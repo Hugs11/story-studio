@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, TriangleAlert, CircleCheck, Loader2 } from '../icons/LucideLocal';
-import { Tooltip } from '../common/Tooltip';
+import { StatusPill, StatusPillItem } from './StatusPill';
+import { useCheckerTranslation } from '../../i18n/useCheckerTranslation.js';
 import './ValidationPill.css';
 
 const AdvancedIssuesPanel = lazy(() => import('../AdvancedWorkspace/DiagnosticsPanel.jsx')
@@ -9,22 +9,14 @@ const AdvancedIssuesPanel = lazy(() => import('../AdvancedWorkspace/DiagnosticsP
 export const ISSUE_KIND_HIERARCHICAL = 'hierarchical';
 export const ISSUE_KIND_ADVANCED = 'advanced';
 
-// Le caret du bouton est un **glyphe plein**, pas une icône : il joue le rôle
-// typographique d'un « ▾ » à 9 px, taille à laquelle le chevron tracé du jeu
-// partagé rendrait un trait d'un demi-pixel. Il reste donc ici, et l'inventaire
-// des jeux d'icônes le nomme avec cette raison. La flèche qui
-// l'accompagnait, elle, redoublait la flèche du jeu partagé : elle a disparu.
-const Caret = ({ size = 10 }) => (
-  <svg width={size} height={size} viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
-    <path d="M1 3l4 4 4-4z" />
-  </svg>
-);
-
+// Le séparateur « — » est porté par les gabarits de validation des trois
+// langues ; aucun mot n'est reconnu. Le libellé du groupe sans emplacement est
+// résolu au rendu.
 function parseIssue(issue) {
   const text = issue?.text ?? '';
   const dashIdx = text.indexOf(' — ');
   if (dashIdx === -1) {
-    return { groupKey: '__pack__', groupLabel: 'Pack', label: text };
+    return { groupKey: '__pack__', groupLabel: null, label: text };
   }
   const location = text.slice(0, dashIdx);
   return {
@@ -67,6 +59,7 @@ export function ValidationPill({
   onCountZeroTransition,
   shortcutLabel = '',
 }) {
+  const { t, language } = useCheckerTranslation();
   const advanced = issueKind === ISSUE_KIND_ADVANCED;
   const blockingIssues = useMemo(
     () => validationIssues.filter((issue) => issue?.status === 'error' || issue?.status === 'warning'),
@@ -77,29 +70,14 @@ export function ValidationPill({
   const pending = advanced
     ? pathAuditPending || advancedIssues == null || ['idle', 'pending'].includes(advancedIssues?.readiness?.status)
     : pathAuditPending;
-  const [severity, setSeverity] = useState('all');
-  const shownIssues = useMemo(
-    () => (severity === 'all'
-      ? blockingIssues
-      : blockingIssues.filter((issue) => issue.status === severity)),
-    [blockingIssues, severity],
-  );
-  const { groups, flat } = useMemo(() => buildGroups(shownIssues), [shownIssues]);
-  const severityCounts = useMemo(() => ({
-    error: blockingIssues.filter((issue) => issue.status === 'error').length,
-    warning: blockingIssues.filter((issue) => issue.status === 'warning').length,
-  }), [blockingIssues]);
+  // La langue entre dans la mémoïsation : les textes des issues sont relus.
+  const { groups, flat } = useMemo(() => buildGroups(blockingIssues), [blockingIssues, language]);
 
   const state = pending ? 'verifying' : totalCount > 0 ? 'issues' : 'ok';
   const isOpen = open && state !== 'verifying';
   const wrapRef = useRef(null);
   const dropdownRef = useRef(null);
-  const closeTimerRef = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => () => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-  }, []);
 
   useEffect(() => {
     if (!isOpen) setActiveIndex(0);
@@ -115,18 +93,12 @@ export function ValidationPill({
     prevTotalCountRef.current = totalCount;
   }, [totalCount, onCountZeroTransition]);
 
+  // Fermeture (Échap, clic extérieur) et survol : le socle commun. Ici, la
+  // seule navigation clavier dans la liste.
   useEffect(() => {
-    if (!isOpen) return undefined;
-    function onPointerDown(event) {
-      if (!wrapRef.current?.contains(event.target)) onOpenChange?.(false);
-    }
+    if (!isOpen || advanced) return undefined;
     function onKeyDown(event) {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onOpenChange?.(false);
-        return;
-      }
-      if (advanced || !wrapRef.current?.contains(event.target)) return;
+      if (!wrapRef.current?.contains(event.target)) return;
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         setActiveIndex((index) => (flat.length === 0 ? 0 : (index + 1) % flat.length));
@@ -141,12 +113,8 @@ export function ValidationPill({
         }
       }
     }
-    document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
+    return () => document.removeEventListener('keydown', onKeyDown);
   }, [isOpen, advanced, flat, activeIndex, onOpenChange, onSelectIssue]);
 
   useEffect(() => {
@@ -156,13 +124,13 @@ export function ValidationPill({
   }, [isOpen, advanced, activeIndex]);
 
   const tooltipText = state === 'verifying'
-    ? 'Vérification en cours…'
-    : `${totalCount} élément${totalCount > 1 ? 's' : ''} à corriger${shortcutLabel ? ` (${shortcutLabel})` : ''}`;
-  const popoverSubtitle = advanced
-    ? `${totalCount} élément${totalCount > 1 ? 's' : ''} empêche${totalCount > 1 ? 'nt' : ''} la génération.`
-    : severity === 'all'
-      ? `${totalCount} élément${totalCount > 1 ? 's' : ''} dans le projet courant.`
-      : `${shownIssues.length} affiché${shownIssues.length > 1 ? 's' : ''} sur ${totalCount}.`;
+    ? t('checker:pill.verifying.tooltip')
+    : shortcutLabel
+      ? t('checker:pill.count.tooltipShortcut', { count: totalCount, shortcut: shortcutLabel })
+      : t('checker:pill.count.tooltip', { count: totalCount });
+  const popoverSubtitle = totalCount === 0
+    ? t('checker:pill.ready.subtitle')
+    : t('checker:pill.blocking.subtitle', { count: totalCount });
 
   function selectIssue(issueId) {
     if (!issueId) return;
@@ -170,132 +138,56 @@ export function ValidationPill({
     onOpenChange?.(false);
   }
 
-  function handlePillClick() {
-    if (state !== 'verifying') onOpenChange?.(!open);
-  }
-
-  function openPopover() {
-    if (state === 'verifying') return;
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    onOpenChange?.(true);
-  }
-
-  function scheduleClose() {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = setTimeout(() => onOpenChange?.(false), 140);
-  }
-
   return (
-    <div
-      className={`validation-pill-wrap ${isOpen ? 'is-open' : ''}`}
-      ref={wrapRef}
-      onPointerEnter={openPopover}
-      onPointerLeave={scheduleClose}
-      onMouseEnter={openPopover}
-      onMouseLeave={scheduleClose}
-      onFocus={openPopover}
+    <StatusPill
+      state={state}
+      open={open}
+      onOpenChange={onOpenChange}
+      tooltip={tooltipText}
+      label={state === 'verifying' ? t('checker:pill.verifying.label') : t('checker:pill.count.label')}
+      count={state === 'verifying' ? null : totalCount}
+      toolbarId="toggleValidation"
+      popoverLabel={t('checker:pill.list.aria')}
+      title={t('checker:pill.list.title')}
+      subtitle={popoverSubtitle}
+      wrapRef={wrapRef}
+      dropdownRef={dropdownRef}
     >
-      <Tooltip text={tooltipText}>
-        <button
-          type="button"
-          data-toolbar-id="toggleValidation"
-          className={`validation-pill is-${state} ${isOpen ? 'is-active' : ''}`}
-          onClick={handlePillClick}
-          aria-haspopup={state === 'verifying' ? undefined : 'dialog'}
-          aria-expanded={state === 'verifying' ? undefined : isOpen}
-          aria-label={tooltipText}
-        >
-          {state !== 'verifying' ? (
-            <>
-              <span className={state === 'issues' ? 'validation-pill-icon' : 'validation-pill-check'}>
-                {state === 'issues'
-                  ? <TriangleAlert width={12} height={12} />
-                  : <CircleCheck width={12} height={12} />}
-              </span>
-              <span className="validation-pill-count">{totalCount}</span>
-              <span className="validation-pill-label">à corriger</span>
-              <span className="validation-pill-caret"><Caret size={9} /></span>
-            </>
-          ) : (
-            <>
-              <span className="validation-pill-spinner"><Loader2 width={12} height={12} /></span>
-              <span className="validation-pill-label">Vérification…</span>
-            </>
-          )}
-        </button>
-      </Tooltip>
-
-      {isOpen ? (
+      {advanced ? (
+        <Suspense fallback={<p className="validation-pill-empty">{t('checker:pill.loading.label')}</p>}>
+          <AdvancedIssuesPanel
+            context={advancedIssues}
+            onRequestClose={() => onOpenChange?.(false)}
+          />
+        </Suspense>
+      ) : (
         <>
-          <div className="validation-pill-hover-bridge" aria-hidden="true" />
-          <div
-            className={`validation-pill-dd is-${state} ${advanced ? 'is-advanced' : ''}`}
-            ref={dropdownRef}
-            role="dialog"
-            aria-label="Liste des éléments à corriger"
-          >
-            <div className="validation-pill-dd-head">
-              <span className="validation-pill-dd-title">À corriger</span>
-              <span className="validation-pill-dd-subtitle">{popoverSubtitle}</span>
-            </div>
-            <div className="validation-pill-dd-body">
-              {advanced ? (
-                <Suspense fallback={<p className="validation-pill-empty">Chargement…</p>}>
-                  <AdvancedIssuesPanel
-                    context={advancedIssues}
-                    onRequestClose={() => onOpenChange?.(false)}
+          {groups.map((group) => (
+            <div key={group.key} className="validation-pill-group">
+              <div className="validation-pill-group-head">
+                <span className="validation-pill-group-label">{group.label ?? t('checker:issues.pack.group')}</span>
+                <span className="validation-pill-group-count">· {group.items.length}</span>
+              </div>
+              {group.items.map((item) => {
+                const isActive = item.flatIndex === activeIndex;
+                return (
+                  <StatusPillItem
+                    key={`${item.issue.id ?? 'noid'}:${item.flatIndex}`}
+                    data-flat-idx={item.flatIndex}
+                    active={isActive}
+                    label={item.label}
+                    onClick={() => selectIssue(item.issue.id)}
+                    onMouseEnter={() => setActiveIndex(item.flatIndex)}
                   />
-                </Suspense>
-              ) : (
-                <>
-                  <div className="validation-pill-filters" role="group" aria-label="Filtrer par gravité">
-                    <button type="button" aria-pressed={severity === 'all'} onClick={() => setSeverity('all')}>
-                      Tous ({totalCount})
-                    </button>
-                    <button type="button" aria-pressed={severity === 'error'} onClick={() => setSeverity('error')}>
-                      Erreurs ({severityCounts.error})
-                    </button>
-                    <button type="button" aria-pressed={severity === 'warning'} onClick={() => setSeverity('warning')}>
-                      Avertissements ({severityCounts.warning})
-                    </button>
-                  </div>
-                  {groups.map((group) => (
-                    <div key={group.key} className="validation-pill-group">
-                      <div className="validation-pill-group-head">
-                        <span className="validation-pill-group-label">{group.label}</span>
-                        <span className="validation-pill-group-count">· {group.items.length}</span>
-                      </div>
-                      {group.items.map((item) => {
-                        const isActive = item.flatIndex === activeIndex;
-                        const severityLabel = item.issue.status === 'error' ? 'Erreur' : 'Avertissement';
-                        return (
-                          <button
-                            type="button"
-                            key={`${item.issue.id ?? 'noid'}:${item.flatIndex}`}
-                            data-flat-idx={item.flatIndex}
-                            data-severity={item.issue.status}
-                            className={`validation-pill-item ${isActive ? 'is-active' : ''}`}
-                            onClick={() => selectIssue(item.issue.id)}
-                            onMouseEnter={() => setActiveIndex(item.flatIndex)}
-                          >
-                            <span className="validation-pill-item-dot" aria-hidden="true" />
-                            <span className="validation-pill-item-severity">{severityLabel}</span>
-                            <span className="validation-pill-item-label">{item.label}</span>
-                            <span className="validation-pill-item-go" aria-hidden="true"><ArrowRight width={11} height={11} strokeWidth={2.6} /></span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                  {shownIssues.length === 0 && (
-                    <p className="validation-pill-empty">Aucun élément dans ce filtre.</p>
-                  )}
-                </>
-              )}
+                );
+              })}
             </div>
-          </div>
+          ))}
+          {blockingIssues.length === 0 && (
+            <p className="validation-pill-empty">{t('checker:issues.empty')}</p>
+          )}
         </>
-      ) : null}
-    </div>
+      )}
+    </StatusPill>
   );
 }

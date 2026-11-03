@@ -1,6 +1,8 @@
 use super::{XttsGenerateRequest, XttsSettings};
-use crate::services::project_files::media_output_root;
+use crate::services::project_files::media_output_dir;
 use crate::support::ffmpeg::now_millis;
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::path::{Path, PathBuf};
 
 // Remplace les caracteres typiquement problematiques pour un nom de fichier
@@ -24,14 +26,50 @@ fn safe_output_filename(filename: &str) -> Result<String, String> {
         || filename.contains("..")
         || filename.chars().any(char::is_control)
     {
-        return Err(format!("Nom de sortie XTTS invalide : {}", filename));
+        return Err({
+            let _msg_filename = (filename).to_string();
+            user_message::UserMessage::new(codes::XTTS_OUTPUT_NAME_INVALID)
+                .param(
+                    "filename",
+                    user_message::transport_param(_msg_filename.clone()),
+                )
+                .with_detail(format!(
+                    "Nom de sortie XTTS invalide : {_msg_filename}",
+                    _msg_filename = user_message::transport_detail(&_msg_filename)
+                ))
+                .into_transport()
+        });
     }
     let file_name = Path::new(filename)
         .file_name()
         .and_then(|value| value.to_str())
-        .ok_or_else(|| format!("Nom de sortie XTTS invalide : {}", filename))?;
+        .ok_or_else(|| {
+            let _msg_filename = (filename).to_string();
+            user_message::UserMessage::new(codes::XTTS_OUTPUT_NAME_INVALID)
+                .param(
+                    "filename",
+                    user_message::transport_param(_msg_filename.clone()),
+                )
+                .with_detail(format!(
+                    "Nom de sortie XTTS invalide : {_msg_filename}",
+                    _msg_filename = user_message::transport_detail(&_msg_filename)
+                ))
+                .into_transport()
+        })?;
     if file_name != filename {
-        return Err(format!("Nom de sortie XTTS invalide : {}", filename));
+        return Err({
+            let _msg_filename = (filename).to_string();
+            user_message::UserMessage::new(codes::XTTS_OUTPUT_NAME_INVALID)
+                .param(
+                    "filename",
+                    user_message::transport_param(_msg_filename.clone()),
+                )
+                .with_detail(format!(
+                    "Nom de sortie XTTS invalide : {_msg_filename}",
+                    _msg_filename = user_message::transport_detail(&_msg_filename)
+                ))
+                .into_transport()
+        });
     }
     Ok(file_name.to_string())
 }
@@ -61,17 +99,30 @@ fn reject_unsafe_hint(raw_hint: &str) -> Result<(), String> {
         || raw_hint.contains("..")
         || raw_hint.chars().any(char::is_control)
     {
-        return Err(format!("Nom de sortie XTTS invalide : {}", raw_hint));
+        return Err({
+            let _msg_raw_hint = (raw_hint).to_string();
+            user_message::UserMessage::new(codes::XTTS_OUTPUT_NAME_CHECK_FAILED)
+                .param(
+                    "details",
+                    user_message::transport_param(_msg_raw_hint.clone()),
+                )
+                .with_detail(format!(
+                    "Nom de sortie XTTS invalide : {_msg_raw_hint}",
+                    _msg_raw_hint = user_message::transport_detail(&_msg_raw_hint)
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }
 
 pub(super) fn generated_dir(request: &XttsGenerateRequest) -> Result<PathBuf, String> {
-    media_output_root(
+    media_output_dir(
         request.workspace_dir.as_deref(),
-        "Aucun emplacement de travail : impossible de generer une voix.",
+        "voix-generees",
+        request.project_destination.as_ref(),
+        codes::XTTS_WORKSPACE_LOCATION_REQUIRED_TRANSPORT,
     )
-    .map(|dir| dir.join("voix-generees"))
 }
 
 pub(super) fn server_output_dir(settings: &XttsSettings) -> PathBuf {

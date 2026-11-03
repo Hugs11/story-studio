@@ -1,3 +1,7 @@
+import { useTranslation } from 'react-i18next';
+import { translateAi as t } from '../../i18n/aiPresentation.js';
+import { presentStoredError, presentUserMessage, presentTechnicalMessage } from '../../i18n/userMessage.js';
+import { getIntlLocale } from '../../i18n/language.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
@@ -11,11 +15,11 @@ import { QUEUE_COLUMNS, resolveQueueGrid, useQueueColumnWidths } from './useQueu
 import './SDQueuePanel.css';
 
 const STATUS_LABEL = {
-  pending: 'En attente',
-  submitting: 'Envoi...',
-  running: 'Génération...',
-  done: 'Terminé',
-  error: 'Erreur',
+  pending: "ai:queue.status.pending",
+  submitting: "ai:queue.status.submitting",
+  running: "ai:queue.status.running",
+  done: "ai:queue.status.done",
+  error: "ai:queue.status.error",
 };
 
 let activeQueueAudioStopper = null;
@@ -24,8 +28,8 @@ function formatCreatedAt(ts) {
   if (!ts) return '-';
   const date = new Date(ts);
   if (Number.isNaN(date.getTime())) return '-';
-  const day = date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
-  const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const day = date.toLocaleDateString(getIntlLocale(), { day: '2-digit', month: '2-digit', year: '2-digit' });
+  const time = date.toLocaleTimeString(getIntlLocale(), { hour: '2-digit', minute: '2-digit' });
   return `${day} ${time}`;
 }
 
@@ -99,6 +103,7 @@ function startQueueMediaDrag(event, { kind, path, label, onDragStart = null }) {
 }
 
 function ProgressRing({ progress }) {
+  useTranslation();
   const percent = progressPercent(progress);
 
   if (percent == null) {
@@ -106,11 +111,11 @@ function ProgressRing({ progress }) {
   }
 
   return (
-    <Tooltip text={`Progression ${percent}%`}>
+    <Tooltip text={t("ai:queue.progress.label", { percent })}>
       <span
         className="sd-progress-ring"
         style={{ '--progress': `${percent}%` }}
-        aria-label={`Progression ${percent}%`}
+        aria-label={t("ai:queue.progress.label", { percent })}
       />
     </Tooltip>
   );
@@ -128,9 +133,10 @@ function UsageBadge({ usage }) {
 }
 
 function StatusBadge({ job }) {
+  useTranslation();
   const percent = progressPercent(job.progress);
   const active = isActiveJob(job);
-  const label = active && percent != null ? `${percent}%` : (STATUS_LABEL[job.status] ?? job.status);
+  const label = active && percent != null ? `${percent}%` : (STATUS_LABEL[job.status] ? t(STATUS_LABEL[job.status]) : job.status);
 
   return (
     <span className={`sd-job-badge sd-badge-${job.status}`}>
@@ -141,16 +147,18 @@ function StatusBadge({ job }) {
 }
 
 function JobKind({ isImageJob }) {
+  useTranslation();
   const Icon = isImageJob ? ImageIcon : Music;
   return (
     <span className={`sd-kind-pill${isImageJob ? ' is-image' : ' is-audio'}`}>
       <Icon className="sd-kind-icon" strokeWidth={2} absoluteStrokeWidth />
-      {isImageJob ? 'Image' : 'Audio'}
+      {isImageJob ? t("ai:queue.kind.image") : t("ai:queue.kind.audio")}
     </span>
   );
 }
 
 function JobResultThumb({ path, onPreview }) {
+  useTranslation();
   const url = useLocalFile(path);
   const draggedRef = useRef(false);
 
@@ -164,7 +172,7 @@ function JobResultThumb({ path, onPreview }) {
   }
 
   return (
-    <Tooltip text="Glisser vers un placeholder image, cliquer pour prévisualiser">
+    <Tooltip text={t("ai:queue.image.dragHelp")}>
       <button
         className="sd-result-thumb"
         onPointerDown={(event) => startQueueMediaDrag(event, {
@@ -174,7 +182,7 @@ function JobResultThumb({ path, onPreview }) {
           onDragStart: () => { draggedRef.current = true; },
         })}
         onClick={handleClick}
-        aria-label={`Prévisualiser ${basename(path)}`}
+        aria-label={t("ai:queue.image.preview", { filename: basename(path) })}
       >
         {url ? (
           <img src={url} alt="" className="sd-result-img" />
@@ -187,6 +195,7 @@ function JobResultThumb({ path, onPreview }) {
 }
 
 function ImagePreviewModal({ path, onClose }) {
+  useTranslation();
   const url = useLocalFile(path);
   const filename = basename(path);
   useEscapeKey(true, () => onClose?.());
@@ -194,8 +203,8 @@ function ImagePreviewModal({ path, onClose }) {
     <div className="modal-overlay sd-preview-overlay" onMouseDown={onClose}>
       <div className="modal-box sd-preview-box" onMouseDown={e => e.stopPropagation()}>
         <div className="modal-header">
-          <span>{filename || 'Image générée'}</span>
-          <Button variant="icon" className="modal-close" onClick={onClose} aria-label="Fermer">
+          <span>{filename || t("ai:queue.image.fallback")}</span>
+          <Button variant="icon" className="modal-close" onClick={onClose} aria-label={t("common:dialog.close.label")}>
             <X className="sd-modal-close-icon" strokeWidth={2} absoluteStrokeWidth />
           </Button>
         </div>
@@ -208,6 +217,7 @@ function ImagePreviewModal({ path, onClose }) {
 }
 
 function QueueAudioButton({ path, filename }) {
+  useTranslation();
   const url = useLocalFile(path);
   const audioRef = useRef(null);
   const stopRef = useRef(null);
@@ -270,8 +280,8 @@ function QueueAudioButton({ path, filename }) {
         size="sm"
         className={`sd-result-play${playing ? ' is-playing' : ''}`}
         onClick={togglePlayback}
-        aria-label={`${playing ? 'Arrêter' : 'Lire'} ${filename}`}
-        title={playing ? 'Arrêter' : 'Lire'}
+        aria-label={playing ? t("ai:queue.audio.stopFile", { filename }) : t("ai:queue.audio.playFile", { filename })}
+        title={playing ? t("ai:queue.audio.stop") : t("ai:queue.audio.play")}
         disabled={!url}
       >
         <Icon className="sd-row-icon" strokeWidth={2} absoluteStrokeWidth />
@@ -281,10 +291,11 @@ function QueueAudioButton({ path, filename }) {
 }
 
 function ResultCell({ job, isImageJob, onPreviewImage }) {
+  useTranslation();
   if (job.status === 'error') {
     return (
-      <Tooltip text={job.errorMessage || 'Erreur de génération'} wrap className="sd-result-error-wrap">
-        <span className="sd-result-error">{job.errorMessage || 'Erreur de génération'}</span>
+      <Tooltip text={job.errorMessage || t("ai:queue.error.fallback")} wrap className="sd-result-error-wrap">
+        <span className="sd-result-error">{job.errorMessage || t("ai:queue.error.fallback")}{job.technicalDetail && <details><summary>{t("common:error.technicalDetails.summary")}</summary><pre>{job.technicalDetail}</pre></details>}</span>
       </Tooltip>
     );
   }
@@ -295,7 +306,7 @@ function ResultCell({ job, isImageJob, onPreviewImage }) {
 
   if (isImageJob) {
     const paths = job.resultPaths ?? [];
-    if (paths.length === 0) return <span className="sd-cell-muted">Aucun fichier</span>;
+    if (paths.length === 0) return <span className="sd-cell-muted">{t("ai:queue.result.empty")}</span>;
     const visiblePaths = paths.slice(0, 2);
     return (
       <div className="sd-image-result-cell">
@@ -314,7 +325,7 @@ function ResultCell({ job, isImageJob, onPreviewImage }) {
     );
   }
 
-  if (!job.resultPath) return <span className="sd-cell-muted">Aucun fichier</span>;
+  if (!job.resultPath) return <span className="sd-cell-muted">{t("ai:queue.result.empty")}</span>;
   const filename = basename(job.resultPath);
   return (
     <div
@@ -334,13 +345,14 @@ function ResultCell({ job, isImageJob, onPreviewImage }) {
 }
 
 function QueueRow({ job, onRemove, onPreviewImage, onRegenerateImage, getAudioUsage, getImageUsage }) {
+  useTranslation();
   const isImageJob = job.kind !== 'audio';
-  const title = isImageJob ? (job.workflowName || 'Image IA') : (job.label || 'Audio IA');
+  const title = isImageJob ? (job.workflowName || t("ai:queue.image.name")) : (presentStoredError(job.labelRef) || job.label || t("ai:queue.audio.name"));
   const subtitle = isImageJob ? 'ComfyUI' : (job.voiceLabel || 'XTTS');
   const usage = job.status === 'done'
     ? (isImageJob ? getImageUsage?.(job) : getAudioUsage?.(job))
     : null;
-  const target = job.targetLabel || '-';
+  const target = presentStoredError(job.targetLabelRef) || job.targetLabel || '-';
 
   return (
     <div className={`sd-queue-row sd-job-${job.status}`}>
@@ -377,8 +389,8 @@ function QueueRow({ job, onRemove, onPreviewImage, onRegenerateImage, getAudioUs
             size="sm"
             className="sd-row-action"
             onClick={() => onRegenerateImage?.(job)}
-            aria-label="Régénérer l'image"
-            title="Régénérer"
+            aria-label={t("ai:queue.image.regenerateAria")}
+            title={t("ai:queue.image.regenerate")}
           >
             <RotateCcw className="sd-row-icon" strokeWidth={2} absoluteStrokeWidth />
           </Button>
@@ -389,8 +401,8 @@ function QueueRow({ job, onRemove, onPreviewImage, onRegenerateImage, getAudioUs
             size="sm"
             className="sd-row-action"
             onClick={() => onRemove(job.id)}
-            aria-label="Retirer de la file"
-            title="Retirer"
+            aria-label={t("ai:queue.job.removeAria")}
+            title={t("ai:queue.job.remove")}
           >
             <X className="sd-row-icon" strokeWidth={2} absoluteStrokeWidth />
           </Button>
@@ -412,7 +424,8 @@ export function SDQueuePanel({
   onClose,
   embedded = false,
 }) {
-  const jobs = [...imageJobs, ...audioJobs].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+  useTranslation();
+  const jobs = [...imageJobs, ...audioJobs].map((job) => ({ ...job, errorMessage: presentUserMessage(job.errorMessage, { allowLegacyFrench: false }).message, technicalDetail: presentUserMessage(job.errorMessage).technicalDetail, progressLabel: presentTechnicalMessage(job.progressLabel) })).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   const hasDone = jobs.some(j => j.status === 'done' || j.status === 'error');
   const [previewPath, setPreviewPath] = useState(null);
   const [tableWidth, setTableWidth] = useState(0);
@@ -496,15 +509,15 @@ export function SDQueuePanel({
   const content = (
     <>
       <div className={embedded ? 'sd-queue-embedded-header' : 'modal-header'}>
-        <span>Générations IA</span>
+        <span>{t("ai:queue.panel.title")}</span>
         <div className="sd-queue-header-actions">
           {hasDone && (
             <Button size="sm" onClick={onClearDone}>
-              Effacer terminées
+              {t("ai:queue.completed.clear")}
             </Button>
           )}
           {!embedded && (
-            <Button variant="icon" className="modal-close" onClick={onClose} aria-label="Fermer">
+            <Button variant="icon" className="modal-close" onClick={onClose} aria-label={t("common:dialog.close.label")}>
               <X className="sd-modal-close-icon" strokeWidth={2} absoluteStrokeWidth />
             </Button>
           )}
@@ -513,13 +526,13 @@ export function SDQueuePanel({
 
       <div className="sd-queue-body">
         {jobs.length === 0 ? (
-          <div className="sd-queue-empty">Aucune génération en cours.</div>
+          <div className="sd-queue-empty">{t("ai:queue.panel.empty")}</div>
         ) : (
           <div className="sd-queue-table" ref={tableRef} style={tableStyle}>
             <div className="sd-queue-table-header" ref={headerRef}>
               {QUEUE_COLUMNS.map((col) => (
                 <div key={col.id} className="sd-col-head">
-                  <span className="sd-col-label">{col.label}</span>
+                  <span className="sd-col-label">{col.labelKey ? t(col.labelKey) : ""}</span>
                   {col.id !== 'actions' && (
                     <span
                       className="sd-col-resize"

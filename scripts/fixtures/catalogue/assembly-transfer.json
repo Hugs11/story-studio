@@ -1,0 +1,9 @@
+{
+  "preparationId": "prepared",
+  "ownerSessionId": "session",
+  "assets": [
+    { "sourcePath": "/prepared/0.jpg", "sessionPath": "/session/0.jpg" },
+    { "sourcePath": "/prepared/0.zip", "sessionPath": "/session/0.zip" }
+  ],
+  "transferred": true
+}

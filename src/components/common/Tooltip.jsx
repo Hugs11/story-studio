@@ -65,7 +65,7 @@ export function Tooltip({
 
     if (nextLeft === pos.left && nextArrowX === pos.arrowX && nextTop === pos.top) return;
     setPos((current) => (current ? { ...current, left: nextLeft, arrowX: nextArrowX, top: nextTop } : current));
-  }, [pos]);
+  }, [pos, text]);
 
   function renderChildrenWithoutNativeTitle() {
     return Children.map(children, (child) => {

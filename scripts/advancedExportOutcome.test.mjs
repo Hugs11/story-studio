@@ -435,3 +435,14 @@ test("la relecture n'est courante que pour la révision et le travail qui l'ont 
   assert.equal(isReviewCurrent(review, { revision: null, epoch: 3 }), false);
   assert.equal(isReviewCurrent(null, { revision: ancien, epoch: 3 }), false);
 });
+
+test('le refus D7 affiche le code Rust structuré sans objet converti en texte', () => {
+  const refusal = classifyExportRefusal({
+    kind: 'output-identity',
+    message: { code: 'OFFICIAL_CONTENT_OUTPUT_REFUSED', params: {} },
+  });
+  assert.equal(refusal.kind, EXPORT_REFUSAL.OUTPUT_IDENTITY);
+  assert.equal(refusal.message, "Export impossible : ce projet contient une histoire Lunii. Elle ne peut être exportée que seule, sous son identifiant d’origine.");
+  assert.equal(refusal.cancelled, false);
+  assert.equal(refusal.residue, false);
+});

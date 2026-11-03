@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { releaseProjectMediaJob } from './projectMediaOutput';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { loadSdSettings, saveSdSettings } from './sdSettings';
 import { KEYS, read, write } from './persistentSettings';
 
@@ -36,6 +37,12 @@ function genId() {
 export function useSdStore() {
   const [sdSettings, setSdSettings] = useState(() => loadSdSettings());
   const [jobs, setJobs] = useState(() => loadPersistedJobs());
+  const jobsRef = useRef(jobs);
+  const mutateJobs = useCallback((transform) => {
+    jobsRef.current = transform(jobsRef.current);
+    setJobs(jobsRef.current);
+  }, []);
+
   const [queueOpen, setQueueOpen] = useState(false);
 
   const updateSdSettings = useCallback((fields) => {
@@ -60,32 +67,44 @@ export function useSdStore() {
       progress: null,
       progressLabel: null,
       createdAt: Date.now(),
-      projectName: options.projectName || '',
+      mediaOutput: options.mediaOutput,
+      projectEpoch: options.projectEpoch,
       fieldId: options.fieldId || null,
       targetLabel: options.targetLabel || '',
+      targetLabelRef: options.targetLabelRef || null,
     };
-    setJobs(prev => [...prev, job]);
+    mutateJobs(prev => [...prev, job]);
     return job.id;
-  }, []);
+  }, [mutateJobs]);
 
   const updateJob = useCallback((id, fields) => {
-    setJobs(prev => prev.map(j => j.id === id ? { ...j, ...fields } : j));
-  }, []);
+    const terminal = fields.status === 'done' || fields.status === 'error';
+    const job = jobsRef.current.find((candidate) => candidate.id === id);
+    if (terminal) releaseProjectMediaJob(job);
+    mutateJobs(prev => prev.flatMap(candidate => candidate.id !== id ? [candidate]
+      : terminal && candidate.removeWhenFinished ? [] : [{ ...candidate, ...fields }]));
+  }, [mutateJobs]);
 
   const removeJob = useCallback((id) => {
-    setJobs(prev => prev.filter(j => j.id !== id));
-  }, []);
+    const job = jobsRef.current.find((candidate) => candidate.id === id);
+    if (!job) return;
+    // Keep a running producer tracked until its native write finishes.
+    const running = job.status === 'submitting' || job.status === 'running';
+    if (!running) releaseProjectMediaJob(job);
+    mutateJobs(prev => prev.flatMap(candidate => candidate.id !== id ? [candidate]
+      : running ? [{ ...candidate, removeWhenFinished: true }] : []));
+  }, [mutateJobs]);
 
   const clearDone = useCallback(() => {
-    setJobs(prev => prev.filter(j => j.status !== 'done' && j.status !== 'error'));
-  }, []);
+    mutateJobs(prev => prev.filter(j => j.status !== 'done' && j.status !== 'error'));
+  }, [mutateJobs]);
 
   const removeResult = useCallback((jobId, resultPath) => {
-    setJobs(prev => prev
+    mutateJobs(prev => prev
       .map(j => j.id === jobId ? { ...j, resultPaths: j.resultPaths.filter(p => p !== resultPath) } : j)
       .filter(j => j.status !== 'done' || j.resultPaths.length > 0),
     );
-  }, []);
+  }, [mutateJobs]);
 
   useEffect(() => {
     persistDoneJobs(jobs);

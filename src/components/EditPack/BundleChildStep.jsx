@@ -1,3 +1,5 @@
+import { useMessageLanguage } from '../../i18n/useMessageLanguage.js';
+import { translateImport as t } from '../../i18n/importPresentation.js';
 import { FunnelSectionHeader, FunnelToolButton } from '../funnels';
 import { Layers, Undo2 } from '../icons/LucideLocal';
 import {
@@ -33,6 +35,7 @@ export function BundleChildStep({
   onBack,
   error = '',
 }) {
+  useMessageLanguage();
   const count = packs?.length ?? 0;
   const canContinue = canContinueWithChild(packs, selectedChildId);
 
@@ -40,11 +43,11 @@ export function BundleChildStep({
     <div className="funnel-step-content">
       <FunnelSectionHeader
         icon={<Layers />}
-        title="Cette archive contient plusieurs packs"
-        description={`${containerLabel} — ${count} pack${count > 1 ? 's' : ''}. Choisis celui à ouvrir ; la suite se passe comme pour n'importe quel pack.`}
+        title={t('import:bundle.archive.title')}
+        description={t('import:bundle.archive.description', { name: containerLabel, count })}
       />
 
-      <ul className="bundle-child-list" role="radiogroup" aria-label="Packs de l'archive">
+      <ul className="bundle-child-list" role="radiogroup" aria-label={t('import:bundle.archive.aria')}>
         {(packs ?? []).map((child) => {
           const selectable = isChildSelectable(child);
           const verdict = describeChildVerdict(child);
@@ -80,12 +83,8 @@ export function BundleChildStep({
           variant="solid"
           disabled={!canContinue}
           onClick={onContinue}
-        >
-          Continuer
-        </FunnelToolButton>
-        <FunnelToolButton icon={<Undo2 />} accent="neutral" onClick={onBack}>
-          Choisir une autre archive
-        </FunnelToolButton>
+        >{t('import:bundle.continue.action')}</FunnelToolButton>
+        <FunnelToolButton icon={<Undo2 />} accent="neutral" onClick={onBack}>{t('import:bundle.otherArchive.action')}</FunnelToolButton>
       </div>
     </div>
   );

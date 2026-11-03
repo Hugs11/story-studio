@@ -27,7 +27,10 @@ fn build(project: Value) -> Result<StoryDocument, String> {
 
 fn refused_without_exit(project: Value) {
     let error = build(project).expect_err("une fin sans sortie est refusée");
-    assert!(error.contains("sans sortie utilisable"), "{error}");
+    assert!(
+        crate::support::user_message::contains_code(&error, "VALIDATION_STAGE_EXIT_UNUSABLE"),
+        "{error}"
+    );
 }
 
 fn pack(root_entries: Value) -> Value {

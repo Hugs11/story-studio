@@ -26,6 +26,46 @@ Story Studio crée alors le fichier `.mbah` et transfère les médias nécessair
 N’attends pas la fin d’un gros pack pour effectuer le premier enregistrement. Une fois le projet enregistré, tu disposes d’une source de travail clairement identifiable et plus simple à sauvegarder.
 :::
 
+## Où sont rangés les nouveaux médias ?
+
+Les nouvelles voix, images, copies importées, prises micro et extractions de packs sont rangées
+par projet dans l’emplacement de travail, par exemple :
+
+```text
+voix-generees/Azuro/narration.mp3
+images-generees/Azuro/
+fichiers-importes/Azuro/
+enregistrements/Azuro/
+zips-extraits/Azuro/<extraction unique>/
+```
+
+Dans une session temporaire, les fichiers restent dans la session jusqu’au premier
+**enregistrement manuel**. Story Studio les copie alors dans ces dossiers en conservant leur
+catégorie et les fichiers nécessaires à la réédition des images et des audios.
+
+Avec **Utiliser un workspace pour les nouveaux projets**, les médias commencent dans
+`Projet sans titre/`. Au premier enregistrement manuel, ce dossier prend le nom du projet ou,
+si aucun nom n’a été donné, celui du `.mbah` choisi. Une production encore en cours peut reporter
+ce rangement au prochain enregistrement manuel. L’enregistrement automatique et la saisie du
+nom ne déplacent aucun dossier.
+
+Ce nom de dossier est ensuite **figé** : renommer « Azuro » en « Azuro v2 » ou utiliser
+**Enregistrer sous…** laisse les nouveaux médias dans `Azuro/`. Deux travaux indépendants
+portant le même nom utilisent des dossiers distincts : `Azuro/`, `Azuro (2)/`, etc. Un dossier
+créé manuellement n’est pas réutilisé.
+
+Changer l’emplacement de travail dirige les prochaines productions vers le nouvel emplacement.
+Les anciens fichiers restent à leur place. Le `.mbah` peut être enregistré sur un autre disque :
+cela ne change pas la destination des médias.
+
+Les anciens projets et fichiers à plat ne sont pas déplacés à l’ouverture. Seules les nouvelles
+productions utilisent le rangement par projet. Après le renommage d’un dossier provisoire, une
+ancienne sauvegarde peut encore citer son ancien chemin ; utilise alors la reliaison des médias.
+Aucune copie n’est laissée à cet ancien chemin.
+
+Les dossiers de sauvegarde et d’export restent inchangés. Pour déplacer le projet avec tous ses
+médias, utilise **Consolider le projet**.
+
 ## Enregistrer les modifications suivantes
 
 Une fois le fichier `.mbah` créé :

@@ -193,7 +193,7 @@ test('le moteur n’est pas appelé si le poste natif n’est pas tenu au nom du
   });
   assert.equal(invoked, 0);
   assert.equal(outcome.outcome, ADVANCED_WORK.REFUSED);
-  assert.match(outcome.refusal.message, /poste de travail natif/);
+  assert.match(outcome.refusal.message, /utilise déjà le moteur de génération/);
 });
 
 test('le poste tenu au nom du graphe laisse passer la demande', async () => {

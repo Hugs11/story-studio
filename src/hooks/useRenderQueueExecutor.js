@@ -36,6 +36,8 @@ import {
 } from '../store/production/renderQueueWork';
 import { ADVANCED_WORK, runAdvancedWork } from '../store/production/advancedRenderWork';
 import { releaseTauriListener } from '../utils/tauriListener';
+import { productionRefusalMessage } from '../i18n/productionPresentation.js';
+import { presentUserMessage } from '../i18n/userMessage.js';
 
 function playNotification(type) {
   try {
@@ -64,7 +66,7 @@ function defaultProgressSubscription(onLine) {
   let unlisten = null;
   listen('generate-log', (event) => {
     if (event.payload == null) return;
-    onLine(String(event.payload));
+    onLine(event.payload);
   }).then((fn) => {
     if (disposed) releaseTauriListener(fn);
     else unlisten = fn;
@@ -125,13 +127,13 @@ export function useRenderQueueExecutor({
     const target = jobAwaitingCancelSignal(jobs, cancelSentForRef.current);
     if (!target) return;
     cancelSentForRef.current = target.id;
-    appendLog(target.id, '⏹ Demande d’annulation envoyée…');
+    appendLog(target.id, { code: 'GENERATION_QUEUE_CANCEL_REQUESTED', params: {} });
     // Le même geste pour les deux natures : côté Rust, `cancel_generate_pack`
     // bascule le drapeau que `generate_pack` **et** `export_advanced_pack`
     // relisent. Ce n'est pas une déduction de commentaire — les deux commandes
     // lisent `GenerationCancelState`.
     invoke('cancel_generate_pack').catch((err) => {
-      appendLog(target.id, `⚠️ Impossible de demander l’annulation : ${String(err)}`);
+      appendLog(target.id, { code: 'GENERATION_QUEUE_CANCEL_FAILED', params: { reason: { messages: [err], separator: '' } } });
       cancelSentForRef.current = null;
     });
   }, [jobs, appendLog, isRuntime, invoke]);
@@ -154,8 +156,8 @@ export function useRenderQueueExecutor({
     executingRef.current = true;
     runningJobIdRef.current = nextJob.id;
     updateJob(nextJob.id, { status: JOB_STATUS.RUNNING });
-    appendLog(nextJob.id, `▶ Démarrage de la fabrication : ${nextJob.projectName}`);
-    appendLog(nextJob.id, `  Dossier de sortie : ${nextJob.outputFolder}`);
+    appendLog(nextJob.id, { code: 'GENERATION_QUEUE_START', params: { projectName: nextJob.projectName || { key: 'common:status.node.fallback' } } });
+    appendLog(nextJob.id, { code: 'GENERATION_QUEUE_OUTPUT_FOLDER', params: { outputFolder: nextJob.outputFolder }, detail: nextJob.outputFolder });
 
     (async () => {
       try {
@@ -173,34 +175,49 @@ export function useRenderQueueExecutor({
 
     function markCancelled(jobId) {
       updateJob(jobId, { status: JOB_STATUS.CANCELED, cancelRequested: false, resultPath: null, errorMessage: null });
-      appendLog(jobId, '⏹ Fabrication annulée.');
+      appendLog(jobId, { code: 'GENERATION_QUEUE_CANCELLED', params: {} });
+    }
+
+    async function generationEvidence(job) {
+      try { return await job.onGenerated?.prepare?.(job) ?? null; } catch { return null; }
     }
 
     async function serveFree(job) {
       try {
-        const outcome = freeJobOutcome(await invoke('generate_pack', {
-          projectJson: job.projectJson,
-          outputFolder: job.outputFolder,
-        }));
+        const input = { projectJson: job.projectJson, outputFolder: job.outputFolder };
+        const evidence = await generationEvidence({ ...job, ...input });
+        const nativeResult = await invoke('generate_pack', input);
+        const outcome = freeJobOutcome(nativeResult);
         // Comme pour le graphe : une annulation revenue trop tard ne déclasse
         // pas une archive publiée, le moteur a rendu son chemin.
         updateJob(job.id, { status: JOB_STATUS.DONE, cancelRequested: false, ...outcome });
+        if (job.onGenerated) {
+          try { await job.onGenerated({ projectPath: job.savePath, outputPath: outcome.resultPath, ...(evidence ? { generatedProjectJson: evidence } : {}), ...(nativeResult?.outputFingerprint ? { generatedOutputFingerprint: nativeResult.outputFingerprint } : {}) }); } catch { /* best effort receipt */ }
+        }
         notify('done');
       } catch (err) {
         // Seul le moteur dit l'abandon. Une autre panne arrivée pendant une
         // annulation (nettoyage du `.partial` impossible…) reste une panne.
-        const message = String(err);
-        if (readsAsCancellation(message)) markCancelled(job.id);
+        if (readsAsCancellation(err)) markCancelled(job.id);
         else {
-          updateJob(job.id, { status: JOB_STATUS.ERROR, cancelRequested: false, errorMessage: message });
+          // Le journal reçoit le seul diagnostic brut, comme avant la
+          // conversion : le message traduit est porté par `errorMessage` et
+          // relu à l'affichage. Le détail d'une erreur codée passe par le code
+          // neutre de sortie d'outil, rendu à l'identique dans toute langue ;
+          // une erreur historique non codée reste la chaîne d'origine.
+          const { technicalDetail: detail, code } = presentUserMessage(err);
+          if (detail) appendLog(job.id, code ? { code: 'TOOL_PROCESS_OUTPUT', params: { output: detail }, detail } : detail);
+          updateJob(job.id, { status: JOB_STATUS.ERROR, cancelRequested: false, errorMessage: err });
           notify('error');
         }
       }
     }
 
     async function serveAdvanced(job) {
+      const captured = { ...job, request: structuredClone(job.request) };
+      const evidence = await generationEvidence(captured);
       const outcome = await runAdvancedWork({
-        job,
+        job: captured,
         invokeExport: (request) => invoke('export_advanced_pack', request),
         readTicket: readAdvancedTicket,
         lock,
@@ -216,6 +233,9 @@ export function useRenderQueueExecutor({
           ownership: outcome.ownership,
           refusal: null,
         });
+        if (job.onGenerated && outcome.ownership === 'current') {
+          try { await job.onGenerated({ projectPath: job.savePath, outputPath: outcome.result.zipPath, ...(evidence ? { generatedProjectJson: evidence } : {}), ...(outcome.result.raw?.outputFingerprint ? { generatedOutputFingerprint: outcome.result.raw?.outputFingerprint } : {}) }); } catch { /* best effort receipt */ }
+        }
         notify('done');
         return;
       }
@@ -230,14 +250,14 @@ export function useRenderQueueExecutor({
           refusal,
           errorMessage: null,
         });
-        appendLog(job.id, '⏹ Fabrication annulée.');
+        appendLog(job.id, { code: 'GENERATION_QUEUE_CANCELLED', params: {} });
         return;
       }
       updateJob(job.id, {
         status: JOB_STATUS.ERROR,
         cancelRequested: false,
         refusal,
-        errorMessage: refusal?.message ?? null,
+        errorMessage: productionRefusalMessage(refusal),
       });
       notify('error');
     }

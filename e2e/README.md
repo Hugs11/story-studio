@@ -70,7 +70,8 @@ commandes IPC, dans l'ordre), `tauri-dev.log` (log Rust) et `result.json` (le ve
     « Appliquer & générer », la révision d'UUID et le dossier scripté, puis attend l'archive.
   - `newProject(page, 'simple' | 'pack' | 'advanced')` : depuis l'accueil, ouvre un nouveau projet
     dans le mode donné et attend l'éditeur (barre d'outils « Projet » visible ; pour `'advanced'`,
-    attend en plus « Générer le pack » actif).
+    attend en plus « Générer le pack » visible et l’Écran initial dans la liste du graphe,
+    pour que l’index soit chargé avant le premier geste).
   - `returnHome(page)` : retour à l'accueil par l'interface (menu « Projet » → « Retour à
     l'accueil »), en traversant la boîte « Projet non enregistré » (« Quitter sans enregistrer »)
     si le projet est dirty — un projet neuf l'est dès sa création.
@@ -210,10 +211,10 @@ passent par la liste de recherche et par l'Inspecteur », `GraphCanvasStage.jsx`
 - `wireStageOkToSelectedAction`/`addActionDestination` : formulaires de `ActionEditor.jsx »
   (« Relier un Écran » / « Ajouter un choix ») — c'est le chemin utilisé pour « raccorder »
   sans piloter le glisser de lien à la souris (prises de port dessinées par le canvas, jugé trop
-  coûteux à fiabiliser). `selectNodePickerOption` choisit l'option d'un `<select>` de
-  `NodePicker.jsx` par **valeur** (le chemin du nœud), jamais par `selectOption({label})`, qui
-  n'accepte pas de RegExp et exige une égalité exacte alors que le picker peut suffixer
-  « (sans nom) » ou « — identifiant dupliqué ».
+  coûteux à fiabiliser). `selectNodePickerOption` ouvre le composant commun Select de
+  `NodePicker.jsx`, clique une option de sa liste portée au body, puis vérifie
+  le libellé sélectionné et la fermeture de la liste. Le libellé exact est prioritaire,
+  avec repli par préfixe pour les suffixes « (sans nom) » ou « — identifiant dupliqué ».
 - `nodeOverlayCenter(page, chemin)` : coordonnées écran d'un nœud peint, via la couche de survol
   HTML (`GraphNodeOverlays.jsx`, `[data-node-path]`) — permet un clic/glisser piloté par
   `page.mouse` (multi-sélection Ctrl+clic, déplacement) là où la liste ne suffit pas (son `onClick`
@@ -379,3 +380,68 @@ Les bancs Vite utilisent `SS_BENCH_<MODE>_OUTPUT_DIR` (modes `GRAPH`, `SURFACE`,
 `ATELIER`, `EXPORT`, `RECETTE`) ou le défaut ignoré `bench/artifacts/<mode>`.
 Ces variables peuvent être enregistrées dans `.env.local`, ignoré par git.
 `SS_BENCH_EXPORT_SANDBOX` permet aussi de choisir le bac à sable temporaire de génération.
+
+## Linux : pilote WebKitGTK et recette Catalogue
+
+Sur Linux, `lib/launch.mjs` sélectionne `lib/webdriver/` : compilation debug avec la config
+`src-tauri/tauri.e2e.conf.json`, Vite e2e, puis `tauri-driver` et `WebKitWebDriver` dans une session
+D-Bus. Il faut les dépendances natives de compilation Tauri/WebKitGTK, les deux pilotes installés,
+un affichage graphique accessible et `dbus-run-session`. Renseigner `tauriDriver` et
+`webkitWebDriver` (ou `SS_E2E_TAURI_DRIVER`, `SS_E2E_WEBKIT_WEB_DRIVER`). Les ports 1420 et
+4444/4445 doivent être libres. Ce pilote couvre l'application réelle ; il n'utilise pas Chromium.
+
+Le profil est isolé sous l'identifiant `com.hugs11.story-studio.e2e`, dans les répertoires XDG
+(data/config/cache). `fresh: true` efface uniquement ce profil e2e. Le workspace est redirigé dans
+le dossier du run. Les dialogues utilisent le même shim et `answerNext` que sous Windows.
+Les artefacts vont dans `<workDir>/runs/`, par défaut `/tmp/ss-e2e/runs/` sur Linux.
+
+`c8-catalogue` prépare ses fixtures puis parcourt Accueil → Catalogue dans l'application Linux :
+
+```bash
+node e2e/run.mjs c8-catalogue
+```
+
+Configuration requise, dans `e2e/local.config.json` (voir l'exemple) ou par environnement :
+
+| Clé | Variable | Contenu |
+|---|---|---|
+| `corpusDir` | `SS_E2E_CORPUS_DIR` | Racine contenant `exemples/`, `synthetiques/`, `reels/` |
+| `catalogueDemoDir` | `SS_E2E_CATALOGUE_DEMO_DIR` | Dossier du jeu local « Demo des quatre formats » |
+
+La démo doit contenir un projet `.mbah`, un ZIP, un 7z et un pack dossier (`story.json` ou `ni`),
+avec la même identité de fiche. Fournir un projet consolidé avec ses médias locaux. Aucun chemin
+ni nom personnel n'est inscrit dans les sources du parcours. Les manifestes et captures du run
+contiennent naturellement les noms et chemins locaux : ils restent des artefacts hors git.
+
+Le parcours copie jusqu'à dix archives du corpus (4 exemples, 3 synthétiques, 3 réelles), ajoute
+une copie identique au nom de fichier long, et copie tout le jeu de démo sous `<run>/packs/`.
+Le tirage est déterministe, réparti par taille dans la première moitié de chaque catégorie pour
+limiter le coût de copie/analyse ; les petites catégories fournissent moins d'archives. Les sources
+restent en lecture seule ; les liens symboliques et un run situé sous une source sont refusés.
+`fixtures.json` consigne le tirage local. Les noms longs des *titres* affichés dépendent du corpus.
+
+L'ajout utilise « Ajouter des dossiers » et `answerNext(page, 'open', dossierCopié)` ; si l'état
+initial n'expose pas ce bouton, il passe par Préférences → Catalogue. Le consentement Lunii est
+refusé par l'interface. L'attente suit les vrais scans déclenchés par le geste, jusqu'à leur état
+terminal (plafond 10 minutes). Le nombre attendu vient du compteur `cards.created` du bilan,
+puis est comparé à l'index réel et au nombre de lignes annoncé par la grille ; ce contrôle vérifie
+la cohérence moteur/interface, pas un inventaire indépendant du moteur. Au moins huit fiches et
+une fiche regroupant les quatre formats sont attendues.
+
+Les PNG numérotés montrent la grille avec fiche, le panneau fermé, la liste, la grande modale
+ouverte par double-clic (puis fermée par Échap), le popover Âge après sélection directe de « 5 »,
+le menu Filtres, la ligne active avec Favoris, l'état vide filtré, les exemplaires avec leurs corbeilles, la
+sélection multiple et les deux thèmes via les Préférences. Une commande absente produit une étape
+`ok: null` motivée dans `result.json` ; une commande présente qui échoue fait échouer le parcours.
+La fenêtre est demandée à 1440×900, sinon maximisée ; dimensions réelles et viewport sont consignés
+dans `result.json`. Les captures des corbeilles ne déclenchent aucune suppression.
+Les exceptions, erreurs console et IPC en échec de `events.jsonl` sont contrôlés après arrêt.
+
+Validation sans démarrer l'application :
+
+```bash
+node --check e2e/parcours/c8-catalogue.mjs
+node --check e2e/lib/catalogue-fixtures.mjs
+node --check e2e/lib/config.mjs
+node --test e2e/lib/catalogue-fixtures.test.mjs e2e/lib/webdriver/webdriver.test.mjs
+```

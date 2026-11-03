@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, UserMessage};
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::{Cursor, Read, Write};
@@ -31,11 +32,23 @@ pub struct NativePackGenerationResult {
     pub(crate) gate_observations: Vec<GateObservation>,
 }
 
+#[cfg(test)]
 pub(crate) fn generate_native_pack_v1_with_cancel(
     project: &Project,
     output_folder: &str,
     emit: &dyn Fn(&str),
     should_cancel: &(dyn Fn() -> bool + Sync),
+) -> Result<NativePackGenerationResult, String> {
+    let identity = super::output_identity::for_project(project, None)?;
+    generate_with_identity(project, output_folder, emit, should_cancel, &identity)
+}
+
+pub(crate) fn generate_with_identity(
+    project: &Project,
+    output_folder: &str,
+    emit: &dyn Fn(&str),
+    should_cancel: &(dyn Fn() -> bool + Sync),
+    identity: &super::output_identity::OutputIdentity,
 ) -> Result<NativePackGenerationResult, String> {
     let output_dir = PathBuf::from(output_folder);
     preflight_output_directory(&output_dir)?;
@@ -49,8 +62,13 @@ pub(crate) fn generate_native_pack_v1_with_cancel(
         let story = build_story_document(&asset_report)?;
         check_cancelled(should_cancel)?;
         let local_output_dir = PathBuf::from(&asset_report.stage_dir).join("pack-export");
-        emit("📦 Assemblage du ZIP dans le cache local...");
-        let written = write_native_pack_archive(&asset_report, &story, &local_output_dir)?;
+        emit(&UserMessage::new(codes::GENERATION_ZIP_CACHE_ASSEMBLY).into_transport());
+        let written = write_native_pack_archive_authorized(
+            &asset_report,
+            &story,
+            &local_output_dir,
+            identity,
+        )?;
         check_cancelled(should_cancel)?;
 
         // Les trois contrôles d'archive, **bloquants**. Ils sont placés entre
@@ -60,7 +78,7 @@ pub(crate) fn generate_native_pack_v1_with_cancel(
         // conversion, jamais un pack abîmé livré.
         let observations = run_free_chain_gates(&asset_report, &written, emit)?;
 
-        emit("📤 Transfert du ZIP vers le dossier choisi...");
+        emit(&UserMessage::new(codes::GENERATION_ZIP_TRANSFER_START).into_transport());
         let zip_path = transfer_completed_zip(
             &written.zip_path,
             &output_dir,
@@ -68,10 +86,11 @@ pub(crate) fn generate_native_pack_v1_with_cancel(
             should_cancel,
         )
         .map_err(TransferError::into_message)?;
-        emit(&format!(
-            "✅ ZIP natif v1 genere : {}",
-            zip_path.to_string_lossy()
-        ));
+        emit(
+            &UserMessage::new(codes::GENERATION_NATIVE_ZIP_GENERATED)
+                .param("zip_path", (zip_path.to_string_lossy()).to_string())
+                .into_transport(),
+        );
         Ok(NativePackGenerationResult {
             zip_path: path_for_frontend(&zip_path),
             warnings: asset_report.warnings.clone(),
@@ -95,7 +114,7 @@ fn run_free_chain_gates(
     emit: &dyn Fn(&str),
 ) -> Result<Vec<GateObservation>, String> {
     let policy = GatePolicy::ENFORCED;
-    emit(gates_header(policy));
+    emit(&gates_header(policy));
     let mut observations = observe_document_gates(
         &written.story_json,
         Some(asset_report.pack_uuid.as_str()),
@@ -134,14 +153,11 @@ fn run_free_chain_gates(
 
 fn check_cancelled(should_cancel: &(dyn Fn() -> bool + Sync)) -> Result<(), String> {
     if should_cancel() {
-        Err(CANCELLED_MESSAGE.to_string())
+        Err(crate::support::user_message::generation_cancelled().into_transport())
     } else {
         Ok(())
     }
 }
-
-/// Le message d'annulation du mode Libre, dont son appelant dépend.
-pub(super) const CANCELLED_MESSAGE: &str = "Génération annulée.";
 
 /// L'issue d'un transfert, **typée à la source**.
 ///
@@ -170,12 +186,13 @@ impl TransferError {
 
     /// Le vocabulaire du mode Libre, qui ne connaît que des chaînes.
     ///
-    /// L'annulation y garde **exactement** le message que son appelant attend :
-    /// `generate_native_pack_v1_with_cancel` le propage tel quel, et le typage
-    /// ajouté ici ne change pas un octet de ce que le mode Libre rapporte.
+    /// L’annulation transporte une enveloppe UserMessage encodée, relayée
+    /// telle quelle jusqu’à la frontière IPC ; son détail français est conservé.
     pub(super) fn into_message(self) -> String {
         match self {
-            Self::Cancelled => CANCELLED_MESSAGE.to_string(),
+            Self::Cancelled => {
+                crate::support::user_message::generation_cancelled().into_transport()
+            }
             Self::Write { message, .. } => message,
         }
     }
@@ -209,12 +226,36 @@ pub(crate) struct WrittenNativePack {
 /// même ordre d'entrées, même `assets/` plat, même sidecar de couverture. Ce
 /// writer garde ce qui lui est propre — la sérialisation `story.json` du pack
 /// Libre et la source de couverture d'un projet canonique.
+#[cfg(test)]
 pub(crate) fn write_native_pack_archive(
     asset_report: &NativeAssetPreparationReport,
     story: &StoryDocument,
     output_dir: &Path,
 ) -> Result<WrittenNativePack, String> {
-    let story_json = serialize_story_with_pack_uuid(story, &asset_report.pack_uuid)?;
+    let value: serde_json::Value = serde_json::from_str(&serialize_story_with_pack_uuid(
+        story,
+        &asset_report.pack_uuid,
+    )?)
+    .map_err(|e| e.to_string())?;
+    let identity = super::output_identity::for_story(
+        &value,
+        super::output_identity::OutputForm::Rewritten,
+        None,
+    )
+    .map_err(UserMessage::into_transport)?;
+    write_native_pack_archive_authorized(asset_report, story, output_dir, &identity)
+}
+
+pub(super) fn write_native_pack_archive_authorized(
+    asset_report: &NativeAssetPreparationReport,
+    story: &StoryDocument,
+    output_dir: &Path,
+    identity: &super::output_identity::OutputIdentity,
+) -> Result<WrittenNativePack, String> {
+    let story_json = identity.serialize(&serialize_story_with_pack_uuid(
+        story,
+        &asset_report.pack_uuid,
+    )?)?;
     let zip_path = local_zip_path(output_dir, &asset_report.project.name)
         .map_err(|error| error.to_string())?;
 
@@ -238,6 +279,7 @@ pub(crate) fn write_native_pack_archive(
 
     write_pack_zip(
         &ArchiveContents {
+            identity,
             story_json: &story_json,
             assets,
             thumbnail_png,
@@ -247,17 +289,18 @@ pub(crate) fn write_native_pack_archive(
     .map_err(|error| error.to_string())?;
     Ok(WrittenNativePack {
         zip_path,
-        story_json,
+        story_json: story_json.to_string(),
         has_thumbnail,
     })
 }
 
 pub(super) fn preflight_output_directory(output_dir: &Path) -> Result<(), String> {
     fs::create_dir_all(output_dir).map_err(|e| {
-        format!(
-            "Impossible d'accéder au dossier de destination '{}': {e}",
-            output_dir.display()
-        )
+        UserMessage::new(codes::EXPORT_DESTINATION_FOLDER_INACCESSIBLE)
+            .param("output_dir", (output_dir.display()).to_string())
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
     })?;
 
     let probe_path = output_dir.join(format!(".story-studio-write-test-{}.tmp", Uuid::new_v4()));
@@ -267,22 +310,25 @@ pub(super) fn preflight_output_directory(output_dir: &Path) -> Result<(), String
             .create_new(true)
             .open(&probe_path)
             .map_err(|e| {
-                format!(
-                    "Le dossier de destination '{}' n'autorise pas la création de fichiers: {e}",
-                    output_dir.display()
-                )
+                UserMessage::new(codes::EXPORT_DESTINATION_CREATE_FORBIDDEN)
+                    .param("output_dir", (output_dir.display()).to_string())
+                    .param("reason", (e).to_string())
+                    .with_detail((e).to_string())
+                    .into_transport()
             })?;
         probe.write_all(b"story-studio").map_err(|e| {
-            format!(
-                "Le dossier de destination '{}' n'autorise pas l'écriture de fichiers: {e}",
-                output_dir.display()
-            )
+            UserMessage::new(codes::EXPORT_DESTINATION_WRITE_FORBIDDEN)
+                .param("output_dir", (output_dir.display()).to_string())
+                .param("reason", (e).to_string())
+                .with_detail((e).to_string())
+                .into_transport()
         })?;
         probe.flush().map_err(|e| {
-            format!(
-                "Impossible de terminer le test d'écriture dans '{}': {e}",
-                output_dir.display()
-            )
+            UserMessage::new(codes::EXPORT_DESTINATION_PROBE_FINALIZE_FAILED)
+                .param("output_dir", (output_dir.display()).to_string())
+                .param("reason", (e).to_string())
+                .with_detail((e).to_string())
+                .into_transport()
         })
     })();
 
@@ -292,11 +338,12 @@ pub(super) fn preflight_output_directory(output_dir: &Path) -> Result<(), String
     }
 
     fs::remove_file(&probe_path).map_err(|e| {
-        format!(
-            "Le dossier de destination '{}' n'autorise pas la suppression du fichier de test '{}': {e}",
-            output_dir.display(),
-            probe_path.display()
-        )
+        UserMessage::new(codes::EXPORT_DESTINATION_DELETE_FORBIDDEN)
+            .param("output_dir", (output_dir.display()).to_string())
+            .param("probe_path", (probe_path.display()).to_string())
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
     })
 }
 
@@ -315,10 +362,11 @@ pub(super) fn transfer_completed_zip(
     fs::create_dir_all(output_dir).map_err(|e| {
         TransferError::write(
             output_dir,
-            format!(
-                "Impossible d'accéder au dossier de destination '{}': {e}",
-                output_dir.display()
-            ),
+            UserMessage::new(codes::EXPORT_DESTINATION_FOLDER_INACCESSIBLE)
+                .param("output_dir", (output_dir.display()).to_string())
+                .param("reason", (e).to_string())
+                .with_detail((e).to_string())
+                .into_transport(),
         )
     })?;
 
@@ -336,10 +384,11 @@ pub(super) fn transfer_completed_zip(
         let mut source = fs::File::open(local_zip_path).map_err(|e| {
             TransferError::write(
                 local_zip_path,
-                format!(
-                    "Impossible de relire le ZIP local '{}': {e}",
-                    local_zip_path.display()
-                ),
+                UserMessage::new(codes::EXPORT_LOCAL_ZIP_REVIEW_FAILED)
+                    .param("local_zip_path", (local_zip_path.display()).to_string())
+                    .param("reason", (e).to_string())
+                    .with_detail((e).to_string())
+                    .into_transport(),
             )
         })?;
         let expected_size = source
@@ -347,10 +396,11 @@ pub(super) fn transfer_completed_zip(
             .map_err(|e| {
                 TransferError::write(
                     local_zip_path,
-                    format!(
-                        "Impossible de contrôler la taille du ZIP local '{}': {e}",
-                        local_zip_path.display()
-                    ),
+                    UserMessage::new(codes::EXPORT_LOCAL_ZIP_SIZE_FAILED)
+                        .param("local_zip_path", (local_zip_path.display()).to_string())
+                        .param("reason", (e).to_string())
+                        .with_detail((e).to_string())
+                        .into_transport(),
                 )
             })?
             .len();
@@ -361,10 +411,11 @@ pub(super) fn transfer_completed_zip(
             .map_err(|e| {
                 TransferError::write(
                     &partial_path,
-                    format!(
-                        "Impossible de créer le transfert temporaire '{}': {e}",
-                        partial_path.display()
-                    ),
+                    UserMessage::new(codes::EXPORT_TRANSFER_TEMP_CREATE_FAILED)
+                        .param("partial_path", (partial_path.display()).to_string())
+                        .param("reason", (e).to_string())
+                        .with_detail((e).to_string())
+                        .into_transport(),
                 )
             })?;
 
@@ -378,10 +429,11 @@ pub(super) fn transfer_completed_zip(
             let read = source.read(&mut buffer).map_err(|e| {
                 TransferError::write(
                     local_zip_path,
-                    format!(
-                        "Impossible de lire le ZIP local pendant le transfert '{}': {e}",
-                        local_zip_path.display()
-                    ),
+                    UserMessage::new(codes::EXPORT_TRANSFER_ZIP_READ_FAILED)
+                        .param("local_zip_path", (local_zip_path.display()).to_string())
+                        .param("reason", (e).to_string())
+                        .with_detail((e).to_string())
+                        .into_transport(),
                 )
             })?;
             if read == 0 {
@@ -390,10 +442,11 @@ pub(super) fn transfer_completed_zip(
             partial.write_all(&buffer[..read]).map_err(|e| {
                 TransferError::write(
                     output_dir,
-                    format!(
-                        "Impossible d'écrire le ZIP dans le dossier de destination '{}': {e}",
-                        output_dir.display()
-                    ),
+                    UserMessage::new(codes::EXPORT_DESTINATION_ZIP_WRITE_FAILED)
+                        .param("output_dir", (output_dir.display()).to_string())
+                        .param("reason", (e).to_string())
+                        .with_detail((e).to_string())
+                        .into_transport(),
                 )
             })?;
             transferred_size += read as u64;
@@ -401,10 +454,11 @@ pub(super) fn transfer_completed_zip(
         partial.flush().map_err(|e| {
             TransferError::write(
                 output_dir,
-                format!(
-                    "Impossible de terminer l'écriture du ZIP dans '{}': {e}",
-                    output_dir.display()
-                ),
+                UserMessage::new(codes::EXPORT_ZIP_WRITE_FINALIZE_FAILED)
+                    .param("output_dir", (output_dir.display()).to_string())
+                    .param("reason", (e).to_string())
+                    .with_detail((e).to_string())
+                    .into_transport(),
             )
         })?;
         drop(partial);
@@ -413,20 +467,23 @@ pub(super) fn transfer_completed_zip(
             .map_err(|e| {
                 TransferError::write(
                     &partial_path,
-                    format!(
-                        "Impossible de vérifier le transfert temporaire '{}': {e}",
-                        partial_path.display()
-                    ),
+                    UserMessage::new(codes::EXPORT_TRANSFER_TEMP_VERIFY_FAILED)
+                        .param("partial_path", (partial_path.display()).to_string())
+                        .param("reason", (e).to_string())
+                        .with_detail((e).to_string())
+                        .into_transport(),
                 )
             })?
             .len();
         if transferred_size != expected_size || published_size != expected_size {
             return Err(TransferError::write(
                 output_dir,
-                format!(
-                    "Le transfert du ZIP vers '{}' est incomplet (attendu: {expected_size} octets, transféré: {transferred_size}, présent: {published_size}).",
-                    output_dir.display()
-                ),
+                UserMessage::new(codes::EXPORT_ZIP_TRANSFER_INCOMPLETE)
+                    .param("output_dir", (output_dir.display()).to_string())
+                    .param("expected_size", (expected_size).to_string())
+                    .param("transferred_size", (transferred_size).to_string())
+                    .param("published_size", (published_size).to_string())
+                    .into_transport(),
             ));
         }
 
@@ -436,11 +493,12 @@ pub(super) fn transfer_completed_zip(
         fs::rename(&partial_path, &final_path).map_err(|e| {
             TransferError::write(
                 &final_path,
-                format!(
-                    "Le ZIP a été transféré, mais son renommage final de '{}' vers '{}' a échoué: {e}",
-                    partial_path.display(),
-                    final_path.display()
-                ),
+                UserMessage::new(codes::EXPORT_ZIP_RENAME_FAILED)
+                    .param("partial_path", (partial_path.display()).to_string())
+                    .param("final_path", (final_path.display()).to_string())
+                    .param("reason", (e).to_string())
+                    .with_detail((e).to_string())
+                    .into_transport(),
             )
         })?;
         Ok(final_path.clone())
@@ -458,10 +516,11 @@ pub(super) fn transfer_completed_zip(
                 // rapporter — une annulation propre, elle, ne laisse rien.
                 return Err(TransferError::write(
                     &partial_path,
-                    format!(
-                        "Le fichier incomplet '{}' n'a pas pu être supprimé après l'arrêt du transfert: {cleanup_error}",
-                        partial_path.display()
-                    ),
+                    UserMessage::new(codes::EXPORT_PARTIAL_FILE_DELETE_FAILED)
+                        .param("partial_path", (partial_path.display()).to_string())
+                        .param("reason", (cleanup_error).to_string())
+                        .with_detail((cleanup_error).to_string())
+                        .into_transport(),
                 ));
             }
         }
@@ -479,15 +538,20 @@ pub(super) fn transfer_completed_zip(
 pub(super) fn libre_pack_identity(pack_uuid: &str) -> Result<&str, String> {
     let identity = pack_uuid.trim();
     if identity.is_empty() {
-        return Err(
-            "Identité de pack absente : elle doit être choisie et persistée avant l'export."
-                .to_string(),
-        );
+        return Err(UserMessage::new(codes::EXPORT_PACK_IDENTITY_REQUIRED).into_transport());
     }
     match pack_identity_refusal(identity) {
-        Some(refusal) => Err(format!(
-            "{refusal} Le corriger, ou en générer un nouveau, dans la fenêtre des métadonnées du pack."
-        )),
+        Some(refusal) => Err(
+            UserMessage::new(codes::VALIDATION_PACK_IDENTITY_REPAIR_ADVICE)
+                .param(
+                    "refusal",
+                    UserMessage::new(codes::PACK_IDENTITY_UNREADABLE)
+                        .param("identity", identity)
+                        .with_detail(refusal)
+                        .into_transport(),
+                )
+                .into_transport(),
+        ),
         None => Ok(identity),
     }
 }
@@ -508,17 +572,22 @@ pub(super) fn serialize_story_with_pack_uuid(
         .as_deref()
         .is_none_or(|uuid| uuid.trim().is_empty())
     {
-        return Err(
-            "Identité de pack absente : elle doit être choisie et persistée avant l'export."
-                .to_string(),
-        );
+        return Err(UserMessage::new(codes::EXPORT_PACK_IDENTITY_REQUIRED).into_transport());
     }
     restore_required_media_keys(&mut story);
     refuse_incomplete_control_settings(&story)?;
-    let story_value = serde_json::to_value(&story)
-        .map_err(|e| format!("Impossible de serialiser story.json natif : {}", e))?;
-    serde_json::to_string_pretty(&story_value)
-        .map_err(|e| format!("Impossible de serialiser story.json natif : {}", e))
+    let story_value = serde_json::to_value(&story).map_err(|e| {
+        UserMessage::new(codes::GENERATION_STORY_JSON_ENCODE_FAILED)
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })?;
+    serde_json::to_string_pretty(&story_value).map_err(|e| {
+        UserMessage::new(codes::GENERATION_STORY_JSON_ENCODE_FAILED)
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })
 }
 
 /// Rétablit `audio` et `image` sur la **copie de sortie** du pack Libre.
@@ -562,11 +631,11 @@ fn refuse_incomplete_control_settings(story: &StoryDocument) -> Result<(), Strin
     if incomplete.is_empty() {
         return Ok(());
     }
-    Err(format!(
-        "Contrôles incomplets : {} n'ont pas leurs cinq valeurs (wheel, ok, home, pause, autoplay). \
-         Renseignez-les explicitement avant de générer le pack : elles ne peuvent pas être déduites.",
-        incomplete.join(", ")
-    ))
+    Err(
+        UserMessage::new(codes::VALIDATION_STAGE_CONTROLS_INCOMPLETE)
+            .param("incomplete", (incomplete.join(", ")).to_string())
+            .into_transport(),
+    )
 }
 
 fn thumbnail_source_path(project: &CanonicalProject) -> Option<String> {
@@ -582,13 +651,27 @@ fn thumbnail_source_path(project: &CanonicalProject) -> Option<String> {
 /// d'entrée : la couverture dérive du média que la préparation a déjà
 /// contrôlé, jamais d'une seconde lecture du fichier d'origine.
 pub(super) fn encode_thumbnail_png(thumbnail: &Path) -> Result<Vec<u8>, String> {
-    let bytes = fs::read(thumbnail).map_err(|e| format!("Lecture thumbnail impossible : {}", e))?;
-    let image = image::load_from_memory(&bytes)
-        .map_err(|e| format!("Image thumbnail illisible : {}", e))?;
+    let bytes = fs::read(thumbnail).map_err(|e| {
+        UserMessage::new(codes::IMPORT_THUMBNAIL_READ_FAILED)
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })?;
+    let image = image::load_from_memory(&bytes).map_err(|e| {
+        UserMessage::new(codes::GENERATION_THUMBNAIL_IMAGE_UNREADABLE)
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })?;
     let mut output = Vec::new();
     image
         .write_to(&mut Cursor::new(&mut output), image::ImageFormat::Png)
-        .map_err(|e| format!("Encodage thumbnail PNG impossible : {}", e))?;
+        .map_err(|e| {
+            UserMessage::new(codes::GENERATION_THUMBNAIL_ENCODE_FAILED)
+                .param("reason", (e).to_string())
+                .with_detail((e).to_string())
+                .into_transport()
+        })?;
     Ok(output)
 }
 

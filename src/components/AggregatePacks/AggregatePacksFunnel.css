@@ -258,3 +258,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+.aggregate-destination {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--border);
+}
+
+.aggregate-destination label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.aggregate-review {
+  overflow-wrap: anywhere;
+}
+
+.aggregate-destination input:focus-visible,
+.aggregate-review button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}

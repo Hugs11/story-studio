@@ -11,7 +11,6 @@
 // porte.
 
 import {
-  ArrowRight,
   FileArchive,
   Folder,
   FolderOpen,
@@ -23,7 +22,6 @@ import {
   Waypoints,
 } from './LucideLocal';
 import {
-  ICON_ARROW_RIGHT,
   ICON_FILE_ARCHIVE,
   ICON_FOLDER,
   ICON_FOLDER_OPEN,
@@ -42,7 +40,6 @@ const COMPONENT_BY_ICON_NAME = Object.freeze({
   [ICON_FOLDER_OPEN]: FolderOpen,
   [ICON_MUSIC]: Music,
   [ICON_FILE_ARCHIVE]: FileArchive,
-  [ICON_ARROW_RIGHT]: ArrowRight,
   [ICON_SQUARE]: Square,
   [ICON_FULLSCREEN]: Fullscreen,
   [ICON_MOON]: Moon,

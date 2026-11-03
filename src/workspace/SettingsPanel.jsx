@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useMemo } from 'react';
 import { NodeEditorContent } from '../components/editors/NodeEditorContent';
 import { EndNodeEditor } from '../components/editors/EndNodeEditor';
@@ -16,12 +17,16 @@ export function SettingsPanel({
   projectIndex,
   afterPlayFocus = null,
   onAfterPlayFocusConsumed,
+  autoNextFocus = null,
+  onAutoNextFocusConsumed,
   header = null,
 }) {
+  const { t } = useTranslation('settings');
   const {
     onUpdateRoot,
     onUpdateMedia,
     onUpdateStoryAudio,
+    onUpdateGlobalOption,
     onUpdateMenu,
     onDeleteMenu,
     onUpdateItem,
@@ -49,7 +54,7 @@ export function SettingsPanel({
   if (!isMultiSelect && selectedId === END_NODE_ID) {
     content = (
       <EndNodeEditor
-        endNodeName={project.endNodeName || 'Message de fin'}
+        endNodeName={project.endNodeName || t('settings:panel.end.fallback')}
         nightModeAudio={project.nightModeAudio}
         nightModeActive={!!project.globalOptions?.nightMode}
         nightModeReturn={project.nightModeReturn ?? null}
@@ -73,7 +78,7 @@ export function SettingsPanel({
     const count = selectedIds.size;
     content = (
       <>
-        <div className="multiselect-hint">{count} éléments sélectionnés — modification groupée</div>
+        <div className="multiselect-hint">{t('settings:panel.multi.description', { count })}</div>
         <NodeEditorContent
           node={node}
           selectedIds={selectedIds}
@@ -84,6 +89,7 @@ export function SettingsPanel({
           onUpdateRoot={onUpdateRoot}
           onUpdateMedia={onUpdateMedia}
           onUpdateStoryAudio={onUpdateStoryAudio}
+          onUpdateOption={onUpdateGlobalOption}
           onUpdateMenu={onUpdateMenu}
           onDeleteMenu={onDeleteMenu}
           onUpdateItem={onUpdateItem}
@@ -92,6 +98,8 @@ export function SettingsPanel({
           onBulkDeleteItems={onBulkDeleteItems}
           afterPlayFocus={afterPlayFocus}
           onAfterPlayFocusConsumed={onAfterPlayFocusConsumed}
+          autoNextFocus={autoNextFocus}
+          onAutoNextFocusConsumed={onAutoNextFocusConsumed}
         />
       </>
     );
@@ -106,12 +114,15 @@ export function SettingsPanel({
         onUpdateRoot={onUpdateRoot}
         onUpdateMedia={onUpdateMedia}
         onUpdateStoryAudio={onUpdateStoryAudio}
+        onUpdateOption={onUpdateGlobalOption}
         onUpdateMenu={onUpdateMenu}
         onDeleteMenu={onDeleteMenu}
         onUpdateItem={onUpdateItem}
         onDeleteItem={onDeleteItem}
         afterPlayFocus={afterPlayFocus}
         onAfterPlayFocusConsumed={onAfterPlayFocusConsumed}
+        autoNextFocus={autoNextFocus}
+        onAutoNextFocusConsumed={onAutoNextFocusConsumed}
       />
     );
   }

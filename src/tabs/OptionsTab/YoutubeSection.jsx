@@ -1,13 +1,18 @@
+import { TechnicalDetail } from '../../components/common/UserMessage.jsx';
+import { Trans, useTranslation } from 'react-i18next';
+import { useMessageLanguage } from '../../i18n/useMessageLanguage.js';
+import { presentUserMessage, presentStoredError } from '../../i18n/userMessage.js';
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { Button } from '../../components/common/Button';
 import { KEYS, read as readSetting, write } from '../../store/persistentSettings';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
-import { errorMessage } from '../../utils/youtubeErrors.js';
 import { releaseTauriListener } from '../../utils/tauriListener';
 
 export function YoutubeSection({ className, sectionRef }) {
+  const { t } = useTranslation('settings');
+  useMessageLanguage();
   const [ytDlpPath, setYtDlpPath] = useState(() => readSetting(KEYS.YTDLP_CUSTOM_PATH, { defaultValue: '' }));
   const [ytDlpUpdate, setYtDlpUpdate] = useState({ state: 'idle', message: '' });
 
@@ -18,7 +23,7 @@ export function YoutubeSection({ className, sectionRef }) {
     let unlisten = null;
     listen('youtube-log', (event) => {
       if (cancelled) return;
-      setYtDlpUpdate((prev) => (prev.state === 'loading' ? { ...prev, message: String(event.payload) } : prev));
+      setYtDlpUpdate((prev) => (prev.state === 'loading' ? { ...prev, message: event.payload } : prev));
     }).then((fn) => {
       if (cancelled) releaseTauriListener(fn);
       else unlisten = fn;
@@ -32,55 +37,46 @@ export function YoutubeSection({ className, sectionRef }) {
   }
 
   async function handleUpdateYtDlp() {
-    setYtDlpUpdate({ state: 'loading', message: 'Mise à jour de yt-dlp…' });
+    setYtDlpUpdate({ state: 'loading', message: { key: 'settings:youtube.update.progress' } });
     try {
       await invoke('update_ytdlp');
-      setYtDlpUpdate({ state: 'ok', message: 'yt-dlp est à jour.' });
+      setYtDlpUpdate({ state: 'ok', message: { key: 'settings:youtube.update.success' } });
     } catch (e) {
-      setYtDlpUpdate({ state: 'error', message: errorMessage(e) });
+      setYtDlpUpdate({ state: 'error', message: { userMessage: e, codedOnly: true } });
     }
   }
 
   return (
     <section id="youtube" className={className} ref={sectionRef}>
-      <div className="opts-card-title">YouTube (yt-dlp)</div>
-      <div className="opts-help">
-        Le funnel « Pack depuis YouTube » télécharge automatiquement yt-dlp au premier usage et le
-        garde à jour, ainsi que le moteur JavaScript Deno (environ 40 Mo) dont yt-dlp a besoin pour
-        lire YouTube de façon fiable. YouTube bloquant les versions périmées, ces réglages ne servent
-        qu'en cas de souci.
-      </div>
+      <div className="opts-card-title">{t('settings:youtube.section.title')}</div>
+      <div className="opts-help">{t('settings:youtube.help.description')}</div>
       <div className="opts-row">
         <div className="opts-row-info">
-          <div className="opts-row-label">Mettre à jour yt-dlp maintenant</div>
-          <div className="opts-row-sub">
-            Force le téléchargement de la dernière version de yt-dlp et installe le moteur JavaScript
-            s'il manque. Utile si un import échoue avec un message de version obsolète.
-          </div>
+          <div className="opts-row-label">{t('settings:youtube.update.label')}</div>
+          <div className="opts-row-sub">{t('settings:youtube.update.description')}</div>
         </div>
         <Button onClick={handleUpdateYtDlp} disabled={ytDlpUpdate.state === 'loading'} style={{ flexShrink: 0 }}>
-          {ytDlpUpdate.state === 'loading' ? 'Mise à jour…' : 'Mettre à jour'}
+          {ytDlpUpdate.state === 'loading' ? t('settings:youtube.update.busy') : t('settings:youtube.update.action')}
         </Button>
       </div>
       {ytDlpUpdate.state !== 'idle' && (
         <div className={`info-box ${ytDlpUpdate.state === 'error' ? 'warn' : ''}`}>
-          {ytDlpUpdate.message}
+          {presentStoredError(ytDlpUpdate.message)}
+              {ytDlpUpdate.state === 'error' && <TechnicalDetail value={presentUserMessage(ytDlpUpdate.message?.params?.message?.userMessage ?? ytDlpUpdate.message?.userMessage).technicalDetail} />}
         </div>
       )}
       <div className="opts-row">
         <div className="opts-row-info">
-          <div className="opts-row-label">Chemin yt-dlp personnalisé</div>
+          <div className="opts-row-label">{t('settings:youtube.path.label')}</div>
           <div className="opts-row-sub">
-            Laisse vide pour utiliser la version gérée automatiquement. Renseigne le chemin complet
-            d'un exécutable <code>yt-dlp.exe</code> sous Windows ou <code>yt-dlp</code> sous
-            Linux/macOS pour l'utiliser à la place (le téléchargement auto est alors ignoré).
+            <Trans i18nKey="settings:youtube.path.description" components={{ windows: <code />, unix: <code /> }} />
           </div>
         </div>
         <input
           className="xtts-input"
           type="text"
           spellCheck={false}
-          placeholder="Chemin complet vers yt-dlp"
+          placeholder={t('settings:youtube.path.placeholder')}
           value={ytDlpPath}
           onChange={(event) => handleYtDlpPathChange(event.target.value)}
           style={{ flex: 1, minWidth: 0 }}

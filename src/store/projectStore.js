@@ -1,4 +1,7 @@
-import { useState, useCallback, useRef } from 'react';
+import { HomeText } from '../i18n/useHomeTranslation.js';
+import { translateHome as t } from '../i18n/homePresentation.js';
+import { ensureProjectStorage } from './projectStorage.js';
+import { createElement, useState, useCallback, useRef } from 'react';
 import {
   appendEntry,
   appendEntries,
@@ -17,14 +20,18 @@ import {
   moveEntriesToContainer,
   MENU_CYCLE_CODE,
   MENU_CYCLE_PASTE_MESSAGE,
+  MENU_CYCLE_PASTE_MESSAGE_REF,
   MENU_CYCLE_PASTE_TITLE,
+  MENU_CYCLE_PASTE_TITLE_REF,
   MENU_DEPTH_LIMIT_CODE,
   MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+  MENU_DEPTH_LIMIT_REACHED_REF,
   MENU_DEPTH_LIMIT_TITLE,
+  MENU_DEPTH_LIMIT_TITLE_REF,
   makeId,
   normalizeProjectData,
-  removeEntryCascadingRefs,
-  removeEntriesCascadingRefs,
+  removeEntry,
+  removeEntries,
   reorderMenuVisibleChildren,
   reorderRootVisibleEntries,
   reorderTopLevelMenus,
@@ -138,8 +145,10 @@ function applyPromotedMenuDefaultsToChild(child, promotedMenu) {
 }
 
 export function useProjectStore() {
-  const [project, setProjectRaw] = useState(DEFAULT_PROJECT);
+  const [project, setProjectRaw] = useState(() => ensureProjectStorage({ ...DEFAULT_PROJECT, rootName: t('home:project.creation.rootName'), endNodeName: t('home:project.creation.endName') }));
   const projectMutationRef = useRef(project);
+  // Le choix du mode, pas le rendu de l’accueil, capture les noms proposés.
+  const creationNamesPendingRef = useRef(true);
   const [selectedId, setSelectedId] = useState('root');
   const [savePath, setSavePath] = useState(null); // chemin du .mbah sauvegardé
   const historyRef = useRef([]);
@@ -161,7 +170,14 @@ export function useProjectStore() {
   const canRedo = redoRef.current.length > 0;
 
   // Tags médias — state séparé (hors undo), persisté dans le .mbah
-  const [mediaTags, setMediaTagsRaw] = useState({});
+  const [mediaTags, setMediaTagsState] = useState({});
+  const mediaTagsMutationRef = useRef(mediaTags);
+  const setMediaTagsRaw = useCallback((updater) => {
+    const next = typeof updater === 'function' ? updater(mediaTagsMutationRef.current) : updater;
+    mediaTagsMutationRef.current = next;
+    setMediaTagsState(next);
+  }, []);
+  const readMediaTags = useCallback(() => mediaTagsMutationRef.current, []);
 
   // Toute modification passe par ici pour alimenter l'historique
   const setProject = useCallback((updater) => {
@@ -185,6 +201,8 @@ export function useProjectStore() {
       code: MENU_DEPTH_LIMIT_CODE,
       title: MENU_DEPTH_LIMIT_TITLE,
       message: MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+      titleRef: MENU_DEPTH_LIMIT_TITLE_REF,
+      messageRef: MENU_DEPTH_LIMIT_REACHED_REF,
     };
     setMutationError(rejection);
     return rejection;
@@ -236,6 +254,11 @@ export function useProjectStore() {
     setProjectRaw(step.project);
   }, []);
 
+  // Repère opaque de l'historique : la pile d'undo est remplacée (jamais
+  // mutée) à chaque étape, undo, redo, relocalisation ou remplacement du
+  // travail. Deux lectures égales disent qu'aucune étape n'a bougé entre-temps.
+  const readHistoryMark = useCallback(() => historyRef.current, []);
+
   // Une sauvegarde qui déplace des médias (promotion d'une session) repointe le
   // projet courant hors historique : les piles doivent suivre, sinon annuler
   // restaurerait des chemins supprimés avec la session. Voir `relocateWorkHistory`.
@@ -252,12 +275,14 @@ export function useProjectStore() {
   // ── Projet ──────────────────────────────────────────────────────────────────
 
   const resetProject = useCallback(() => {
+    creationNamesPendingRef.current = true;
     workEpochRef.current += 1;
     historyRef.current = [];
     redoRef.current = [];
     pristineRef.current = null;
-    setProjectRaw(DEFAULT_PROJECT);
-    projectMutationRef.current = DEFAULT_PROJECT;
+    const fresh = ensureProjectStorage({ ...DEFAULT_PROJECT, rootName: t('home:project.creation.rootName'), endNodeName: t('home:project.creation.endName') });
+    setProjectRaw(fresh);
+    projectMutationRef.current = fresh;
     setSelectedId('root');
     setSavePath(null);
     setMediaTagsRaw({});
@@ -273,7 +298,8 @@ export function useProjectStore() {
     historyRef.current = [];
     redoRef.current = [];
     pristineRef.current = null;
-    const normalized = normalizeWorkProject(data);
+    const normalized = normalizeWorkProject(ensureProjectStorage(data));
+    creationNamesPendingRef.current = false;
     projectMutationRef.current = normalized;
     setProjectRaw(normalized);
     setSelectedId('root');
@@ -354,7 +380,11 @@ export function useProjectStore() {
   const readProject = useCallback(() => projectMutationRef.current, []);
 
   const setProjectType = useCallback((type) => {
-    const current = projectMutationRef.current;
+    const acquired = projectMutationRef.current;
+    const current = creationNamesPendingRef.current
+      ? { ...acquired, rootName: t('home:project.creation.rootName'), endNodeName: t('home:project.creation.endName') }
+      : acquired;
+    creationNamesPendingRef.current = false;
     const project = current.packMetadata?.uuid
       ? current
       : {
@@ -444,7 +474,7 @@ export function useProjectStore() {
   // ── Menus ─────────────────────────────────────────────────────────────────
 
   const addMenu = useCallback((parentMenuId = null) => {
-    const newMenu = createMenuEntry();
+    const newMenu = createMenuEntry({ name: t('home:project.creation.folderName') });
     const current = projectMutationRef.current;
     const diagnostic = validateMenuDepthPlacement(current, parentMenuId, [newMenu]);
     const outcome = commitDepthMutation(
@@ -461,7 +491,7 @@ export function useProjectStore() {
   }, [setProject]);
 
   const deleteMenu = useCallback((menuId) => {
-    setProject(p => removeEntryCascadingRefs(p, menuId));
+    setProject(p => removeEntry(p, menuId));
     setSelectedId('root');
   }, [setProject]);
 
@@ -503,7 +533,7 @@ export function useProjectStore() {
       const currentEntries = p.rootEntries ?? [];
       if (!currentEntries.length) return p;
       const newMenu = createMenuEntry({
-        name: p.rootName || p.packMetadata?.title || p.projectName || 'Pack',
+        name: p.rootName || p.packMetadata?.title || p.projectName || t('home:project.creation.packName'),
         audio: p.rootAudio ?? null,
         image: p.rootImage ?? null,
         children: currentEntries,
@@ -534,9 +564,8 @@ export function useProjectStore() {
       if (!simpleStory || !audioPath) return null;
       if (simpleStory.audio) {
         setMutationError({
-          title: 'Audio du récit',
-          message: "L'histoire a déjà un audio du récit. Pour le remplacer, "
-            + "utilise le champ « Audio du récit ».",
+          title: createElement(HomeText, { messageKey: 'home:project.audio.errorTitle' }),
+          message: { key: 'home:project.audio.alreadySet', params: {} },
         });
         return null;
       }
@@ -547,7 +576,7 @@ export function useProjectStore() {
     const explicitName = typeof options.name === 'string' ? options.name.trim() : '';
     const hasImportedAudio = !!audioPath;
     const newStory = createStoryEntry({
-      name: explicitName || autoName || 'Nouvelle histoire',
+      name: explicitName || autoName || t('home:project.creation.storyName'),
       audio: audioPath || null,
       ...(hasImportedAudio
         ? {
@@ -567,20 +596,19 @@ export function useProjectStore() {
     return newStory.id;
   }, [setProject]);
 
-  const addZip = useCallback((menuId, zipPath, preferredName = null, coverImage = null, coverAudio = null) => {
+  const addZip = useCallback((menuId, zipPath, preferredName = null, coverImage = null, coverAudio = null, packIdentity = {}) => {
     if (projectMutationRef.current.projectType === 'simple') {
       // Un projet simple n'a qu'une histoire : un pack ajouté serait une
       // seconde entrée racine, ni affichée ni générée.
       setMutationError({
-        title: 'Projet simple',
-        message: "Un projet simple ne contient qu'une histoire : on ne peut pas y ajouter "
-          + "un pack (.zip). Pour réunir plusieurs packs, crée un projet dans l'éditeur par menus.",
+        title: createElement(HomeText, { messageKey: 'home:project.simple.errorTitle' }),
+        message: { key: 'home:project.simple.zipRefused', params: {} },
       });
       return null;
     }
     const rawName = preferredName || basenameNoExt(zipPath);
-    const name = sanitizeImportedName(rawName, 'ZIP importe');
-    const newZip = createZipEntry({ name, zipPath: zipPath || null, coverImage, coverAudio });
+    const name = sanitizeImportedName(rawName, t('home:project.creation.importedZip'));
+    const newZip = createZipEntry({ name, zipPath: zipPath || null, coverImage, coverAudio, ...packIdentity });
     setProject(p => appendEntry(p, menuId, newZip));
     setSelectedId(newZip.id);
     return newZip.id;
@@ -602,12 +630,12 @@ export function useProjectStore() {
   }, [setProject]);
 
   const bulkDeleteItems = useCallback((ids) => {
-    setProject(p => removeEntriesCascadingRefs(p, ids));
+    setProject(p => removeEntries(p, ids));
     setSelectedId('root');
   }, [setProject]);
 
   const deleteItem = useCallback((itemId) => {
-    setProject(p => removeEntryCascadingRefs(p, itemId));
+    setProject(p => removeEntry(p, itemId));
     setSelectedId('root');
   }, [setProject]);
 
@@ -652,6 +680,8 @@ export function useProjectStore() {
         code: MENU_CYCLE_CODE,
         title: MENU_CYCLE_PASTE_TITLE,
         message: MENU_CYCLE_PASTE_MESSAGE,
+        titleRef: MENU_CYCLE_PASTE_TITLE_REF,
+        messageRef: MENU_CYCLE_PASTE_MESSAGE_REF,
       };
       setMutationError(rejection);
       return rejection;
@@ -745,7 +775,7 @@ export function useProjectStore() {
     mutationError, clearMutationError,
     savePath, setSavePath,
     selectedId, setSelectedId,
-    canUndo, undo, canRedo, redo, relocateHistory,
+    canUndo, undo, canRedo, redo, relocateHistory, readHistoryMark,
     setProjectType, updateStoryAudio,
     updateProjectName, updatePackMetadata, updateRootMedia, updateGlobalOption, updateGlobalEndMessage, updateGlobalEndPlayback, addGlobalEndMessage, attachStoryEndToGlobal, removeGlobalEndMessage,
     addMenu, updateMenu, deleteMenu, promoteMenuToRoot, demoteRootToMenu,
@@ -755,6 +785,6 @@ export function useProjectStore() {
     removeMediaReferences,
     reorderMenuItems, reorderRootItems, reorderMenus, moveItemToMenu,
     getSelectedNode, getParentMenuId,
-    mediaTags, setMediaTags, addMediaTag, removeMediaTag, deleteMediaTag, deleteMediaTagsForPath,
+    mediaTags, readMediaTags, setMediaTags, addMediaTag, removeMediaTag, deleteMediaTag, deleteMediaTagsForPath,
   };
 }

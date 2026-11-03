@@ -5,7 +5,7 @@
 // la plupart des gestes aient un effet observable). Chaque pression relève un
 // effet observable (fait, pas un jugement d'interface) ; aucune ne doit
 // déclencher d'erreur console, et aucune ne doit agir pendant qu'une modale
-// est ouverte (Préférences, Ctrl+Maj+O).
+// est ouverte (Préférences, Ctrl+,).
 import { launchApp } from '../lib/launch.mjs';
 import { createRun } from '../lib/run-context.mjs';
 import { importPack } from '../lib/actions.mjs';
@@ -17,7 +17,7 @@ const SHORTCUTS_TO_TRY = [
   { id: 'saveProject', keys: 'Control+s', writes: false, label: 'Enregistrer le projet' },
   { id: 'treeSearch', keys: 'Control+f', writes: false, label: 'Rechercher dans la structure' },
   { id: 'toggleValidation', keys: 'Control+Shift+e', writes: false, label: 'Ouvrir les éléments à corriger' },
-  { id: 'storySettings', keys: 'Control+,', writes: false, label: 'Options du pack' },
+  { id: 'tabOptions', keys: 'Control+,', writes: false, label: 'Préférences' },
   { id: 'selectionRename', keys: 'F2', writes: true, label: 'Renommer', needsSelection: true },
   { id: 'selectionCopy', keys: 'Control+c', writes: false, label: 'Copier la sélection', needsSelection: true },
   { id: 'selectionDuplicate', keys: 'Control+d', writes: true, label: 'Dupliquer la sélection', needsSelection: true },
@@ -76,7 +76,7 @@ export async function run() {
         const afterCounts = await page.locator('li[role="option"]').count();
         observed = JSON.stringify({ nodeCountBefore: beforeCounts, nodeCountAfter: afterCounts, modalBefore, modalAfter });
         // Referme une éventuelle modale ouverte par le raccourci (Préférences,
-        // Options du pack…) avant le raccourci suivant.
+        // …) avant le raccourci suivant.
         if (modalAfter > modalBefore) {
           await page.keyboard.press('Escape');
           await page.waitForTimeout(300);

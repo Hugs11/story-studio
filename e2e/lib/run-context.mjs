@@ -1,13 +1,29 @@
 // Contexte commun d'un parcours : dossier d'exécution, captures numérotées,
 // étapes et verdict final écrit dans `result.json`.
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { config } from './config.mjs';
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { REPO_DIR, config } from './config.mjs';
 
 export function createRun(name) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const runDir = join(config.workDir, 'runs', `${name}-${stamp}`);
   mkdirSync(runDir, { recursive: true });
+  const git = (...args) => execFileSync('git', args, { cwd: REPO_DIR, maxBuffer: 64 * 1024 * 1024 });
+  const diff = git('diff', '--binary', 'HEAD');
+  const untracked = git('ls-files', '--others', '--exclude-standard', '-z', '--', 'e2e').toString().split('\0').filter(Boolean);
+  const untrackedSha256 = Object.fromEntries(untracked.map(path => [path,
+    createHash('sha256').update(readFileSync(join(REPO_DIR, path))).digest('hex')]));
+  const provenance = {
+    head: git('rev-parse', 'HEAD').toString().trim(),
+    diffSha256: createHash('sha256').update(diff).digest('hex'),
+    args: process.argv.slice(2),
+    untrackedSha256,
+    status: git('status', '--porcelain=v1').toString(),
+  };
+  writeFileSync(join(runDir, 'code.diff'), diff);
+  writeFileSync(join(runDir, 'provenance.json'), JSON.stringify(provenance, null, 2) + '\n');
   const steps = [];
   let shots = 0;
   return {

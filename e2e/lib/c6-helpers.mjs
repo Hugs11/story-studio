@@ -55,14 +55,16 @@ export const LEGACY_SHORTCUTS_098 = {
 // `KeyboardShortcutsModal.jsx`) : le libellé du raccourci tel que `formatShortcut`
 // le rend. `Ctrl` est affiché littéralement sous Windows (`commandKeyLabel`).
 export const EXPECTED_AFTER_MIGRATION = {
-  'Copier la sélection': 'Ctrl+Shift+C', // treeCopy -> selectionCopy
+  // e65bff95 : nom localisé de Shift en français ; combinaison inchangée.
+  'Copier la sélection': 'Ctrl+Maj+C', // treeCopy -> selectionCopy
   'Couper la sélection': 'Ctrl+Alt+X', // diagramCut (seul personnalisé) -> selectionCut
   'Coller': 'Ctrl+Alt+V', // treePaste gagne sur diagramPaste -> selectionPaste
   'Supprimer la sélection': 'Suppr', // ni tree ni diagram personnalisés -> défaut inchangé
   'Annuler': 'Ctrl+Alt+U', // undo, personnalisation simple sans migration d'id
   'Préférences': 'Ctrl+Alt+P', // tabOptions, pas un ancien défaut -> conservé
-  "Afficher/masquer l'arbre": 'Ctrl+Shift+1', // toggleTree, personnalisation préservée
-  'Rétablir': 'Ctrl+Shift+Z', // redo, valeur stockée corrompue -> repli sur le défaut
+  // c50ce2032 : apostrophe typographique dans le libellé FR exact.
+  'Afficher/masquer l’arbre': 'Ctrl+Maj+1', // toggleTree, personnalisation préservée
+  'Rétablir': 'Ctrl+Maj+Z', // redo, valeur stockée corrompue -> repli sur le défaut
 };
 
 // Quelques préférences non liées aux raccourcis, dans leur forme brute
@@ -119,6 +121,7 @@ export async function seedLegacyProfile098(page, { shortcuts = LEGACY_SHORTCUTS_
   }, entries);
   await page.reload();
   await page.waitForLoadState('domcontentloaded');
+  await page.getByText('Modifier un pack existant', { exact: true }).waitFor({ timeout: 60_000 });
   return entries;
 }
 

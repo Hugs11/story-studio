@@ -27,6 +27,7 @@ import { answerNext } from '../lib/dialogs.mjs';
 import { dropFiles } from '../lib/drop.mjs';
 import { openProjectDialog } from '../lib/c2-helpers.mjs';
 import { readbackPack } from '../lib/oracles.mjs';
+import { correctDiagnostic } from '../lib/diagnostics.mjs';
 import { reducedEntries } from '../lib/reduced-corpus.mjs';
 import { luniiqtVerdict } from '../luniiqt/luniiqt.mjs';
 
@@ -43,10 +44,6 @@ const PICKS = {
   publishedExample: () => pick((e) => (e.cases ?? []).includes('ui:exemple-publie')),
 };
 
-const FIX_LABELS = {
-  'disable-home': /Désactiver le bouton Accueil/,
-  'clear-home-transition': /Retirer la destination Accueil/,
-};
 
 export async function run() {
   const ctx = createRun('release-ui');
@@ -144,14 +141,7 @@ export async function run() {
       if (before.count !== fixable.expect.blocking.length) {
         return { ok: false, reason: `à corriger attendu ${fixable.expect.blocking.length}, affiché ${before.count}` };
       }
-      // La pastille ouvre son panneau au survol ; un clic de plus le refermerait.
-      const pill = app.page.locator('[data-toolbar-id="toggleValidation"]').first();
-      const panel = app.page.locator('[aria-label="Éléments à corriger"]');
-      await pill.hover();
-      if (!(await panel.waitFor({ timeout: 5_000 }).then(() => true, () => false))) await pill.click();
-      await panel.waitFor({ timeout: 15_000 });
-      await clickButton(panel, FIX_LABELS[fixable.expect.afterFix.resolution], { timeout: 15_000 });
-      await app.page.keyboard.press('Escape').catch(() => {});
+      await correctDiagnostic(app.page, fixable.expect.afterFix.resolution);
       const after = await waitValidationSettled(app.page);
       if (after.count !== 0) return { ok: false, reason: `encore ${after.count} à corriger après la correction` };
       return generateAndRead('5-apres-correction');

@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -102,8 +103,13 @@ fn preprocess_request(
             )
         }
         AssetSourceKind::Image => {
-            let raw = fs::read(&request.source_path)
-                .map_err(|e| format!("Lecture image '{}' : {}", request.role, e))?;
+            let raw = fs::read(&request.source_path).map_err(|e| {
+                UserMessage::new(codes::LABEL_IMAGE_READ_OPERATION)
+                    .param("request_role", (request.role).to_string())
+                    .param("reason", (e).to_string())
+                    .with_detail((e).to_string())
+                    .into_transport()
+            })?;
             // Le sort de l'image se décide sur ses **octets**, jamais sur son
             // nom : un JPEG appelé `.png` partait sous une extension que les
             // passerelles figées croient, et un format hors liste fermée déjà
@@ -126,7 +132,7 @@ fn preprocess_request(
         }
         AssetSourceKind::Audio => {
             let ffmpeg = ffmpeg.ok_or_else(|| {
-                "ffmpeg requis pour la preparation audio native mais introuvable.".to_string()
+                UserMessage::new(codes::GENERATION_AUDIO_FFMPEG_MISSING).into_transport()
             })?;
             let prepared = prepare_audio_asset(
                 &request.source_path,
@@ -236,12 +242,17 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
     let pipeline_start = Instant::now();
     let preprocess_start = Instant::now();
 
-    emit("🧪 Preparation assets moteur natif");
-    emit(&format!("  Stage dir : {}", stage_dir.to_string_lossy()));
-    emit(&format!(
-        "  Prétraitement assets : {} élément(s)",
-        requests.len()
-    ));
+    emit(&UserMessage::new(codes::GENERATION_NATIVE_ASSETS_PREPARING).into_transport());
+    emit(
+        &UserMessage::new(codes::GENERATION_LOG_STAGE_DIR)
+            .param("stage_dir", (stage_dir.to_string_lossy()).to_string())
+            .into_transport(),
+    );
+    emit(
+        &UserMessage::new(codes::GENERATION_ASSETS_PREPROCESS_START)
+            .param("requests", (requests.len()).to_string())
+            .into_transport(),
+    );
 
     let canonical_options = &canonical.options;
     let ffmpeg_ref = ffmpeg.as_ref();
@@ -250,43 +261,61 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
 
     let preprocessed: Result<Vec<PreprocessedRequest>, String> = std::thread::scope(|scope| {
         let worker_tx = progress_tx.clone();
-        let handle = scope.spawn(move || {
-            requests
-                .par_iter()
-                .map(|request| {
-                    if should_cancel() {
-                        return Err("Génération annulée.".to_string());
-                    }
-                    let tx = worker_tx.clone();
-                    let _ = tx.send(format!("  ▶ {}", request.role));
-                    let result = preprocess_request(
-                        request,
-                        canonical_options,
-                        ffmpeg_ref,
-                        processed_audio_dir_ref,
-                    );
-                    match &result {
-                        Ok(pre) => {
-                            let _ = tx.send(format!("  ✓ {} ({} ms)", pre.role, pre.preprocess_ms));
+        let handle =
+            scope.spawn(move || {
+                requests
+                    .par_iter()
+                    .map(|request| {
+                        if should_cancel() {
+                            return Err(crate::support::user_message::generation_cancelled()
+                                .into_transport());
                         }
-                        Err(err) => {
-                            let _ = tx.send(format!("  ✕ {} : {}", request.role, err));
+                        let tx = worker_tx.clone();
+                        let _ = tx.send(
+                            UserMessage::new(codes::GENERATION_LOG_ASSET_START)
+                                .param("request_role", (request.role).to_string())
+                                .into_transport(),
+                        );
+                        let result = preprocess_request(
+                            request,
+                            canonical_options,
+                            ffmpeg_ref,
+                            processed_audio_dir_ref,
+                        );
+                        match &result {
+                            Ok(pre) => {
+                                let _ = tx.send(
+                                    UserMessage::new(codes::GENERATION_LOG_MS)
+                                        .param("pre_role", (pre.role).to_string())
+                                        .param("pre_preprocess_ms", (pre.preprocess_ms).to_string())
+                                        .into_transport(),
+                                );
+                            }
+                            Err(err) => {
+                                let _ = tx.send(
+                                    UserMessage::new(codes::GENERATION_LOG_ASSET_FAILED)
+                                        .param("request_role", (request.role).to_string())
+                                        .param("reason", (err).to_string())
+                                        .with_detail((err).to_string())
+                                        .into_transport(),
+                                );
+                            }
                         }
-                    }
-                    if should_cancel() {
-                        return Err("Génération annulée.".to_string());
-                    }
-                    result
-                })
-                .collect()
-        });
+                        if should_cancel() {
+                            return Err(crate::support::user_message::generation_cancelled()
+                                .into_transport());
+                        }
+                        result
+                    })
+                    .collect()
+            });
         drop(progress_tx);
         for message in progress_rx {
             emit(&message);
         }
-        handle
-            .join()
-            .map_err(|_| "Prétraitement assets interrompu.".to_string())?
+        handle.join().map_err(|_| {
+            UserMessage::new(codes::GENERATION_ASSET_PREPROCESS_INTERRUPTED).into_transport()
+        })?
     });
     let preprocessed = preprocessed?;
     let preprocess_ms = preprocess_start.elapsed().as_millis();
@@ -300,18 +329,22 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
     let mut warnings = Vec::new();
 
     if should_cancel() {
-        return Err("Génération annulée.".to_string());
+        return Err(crate::support::user_message::generation_cancelled().into_transport());
     }
-    emit("  Staging assets...");
+    emit(&UserMessage::new(codes::GENERATION_LOG_STAGING_ASSETS).into_transport());
 
     for pre in preprocessed {
         if should_cancel() {
-            return Err("Génération annulée.".to_string());
+            return Err(crate::support::user_message::generation_cancelled().into_transport());
         }
         warnings.extend(pre.warnings);
         match pre.asset {
             PreprocessedAsset::Zip { canonical_zip_path } => {
-                emit(&format!("  📦 ZIP fusion natif : {}", pre.role));
+                emit(
+                    &UserMessage::new(codes::GENERATION_NATIVE_ZIP_MERGE)
+                        .param("pre_role", (pre.role).to_string())
+                        .into_transport(),
+                );
                 let (bundle, mut zip_assets) = stage_imported_zip_bundle(
                     &pre.role,
                     &canonical_zip_path,
@@ -344,7 +377,11 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
             }
             PreprocessedAsset::ImageResized { png_bytes } => {
                 image_resize_count += 1;
-                emit(&format!("  [resize] {} -> 320x240", pre.role));
+                emit(
+                    &UserMessage::new(codes::GENERATION_LOG_RESIZE_320X240)
+                        .param("pre_role", (pre.role).to_string())
+                        .into_transport(),
+                );
                 let prepared = stage_binary_asset_bytes(
                     &pre.role,
                     "resized.png",
@@ -396,35 +433,55 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
 
     let notes = build_asset_notes(&canonical.options, &stats);
 
-    emit(&format!(
-        "  Assets uniques : {} | audios transformes : {} | zips importes : {}",
-        stats.unique_asset_count, stats.transformed_audio_count, stats.imported_zip_count,
-    ));
+    emit(
+        &UserMessage::new(codes::GENERATION_ASSETS_PREPARED_SUMMARY)
+            .param(
+                "stats_unique_asset_count",
+                (stats.unique_asset_count).to_string(),
+            )
+            .param(
+                "stats_transformed_audio_count",
+                (stats.transformed_audio_count).to_string(),
+            )
+            .param(
+                "stats_imported_zip_count",
+                (stats.imported_zip_count).to_string(),
+            )
+            .into_transport(),
+    );
     // Note: les `*_ms` ci-dessous somment le temps WALL-CLOCK passe DANS
     // chaque etape avant la parallelisation. La somme peut depasser le
     // wall-clock total si execute en parallele (c'est attendu : on a 4
     // ffmpeg qui tournent en parallele, chacun comptant 1s, total cpu 4s,
     // wall 1s).
     let total_ms = pipeline_start.elapsed().as_millis();
-    emit(&format!(
-        "  ⏱  Timing assets : total wall {} ms | preprocess parallele {} ms | stage sequentiel {} ms",
-        total_ms, preprocess_ms, stage_ms,
-    ));
-    emit(&format!(
-        "      cumul CPU par categorie : audio ffmpeg {} ms ({}x) | audio passthrough {} ms | image {} ms ({}x resize) | zip {} ms",
-        audio_processing_ms,
-        transformed_audio_count,
-        audio_passthrough_ms,
-        image_ms,
-        image_resize_count,
-        zip_ms,
-    ));
-    emit("  Aucun ZIP final n'est encore genere a ce stade.");
+    emit(
+        &UserMessage::new(codes::GENERATION_TIMING_ASSETS_SUMMARY)
+            .param("total_ms", (total_ms).to_string())
+            .param("preprocess_ms", (preprocess_ms).to_string())
+            .param("stage_ms", (stage_ms).to_string())
+            .into_transport(),
+    );
+    emit(
+        &UserMessage::new(codes::GENERATION_TIMING_CPU_SUMMARY)
+            .param("audio_processing_ms", (audio_processing_ms).to_string())
+            .param(
+                "transformed_audio_count",
+                (transformed_audio_count).to_string(),
+            )
+            .param("audio_passthrough_ms", (audio_passthrough_ms).to_string())
+            .param("image_ms", (image_ms).to_string())
+            .param("image_resize_count", (image_resize_count).to_string())
+            .param("zip_ms", (zip_ms).to_string())
+            .into_transport(),
+    );
+    emit(&UserMessage::new(codes::GENERATION_ZIP_NOT_PRODUCED).into_transport());
     if !warnings.is_empty() {
-        emit(&format!(
-            "  ⚠️  {} avertissement(s) audio seront joints au résultat.",
-            warnings.len()
-        ));
+        emit(
+            &UserMessage::new(codes::GENERATION_AUDIO_WARNINGS_ATTACHED)
+                .param("warnings", (warnings.len()).to_string())
+                .into_transport(),
+        );
     }
 
     stage_guard.disarm();
@@ -701,22 +758,31 @@ fn collect_entry_requests(
             }
             stamp_entry_id(requests, first, &zip.id);
         }
-        // Une référence ne porte aucun asset propre : elle réutilise ceux de sa cible.
-        CanonicalEntry::Ref(_) => {}
     }
 }
 
 fn emit_asset_result(asset: &PreparedAsset, emit: &dyn Fn(&str)) {
-    let suffix = if asset.deduplicated { " (dedup)" } else { "" };
-    let transform = if asset.transformed {
-        "transforme"
+    let suffix = if asset.deduplicated {
+        UserMessage::new(codes::GENERATION_ASSET_DEDUPLICATED).into_transport()
     } else {
-        "copie"
+        String::new()
     };
-    emit(&format!(
-        "  {} → {} [{}]{}",
-        asset.role, asset.staged_asset_name, transform, suffix
-    ));
+    let transform = if asset.transformed {
+        UserMessage::new(codes::GENERATION_ASSET_TRANSFORMED).into_transport()
+    } else {
+        UserMessage::new(codes::GENERATION_ASSET_COPIED).into_transport()
+    };
+    emit(
+        &UserMessage::new(codes::GENERATION_LOG_ASSET_READY)
+            .param("asset_role", (asset.role).to_string())
+            .param(
+                "asset_staged_asset_name",
+                (asset.staged_asset_name).to_string(),
+            )
+            .param("transform", (transform).to_string())
+            .param("suffix", (suffix).to_string())
+            .into_transport(),
+    );
 }
 
 fn audio_request(

@@ -229,7 +229,7 @@ test('la capture compose le rendu du moteur et la couche de surimpressions', () 
     ],
   });
   assert.ok(painted.includes('FORÊT'), 'la zone de groupe est peinte avec son nom');
-  assert.ok(painted.includes('RACINE'), 'la pastille de rôle est peinte');
+  assert.ok(painted.includes('ENTRÉE'), 'la pastille de rôle est peinte');
   assert.ok(painted.includes('Accueil'), 'le nom sous la carte est peint');
   assert.ok(painted.includes('3'), 'le compte de sorties de l’Action est peint au-dessus du losange');
 });
@@ -248,7 +248,7 @@ test('la capture masque le badge d’entrée avec les autres libellés', () => {
   assert.deepEqual(painted, [], 'ni le badge ni le nom ne survivent à noLabels');
 
   paintOverlay(context, { detailLevel: 'simplified', groups: [], nodes: [node] });
-  assert.deepEqual(painted, ['RACINE'], 'le repère d’entrée reste peint en vue très éloignée');
+  assert.deepEqual(painted, ['ENTRÉE'], 'le repère d’entrée reste peint en vue très éloignée');
 });
 
 test('au régime éloigné, la capture peint les repères en pixels écran', () => {
@@ -268,7 +268,7 @@ test('au régime éloigné, la capture peint les repères en pixels écran', () 
       { path: '/x', kind: 'stage', label: 'Quelconque', x: 120, y: 60, width: 10, height: 6 },
     ],
   });
-  assert.deepEqual(painted, ['RACINE', 'Carrefour · 31 liens']);
+  assert.deepEqual(painted, ['ENTRÉE', 'Carrefour · 31 liens']);
 });
 
 test('la capture peint la couche de surimpressions avec la palette du thème', () => {
@@ -326,7 +326,7 @@ test('au régime éloigné, les diagnostics ne laissent que les repères de navi
       { path: '/h', kind: 'stage', label: 'Carrefour', x: 320, y: 60, width: 10, height: 6, isHub: true, degree: 31 },
     ],
   });
-  assert.deepEqual(painted, ['RACINE', 'Carrefour · 31 liens']);
+  assert.deepEqual(painted, ['ENTRÉE', 'Carrefour · 31 liens']);
 });
 
 test('la capture écrête ses textes comme la feuille de style', () => {
@@ -466,7 +466,7 @@ test('les boutons de la colonne annoncent la touche effective de leur commande',
   assert.ok(bubbles.includes('Réduire (-)'));
   assert.ok(bubbles.includes('Cadrer tout le graphe (0)'));
   // La touche de commande suit la plateforme : Ctrl, ou ⌘ sous macOS.
-  assert.ok(bubbles.includes(`Ranger le graphe en suivant le parcours de l’histoire (${commandKeyLabel()}+Shift+R)`));
+  assert.ok(bubbles.includes(`Ranger le graphe en suivant le parcours de l’histoire (${commandKeyLabel()}+Maj+R)`));
   assert.ok(!elements.some((element) => typeof element.props?.title === 'string' && element.type === 'button'));
   assert.ok(bubbles.includes('Replier la vue d’ensemble (M)'));
 });

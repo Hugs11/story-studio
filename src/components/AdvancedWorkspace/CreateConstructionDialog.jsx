@@ -1,19 +1,23 @@
+import { useTranslation } from 'react-i18next';
+import { translateGraph as t, graphTranslationEngine } from '../../i18n/graphPresentation.js';
 import { useState } from 'react';
 import { AdvancedDialog } from './AdvancedDialog.jsx';
 import { NodePicker } from './NodePicker.jsx';
 import { Button } from '../common/Button';
 import { Toggle } from '../common/Toggle';
-import { GroupedControls } from './ControlsEditor.jsx';
+import { Select } from '../common/Select';
+import { CreationControlGroups } from './NewStageDefaultsDialog.jsx';
 import {
   buildConstructionGesture, CONSTRUCTION_LABELS, NARRATIVE_CONTROLS, CHOICE_CONTROLS,
 } from '../../store/advancedAuthoring/constructions.js';
 
 // Les interrupteurs et les libellés du panneau d'un Écran.
 function ConstructionControls({ title, value, onChange }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   return (
     <fieldset className="advanced-field">
       <legend>{title}</legend>
-      <GroupedControls
+      <CreationControlGroups
         renderControl={(key, label) => (
           <label key={key} className="sequence-control">
             <span>{label}</span>
@@ -30,6 +34,7 @@ function ConstructionControls({ title, value, onChange }) {
 }
 
 export function CreateConstructionDialog({ index, busy, onCancel, onConfirm }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const [kind, setKind] = useState('scene');
   const [name, setName] = useState('');
   const [items, setItems] = useState([{ key: 0, name: '', targetPath: null }, { key: 1, name: '', targetPath: null }]);
@@ -54,49 +59,52 @@ export function CreateConstructionDialog({ index, busy, onCancel, onConfirm }) {
 
   return (
     <AdvancedDialog
-      title="Constructions dérivées"
-      description="Ces raccourcis créent des Écrans et des listes de choix ordinaires, modifiables séparément. L’ensemble se crée et s’annule en une seule opération."
+      title={t("graph:construction.derivedConstructions.label")}
+      description={t("graph:construction.theseShortcutsCreateOrdinaryStagesAndChoiceListsThat.label")}
       busy={busy} onCancel={onCancel} onConfirm={() => onConfirm(gesture)}
-      confirmLabel={{ scene: 'Créer la scène', choice: 'Créer le choix', sequence: 'Créer la séquence', random: 'Créer le tirage au sort' }[kind]}
+      confirmLabel={{ scene: t("graph:construction.creerLaScene.label"), choice: t("graph:construction.creerLeChoix.label"), sequence: t("graph:construction.createSequence.label"), random: t("graph:construction.createRandomDraw.label") }[kind]}
       confirmDisabled={!gesture}
     >
       <fieldset disabled={busy} className="advanced-field">
-        <label className="advanced-field__label" htmlFor="construction-kind">Construction</label>
-        <select id="construction-kind" value={kind} onChange={(event) => setKind(event.target.value)}>
-          {Object.entries(CONSTRUCTION_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-        </select>
+        <label className="advanced-field__label" htmlFor="construction-kind">{t("graph:construction.construction.label")}</label>
+        <Select
+          id="construction-kind"
+          value={kind}
+          onChange={setKind}
+          options={Object.entries(CONSTRUCTION_LABELS).map(([value, label]) => ({ value, label: t(label) }))}
+        />
         {kind !== 'sequence' && (
           <>
-            <label className="advanced-field__label" htmlFor="construction-name">{kind === 'choice' && question ? 'Nom de la question et du choix' : 'Nom'}</label>
+            <label className="advanced-field__label" htmlFor="construction-name">{kind === 'choice' && question ? t('graph:construction.name.question') : t("graph:construction.nom.label")}</label>
             <input id="construction-name" value={name} onChange={(event) => setName(event.target.value)} />
           </>
         )}
         {kind === 'choice' && (
           <label className="advanced-controls__row">
-            <span>Un Écran de question avant les propositions</span>
+            <span>{t("graph:construction.aQuestionStageBeforeTheAnswers.label")}</span>
             <input type="checkbox" checked={question} onChange={(event) => setQuestion(event.target.checked)} />
           </label>
         )}
         {kind !== 'scene' && (
           <fieldset className="advanced-field">
-            <legend>{kind === 'choice' ? 'Propositions, dans l’ordre de la molette' : kind === 'sequence' ? 'Passages, dans l’ordre de lecture' : 'Destinations du tirage'}</legend>
+            <legend>{kind === 'choice' ? t('graph:construction.items.choices') : kind === 'sequence' ? t('graph:construction.items.passages') : t('graph:construction.items.destinations')}</legend>
             <ol className="advanced-options">
               {items.map((item, position) => (
                 <li key={item.key} className="advanced-field">
-                  <label className="advanced-field__label" htmlFor={`construction-item-${item.key}`}>{position + 1}. {kind === 'random' ? 'Nom du nouvel Écran (si aucune cible existante)' : 'Nom'}</label>
+                  <label className="advanced-field__label" htmlFor={`construction-item-${item.key}`}>{position + 1}. {kind === 'random' ? t("graph:construction.newStageNameIfNoExistingTarget.label") : t("graph:construction.nom.label")}</label>
                   <input id={`construction-item-${item.key}`} value={item.name} onChange={(event) => setItem(item.key, { name: event.target.value })} disabled={kind === 'random' && !!item.targetPath} />
                   {kind !== 'sequence' && (
                     <>
-                      <label className="advanced-field__label" htmlFor={`construction-target-${item.key}`}>{kind === 'choice' ? 'Après validation, aller à' : 'Ou réutiliser cet Écran'}</label>
+                      <label className="advanced-field__label" htmlFor={`construction-target-${item.key}`}>{kind === 'choice' ? t("graph:construction.afterConfirmingGoTo.label") : t("graph:construction.orReuseThisStage.label")}</label>
                       <NodePicker id={`construction-target-${item.key}`} index={index} kind="stage" forChoice value={item.targetPath}
                         onChange={(targetPath) => setItem(item.key, { targetPath })}
-                        emptyLabel={kind === 'choice' ? '— destination commune ci-dessous —' : '— créer un nouvel Écran —'} />
+                        emptyLabel={kind === 'choice' ? t('graph:construction.destination.placeholder') : t("graph:construction.createANewStage.label")} />
                     </>
                   )}
                   <div className="advanced-dialog__footer">
-                    <Button size="sm" disabled={position === 0} onClick={() => moveItem(position, -1)}>Monter</Button>
-                    <Button size="sm" disabled={position === items.length - 1} onClick={() => moveItem(position, 1)}>Descendre</Button>
-                    <Button size="sm" onClick={() => setItems((current) => current.filter((row) => row.key !== item.key))}>Retirer</Button>
+                    <Button size="sm" disabled={position === 0} onClick={() => moveItem(position, -1)}>{t("graph:construction.monter.label")}</Button>
+                    <Button size="sm" disabled={position === items.length - 1} onClick={() => moveItem(position, 1)}>{t("graph:construction.descendre.label")}</Button>
+                    <Button size="sm" onClick={() => setItems((current) => current.filter((row) => row.key !== item.key))}>{t("graph:construction.retirer.label")}</Button>
                   </div>
                 </li>
               ))}
@@ -104,37 +112,42 @@ export function CreateConstructionDialog({ index, busy, onCancel, onConfirm }) {
             <Button size="sm" onClick={() => {
               setItems((current) => [...current, { key: nextKey, name: '', targetPath: null }]);
               setNextKey((current) => current + 1);
-            }}>Ajouter {kind === 'choice' ? 'une proposition' : kind === 'sequence' ? 'un passage' : 'une destination'}</Button>
+            }}>{kind === 'choice' ? t('graph:construction.items.addChoice') : kind === 'sequence' ? t('graph:construction.items.addPassage') : t('graph:construction.items.addDestination')}</Button>
           </fieldset>
         )}
         <fieldset className="advanced-field">
-          <legend>Suite {kind === 'choice' ? 'commune (sauf destination par proposition)' : ''}</legend>
-          <label className="advanced-field__label" htmlFor="construction-destination">Destination finale</label>
-          <NodePicker id="construction-destination" index={index} kind="stage" forChoice value={destinationPath} onChange={setDestinationPath} emptyLabel="— à raccorder plus tard —" />
-          <p className="advanced-field__note">{kind === 'random' ? 'Cette suite concerne uniquement les nouveaux Écrans. Les Écrans réutilisés gardent leurs contrôles et leurs transitions.' : kind === 'sequence' ? 'Seule la dernière scène rejoint cette destination.' : 'Sans destination, les sorties restent à raccorder.'}</p>
+          <legend>{kind === 'choice' ? t('graph:construction.destination.commonTitle') : t('graph:construction.destination.title')}</legend>
+          <label className="advanced-field__label" htmlFor="construction-destination">{t("graph:construction.finalDestination.label")}</label>
+          <NodePicker id="construction-destination" index={index} kind="stage" forChoice value={destinationPath} onChange={setDestinationPath} emptyLabel={t("graph:construction.connectLater.label")} />
+          <p className="advanced-field__note">{kind === 'random' ? t("graph:construction.thisContinuationOnlyAppliesToNewStagesReusedStages.label") : kind === 'sequence' ? t("graph:construction.onlyTheLastSceneReachesThisDestination.label") : t("graph:construction.withoutADestinationExitsStillNeedToBeConnected.label")}</p>
         </fieldset>
-        {(kind !== 'choice' || question) && <ConstructionControls title="Boutons des Écrans de lecture" value={controls} onChange={setControls} />}
-        {kind === 'choice' && <ConstructionControls title="Boutons des Écrans de choix" value={optionControls} onChange={setOptionControls} />}
+        {(kind !== 'choice' || question) && <ConstructionControls title={t("graph:construction.playbackStageButtons.label")} value={controls} onChange={setControls} />}
+        {kind === 'choice' && <ConstructionControls title={t("graph:construction.choiceStageButtons.label")} value={optionControls} onChange={setOptionControls} />}
         <fieldset className="advanced-field">
-          <legend>Arrivée {kind === 'random' ? '(obligatoire pour le tirage)' : '(facultative)'}</legend>
-          <label className="advanced-field__label" htmlFor="construction-source">Écran de départ</label>
-          <NodePicker id="construction-source" index={index} kind="stage" value={sourcePath} onChange={setSourcePath} emptyLabel="— créer sans arrivée —" />
+          <legend>{kind === 'random' ? t('graph:construction.source.requiredTitle') : t('graph:construction.source.optionalTitle')}</legend>
+          <label className="advanced-field__label" htmlFor="construction-source">{t("graph:construction.ecranDeDepart.label")}</label>
+          <NodePicker id="construction-source" index={index} kind="stage" value={sourcePath} onChange={setSourcePath} emptyLabel={t("graph:construction.createWithoutAnIncomingLink.label")} />
           {sourcePath && (
             <>
-              <label className="advanced-field__label" htmlFor="construction-trigger">Depuis cet Écran</label>
-              <select id="construction-trigger" value={trigger} onChange={(event) => setTrigger(event.target.value)}>
-                <option value="autoplay">Suite du parcours, à la fin du son</option><option value="ok">Suite du parcours, au bouton OK</option><option value="home">Bouton Accueil</option>
-              </select>
+              <label className="advanced-field__label" htmlFor="construction-trigger">{t("graph:construction.depuisCetEcran.label")}</label>
+              <Select
+                id="construction-trigger"
+                value={trigger}
+                onChange={setTrigger}
+                options={[
+                  { value: 'autoplay', label: t("graph:construction.continueThePathWhenAudioEnds.label") },
+                  { value: 'ok', label: t("graph:construction.continueThePathWithTheOKButton.label") },
+                  { value: 'home', label: t("graph:construction.boutonAccueil.label") },
+                ]}
+              />
               <p className="advanced-field__warning">
-                Ce raccord remplace {trigger === 'home' ? 'la destination du bouton Accueil (homeTransition)' : 'la suite du parcours (okTransition)'} de l’Écran choisi
-                et active {trigger === 'autoplay' ? 'la suite automatique à la fin du son' : trigger === 'ok' ? 'le bouton OK' : 'le bouton Accueil'}.
-                Les autres contrôles restent inchangés.
+                {trigger === 'home' ? t('graph:construction.trigger.homeWarning') : trigger === 'ok' ? t('graph:construction.trigger.okWarning') : t('graph:construction.trigger.autoplayWarning')}
               </p>
-              <p className="advanced-field__note">{kind === 'random' ? 'La transition tirera un choix au sort à chaque ouverture.' : 'Les listes de raccord s’ouvrent sur leur premier choix.'}</p>
+              <p className="advanced-field__note">{kind === 'random' ? t("graph:construction.theTransitionWillDrawARandomChoiceEachTime.label") : t('graph:construction.connection.firstChoice')}</p>
             </>
           )}
         </fieldset>
-        <p className="advanced-field__note">Les images et audios pourront être ajoutés sur chaque Écran après la création. Aucun regroupement ni nouveau type de nœud n’est créé.</p>
+        <p className="advanced-field__note">{t("graph:construction.imagesAndAudioCanBeAddedToEachStage.label")}</p>
         {error && <p className="advanced-field__note" role="status">{error}</p>}
       </fieldset>
     </AdvancedDialog>

@@ -393,9 +393,10 @@ fn generating_an_identity_does_not_rescue_an_invalid_graph() {
 #[test]
 fn generating_an_identity_qualifies_only_its_own_dimension() {
     let mut source = document(BRACED, Some(SECOND));
-    // Une extension inconnue sans disposition : elle doit rester UNTESTED et
-    // bloquante avant comme après la résolution de l'identité.
-    source["stageNodes"][1]["stageExtension"] = json!({"inconnu": true});
+    // Un alias connu divergent sans disposition : il doit rester bloquant
+    // avant comme après la résolution de l'identité. (Une clé inconnue ne
+    // peut plus servir de témoin : l'import l'ignore.)
+    source["stageNodes"][1]["id"] = json!("alias-divergent");
     let decoded = decode(source);
 
     let before = assess_graph_document_export_readiness(Ok(&decoded));
@@ -438,21 +439,15 @@ fn generating_an_identity_qualifies_only_its_own_dimension() {
         );
     }
     assert_eq!(after.dimensions.len(), before.dimensions.len() + 1);
-    assert!(after
-        .dimensions
-        .iter()
-        .any(|dimension| dimension.id == DimensionId::UnknownExtension
-            && dimension.qualification == DimensionQualification::Untested));
     assert_eq!(
         after.diagnostics.len(),
         before.diagnostics.len(),
         "aucun diagnostic effacé ni ajouté"
     );
-    assert!(
-        after.blocked,
-        "l'extension sans disposition bloque toujours"
-    );
-    assert_eq!(after.interoperability, DimensionQualification::Untested);
+    assert!(after.blocked, "l'alias sans disposition bloque toujours");
+    // Sans dimension « extension inconnue » (retirée avec la capture des clés
+    // inconnues), l'identité générée `PREPARED` fixe seule l'agrégat.
+    assert_eq!(after.interoperability, DimensionQualification::Prepared);
 }
 
 /// Les 4 octets de poids faible de l'identité générée décident du nom de
@@ -550,4 +545,24 @@ fn private_corpus_identity_resolution_is_measured() {
         "un tirage par identité générée"
     );
     assert_eq!(generated, 2, "deux entrées textuelles annoncées par 08c");
+}
+
+#[test]
+fn optional_initial_stage_name_keeps_the_old_payload_without_an_argument() {
+    let create = |name| {
+        let mut draws = Draws::new();
+        super::super::create_advanced_document_named("Pack", name, &mut || draws.next()).unwrap()
+    };
+    let mut draws = Draws::new();
+    let old = create_advanced_document("Pack", &mut || draws.next()).unwrap();
+    assert_eq!(create(None), old);
+    assert_eq!(create(Some("Écran 1")), old);
+    let named = decode_authoring_payload(&create(Some("Stage 1"))).unwrap();
+    let mut original = decode_authoring_payload(&old).unwrap();
+    original.document.stage_nodes[0].name = crate::native_pack::Presence::Value("Stage 1".into());
+    assert_eq!(named.document, original.document);
+    assert_eq!(
+        create(Some("Stage 1")),
+        encode_authoring_payload(&original).unwrap()
+    );
 }

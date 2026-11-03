@@ -184,27 +184,17 @@ for (const [label, version, original] of [
   });
 }
 
-// Le bloc que « Vérifier un pack » écrivait dans les packs corrigés est
-// préservé dès l'atterrissage : l'auteur n'a pas à trancher une donnée que
-// Story Studio a lui-même écrite. Une extension d'un tiers reste à trancher.
-test('pack repris dans le graphe : le bloc Story Studio est préservé, pas celui d’un tiers', async () => {
+// Les clés inconnues d'un pack repris (dont l'ancien bloc `storyStudioMetadata`
+// de « Vérifier un pack ») sont ignorées par le moteur, comme dans l'éditeur
+// menus : l'atterrissage ne règle plus que les métadonnées du document.
+test('pack repris dans le graphe : aucune décision sur des données inconnues à l’atterrissage', async () => {
   const calls = [];
-  // Forme réelle du DTO : `path` désigne le porteur (la racine), la clé est à part.
   const own = { scope: 'root', path: '/', key: 'storyStudioMetadata', sourceOccurrence: 0 };
-  const foreign = { scope: 'root', path: '/', key: 'autreOutil', sourceOccurrence: 0 };
   await prepareImportedAdvancedProject(advancedProject(), {
-    invokeCommand: revisionInvoker({ presence: 'value', value: 1 }, calls, [own, foreign]),
+    invokeCommand: revisionInvoker({ presence: 'value', value: 1 }, calls, [own]),
   });
 
   const gestures = calls.filter((call) => call.command === 'apply_advanced_gesture')
-    .map((call) => call.args.gesture);
-  assert.deepEqual(gestures.map((gesture) => gesture.gesture), [
-    'set-document-metadata',
-    'set-opaque-export-disposition',
-  ]);
-  assert.deepEqual(gestures[1], {
-    gesture: 'set-opaque-export-disposition',
-    member: { path: own.path, key: own.key, sourceOccurrence: 0 },
-    disposition: 'preserve-untested',
-  });
+    .map((call) => call.args.gesture.gesture);
+  assert.deepEqual(gestures, ['set-document-metadata']);
 });

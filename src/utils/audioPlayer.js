@@ -1,4 +1,5 @@
 import WebAudioPlayer from 'wavesurfer.js/dist/webaudio.js';
+import { importPresentationError } from '../i18n/importPresentation.js';
 
 const PLAYBACK_TICK_MS = 100;
 const LOAD_TIMEOUT_MS = 30_000;
@@ -8,7 +9,7 @@ let sharedAudioContext = null;
 function getAudioContext() {
   if (sharedAudioContext && sharedAudioContext.state !== 'closed') return sharedAudioContext;
   const AudioContextClass = globalThis.AudioContext || globalThis.webkitAudioContext;
-  if (!AudioContextClass) throw new Error('Web Audio indisponible.');
+  if (!AudioContextClass) throw importPresentationError('media:player.webAudio.unavailable', {}, { code: 'AUDIO_PLAYER_WEB_AUDIO_UNAVAILABLE' });
   sharedAudioContext = new AudioContextClass();
   return sharedAudioContext;
 }
@@ -52,6 +53,7 @@ export class SharedAudioPlayer extends EventTarget {
     this._loadTimer = null;
     this._tickTimer = null;
     this._playRequested = false;
+    this._playbackActive = false;
     this._readyPromise = Promise.resolve();
     this._unsubscribe = [
       this.backend.addEventListener('loadedmetadata', () => this._handleLoaded()),
@@ -82,6 +84,7 @@ export class SharedAudioPlayer extends EventTarget {
   }
 
   _handlePlay() {
+    this._playbackActive = true;
     this.ended = false;
     this._startTicking();
     this._emit('play');
@@ -94,6 +97,8 @@ export class SharedAudioPlayer extends EventTarget {
   }
 
   _handleEnded() {
+    if (!this._playbackActive || this.ended) return;
+    this._playbackActive = false;
     this.ended = true;
     this._playRequested = false;
     this._stopTicking();
@@ -103,7 +108,17 @@ export class SharedAudioPlayer extends EventTarget {
 
   _startTicking() {
     this._stopTicking();
-    this._tickTimer = globalThis.setInterval(() => this._emit('timeupdate'), PLAYBACK_TICK_MS);
+    this._tickTimer = globalThis.setInterval(() => {
+      // WaveSurfer peut filtrer onended à durée - epsilon. Son horloge
+      // continue alors d'avancer : attendre la durée exacte, sans tolérance.
+      if (this._playbackActive && !this.paused && this.duration > 0
+        && Number.isFinite(this.duration) && this.currentTime >= this.duration) {
+        this.backend.pause();
+        this._handleEnded();
+      } else {
+        this._emit('timeupdate');
+      }
+    }, PLAYBACK_TICK_MS);
   }
 
   _stopTicking() {
@@ -144,7 +159,7 @@ export class SharedAudioPlayer extends EventTarget {
       this._rejectReady = reject;
       this._loadTimer = globalThis.setTimeout(() => {
         if (generation !== this._loadGeneration) return;
-        const error = new Error('Le décodage audio a expiré.');
+        const error = importPresentationError('media:player.decode.timeout', {}, { code: 'AUDIO_PLAYER_DECODE_TIMEOUT' });
         this._resolveReady = null;
         this._rejectReady = null;
         reject(error);
@@ -212,6 +227,7 @@ export class SharedAudioPlayer extends EventTarget {
       await this._readyPromise;
       if (!this._playRequested || generation !== this._loadGeneration || !this._src) return;
       await resumeAudioContext(this.backend.audioContext);
+      if (!this._playRequested || generation !== this._loadGeneration || !this._src) return;
       await this.backend.play();
     } catch (error) {
       if (error?.name !== 'AbortError') throw error;
@@ -220,11 +236,14 @@ export class SharedAudioPlayer extends EventTarget {
 
   pause() {
     this._playRequested = false;
+    this._playbackActive = false;
+    this._stopTicking();
     this.backend.pause();
   }
 
   destroy() {
     this._playRequested = false;
+    this._playbackActive = false;
     this._loadGeneration += 1;
     clearTimeout(this._loadTimer);
     this._loadTimer = null;

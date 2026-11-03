@@ -1,6 +1,7 @@
 //! Constructions d'auteur : uniquement des Stages/Actions ordinaires.
 //! Le payload privé du geste porte toute la construction ; aucun état partiel
 //! n'est publié, même si un raccord ou un média est refusé en fin d'opération.
+use crate::support::user_message::{codes, UserMessage};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -228,7 +229,9 @@ pub(crate) fn create_construction(
 ) -> Result<(CreatedNodes, ConstructionReport), GestureError> {
     use ConstructionKind::*;
     if request.name.trim().is_empty() {
-        return Err(invalid("Donner un nom à la construction."));
+        return Err(invalid(
+            &UserMessage::new(codes::INVALID_CONSTRUCTION).into_transport(),
+        ));
     }
     let minimum = match request.kind {
         Scene => 0,
@@ -237,26 +240,38 @@ pub(crate) fn create_construction(
     };
     if request.items.len() < minimum || (request.kind == Scene && !request.items.is_empty()) {
         return Err(invalid(
-            "Le nombre de passages ou de propositions ne convient pas à cette construction.",
+            &UserMessage::new(codes::INVALID_CONSTRUCTION)
+                .param("context", codes::INVALID_CONSTRUCTION_ITEM_COUNT)
+                .into_transport(),
         ));
     }
     if request.kind == Random && request.source.is_none() {
         return Err(invalid(
-            "Le tirage au sort exige une transition entrante explicite.",
+            &UserMessage::new(codes::INVALID_CONSTRUCTION)
+                .param("context", codes::INVALID_CONSTRUCTION_RANDOM_INPUT)
+                .into_transport(),
         ));
     }
     if request.question && request.kind != Choice {
         return Err(invalid(
-            "La question appartient uniquement à la construction Choix.",
+            &UserMessage::new(codes::INVALID_CONSTRUCTION)
+                .param("context", codes::INVALID_CONSTRUCTION_QUESTION_KIND)
+                .into_transport(),
         ));
     }
     for item in &request.items {
         if item.name.trim().is_empty() && !(request.kind == Random && item.target.is_some()) {
-            return Err(invalid("Nommer chaque nouveau passage ou proposition."));
+            return Err(invalid(
+                &UserMessage::new(codes::INVALID_CONSTRUCTION)
+                    .param("context", codes::INVALID_CONSTRUCTION_ITEM_LABEL)
+                    .into_transport(),
+            ));
         }
         if request.kind == Sequence && item.target.is_some() {
             return Err(invalid(
-                "Une séquence crée ses passages ; sa destination finale est distincte.",
+                &UserMessage::new(codes::INVALID_CONSTRUCTION)
+                    .param("context", codes::INVALID_CONSTRUCTION_SEQUENCE_TARGET)
+                    .into_transport(),
             ));
         }
         if let Some(target) = &item.target {
@@ -390,12 +405,16 @@ pub(crate) fn create_linked_node(
             unique_stage_index(&payload.document, stage_uuid)?;
             if action.options.is_empty() {
                 return Err(invalid(
-                    "Une Action créée depuis un raccord porte au moins une option.",
+                    &UserMessage::new(codes::INVALID_CONSTRUCTION)
+                        .param("context", codes::INVALID_CONSTRUCTION_ACTION_OPTIONS)
+                        .into_transport(),
                 ));
             }
             if *option_index < -1 || *option_index >= action.options.len() as i64 {
                 return Err(invalid(
-                    "L'option choisie doit appartenir à l'Action créée, ou être aléatoire.",
+                    &UserMessage::new(codes::INVALID_CONSTRUCTION)
+                        .param("context", codes::INVALID_CONSTRUCTION_SELECTED_OPTION)
+                        .into_transport(),
                 ));
             }
             let created = create_action(payload, action, next)?;
@@ -457,7 +476,9 @@ pub(crate) fn create_linked_node(
                     != Some(&None)
                 {
                     return Err(invalid(
-                        "La destination à compléter n'existe plus à cette place.",
+                        &UserMessage::new(codes::INVALID_CONSTRUCTION)
+                            .param("context", codes::INVALID_CONSTRUCTION_MISSING_DESTINATION)
+                            .into_transport(),
                     ));
                 }
             }

@@ -1,7 +1,13 @@
+import { claimProjectAccess, releaseProjectAccess, withProjectSaveAccess } from './projectSessionAccess.js';
+import { readPathExistence } from './fileMetadataCache.js';
+import { translateImport as t, importPresentationError } from '../i18n/importPresentation.js';
+import { presentUserMessage } from '../i18n/userMessage.js';
+import { withProjectMediaOutput } from './projectMediaOutput';
+import { announceSavedSubscriptions } from './mediaSubscriptionSource.js';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { documentDir, join } from '@tauri-apps/api/path';
 import { readTextFile, writeTextFile, copyFile, mkdir, rename, remove, exists, readDir } from '@tauri-apps/plugin-fs';
-import { getProjectFilePrefix, sanitizeProjectPrefix } from '../utils/projectPrefix';
+import { sanitizeProjectPrefix } from '../utils/projectPrefix';
 import { isFallbackProjectName, suggestProjectName } from './projectSaveName.js';
 import { createAdvancedViewBridge } from './advancedGraphView/advancedViewBridge.js';
 import {
@@ -30,6 +36,7 @@ import {
   toProjectRelativeMediaPath,
 } from './projectMediaPaths';
 import { isProjectWorthAutosaving, selectStaleAutosaveBackups } from './autosaveDecision';
+import { withDeclaredWrite } from './catalogueWrites.js';
 import { KEYS, read as readSetting, write as writeSetting } from './persistentSettings';
 import {
   EXPORTS,
@@ -123,7 +130,7 @@ export async function pickWorkspaceDir() {
     directory: true,
     multiple: false,
     defaultPath: current,
-    title: 'Choisir l’emplacement de travail',
+    title: t('native:project.workspace.title'),
   });
   if (!chosen) return null;
   setWorkspaceDir(chosen);
@@ -159,8 +166,8 @@ export function rememberRecentProject(project, path) {
   const normalizedPath = pathKey(path);
   const nextEntry = {
     path,
-    projectName: project?.projectName?.trim() || basenameNoExt(path) || 'Projet sans nom',
-    name: project?.projectName?.trim() || basenameNoExt(path) || 'Projet sans nom',
+    projectName: project?.projectName?.trim() || basenameNoExt(path) || t('import:project.unnamed.label'),
+    name: project?.projectName?.trim() || basenameNoExt(path) || t('import:project.unnamed.label'),
     projectType: project?.projectType || 'pack',
     thumbnailImage: projectPreviewThumbnail(project),
     updatedAt: Date.now(),
@@ -215,6 +222,7 @@ function splitFileName(fileName) {
 function getProjectAssetsDir(savePath) {
   const projectDir = getProjectDir(savePath);
   const projectBaseName = basenameNoExt(savePath);
+  // eslint-disable-next-line i18next/no-literal-string -- Format I/O : chemin technique stable, pas un libellé UI.
   return joinPath(projectDir, `${projectBaseName}_assets`);
 }
 
@@ -233,6 +241,7 @@ async function resolveLoadedProjectPath(maybeRelativePath, mbahDir, workspaceDir
   if (!hasPath(maybeRelativePath)) return maybeRelativePath;
   if (!maybeRelativePath.startsWith('./') && !maybeRelativePath.startsWith('../')) return maybeRelativePath;
 
+  // eslint-disable-next-line i18next/no-literal-string -- Format I/O : chemin technique stable, pas un libellé UI.
   const cacheKey = `${mbahDir}\n${workspaceDir}\n${maybeRelativePath}`;
   if (cache.has(cacheKey)) return cache.get(cacheKey);
 
@@ -244,8 +253,8 @@ async function resolveLoadedProjectPath(maybeRelativePath, mbahDir, workspaceDir
   }
 
   const [projectExists, workspaceExists] = await Promise.all([
-    exists(projectPath).catch(() => false),
-    exists(workspacePath).catch(() => false),
+    readPathExistence(projectPath),
+    readPathExistence(workspacePath),
   ]);
   const resolvedPath = chooseCompatibleProjectPath(maybeRelativePath, projectPath, workspaceDir, {
     projectExists,
@@ -324,7 +333,7 @@ export function collectTransferableProjectFiles(project, savePath, statusByPath 
     seen.add(key);
     candidates.push({
       path: ref.path,
-      label: ref.label,
+      get label() { return ref.label; },
       filename: basename(ref.path) || ref.path,
     });
   }
@@ -344,6 +353,7 @@ export async function transferProjectFilesToProject(project, savePath, copyToPro
   const errors = [];
 
   for (const ref of refs) {
+  // eslint-disable-next-line i18next/no-literal-string -- Format I/O : chemin technique stable, pas un libellé UI.
     const cacheKey = normalizePath(ref.path);
     let nextPath = copiedPaths.get(cacheKey);
 
@@ -355,8 +365,9 @@ export async function transferProjectFilesToProject(project, savePath, copyToPro
       } catch (error) {
         errors.push({
           path: ref.path,
-          label: ref.label,
-          error: String(error),
+          get label() { return ref.label; },
+          error: presentUserMessage(error).message,
+          userMessage: error,
         });
         continue;
       }
@@ -389,7 +400,7 @@ async function uniquePathInDir(dir, fileName) {
     candidate = joinPath(dir, `${stem}--${Date.now()}-${index}${ext}`);
     if (!(await exists(candidate))) return candidate;
   }
-  throw new Error(`Impossible de créer un nom unique pour ${fileName}`);
+  throw importPresentationError('import:project.name.uniqueFailure', { name: fileName }, { code: 'IMPORT_PROJECT_NAME_CONFLICT' });
 }
 
 async function backupProjectFile(path, limit = 0, backupDirOverride = null) {
@@ -399,11 +410,24 @@ async function backupProjectFile(path, limit = 0, backupDirOverride = null) {
   const baseName = basenameNoExt(path);
   const backupDir = backupDirOverride ?? joinPath(projectDir, BACKUP_DIR_NAME);
   await mkdir(backupDir, { recursive: true });
+  const entries = await readDir(backupDir).catch(() => []);
+  // Une version identique à la plus récente n'apporte rien et chasserait une
+  // version utile de la rotation — typiquement quand l'écriture qui suit
+  // échoue à chaque échéance (fichier non inscriptible).
+  const newest = selectStaleAutosaveBackups(entries, baseName, 0)[0];
+  if (newest) {
+    const [currentText, newestText] = await Promise.all([
+      readTextFile(path).catch(() => null),
+      readTextFile(joinPath(backupDir, newest)).catch(() => null),
+    ]);
+    if (currentText !== null && currentText === newestText) return;
+  }
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  // eslint-disable-next-line i18next/no-literal-string -- Format I/O : chemin technique stable, pas un libellé UI.
   await copyFile(path, joinPath(backupDir, `${baseName}.${stamp}.mbah`));
 
-  const entries = await readDir(backupDir).catch(() => []);
-  for (const stale of selectStaleAutosaveBackups(entries, baseName, keep)) {
+  const refreshed = await readDir(backupDir).catch(() => []);
+  for (const stale of selectStaleAutosaveBackups(refreshed, baseName, keep)) {
     await remove(joinPath(backupDir, stale)).catch(() => {});
   }
 }
@@ -412,16 +436,28 @@ async function backupProjectFile(path, limit = 0, backupDirOverride = null) {
 // complet : ni l'écriture ni le remplacement ne peuvent le laisser à moitié
 // réécrit. Le backup est pris avant, donc il conserve l'état valide même quand
 // l'écriture échoue ensuite ; le temporaire, lui, est retiré dans les deux cas.
-async function writeProjectFileAtomic(path, contents, { backupLimit = 0, backupDirOverride = null } = {}) {
-  await backupProjectFile(path, backupLimit, backupDirOverride);
-  const tmpPath = `${path}.tmp-${Date.now()}`;
-  try {
-    await writeTextFile(tmpPath, contents);
-    await rename(tmpPath, path);
-  } catch (error) {
-    await remove(tmpPath).catch(() => {});
-    throw error;
-  }
+async function writeProjectFileAtomic(path, contents, { backupLimit = 0, backupDirOverride = null, publishProjectFile = null } = {}) {
+  if (!publishProjectFile) return withProjectSaveAccess(path, () => writeProjectFileAtomic(path, contents, { backupLimit, backupDirOverride, publishProjectFile: async (temporary, finalPath) => rename(temporary, finalPath) }));
+  // Unique même pour deux écritures du même fichier dans la même milliseconde :
+  // un nom partagé laissait l'une renommer le contenu de l'autre.
+  // eslint-disable-next-line i18next/no-literal-string -- Format I/O : chemin technique stable, pas un libellé UI.
+  const tmpPath = `${path}.tmp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  // Fichier, temporaire et rotation des versions sont déclarés au catalogue
+  // avant la première mutation : la surveillance les reconnaît.
+  const backupDir = Number(backupLimit) > 0
+    ? (backupDirOverride ?? joinPath(getProjectDir(path), BACKUP_DIR_NAME))
+    : null;
+  const declaration = { kind: 'projectSave', paths: [path], temporaries: [tmpPath], subtrees: [backupDir] };
+  await withDeclaredWrite(declaration, async () => {
+    await backupProjectFile(path, backupLimit, backupDirOverride);
+    try {
+      await writeTextFile(tmpPath, contents);
+      await publishProjectFile(tmpPath, path);
+    } catch (error) {
+      await remove(tmpPath).catch(() => {});
+      throw error;
+    }
+  });
 }
 
 /**
@@ -432,7 +468,7 @@ async function writeProjectFileAtomic(path, contents, { backupLimit = 0, backupD
  * Chaque copie créée est consignée dans `createdCopies` (`{ from, to }`) au fil
  * de l'eau : un échec en cours de route laisse la liste exacte à retirer.
  */
-async function persistTempImages(project, projectPath, workspaceDir = null, createdCopies = null) {
+async function persistTempImages(project, projectPath, workspaceDir = null, createdCopies = null, mediaStorage = null) {
   const updated = projectFileBody(project);
 
   // Une seule traversee : on collecte uniquement les images temporaires editables.
@@ -451,7 +487,7 @@ async function persistTempImages(project, projectPath, workspaceDir = null, crea
   if (tempRefs.length === 0) return updated;
 
   const baseDir = workspaceDir || await getWorkspaceDir();
-  const prefix = getProjectFilePrefix(project, projectPath) || sanitizeProjectPrefix(basenameNoExt(projectPath));
+  const prefix = mediaStorage ?? { root: baseDir, storage: project.storage, ephemeral: false };
   for (const ref of tempRefs) {
     const copied = await copyMediaToWorkspace(
       ref.path,
@@ -487,6 +523,10 @@ export async function discardMediaCopies(copies = [], { keepPaths = [] } = {}) {
 }
 
 export async function saveProject(project, existingPath = null, onProgress = null, options = {}) {
+  if (existingPath && !options.publishProjectFile) return withProjectSaveAccess(existingPath, () => saveProjectInner(project, existingPath, onProgress, options));
+  return saveProjectInner(project, existingPath, onProgress, options);
+}
+async function saveProjectInner(project, existingPath, onProgress, options) {
   let path = existingPath;
 
   if (!path) {
@@ -496,21 +536,23 @@ export async function saveProject(project, existingPath = null, onProgress = nul
     const defaultDir = workspaceAutosaveDir ?? lastDir;
     const suggestedName = await projectSaveFilename(project);
     const chosenPath = await save({
-      filters: [{ name: 'Projet LuniiPack', extensions: ['mbah'] }],
+      filters: [{ name: t('native:project.file.filterLabel'), extensions: ['mbah'] }],
+  // eslint-disable-next-line i18next/no-literal-string -- Format I/O : chemin technique stable, pas un libellé UI.
       defaultPath: defaultDir ? joinPath(defaultDir, `${suggestedName}.mbah`) : `${suggestedName}.mbah`,
-      title: 'Enregistrer le projet...',
+      title: t('native:project.save.title'),
     });
     if (!chosenPath) return null;
+  // eslint-disable-next-line i18next/no-literal-string -- Format I/O : chemin technique stable, pas un libellé UI.
     path = /\.mbah$/i.test(chosenPath) ? chosenPath : `${chosenPath}.mbah`;
   }
 
   if (options.autosave
     && !isProjectWorthAutosaving(project, options.mediaLibraryPaths ?? [], options.totalMediaCount ?? 0)
     && Object.keys(options.mediaTags ?? {}).length === 0) {
-    throw new Error('Autosave annulée : le projet courant semble vide.');
+    throw importPresentationError('import:project.autosave.empty', {}, { code: 'IMPORT_AUTOSAVE_EMPTY' });
   }
 
-  onProgress?.('Enregistrement du projet...');
+  onProgress?.({ key: 'import:project.save.progress' });
   const mbahDir = getProjectDir(path);
   const resolvedWs = options.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
   const projectForPath = options.autosave
@@ -521,15 +563,21 @@ export async function saveProject(project, existingPath = null, onProgress = nul
   const createdCopies = [];
   let projectWithImages;
   let reconciledMediaLibraryPaths;
+  // Les écritures de secours (dossier de sauvegardes, instantané de session)
+  // ne déplacent jamais les images temporaires : leur projet en mémoire n'est
+  // pas republié, chaque passage en referait une copie. Une écriture vers le
+  // fichier même du projet, silencieuse comprise, les copie au contraire dans
+  // l'emplacement de travail (`persistTempImages: true`) : sans quoi le `.mbah`
+  // désignerait le cache de l'application, purgeable, et le projet republié
+  // passerait pour enregistré.
+  const persistTemp = options.persistTempImages ?? !options.autosave;
   try {
-    // Une sauvegarde automatique ne déplace jamais les images temporaires :
-    // seule une sauvegarde explicite les copie dans l'emplacement de travail.
-    projectWithImages = options.autosave
-      ? projectFileBody(projectForPath)
-      : await persistTempImages(projectForPath, path, resolvedWs, createdCopies);
-    const catalogPathsForSave = options.autosave
-      ? (options.mediaLibraryPaths ?? [])
-      : (options.mediaLibraryPaths ?? []).filter((mediaPath) => !isTempImage(mediaPath));
+    projectWithImages = persistTemp
+      ? await persistTempImages(projectForPath, path, resolvedWs, createdCopies, options.mediaStorage)
+      : projectFileBody(projectForPath);
+    const catalogPathsForSave = persistTemp
+      ? (options.mediaLibraryPaths ?? []).filter((mediaPath) => !isTempImage(mediaPath))
+      : (options.mediaLibraryPaths ?? []);
     reconciledMediaLibraryPaths = reconcileMediaLibraryPaths(projectWithImages, catalogPathsForSave);
     const projectToSave = {
       ...relativizeProjectMediaPaths(projectWithImages, mbahDir),
@@ -544,6 +592,7 @@ export async function saveProject(project, existingPath = null, onProgress = nul
       ? joinPath(resolvedWs, SAUVEGARDES, VERSIONS_SECURITE)
       : null;
     await writeProjectFileAtomic(path, encodeProjectFile(projectToSave, { fileName: basename(path) }), {
+      publishProjectFile: options.publishProjectFile ?? null,
       backupLimit: options.backupLimit ?? 0,
       backupDirOverride: options.backupDirOverride ?? workspaceBackupDir,
     });
@@ -554,7 +603,11 @@ export async function saveProject(project, existingPath = null, onProgress = nul
   if (!options.autosave) {
     saveProjectDir(PROJECT_SAVE_KEYS[0], path);
   }
-  onProgress?.('Projet enregistré');
+  // Les écritures de secours (dossier de sauvegardes, instantané de session)
+  // n'annoncent rien : leur chemin n'est pas celui du projet. Une sauvegarde
+  // silencieuse vers le fichier du projet, elle, l'annonce explicitement.
+  if (!options.autosave || options.announceSubscriptions) announceSavedSubscriptions(path, projectWithImages);
+  onProgress?.({ key: 'import:project.save.done' });
   // Return the project with absolute paths for in-memory use
   return { path, project: projectWithImages, mediaLibraryPaths: reconciledMediaLibraryPaths };
 }
@@ -567,21 +620,23 @@ export async function saveProject(project, existingPath = null, onProgress = nul
  */
 export async function writeNewProjectFile(project, path) {
   if (await exists(path)) {
-    throw new Error(`Un fichier porte déjà ce nom : ${basename(path)}.`);
+    throw importPresentationError('import:project.file.exists', { name: basename(path) }, { code: 'IMPORT_PROJECT_FILE_EXISTS' });
   }
   const contents = encodeProjectFile(
     relativizeProjectMediaPaths(projectFileBody(project), getProjectDir(path)),
     { fileName: basename(path) },
   );
-  try {
-    await writeTextFile(path, contents, { createNew: true });
-  } catch (error) {
-    // Un fichier apparu entre la vérification et l'écriture n'est pas le nôtre :
-    // on n'y touche pas. Toute autre panne laisse un fichier partiel, le nôtre.
-    const alreadyThere = /exist/i.test(String(error?.message ?? error));
-    if (!alreadyThere) await remove(path).catch(() => {});
-    throw error;
-  }
+  await withDeclaredWrite({ kind: 'projectSave', paths: [path] }, async () => {
+    try {
+      await writeTextFile(path, contents, { createNew: true });
+    } catch (error) {
+      // Un fichier apparu entre la vérification et l'écriture n'est pas le nôtre :
+      // on n'y touche pas. Toute autre panne laisse un fichier partiel, le nôtre.
+      const alreadyThere = /exist/i.test(presentUserMessage(error).message);
+      if (!alreadyThere) await remove(path).catch(() => {});
+      throw error;
+    }
+  });
   return path;
 }
 
@@ -592,20 +647,22 @@ export async function saveProjectAs(project, currentSavePath, onProgress = null,
   const defaultDir = currentSavePath
     ? getProjectDir(currentSavePath)
     : (workspaceAutosaveDir ?? getStoredDir(PROJECT_SAVE_KEYS) ?? getStoredDir(PROJECT_OPEN_KEYS));
-  const chosenPath = await save({
-    filters: [{ name: 'Projet LuniiPack', extensions: ['mbah'] }],
+  const chosenPath = options.chosenPath || await save({
+    filters: [{ name: t('native:project.file.filterLabel'), extensions: ['mbah'] }],
+  // eslint-disable-next-line i18next/no-literal-string -- Format I/O : chemin technique stable, pas un libellé UI.
     defaultPath: defaultDir ? joinPath(defaultDir, `${safeCurrentName}.mbah`) : `${safeCurrentName}.mbah`,
-    title: 'Enregistrer une copie sous...',
+    title: t('native:project.saveCopy.title'),
   });
   if (!chosenPath) return null;
 
+  // eslint-disable-next-line i18next/no-literal-string -- Format I/O : chemin technique stable, pas un libellé UI.
   const newPath = /\.mbah$/i.test(chosenPath) ? chosenPath : `${chosenPath}.mbah`;
   const newProjectDir = getProjectDir(newPath);
 
-  onProgress?.('Enregistrement du projet...');
+  onProgress?.({ key: 'import:project.save.progress' });
 
   const resolvedWs = options?.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
-  onProgress?.('Décollage vers la lune...');
+  onProgress?.({ key: 'import:project.save.takeoff' });
   const projectForPath = withLocalProjectNameForPath(project, newPath, { force: true });
   const catalogPathsForSave = mediaLibraryPaths.filter((mediaPath) => !isTempImage(mediaPath));
   // `deferWrite` : le chemin est choisi et le projet préparé, mais rien n'est
@@ -628,7 +685,7 @@ export async function saveProjectAs(project, currentSavePath, onProgress = null,
   let projectWithImages;
   let reconciledMediaLibraryPaths;
   try {
-    projectWithImages = await persistTempImages(projectForPath, newPath, resolvedWs, createdCopies);
+    projectWithImages = await persistTempImages(projectForPath, newPath, resolvedWs, createdCopies, options.mediaStorage);
     reconciledMediaLibraryPaths = reconcileMediaLibraryPaths(projectWithImages, catalogPathsForSave);
     const projectToSave = {
       ...relativizeProjectMediaPaths(projectWithImages, newProjectDir),
@@ -641,9 +698,10 @@ export async function saveProjectAs(project, currentSavePath, onProgress = null,
     await discardMediaCopies(createdCopies);
     throw error;
   }
+  announceSavedSubscriptions(newPath, projectWithImages, currentSavePath);
   saveProjectDir(PROJECT_SAVE_KEYS[0], newPath);
 
-  onProgress?.('Projet enregistré');
+  onProgress?.({ key: 'import:project.save.done' });
   return {
     path: newPath,
     project: projectWithImages,
@@ -655,15 +713,24 @@ export async function saveProjectAs(project, currentSavePath, onProgress = null,
 export async function loadProject() {
   const path = await open({
     multiple: false,
-    filters: [{ name: 'Projet LuniiPack', extensions: ['mbah'] }],
+    filters: [{ name: t('native:project.file.filterLabel'), extensions: ['mbah'] }],
     defaultPath: getStoredDir(PROJECT_OPEN_KEYS) ?? getStoredDir(PROJECT_SAVE_KEYS),
   });
   if (!path) return null;
   saveProjectDir(PROJECT_OPEN_KEYS[0], path);
-  return loadProjectFromPath(path);
+  return loadProjectFromPath(path, { editorAccess: true });
 }
 
-export async function loadProjectFromPath(path, { preserveEmptyProjectName = false } = {}) {
+export async function loadProjectFromPath(path, options = {}) {
+  if (!options.editorAccess) return readProjectFromPath(path, options);
+  const accessToken = await claimProjectAccess('open', path);
+  try { return { ...await readProjectFromPath(path, options), accessToken }; }
+  catch (error) {
+    await releaseProjectAccess(accessToken).catch(() => {});
+    throw error;
+  }
+}
+async function readProjectFromPath(path, { preserveEmptyProjectName = false, includeSourceText = false } = {}) {
   const text = await readTextFile(path);
   const mbahDir = getProjectDir(path);
   const workspaceDir = await getWorkspaceDir();
@@ -690,6 +757,7 @@ export async function loadProjectFromPath(path, { preserveEmptyProjectName = fal
     data,
     path,
     summary,
+    ...(includeSourceText ? { sourceText: text } : {}),
     mediaTags,
     mediaLibraryPaths: reconcileMediaLibraryPaths(data, mediaLibraryPaths),
   };
@@ -738,7 +806,7 @@ async function auditMediaBindingStatuses(project) {
   const statusByPath = {};
   for (const binding of readMediaBindings(project)) {
     if (!hasPath(binding?.path) || Object.hasOwn(statusByPath, binding.path)) continue;
-    statusByPath[binding.path] = await exists(binding.path).catch(() => false);
+    statusByPath[binding.path] = await readPathExistence(binding.path);
   }
   return resolveMediaBindingStatuses(project, statusByPath);
 }
@@ -778,9 +846,9 @@ export async function consolidateProject(project, savePath, destinationDir, onPr
         await copyFile(ref.path, nextPath);
         copied.set(key, nextPath);
         copiedCount += 1;
-        onProgress?.(`Copie média ${copiedCount}/${refs.length}`);
+        onProgress?.({ key: 'import:project.media.copy', params: { done: copiedCount, total: refs.length } });
       } catch (error) {
-        errors.push({ path: ref.path, error: String(error) });
+        errors.push({ path: ref.path, error: presentUserMessage(error).message });
         continue;
       }
     }
@@ -789,6 +857,7 @@ export async function consolidateProject(project, savePath, destinationDir, onPr
 
   const fallbackName = savePath ? basenameNoExt(savePath) : 'projet';
   const projectName = sanitizeProjectFilename(serializable.projectName || fallbackName, 'projet') || 'projet';
+  // eslint-disable-next-line i18next/no-literal-string -- Format I/O : chemin technique stable, pas un libellé UI.
   const projectPath = joinPath(destinationDir, `${projectName.replace(/\.mbah$/i, '')}-consolidee.mbah`);
   // Le `status` d'une liaison est un dernier état connu, jamais un droit de
   // suppression : il est redérivé du disque après les copies, et une liaison
@@ -831,6 +900,7 @@ export async function autoSaveNewProject(project, workspaceDir, options = {}) {
     .replace(/\s+/g, '-')
     .toLowerCase() || 'nouveau-projet';
   const stamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, 'h').replace(/-(\d{2})$/, 'm$1');
+  // eslint-disable-next-line i18next/no-literal-string -- Format I/O : chemin technique stable, pas un libellé UI.
   const filename = `${safeName}_${stamp}.mbah`;
   const path = joinPath(autosaveDir, filename);
   const backupDirOverride = joinPath(autosaveDir, VERSIONS_SECURITE);
@@ -865,6 +935,7 @@ async function copyPlainMediaToWorkspace(sourcePath, baseDir, category, projectN
   if (isManagedWorkspacePath(sourcePath, baseDir)) return { path: sourcePath, copied: false };
   const prefix = sanitizeProjectPrefix(projectName);
   const originalName = basename(sourcePath);
+  // eslint-disable-next-line i18next/no-literal-string -- Format I/O : chemin technique stable, pas un libellé UI.
   const targetName = prefix ? `${prefix}__${originalName}` : originalName;
   const dest = await uniquePathInDir(targetDir, targetName);
   await copyFile(sourcePath, dest);
@@ -888,9 +959,29 @@ export async function copyMediaToWorkspace(
   workspaceDir,
   category = FICHIERS_IMPORTES,
   projectName = '',
-  { artifactCopies = null, knownCopies = null } = {},
+  { artifactCopies = null, knownCopies = null, mediaOutput = null } = {},
 ) {
   if (!hasPath(sourcePath)) return sourcePath;
+  const capturedCopy = knownCopies?.get(pathKey(sourcePath));
+  if (capturedCopy) return capturedCopy;
+  if (projectName && typeof projectName === 'object') {
+    const context = { ...projectName, root: workspaceDir || projectName.root || await getWorkspaceDir() };
+    const copy = async (output) => {
+      const args = await output.arguments();
+      const { invoke } = await import('@tauri-apps/api/core');
+      const result = await invoke('copy_project_media', {
+        sourcePath, root: args.workspaceDir, category,
+        projectDestination: args.projectDestination,
+        sessionRoot: projectName.sessionRoot ?? null,
+      });
+      for (const copy of result.copies) {
+        knownCopies?.set(pathKey(copy.from), copy.to);
+        if (pathKey(copy.from) !== pathKey(sourcePath)) artifactCopies?.push(copy);
+      }
+      return result.path;
+    };
+    return mediaOutput ? copy(mediaOutput) : withProjectMediaOutput(context, copy);
+  }
   const baseDir = workspaceDir || await getWorkspaceDir();
   if (isManagedWorkspacePath(sourcePath, baseDir)) return sourcePath;
   const cachedMain = knownCopies?.get(pathKey(sourcePath));

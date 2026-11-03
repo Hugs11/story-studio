@@ -1,9 +1,10 @@
+import { useTreeTranslation } from '../../i18n/useTreeTranslation.jsx';
+import { translateTree as t, presentTreeNavigationTargetName } from '../../i18n/treePresentation.js';
 import { useMemo, useRef } from 'react';
 import { computeBadgesData, formatBadgeTitle } from '../tree/treeNavigationBadges';
 import {
   getPresentedEndNodeHomeNavigation,
   getPresentedEndNodeReturnNavigation,
-  getGeneratedNavigationTargetName,
   hasVisibleEndNode,
 } from '../../store/generatedNavigation';
 import { EMPTY_BADGES } from './treePanelConstants';
@@ -17,7 +18,30 @@ export function useTreeNavigationBadges({
   showNavigationBadges,
   validationIssues,
 }) {
+  const { language } = useTreeTranslation();
   const rootEntries = project.rootEntries ?? [];
+  const rootNavigationBadges = useMemo(() => {
+    const badges = [];
+    if (projectType === 'pack' && project?.globalOptions?.autoNext) {
+      badges.push({
+        key: 'auto-next-settings',
+        kind: 'auto-next',
+        action: 'open-auto-next-settings',
+        label: '»',
+        title: t("tree:badge.autoNext.hint"),
+      });
+    }
+    if (projectType === 'pack' && showNavigationBadges && project?.nativeGraph?.preserveForRoundTrip === true) {
+      badges.unshift({
+        key: 'native-graph-root',
+        kind: 'graph',
+        label: t("tree:badge.graph.label"),
+        title: t("tree:badge.graph.active"),
+      });
+    }
+    return badges.length ? badges : EMPTY_BADGES;
+  }, [project?.globalOptions?.autoNext, project?.nativeGraph?.preserveForRoundTrip, projectType, showNavigationBadges, language]);
+
   const issuesById = useMemo(() => {
     const map = new Map();
     for (const issue of validationIssues) {
@@ -107,6 +131,7 @@ export function useTreeNavigationBadges({
 
     return badgesById;
   }, [
+    language,
     issuesById,
     project,
     projectIndex,
@@ -122,33 +147,33 @@ export function useTreeNavigationBadges({
     const badges = [];
     const returnNavigation = getPresentedEndNodeReturnNavigation(project);
     if (hasEndNode && returnNavigation) {
-      const nightSuffix = project.globalOptions?.nightMode ? ' (mode nuit)' : '';
+      const nightSuffix = project.globalOptions?.nightMode ? t('tree:badge.night.suffix') : '';
       const isNightMode = !!project.globalOptions?.nightMode;
       const returnName = returnNavigation.targetId
-        ? getGeneratedNavigationTargetName(returnNavigation.targetId, projectIndex)
-        : "destination de fin de l'histoire source";
+        ? presentTreeNavigationTargetName(returnNavigation.targetId, projectIndex)
+        : t('tree:badge.story.endDestination');
       badges.push({
         key: `end-node-return:${returnNavigation.targetId || 'contextual'}:${returnName}`,
         kind: isNightMode ? 'end-night' : 'end-node',
         label: isNightMode ? '☾' : '■',
-        title: `À la fin du message de fin${nightSuffix} → « ${returnName} »`,
+        title: t("tree:badge.end.return", { nightSuffix, returnName }),
       });
     }
 
     const homeNavigation = getPresentedEndNodeHomeNavigation(project);
     if (hasEndNode && homeNavigation?.targetId) {
-      const homeName = getGeneratedNavigationTargetName(homeNavigation.targetId, projectIndex);
-      const nightSuffix = homeNavigation.isNightMode ? ' (mode nuit)' : '';
+      const homeName = presentTreeNavigationTargetName(homeNavigation.targetId, projectIndex);
+      const nightSuffix = homeNavigation.isNightMode ? t('tree:badge.night.suffix') : '';
       badges.push({
         key: `end-node-home:${homeNavigation.targetId}:${homeName}`,
         kind: homeNavigation.isNightMode ? 'end-night-home' : 'end-node-home',
         label: '⌂',
-        title: `Appuie sur le bouton Accueil du message de fin${nightSuffix} → « ${homeName} »`,
+        title: t("tree:badge.end.home", { nightSuffix, homeName }),
       });
     }
 
     return badges.length ? badges : EMPTY_BADGES;
   })();
 
-  return { navigationBadgesById, endNodeNavigationBadges, hasEndNode };
+  return { navigationBadgesById, rootNavigationBadges, endNodeNavigationBadges, hasEndNode };
 }

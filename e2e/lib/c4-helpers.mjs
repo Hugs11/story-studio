@@ -26,16 +26,18 @@ export async function repairGraphEndings(page) {
     const opened = await panel.waitFor({ state: 'visible', timeout: 5_000 }).then(() => true, () => false);
     if (!opened) await pill.click();
     await panel.waitFor({ state: 'visible', timeout: 15_000 });
-    const issue = panel.locator('.advanced-diagnostics__item').filter({
+    // Depuis 7a093fda, chaque diagnostic est un <details> replié : on le déplie
+    // par son résumé, comme l'utilisateur, avant d'atteindre ses actions.
+    const issue = panel.locator('details.validation-pill-details').filter({
       hasText: /OK ou la fin automatique est actif sans destination utilisable|Cet Écran accessible ne permet aucune sortie, même par la molette/,
     }).first();
     if (!await issue.count()) {
       await page.keyboard.press('Escape');
       return { repaired: messages.length, messages, remaining: validation.count };
     }
-    messages.push(await issue.locator('.advanced-diagnostics__message').filter({
-      hasText: /OK ou la fin automatique est actif sans destination utilisable|Cet Écran accessible ne permet aucune sortie, même par la molette/,
-    }).innerText());
+    const summary = issue.locator('summary.validation-pill-item');
+    messages.push(await summary.locator('.validation-pill-item-label').innerText());
+    if (await issue.getAttribute('open') === null) await summary.click();
     await issue.getByRole('button', { name: 'En faire une fin', exact: true }).click();
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
@@ -190,9 +192,8 @@ export async function createGraphAction(page) {
 export async function renameSelectedNode(page, newName) {
   await page.keyboard.press('F2');
   // `exact: true` : sans lui, `getByLabel` matche aussi, en sous-chaîne
-  // insensible à la casse, le bouton de la fiche du pack dans la barre de
-  // titre (aria-label « … Modifier le **nom** et les métadonnées du pack »),
-  // souvent trouvé en premier dans l'ordre du DOM.
+  // insensible à la casse, les autres contrôles dont le libellé contient
+  // « Nom ». La sélection vise seulement le champ de l’Inspecteur.
   const field = page.getByLabel('Nom', { exact: true }).first();
   await field.waitFor({ timeout: 5_000 });
   await field.fill(newName);
@@ -200,18 +201,42 @@ export async function renameSelectedNode(page, newName) {
   await page.waitForTimeout(300);
 }
 
-// Choisit, dans un `<select>` de `NodePicker.jsx`, la première `<option>` dont
-// le texte commence par `name` (le picker peut suffixer « (sans nom) » ou
-// « — identifiant dupliqué » : `selectOption({ label })` de Playwright exige
-// une égalité EXACTE et n'accepte pas de RegExp pour `label`, d'où ce détour
-// par `value`, l'attribut qui porte le chemin du nœud).
-export async function selectNodePickerOption(selectLocator, name) {
-  const value = await selectLocator.evaluate((select, wanted) => {
-    const match = [...select.options].find((option) => option.textContent?.trim().startsWith(wanted));
-    return match ? match.value : null;
-  }, name);
-  if (!value) throw new Error(`Aucune option « ${name}… » dans ce sélecteur.`);
-  await selectLocator.selectOption({ value });
+// Ouvre common/Select et choisit une option visible (liste portée au body).
+export async function selectNodePickerOption(selectLocator, name, { timeout = 5_000 } = {}) {
+  // Select ferme sur scroll : terminer le défilement vers le déclencheur
+  // avant de l'ouvrir, plutôt que laisser un scroll différé refermer la liste.
+  await selectLocator.scrollIntoViewIfNeeded();
+  await selectLocator.click();
+  const ownerPage = typeof selectLocator.page === 'function' ? selectLocator.page() : selectLocator.page;
+  const deadline = Date.now() + timeout;
+  let listId;
+  // Le clic précède le rendu React qui pose aria-controls. Ne pas lire
+  // l'attribut une seule fois dans cette fenêtre de montage.
+  do {
+    listId = await selectLocator.getAttribute('aria-controls');
+    if (listId && await selectLocator.getAttribute('aria-expanded') === 'true') break;
+    await ownerPage.waitForTimeout(50);
+  } while (Date.now() < deadline);
+  if (!listId || await selectLocator.getAttribute('aria-expanded') !== 'true') {
+    throw new Error('Sélecteur sans liste ouverte après ' + timeout + ' ms : ' + await selectLocator.innerText());
+  }
+  const list = ownerPage.locator('[id=' + JSON.stringify(listId) + ']');
+  const options = list.locator('[role="option"]');
+  await options.first().waitFor({ timeout: 5_000 });
+  const labels = [];
+  for (let i = 0, count = await options.count(); i < count; i += 1) labels.push(await options.nth(i).innerText());
+  const exact = labels.findIndex(label => label.trim() === name);
+  const index = exact >= 0 ? exact : labels.findIndex(label => label.trim().startsWith(name));
+  if (index < 0) throw new Error('Aucune option « ' + name + ' » dans ce sélecteur.');
+  const chosen = labels[index].trim();
+  await options.nth(index).click();
+  const selectionDeadline = Date.now() + timeout;
+  do {
+    if ((await selectLocator.innerText()).trim() === chosen
+      && await selectLocator.getAttribute('aria-expanded') === 'false') return;
+    await ownerPage.waitForTimeout(50);
+  } while (Date.now() < selectionDeadline);
+  throw new Error('Le choix du sélecteur ne persiste pas : ' + chosen);
 }
 
 const inspector = (page) => page.locator('.advanced-panel--inspector');

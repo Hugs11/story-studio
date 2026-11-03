@@ -80,7 +80,10 @@ fn a_position_disposition_is_attached_to_the_exact_value_it_resolves() {
 
 #[test]
 fn an_extension_disposition_is_explicit_and_the_unknown_one_is_never_invented() {
+    // Le témoin est un alias `id` divergent, membre opaque que le décodeur
+    // capture encore ; le `duration` de STUdio, clé inconnue, est ignoré.
     let mut source = source_document();
+    source["stageNodes"][1]["id"] = json!("alias-cible");
     source["stageNodes"][1]["duration"] = json!(42000);
     let payload = payload_from(&source);
     let target = format!("/stageNodes/@uuid={TARGET}#0");
@@ -90,7 +93,7 @@ fn an_extension_disposition_is_explicit_and_the_unknown_one_is_never_invented() 
         bindings(),
         json!({
             "gesture": "set-opaque-export-disposition",
-            "member": opaque_member(&target, "duration"),
+            "member": opaque_member(&target, "id"),
             "disposition": "remove-explicitly"
         }),
     );
@@ -99,15 +102,17 @@ fn an_extension_disposition_is_explicit_and_the_unknown_one_is_never_invented() 
         .context
         .opaque_members
         .iter()
-        .find(|member| member.key == "duration")
-        .expect("extension conservée");
+        .find(|member| member.key == "id" && member.path == target)
+        .expect("alias conservé");
     assert_eq!(
         member.export_disposition,
         Some(OpaqueExportDisposition::RemoveExplicitly)
     );
     // La valeur et sa provenance sont figées avec la décision : une édition
     // ultérieure la rendra périmée sans qu'un appelant ait à y penser.
-    assert!(member.export_disposition_value.matches_json(&json!(42000)));
+    assert!(member
+        .export_disposition_value
+        .matches_json(&json!("alias-cible")));
     assert_eq!(member.export_disposition_origin, Some(member.origin));
 
     // La règle sur les clés connues jamais émises reste prioritaire : une telle
@@ -131,6 +136,19 @@ fn an_extension_disposition_is_explicit_and_the_unknown_one_is_never_invented() 
         json!({
             "gesture": "set-opaque-export-disposition",
             "member": opaque_member(&target, "absente"),
+            "disposition": "preserve-untested"
+        }),
+    );
+    assert_eq!(error.code, "OPAQUE_DISPOSITION_REFUSED");
+
+    // Le `duration` ignoré à l'import n'est pas un membre : aucune décision
+    // ne peut s'y attacher.
+    let error = refused(
+        &payload,
+        bindings(),
+        json!({
+            "gesture": "set-opaque-export-disposition",
+            "member": opaque_member(&target, "duration"),
             "disposition": "preserve-untested"
         }),
     );

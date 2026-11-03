@@ -1,3 +1,4 @@
+import { translateTree as t } from "../i18n/treePresentation.js";
 // Les métadonnées communes aux deux éditeurs : leur source de vérité, ce qui
 // est éditable, et ce que la production en fait réellement.
 //
@@ -61,13 +62,13 @@ function presenceValue(field) {
  * la fiche change cette identité et la racine du document dans un seul geste.
  * Sans modification, l'identité acquise à la création ou à l'import demeure.
  */
-export function advancedFieldGovernance(documentOrigin) {
+export function advancedFieldGovernance(documentOrigin, identityLocked = false) {
   void documentOrigin;
   return {
     title: { editable: true, reason: null },
     description: { editable: true, reason: null },
     version: { editable: true, reason: null },
-    uuid: { editable: true, reason: null },
+    uuid: { editable: !identityLocked, reason: null },
   };
 }
 
@@ -98,6 +99,7 @@ export function advancedPackMetadataDraft(view, project = null) {
     version: version == null ? '' : String(version),
     uuid: advancedProducedIdentity(view) ?? '',
     originalUuid: advancedImportedIdentity(view),
+    ...(view?.identityLocked ? { identityLocked: true } : {}),
   };
 }
 
@@ -181,7 +183,7 @@ function trimmedText(value) {
  * Rend `null` quand rien n'a bougé : l'appelant n'envoie alors aucun geste.
  */
 export function advancedMetadataMembers(view, draft) {
-  const governance = advancedFieldGovernance(view?.documentOrigin);
+  const governance = advancedFieldGovernance(view?.documentOrigin, view?.identityLocked);
   const metadata = view?.metadata ?? null;
   const members = {};
 
@@ -266,9 +268,9 @@ export function advancedPackRecap(view) {
     // Un document créé sans version en reçoit une à la production — `1`, le
     // défaut ; un document importé sans version explicite y est refusé. Dans les
     // deux cas, afficher « v1 » sans le dire mentirait.
-    line: version == null
-      ? (view.documentOrigin === DOCUMENT_ORIGIN_CREATED ? 'v1 par défaut à la production' : 'Version non renseignée')
-      : `v${version}`,
+    get line() { return version == null
+      ? (view.documentOrigin === DOCUMENT_ORIGIN_CREATED ? t("tree:metadata.version.default") : t("tree:metadata.version.empty"))
+      : `v${version}`; },
   };
 }
 
@@ -284,11 +286,11 @@ export const METADATA_SAVE_CLOSED = 'closed';
 export const METADATA_SAVE_KEPT = 'kept';
 
 const SAVE_NOTICES = Object.freeze({
-  held: "Un export est en cours. La saisie est conservée ; clique de nouveau sur « Appliquer » une fois l'export terminé.",
-  busy: 'Un geste est déjà en cours. Réessaie dans un instant ; la saisie est conservée.',
-  queued: 'Un geste est déjà en cours. Réessaie dans un instant ; la saisie est conservée.',
-  stale: "Le projet a changé pendant l'application. Vérifie les valeurs avant de réessayer.",
-  refused: "La modification a été refusée et rien n'a été écrit. La saisie est conservée.",
+  held: "tree:metadata.save.held",
+  busy: "tree:metadata.save.busy",
+  queued: "tree:metadata.save.busy",
+  stale: "tree:metadata.save.stale",
+  refused: "tree:metadata.save.refused",
 });
 
 /**
@@ -301,9 +303,6 @@ export function metadataSaveDecision(outcome) {
   if (outcome == null || outcome.status === 'applied') {
     return { result: METADATA_SAVE_CLOSED, notice: null };
   }
-  return {
-    result: METADATA_SAVE_KEPT,
-    notice: SAVE_NOTICES[outcome.status]
-      ?? "La modification n'a pas été appliquée. La saisie est conservée.",
-  };
+  const noticeRef = { key: SAVE_NOTICES[outcome.status] ?? "tree:metadata.save.notApplied" };
+  return { result: METADATA_SAVE_KEPT, noticeRef, get notice() { return t(noticeRef.key); } };
 }

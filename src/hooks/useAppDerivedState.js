@@ -1,3 +1,4 @@
+import { useCommonTranslation } from '../i18n/commonPresentation.js';
 import { useEffect, useMemo, useState } from 'react';
 import { getLastExportDir } from './useFileDialog';
 import { useProjectDerivedData } from './useProjectDerivedData';
@@ -42,6 +43,7 @@ export function useAppDerivedState({
   keyboardShortcuts,
   xttsSettings,
 }) {
+  const { t, language } = useCommonTranslation();
   const {
     selectedNode,
     validationIssues,
@@ -98,25 +100,25 @@ export function useAppDerivedState({
 
   const selectedStatusName = useMemo(() => {
     if (!hasTree) return null;
-    if (store.selectedId === END_NODE_ID) return store.project.endNodeName || 'Message de fin';
+    if (store.selectedId === END_NODE_ID) return store.project.endNodeName || t('common:status.end.fallback');
     if (store.selectedId === 'root') {
       return projectType === 'simple'
-        ? (store.project.projectName || 'Mon histoire')
-        : (store.project.rootName || store.project.projectName || 'Menu racine');
+        ? (store.project.projectName || t('common:status.story.fallback'))
+        : (store.project.rootName || store.project.projectName || t('common:status.root.fallback'));
     }
     const entry = projectIndex.entryById.get(store.selectedId);
-    return entry?.name || '(sans nom)';
-  }, [hasTree, projectIndex, projectType, store.project, store.selectedId]);
+    return entry?.name || t('common:status.node.fallback');
+  }, [hasTree, projectIndex, projectType, store.project, store.selectedId, t, language]);
   const activePanelsLabel = [
-    workspaceViewState.showTree && 'arbre',
-    workspaceViewState.showSettings && 'réglages',
-    workspaceViewState.showDiagram && 'diagramme',
+    workspaceViewState.showTree && t('common:status.tree.label'),
+    workspaceViewState.showSettings && t('common:status.settings.label'),
+    workspaceViewState.showDiagram && t('common:status.diagram.label'),
   ].filter(Boolean).join(' + ');
   const statusText = isAdvanced
-    ? 'Éditeur graphe — navigation du pack éditée directement'
+    ? t('common:status.graph.description')
     : !hasTree
-      ? 'Choisis un type de projet'
-      : `Sélection : ${selectedStatusName} — panneaux : ${activePanelsLabel}`;
+      ? t('common:status.home.description')
+      : t('common:status.selection.description', { name: selectedStatusName, panels: activePanelsLabel });
   const projectDirty = hasUnsavedWork({
     project: store.project,
     mediaLibraryPaths,

@@ -1,0 +1,6 @@
+{
+  "coveredBySourceId": "source-id",
+  "excluded": null,
+  "indexed": [],
+  "lastOutcome": { "outcome": "refused", "reason": "corruptArchive" }
+}

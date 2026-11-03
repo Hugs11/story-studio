@@ -1,10 +1,16 @@
+import { useCommonTranslation } from '../../i18n/commonPresentation.js';
 import { useMemo, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
-import { Image as ImageIcon } from '../icons/LucideLocal';
+import { CircleHelp, Image as ImageIcon, Settings } from '../icons/LucideLocal';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { Tooltip } from '../common/Tooltip';
+import { DEFAULT_SHORTCUT_LABELS } from '../../store/keyboardShortcuts';
 import './TitleBar.css';
+
+// Les boutons de fenêtre sont dessinés dans un viewBox 16 au trait de 1,5 px ; les icônes lucide
+// (viewBox 24, rendues à 16 px) donnent le même trait avec 1,5 x 24 / 16.
+const LUCIDE_STROKE = 2.25;
 
 function AppMark() {
   return (
@@ -38,15 +44,6 @@ function CloseIcon() {
   );
 }
 
-function HelpIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="chrome-icon" aria-hidden="true">
-      <path d="M6.7 6.15a1.55 1.55 0 1 1 2.25 1.37c-.66.33-.95.73-.95 1.43v.35" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-      <path d="M8 11.55h.01" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function ChevronIcon() {
   return (
     <svg viewBox="0 0 12 12" className="chrome-titlebar-chevron-icon" aria-hidden="true">
@@ -60,25 +57,33 @@ function ChevronIcon() {
 // champs. Composer la ligne ici obligerait à replier l'âge minimum sur « 3+ »
 // pour un projet graphe, qui n'en a pas — une valeur d'auteur inventée. La
 // ligne est donc calculée par l'appelant, qui sait ce que sa structure porte.
-export function TitleBar({ projectName, packRecap = null, packCoverImage = null, isDirty, hasSavePath = false, saveState = null, showProjectMeta = true, onOpenPackMetadata = null, onOpenCredits = null }) {
+// `section` remplace la méta projet par le nom d'un écran hors projet (le
+// Catalogue) : « Story Studio › Catalogue ».
+export function TitleBar({ section = null, projectName, packRecap = null, packCoverImage = null, isDirty, hasSavePath = false, saveState = null, showProjectMeta = true, onOpenPackMetadata = null, onOpenCredits = null, onOpenPreferences = null, preferencesShortcut = DEFAULT_SHORTCUT_LABELS.tabOptions }) {
+  const { t } = useCommonTranslation();
   const currentWindow = useMemo(() => (isTauriRuntime() ? getCurrentWindow() : null), []);
   const [isMaximizing, setIsMaximizing] = useState(false);
   const packCoverUrl = useLocalFile(packCoverImage);
-  const displayProjectName = hasSavePath ? (projectName || 'Nouveau projet') : 'Projet non enregistré';
+  const displayProjectName = hasSavePath ? (projectName || t('common:project.new.fallback')) : t('common:project.unsaved.label');
   const packStoryName = packRecap?.title || '';
-  const packDisplayName = packStoryName || 'Métadonnées du pack';
+  const packDisplayName = packStoryName || t('common:titleBar.pack.fallback');
   const packMetaLine = packRecap?.line ?? '';
-  const projectTooltip = `Nom du projet : « ${displayProjectName} »`;
+  const projectTooltip = t('common:titleBar.project.tooltip', { name: displayProjectName });
   const packTooltip = packStoryName
-    ? `« ${packStoryName} » — Modifier le nom et les métadonnées du pack`
-    : 'Renseigner le nom et les métadonnées du pack';
+    ? t('common:titleBar.pack.namedTooltip', { name: packStoryName })
+    : t('common:titleBar.pack.tooltip');
   const showSaveIndicator = isDirty || hasSavePath || saveState === 'ok';
   const saveIndicatorClass = (isDirty && saveState !== 'ok')
     ? 'chrome-titlebar-status is-dirty'
     : 'chrome-titlebar-status is-saved';
   const saveIndicatorTitle = !hasSavePath
-    ? 'Projet pas encore enregistré'
-    : (isDirty && saveState !== 'ok') ? 'Modifications non enregistrées' : 'Projet enregistré';
+    ? t('common:titleBar.save.neverSaved')
+    : (isDirty && saveState !== 'ok') ? t('common:saveBeforeLeave.dirty.title') : t('common:titleBar.save.saved');
+
+  const preferencesLabel = t('common:titleBar.preferences.tooltip');
+  const preferencesTooltip = preferencesShortcut
+    ? t('common:toolbar.shortcut.tooltip', { label: preferencesLabel, shortcut: preferencesShortcut })
+    : preferencesLabel;
 
   async function handleToggleMaximize() {
     if (!currentWindow || isMaximizing) return;
@@ -110,6 +115,11 @@ export function TitleBar({ projectName, packRecap = null, packCoverImage = null,
                 </Tooltip>
               )}
             </>
+          ) : section ? (
+            <>
+              <span className="chrome-titlebar-chevron"><ChevronIcon /></span>
+              <span className="chrome-titlebar-project">{section}</span>
+            </>
           ) : null}
         </div>
         {showProjectMeta && packRecap ? (
@@ -139,20 +149,28 @@ export function TitleBar({ projectName, packRecap = null, packCoverImage = null,
       <div className="chrome-titlebar-spacer" data-tauri-drag-region />
 
       <div className="chrome-window-controls">
+        {onOpenPreferences ? (
+          <Tooltip text={preferencesTooltip}>
+            <button type="button" className="chrome-window-btn chrome-titlebar-preferences" onClick={onOpenPreferences} aria-label={preferencesTooltip}>
+              <Settings className="chrome-icon" aria-hidden="true" strokeWidth={LUCIDE_STROKE} />
+            </button>
+          </Tooltip>
+        ) : null}
         {onOpenCredits ? (
-          <button type="button" className="chrome-window-btn" onClick={onOpenCredits} title="Aide et à propos" aria-label="Aide et à propos">
-            <HelpIcon />
+          <button type="button" className="chrome-window-btn" onClick={onOpenCredits} title={t('common:titleBar.help.tooltip')} aria-label={t('common:titleBar.help.tooltip')}>
+            <CircleHelp className="chrome-icon" aria-hidden="true" strokeWidth={LUCIDE_STROKE} />
           </button>
         ) : null}
+        {currentWindow && (onOpenPreferences || onOpenCredits) ? <span className="chrome-window-separator" aria-hidden="true" /> : null}
         {currentWindow ? (
           <>
-            <button type="button" className="chrome-window-btn" onClick={() => currentWindow.minimize()} title="Réduire">
+            <button type="button" className="chrome-window-btn" onClick={() => currentWindow.minimize()} title={t('common:window.minimize.label')}>
               <MinimizeIcon />
             </button>
-            <button type="button" className="chrome-window-btn" onClick={handleToggleMaximize} title="Agrandir ou restaurer" disabled={isMaximizing}>
+            <button type="button" className="chrome-window-btn" onClick={handleToggleMaximize} title={t('common:window.maximize.label')} disabled={isMaximizing}>
               <MaximizeIcon />
             </button>
-            <button type="button" className="chrome-window-btn chrome-window-btn-close" onClick={() => currentWindow.close()} title="Fermer">
+            <button type="button" className="chrome-window-btn chrome-window-btn-close" onClick={() => currentWindow.close()} title={t('common:window.close.label')}>
               <CloseIcon />
             </button>
           </>

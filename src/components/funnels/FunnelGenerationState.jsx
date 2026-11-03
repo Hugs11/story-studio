@@ -1,3 +1,4 @@
+import { useHomeTranslation } from '../../i18n/useHomeTranslation.js';
 /**
  * Écran « Génération » du châssis pour les funnels génératifs/outils.
  * Spinner violet + liste de phases (à venir / en cours / faite) + barre de
@@ -10,18 +11,19 @@
  * @param {number}   [props.progress]   0..1. Si fourni, affiche la barre + %.
  */
 export function FunnelGenerationState({
-  title = 'Génération…',
-  hint = 'Ne ferme pas la fenêtre.',
+  title,
+  hint,
   phases = [],
   progress = null,
 }) {
+  const { t } = useHomeTranslation();
   const pct = progress === null ? null : Math.round(Math.max(0, Math.min(1, progress)) * 100);
 
   return (
     <div className="funnel-process">
       <div className="funnel-spinner" aria-hidden="true" />
-      <div className="funnel-process-title">{title}</div>
-      <div className="funnel-process-hint">{hint}</div>
+      <div className="funnel-process-title">{title ?? t('home:funnel.generation.title')}</div>
+      <div className="funnel-process-hint">{hint ?? t('home:funnel.generation.hint')}</div>
 
       {phases.length > 0 && (
         <div className="funnel-phases">

@@ -1,15 +1,18 @@
 use super::*;
+use crate::support::user_message::codes;
+#[cfg(test)]
+use crate::support::user_message::MessageTransportAssertions as _;
 
 #[test]
 fn save_recording_requires_a_workspace() {
-    let err = save_recording(None, "recording.webm", b"audio").unwrap_err();
-    assert!(err.contains("emplacement de travail"));
+    let err = save_recording(None, "recording.webm", b"audio", None).unwrap_err();
+    assert!(err.contains_any_code(&[codes::AUDIO_RECORDING_WORKSPACE_REQUIRED]));
 }
 
 #[test]
 fn save_recording_rejects_unsafe_filename() {
     let err = validate_recording_filename("../recording.webm").unwrap_err();
-    assert!(err.contains("invalide"));
+    assert!(err.contains_any_code(&[codes::FILES_INVALID_RECORDING_NAME]));
 
     for filename in [
         r"folder/recording.webm",
@@ -18,30 +21,31 @@ fn save_recording_rejects_unsafe_filename() {
     ] {
         let err = validate_recording_filename(filename).unwrap_err();
         assert!(
-            err.contains("invalide") || err.contains("interdits"),
+            err.contains_any_code(&[codes::FILES_INVALID_RECORDING_NAME])
+                || err.contains_any_code(&[codes::AUDIO_RECORDING_NAME_CHARS_INVALID]),
             "{filename:?} should be rejected with a filename error"
         );
     }
 
     let err = validate_recording_filename("recording.mp3").unwrap_err();
-    assert!(err.contains("Extension"));
+    assert!(err.contains_any_code(&[codes::FILES_RECORDING_EXTENSION_NOT_SUPPORTED]));
 
     let err = validate_recording_filename("recording.exe").unwrap_err();
-    assert!(err.contains("Extension"));
+    assert!(err.contains_any_code(&[codes::FILES_RECORDING_EXTENSION_NOT_SUPPORTED]));
 
     let long_name = format!("{}.wav", "a".repeat(300));
     let err = validate_recording_filename(&long_name).unwrap_err();
-    assert!(err.contains("trop long"));
+    assert!(err.contains_any_code(&[codes::AUDIO_RECORDING_NAME_LENGTH_LIMIT]));
 }
 
 #[test]
 fn save_recording_rejects_empty_or_oversized_data() {
-    let err = save_recording(Some("C:/projet"), "recording.webm", &[]).unwrap_err();
-    assert!(err.contains("vide"));
+    let err = save_recording(Some("C:/projet"), "recording.webm", &[], None).unwrap_err();
+    assert!(err.contains_any_code(&[codes::FILES_EMPTY_RECORDING]));
 
     let data = vec![0_u8; MAX_RECORDING_BYTES + 1];
-    let err = save_recording(Some("C:/projet"), "recording.webm", &data).unwrap_err();
-    assert!(err.contains("trop volumineux"));
+    let err = save_recording(Some("C:/projet"), "recording.webm", &data, None).unwrap_err();
+    assert!(err.contains_any_code(&[codes::AUDIO_RECORDING_SIZE_LIMIT]));
 }
 
 #[test]
@@ -53,6 +57,7 @@ fn save_recording_writes_inside_recordings_dir() {
         Some(workspace_dir.to_str().expect("workspace path utf8")),
         "recording.webm",
         b"audio",
+        None,
     )
     .expect("save recording");
     let written_path = PathBuf::from(&written);
@@ -80,6 +85,7 @@ fn save_recording_accepts_wav() {
         Some(workspace_dir.to_str().expect("workspace path utf8")),
         "enregistrement-2026-05-24.wav",
         b"audio",
+        None,
     )
     .expect("save wav recording");
     let written_path = PathBuf::from(&written);
@@ -106,7 +112,7 @@ fn save_recording_accepts_session_workspace() {
     let session =
         crate::support::temp::create_session_workspace(&root).expect("create session workspace");
 
-    let written = save_recording(Some(&session), "session-recording.webm", b"audio")
+    let written = save_recording(Some(&session), "session-recording.webm", b"audio", None)
         .expect("save recording in session workspace");
     let written_path = PathBuf::from(&written);
     let expected_recordings_dir = PathBuf::from(&session).join("enregistrements");
@@ -124,8 +130,8 @@ fn save_recording_accepts_session_workspace() {
 /// Deux prises sous le même nom : la seconde ne remplace jamais la première.
 /// Elle reçoit un nom libre, et le chemin rendu est celui réellement écrit.
 fn assert_second_take_keeps_the_first(workspace_dir: Option<&str>, recordings_dir: &Path) {
-    let first = save_recording(workspace_dir, "prise.wav", b"premiere").expect("first take");
-    let second = save_recording(workspace_dir, "prise.wav", b"seconde").expect("second take");
+    let first = save_recording(workspace_dir, "prise.wav", b"premiere", None).expect("first take");
+    let second = save_recording(workspace_dir, "prise.wav", b"seconde", None).expect("second take");
 
     assert_ne!(first, second, "la seconde prise doit avoir son propre nom");
     assert_eq!(

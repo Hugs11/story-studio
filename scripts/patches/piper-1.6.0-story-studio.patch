@@ -141,3 +141,10 @@ index 5039a89..a7d41b5 100644
 +    max_amplitude = std::max(max_amplitude, std::abs(sample));
 +  }
 +  EXPECT_NEAR(max_amplitude, 1.0F, 1e-5F);
+diff --git a/libpiper/tests/CMakeLists.txt b/libpiper/tests/CMakeLists.txt
+--- a/libpiper/tests/CMakeLists.txt
++++ b/libpiper/tests/CMakeLists.txt
+@@ -65,0 +66,3 @@ gtest_discover_tests(piper_test
++    # Fresh Windows installations can take longer to start a new executable.
++    # Allow test discovery to finish without changing individual test timeouts.
++    DISCOVERY_TIMEOUT 60

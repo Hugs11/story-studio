@@ -1,3 +1,5 @@
+import { presentUserMessage } from '../i18n/userMessage.js';
+import { translateMedia } from '../i18n/mediaPresentation.js';
 import { useCallback, useRef, useState } from 'react';
 import { collectSessionOnlyMedia, applySessionMediaTriage } from '../store/sessionMediaTriage';
 import { copyMediaToWorkspace } from '../store/projectIO';
@@ -8,12 +10,13 @@ import { logger } from '../utils/logger';
 /**
  * Tri des médias de session à la promotion.
  *
- * `triageSessionMedia({ project, sessionDir, targetWorkspaceDir, projectName, transferCopies })`
+ * `triageSessionMedia({ project, sessionDir, targetWorkspaceDir, mediaStorage, transferCopies })`
  * - re-pointe bibliothèque et tags vers les fichiers déjà copiés par le
  *   transfert des médias référencés (`transferCopies`, pas de re-copie) ;
  * - détecte les orphelins restants (bibliothèque + clés de tags dans la
  *   session, non référencés) et propose le tri à l'utilisateur (modale) ;
- * - copie les conservés dans `fichiers-importes/` avec reprise : en cas
+ * - copie les conservés dans leur catégorie d’origine et le dossier projet
+ *   capturés par la sauvegarde (origine externe → fichiers-importes), avec reprise : en cas
  *   d'échec, dialogue « Réessayer / Abandonner ces fichiers » jusqu'à
  *   résolution explicite — aucun fichier ne reste dans le dossier temporaire
  *   (purgé sous 24 h) sans décision.
@@ -28,7 +31,7 @@ export function useSessionMediaTriage({ store, mediaLibraryPathsRef, setMediaLib
     project,
     sessionDir,
     targetWorkspaceDir,
-    projectName = '',
+    mediaStorage = null,
     transferCopies = [],
     isSessionCurrent = () => true,
   }) => {
@@ -69,7 +72,7 @@ export function useSessionMediaTriage({ store, mediaLibraryPathsRef, setMediaLib
               path,
               targetWorkspaceDir,
               FICHIERS_IMPORTES,
-              projectName,
+              { ...(mediaStorage ?? { root: targetWorkspaceDir, storage: project.storage, ephemeral: false }), sessionRoot: sessionDir },
               { artifactCopies },
             );
             replacements.set(pathKey(path), dest);
@@ -77,23 +80,25 @@ export function useSessionMediaTriage({ store, mediaLibraryPathsRef, setMediaLib
               replacements.set(pathKey(copy.from), copy.to);
             }
           } catch (error) {
-            failed.push({ path, error: String(error) });
+            // Erreur d'origine retenue : présentée dans la langue active à l'affichage.
+            failed.push({ path, error });
           }
         }
         if (!isSessionCurrent()) return { changed: false };
         if (failed.length === 0) break;
         logger.error(`session:triage-copy-errors count=${failed.length}`);
-        const details = failed.slice(0, 5).map((item) => `• ${item.path}\n  ${item.error}`).join('\n');
+        const shownFailures = failed.slice(0, 5);
         const action = await showChoiceDialog({
-          title: 'Copie incomplète',
-          message: 'Certains médias conservés n\'ont pas pu être copiés :\n\n'
-            + details
-            + '\n\nRéessayer, ou les abandonner (ils seront supprimés avec le dossier temporaire de session) ?',
+          get title() { return translateMedia('media:triage.copy.incompleteTitle'); },
+          get message() {
+            const details = shownFailures.map((item) => `• ${item.path}\n  ${presentUserMessage(item.error).message}`).join('\n');
+            return translateMedia('media:triage.copy.incompleteMessage', { details });
+          },
           variant: 'warning',
           cancelValue: 'retry',
           actions: [
-            { value: 'drop', label: 'Abandonner ces fichiers', kind: 'danger-outline' },
-            { value: 'retry', label: 'Réessayer', kind: 'primary', autoFocus: true },
+            { value: 'drop', get label() { return translateMedia('media:triage.copy.drop'); }, kind: 'danger-outline' },
+            { value: 'retry', get label() { return translateMedia('media:triage.copy.retry'); }, kind: 'primary', autoFocus: true },
           ],
         });
         if (action === 'drop') {

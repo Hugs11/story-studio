@@ -1,3 +1,4 @@
+import { useHomeTranslation } from '../../i18n/useHomeTranslation.js';
 import { AppModalPortal } from '../common/AppModalPortal';
 import { X } from '../icons/LucideLocal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -41,6 +42,7 @@ export function FunnelShell({
   ariaLabel,
   children,
 }) {
+  const { t } = useHomeTranslation();
   useEscapeKey(!closeDisabled, onClose);
 
   return (
@@ -61,7 +63,7 @@ export function FunnelShell({
           <button
             type="button"
             className="funnel-icon-btn"
-            aria-label="Fermer"
+            aria-label={t('common:dialog.close.label')}
             onClick={onClose}
             disabled={closeDisabled}
           >

@@ -1787,7 +1787,10 @@ fn an_embedded_zip_with_incomplete_controls_is_kept_but_refused_by_the_pack_writ
         "11111111-2222-3333-4444-555566667777",
     )
     .expect_err("le pack ne peut pas être écrit avec des contrôles incomplets");
-    assert!(error.contains("Contrôles incomplets"), "{error}");
+    assert!(
+        crate::support::user_message::contains_code(&error, "VALIDATION_STAGE_CONTROLS_INCOMPLETE"),
+        "{error}"
+    );
     assert!(error.contains("Imported content"), "{error}");
 
     // Le même document, une fois les cinq contrôles renseignés, s'écrit.

@@ -567,6 +567,56 @@ body.workspace-is-reordering * {
   cursor: not-allowed;
 }
 
+.btn-xs {
+  min-height: 28px;
+  padding: 0 11px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  color: var(--control-text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-control);
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  transition:
+    background var(--dur-fast),
+    border-color var(--dur-fast),
+    color var(--dur-fast),
+    box-shadow var(--dur-fast);
+}
+
+.btn-xs:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+  border-color: var(--control-border-hover);
+}
+
+.btn-xs:active:not(:disabled) {
+  background: var(--control-bg-active);
+}
+
+.btn-xs:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
+}
+
+.btn-xs:disabled {
+  background: var(--control-disabled-bg);
+  border-color: var(--control-disabled-border);
+  color: var(--control-disabled-text);
+  cursor: not-allowed;
+}
+
+/* Les variantes principales suivent .btn-xs pour garder leurs couleurs dans tous les
+   états, quelle que soit la taille, sans modifier le gabarit des petits boutons. */
 .btn-primary {
   background: var(--accent);
   color: var(--accent-contrast);
@@ -619,54 +669,6 @@ body.workspace-is-reordering * {
   background: var(--primary-disabled-bg);
   border-color: var(--primary-disabled-border);
   color: var(--primary-disabled-text);
-}
-
-.btn-xs {
-  min-height: 28px;
-  padding: 0 11px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--control-border);
-  background: var(--control-bg);
-  color: var(--control-text);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  font-family: var(--font-sans);
-  font-size: var(--text-control);
-  font-weight: var(--weight-semibold);
-  line-height: 1.4;
-  max-width: 100%;
-  min-width: 0;
-  white-space: nowrap;
-  transition:
-    background var(--dur-fast),
-    border-color var(--dur-fast),
-    color var(--dur-fast),
-    box-shadow var(--dur-fast);
-}
-
-.btn-xs:hover:not(:disabled) {
-  background: var(--control-bg-hover);
-  border-color: var(--control-border-hover);
-}
-
-.btn-xs:active:not(:disabled) {
-  background: var(--control-bg-active);
-}
-
-.btn-xs:focus-visible {
-  outline: 1px solid var(--focus-ring);
-  outline-offset: 2px;
-  box-shadow: var(--ring);
-}
-
-.btn-xs:disabled {
-  background: var(--control-disabled-bg);
-  border-color: var(--control-disabled-border);
-  color: var(--control-disabled-text);
-  cursor: not-allowed;
 }
 
 /* Danger — variantes plein et outline partagent les tokens */
@@ -792,7 +794,7 @@ body.workspace-is-reordering * {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--overlay-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;

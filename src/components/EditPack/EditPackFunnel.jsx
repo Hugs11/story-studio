@@ -1,3 +1,7 @@
+import { createEditorExtractionOwner } from '../../store/catalogue/editorExtractionOwner.js';
+import { catalogueOpenApi } from '../../store/catalogue/catalogueOpenApi.js';
+import { useMessageLanguage } from '../../i18n/useMessageLanguage.js';
+import { translateImport as t } from '../../i18n/importPresentation.js';
 import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -8,7 +12,7 @@ import {
   FunnelToolButton,
   FunnelGenerationState,
 } from '../funnels';
-import { Eye, FolderOpen, Package, TriangleAlert, Undo2, Upload } from '../icons/LucideLocal';
+import { Eye, FolderOpen, Package, SquarePen, TriangleAlert, Undo2, Upload } from '../icons/LucideLocal';
 import { useErrorDialog } from '../common/Dialog';
 import { pickFolder, pickZip } from '../../hooks/useFileDialog';
 import { basename } from '../../utils/fileUtils';
@@ -56,6 +60,7 @@ const BUNDLE_PROGRESS_EVENT = 'pack-bundle-inspection-progress';
  */
 export function EditPackFunnel({
   onClose,
+  initialSource = null,
   onLand,
   onSimulate,
   onLandAdvanced = null,
@@ -63,9 +68,10 @@ export function EditPackFunnel({
   openedFromGraph = false,
   onNotice = null,
 }) {
+  useMessageLanguage();
   const { showChoiceDialog } = useErrorDialog();
   // collect | busy | bundle | readOnly | unsupported
-  const [phase, setPhase] = useState('collect');
+  const [phase, setPhase] = useState(initialSource ? 'busy' : 'collect');
   const [busy, setBusy] = useState({ title: '', hint: '' });
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState('');
@@ -78,13 +84,31 @@ export function EditPackFunnel({
   // projet courant, pas la question déjà tranchée.
   const [fromGraph] = useState(openedFromGraph);
   const operationLifecycleRef = useRef(null);
+  const extractionOwnerRef = useRef(null);
   if (!operationLifecycleRef.current) {
     operationLifecycleRef.current = createEditPackOperationLifecycle();
   }
 
   useEffect(() => {
     operationLifecycleRef.current.activate();
-    return () => operationLifecycleRef.current.deactivate();
+    return () => {
+      operationLifecycleRef.current.deactivate();
+      extractionOwnerRef.current?.close();
+      extractionOwnerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!initialSource) return;
+    let disposed = false;
+    queueMicrotask(() => {
+      if (disposed) return;
+      if (initialSource.containerPath) void processBundleChild(initialSource, initialSource.childId);
+      else void processPack(initialSource.path, initialSource.kind ?? 'auto');
+    });
+    return () => { disposed = true; };
+  // reason: the preselected source belongs to this mounted funnel.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // L'examen d'une enveloppe classe chacun de ses packs : sur une grosse
@@ -107,6 +131,7 @@ export function EditPackFunnel({
 
   function closeFunnel() {
     operationLifecycleRef.current.deactivate();
+    extractionOwnerRef.current?.close();
     onClose();
   }
 
@@ -121,10 +146,11 @@ export function EditPackFunnel({
     setProgress(null);
     if (result.status === 'landed') {
       const notice = graphOnlyNoticeFor(result, { openedFromGraph: fromGraph });
-      if (notice) onNotice?.(notice);
+      if (notice) onNotice?.({ key: 'import:landing.graphOnly.notice' });
       closeFunnel();
     } else if (result.status === 'choice-cancelled') {
-      setPhase(fallbackPhase);
+      if (initialSource) closeFunnel();
+      else setPhase(fallbackPhase);
     } else if (result.status === 'classified') {
       setPending({
         zipPath: result.zipPath,
@@ -152,9 +178,9 @@ export function EditPackFunnel({
     // celle de l'archive ouverte.
     setBundle(null);
     setSelectedChildId(null);
-    setBusy({ title: 'Vérification du pack…', hint: 'Un instant.' });
+    setBusy({ get title() { return t('import:edit.verification.progress'); }, get hint() { return t('import:edit.wait.hint'); } });
     setPhase('busy');
-    const packLabel = basename(path);
+    const packLabel = initialSource?.packLabel ?? basename(path);
     const isFolder = kind === 'folder' || (kind === 'auto' && !ARCHIVE_RE.test(path));
     const result = await runEditPackImportOperation({
       lifecycle: operation,
@@ -165,16 +191,14 @@ export function EditPackFunnel({
       inspect: (archivePath) => invoke('inspect_pack_archive', { path: archivePath }),
       beforeInspect: () => {
         setBusy({
-          title: 'Examen de l’archive…',
-          hint: 'Si elle contient plusieurs packs, ils sont examinés un par un.',
+          get title() { return t('import:edit.inspection.progress'); },
+          get hint() { return t('import:edit.inspection.hint'); },
         });
       },
       beforeLand: (editor) => {
         setBusy({
-          title: editor === 'advanced'
-            ? 'Ouverture de l’Éditeur graphe…'
-            : 'Décompression du pack…',
-          hint: 'Ne ferme pas la fenêtre.',
+          get title() { return editor === 'advanced' ? t('import:edit.graphOpening.progress') : t('import:edit.unpacking.progress'); },
+          get hint() { return t('import:edit.keepWindow.hint'); },
         });
       },
       land: (zipPath) => onLand({ zipPath, packLabel }),
@@ -199,32 +223,35 @@ export function EditPackFunnel({
 
   // L'enfant choisi reprend le parcours d'import d'un pack normal, sans le
   // modifier : même classification, même éditeur, même simulation.
-  async function processBundleChild() {
-    if (!bundle || !selectedChildId) return;
+  async function processBundleChild(source = bundle, childId = selectedChildId) {
+    // Button events are not sources.
+    if (!source?.containerPath) source = bundle;
+    if (!source || !childId) return;
     const operation = operationLifecycleRef.current;
-    const child = bundle.children.find((entry) => entry.childId === selectedChildId);
-    const packLabel = child?.displayName ?? bundle.containerLabel;
+    const child = source.children?.find((entry) => entry.childId === childId);
+    const packLabel = initialSource?.packLabel ?? child?.displayName ?? source.containerLabel;
     setError('');
     setProgress(null);
     onNotice?.(null);
-    setBusy({ title: 'Préparation du pack choisi…', hint: 'Ne ferme pas la fenêtre.' });
+    setBusy({ get title() { return t('import:edit.childPreparation.progress'); }, get hint() { return t('import:edit.keepWindow.hint'); } });
     setPhase('busy');
-    const result = await runEditPackBundleChildOperation({
+    const owner = childId.startsWith('catalogue:')
+      ? (extractionOwnerRef.current ??= createEditorExtractionOwner({ ownerId: crypto.randomUUID(), release: id => catalogueOpenApi().releaseEditorExtractions(id) }))
+      : null;
+    const run = () => runEditPackBundleChildOperation({
       lifecycle: operation,
-      containerPath: bundle.containerPath,
-      containerFingerprint: bundle.containerFingerprint,
-      childId: selectedChildId,
+      containerPath: source.containerPath,
+      containerFingerprint: source.containerFingerprint,
+      childId,
       extractChild: ({ containerPath, containerFingerprint, childId }) => invoke(
         'extract_pack_bundle_child',
-        { path: containerPath, containerFingerprint, childId },
+        { path: containerPath, containerFingerprint, childId, ...(owner ? { ownerId: owner.ownerId } : {}) },
       ),
       classify: (zipPath) => invoke('classify_pack_editability', { zipPath }),
       beforeLand: (editor) => {
         setBusy({
-          title: editor === 'advanced'
-            ? 'Ouverture de l’Éditeur graphe…'
-            : 'Décompression du pack…',
-          hint: 'Ne ferme pas la fenêtre.',
+          get title() { return editor === 'advanced' ? t('import:edit.graphOpening.progress') : t('import:edit.unpacking.progress'); },
+          get hint() { return t('import:edit.keepWindow.hint'); },
         });
       },
       land: (zipPath) => onLand({ zipPath, packLabel }),
@@ -232,12 +259,18 @@ export function EditPackFunnel({
       chooseEditor: onLandAdvanced ? editorChooser : null,
       beforeReplace: onBeforeReplace,
     });
+    const result = owner ? await owner.run(run) : await run();
+    if (owner && result.status === 'error') {
+      owner.close();
+      if (extractionOwnerRef.current === owner) extractionOwnerRef.current = null;
+    }
     applyImportResult(result, packLabel, 'bundle');
   }
 
   // Revenir depuis un verdict ramène à la liste de l'enveloppe quand on en
   // vient, et à la zone de dépôt sinon.
   function backFromVerdict() {
+    if (initialSource) { closeFunnel(); return; }
     setPending(null);
     setError('');
     setPhase(bundle ? 'bundle' : 'collect');
@@ -255,14 +288,14 @@ export function EditPackFunnel({
 
   function askEditor() {
     return showChoiceDialog({
-      title: 'Choisir l’éditeur',
-      message: 'Ce pack peut être modifié avec les deux éditeurs.',
+      get title() { return t('import:edit.editorChoice.title'); },
+      get message() { return t('import:edit.editorChoice.message'); },
       variant: 'info',
       cancelValue: null,
       actions: [
-        { value: 'free', label: 'Éditeur par menus', kind: 'secondary' },
-        { value: 'advanced', label: 'Éditeur graphe', kind: 'primary', autoFocus: true },
-        { value: null, label: 'Annuler', kind: 'ghost' },
+        { value: 'free', get label() { return t('import:edit.menuEditor.action'); }, kind: 'secondary' },
+        { value: 'advanced', get label() { return t('import:edit.graphEditor.action'); }, kind: 'primary', autoFocus: true },
+        { value: null, get label() { return t('common:dialog.cancel.label'); }, kind: 'ghost' },
       ],
     });
   }
@@ -285,7 +318,7 @@ export function EditPackFunnel({
     const operation = operationLifecycleRef.current;
     const token = operation.begin();
     if (token === null) return;
-    setBusy({ title: 'Préparation du simulateur…', hint: 'Un instant.' });
+    setBusy({ get title() { return t('import:edit.simulator.progress'); }, get hint() { return t('import:edit.wait.hint'); } });
     setPhase('busy');
     try {
       if (!operation.claimCompletion(token)) return;
@@ -303,13 +336,14 @@ export function EditPackFunnel({
 
   return (
     <FunnelShell
-      icon={<Package />}
-      title="Modifier un pack"
+      icon={<SquarePen />}
+      title={t('import:edit.funnel.title')}
+      subtitle={initialSource?.packLabel}
       onClose={handleClose}
       closeDisabled={phase === 'busy'}
       showChrome={false}
       fitContent
-      ariaLabel="Modifier un pack"
+      ariaLabel={t('import:edit.funnel.title')}
     >
       {phase === 'busy' && (
         <FunnelGenerationState title={busy.title} hint={busy.hint} progress={progress} />
@@ -327,24 +361,21 @@ export function EditPackFunnel({
         />
       )}
 
-      {phase === 'collect' && (
+      {phase === 'collect' && initialSource && <ImportErrorNotice error={error} />}
+      {phase === 'collect' && !initialSource && (
         <div className="funnel-step-content">
           <FunnelSectionHeader
             icon={<Upload />}
-            title="Choisis un pack"
-            description="Un .zip, un .7z ou un dossier d'histoire déjà décompressé."
+            title={t('import:edit.select.title')}
+            description={t('import:edit.select.description')}
           />
           <FunnelDropZone
-            title="Dépose ton pack ici"
-            hint="Formats : .zip, .7z ou dossier d'histoire décompressé"
+            title={t('import:edit.drop.title')}
+            hint={t('import:edit.drop.hint')}
             onFiles={handleDrop}
           >
-            <FunnelToolButton icon={<Package />} accent="neutral" onClick={handleBrowseFile}>
-              Importer zip/7z
-            </FunnelToolButton>
-            <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={handleBrowseFolder}>
-              Importer un dossier
-            </FunnelToolButton>
+            <FunnelToolButton icon={<Package />} accent="neutral" onClick={handleBrowseFile}>{t('import:edit.archive.action')}</FunnelToolButton>
+            <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={handleBrowseFolder}>{t('import:edit.folder.action')}</FunnelToolButton>
           </FunnelDropZone>
           <ImportErrorNotice error={error} />
         </div>
@@ -354,25 +385,21 @@ export function EditPackFunnel({
         <div className="funnel-step-content">
           <FunnelSectionHeader
             icon={<TriangleAlert />}
-            title="Pack non éditable"
+            title={t('import:edit.readOnly.title')}
             description={pending?.advancedError
-              ? "Ce pack n'a pu être ouvert ni dans l'Éditeur par menus ni dans l'Éditeur graphe. La simulation reste disponible en lecture seule."
-              : "Ce pack n'est pas éditable avec Story Studio. Tu peux quand même le simuler (lecture seule)."}
+              ? t('import:edit.readOnly.bothFailed')
+              : t('import:edit.readOnly.description')}
           />
           <ImportErrorNotice error={pending?.advancedError} context="graph" />
-          <ImportErrorNotice error={pending?.report?.reason} context="readOnly" role="status" />
+          <ImportErrorNotice error={pending?.report?.reasonCode ? { code: pending.report.reasonCode, params: {}, detail: pending.report.reason } : pending?.report?.reason} context="readOnly" role="status" />
           <ImportErrorNotice error={error} />
           <div className="funnel-dropzone-actions" style={{ justifyContent: 'flex-start' }}>
-            <FunnelToolButton icon={<Eye />} accent="neutral" onClick={handleSimulate}>
-              Simuler le pack
-            </FunnelToolButton>
+            <FunnelToolButton icon={<Eye />} accent="neutral" onClick={handleSimulate}>{t('import:edit.simulate.action')}</FunnelToolButton>
             <FunnelToolButton
               icon={<Undo2 />}
               accent="neutral"
               onClick={backFromVerdict}
-            >
-              Choisir un autre pack
-            </FunnelToolButton>
+            >{t('import:edit.otherPack.action')}</FunnelToolButton>
           </div>
         </div>
       )}
@@ -381,10 +408,10 @@ export function EditPackFunnel({
         <div className="funnel-step-content">
           <FunnelSectionHeader
             icon={<TriangleAlert />}
-            title="Pack non supporté"
-            description="Ce pack ne peut pas être ouvert ni simulé par Story Studio."
+            title={t('import:edit.unsupported.title')}
+            description={t('import:edit.unsupported.description')}
           />
-          <ImportErrorNotice error={pending?.report?.reason} context="unsupported" role="status" />
+          <ImportErrorNotice error={pending?.report?.reasonCode ? { code: pending.report.reasonCode, params: {}, detail: pending.report.reason } : pending?.report?.reason} context="unsupported" role="status" />
           <ImportErrorNotice error={pending?.advancedError} context="graph" />
           <ImportErrorNotice error={error} />
           <div className="funnel-dropzone-actions" style={{ justifyContent: 'flex-start' }}>
@@ -392,9 +419,7 @@ export function EditPackFunnel({
               icon={<Undo2 />}
               accent="neutral"
               onClick={backFromVerdict}
-            >
-              Choisir un autre pack
-            </FunnelToolButton>
+            >{t('import:edit.otherPack.action')}</FunnelToolButton>
           </div>
         </div>
       )}

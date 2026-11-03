@@ -1,3 +1,4 @@
+import { translateGraph as t, graphPresentationError } from '../../i18n/graphPresentation.js';
 // Brouillon pur du câblage direct du graphe.
 //
 // Les prises visibles décrivent les deux primitives réelles du dialecte :
@@ -45,7 +46,7 @@ export function graphLinkPorts(entry) {
         slot: 'ok',
         active: settable,
         activateControl: !enabled(controls.ok) && !enabled(controls.autoplay),
-        label: 'Raccorder la suite du parcours (okTransition)',
+        get label() { return t('graph:link.port.route'); },
         control: enabled(controls.autoplay) ? 'autoplay' : 'ok',
       },
       {
@@ -53,7 +54,7 @@ export function graphLinkPorts(entry) {
         slot: 'home',
         active: settable,
         activateControl: !enabled(controls.home),
-        label: 'Raccorder le bouton Accueil (homeTransition)',
+        get label() { return t('graph:link.port.home'); },
         control: 'home',
       },
     ];
@@ -64,7 +65,7 @@ export function graphLinkPorts(entry) {
     return [{
       id: GRAPH_LINK_PORTS.ACTION_OPTION,
       active: true,
-      label: missingOptionIndex >= 0 ? 'Raccorder le choix manquant' : 'Ajouter un choix',
+      get label() { return missingOptionIndex >= 0 ? t('graph:link.port.missing') : t('graph:action.choice.add'); },
       suggestedIndex: missingOptionIndex >= 0 ? missingOptionIndex : options.length,
       missingOptionIndex: missingOptionIndex >= 0 ? missingOptionIndex : null,
     }];
@@ -139,9 +140,9 @@ export function resolveGraphLinkDrop(index, draft, targetPath, graphPoint) {
       kind: GRAPH_LINK_DROP.INVALID,
       sourcePath: draft.sourcePath,
       targetPath,
-      reason: draft.sourceKind === STAGE_KIND
-        ? 'Un Écran se raccorde à une liste de choix.'
-        : 'Une liste de choix se raccorde à un Écran.',
+      get reason() { return draft.sourceKind === STAGE_KIND
+        ? t('graph:link.reason.stage')
+        : t('graph:link.reason.action'); },
     };
   }
   // L'Écran d'entrée n'est jamais le choix d'une liste : le moteur refuserait
@@ -151,7 +152,7 @@ export function resolveGraphLinkDrop(index, draft, targetPath, graphPoint) {
       kind: GRAPH_LINK_DROP.INVALID,
       sourcePath: draft.sourcePath,
       targetPath,
-      reason: 'L’Écran d’entrée ne peut pas être le choix d’une liste : on y revient par le bouton Accueil laissé sans destination.',
+      get reason() { return t('graph:link.reason.entry'); },
     };
   }
   return {
@@ -192,7 +193,7 @@ export function isGraphLinkAutoApplyable(intent) {
 
 export function buildExistingGraphLinkGesture(intent, decision) {
   if (intent?.kind !== GRAPH_LINK_DROP.EXISTING) {
-    throw new TypeError('Le raccord doit viser un nœud existant.');
+    throw graphPresentationError(TypeError, 'graph:link.guard.existing');
   }
   if (intent.sourceKind === STAGE_KIND) {
     if (intent.targetOptionCount === 0) {
@@ -217,7 +218,7 @@ export function buildExistingGraphLinkGesture(intent, decision) {
       ? RANDOM_OPTION_INDEX
       : Number(decision?.selection ?? 0);
     if (decision?.selection !== 'random' && (!Number.isInteger(selection) || selection < 0)) {
-      throw new TypeError('Choisir un choix d’arrivée fixe ou tiré au sort.');
+      throw graphPresentationError(TypeError, 'graph:link.guard.landing');
     }
     return advancedGestures.setStageTransition(
       intent.sourceId,
@@ -249,7 +250,7 @@ export function buildExistingGraphLinkGesture(intent, decision) {
   const proposed = decision?.insertionIndex ?? intent.suggestedIndex ?? null;
   const insertionIndex = proposed === null ? Number.NaN : Number(proposed);
   if (!Number.isInteger(insertionIndex) || insertionIndex < 0) {
-    throw new TypeError('Choisir la place du nouveau choix.');
+    throw graphPresentationError(TypeError, 'graph:link.guard.position');
   }
   return advancedGestures.insertActionOption(
     intent.sourceId,
@@ -261,7 +262,7 @@ export function buildExistingGraphLinkGesture(intent, decision) {
 export function layoutEntriesFromPositions(index, positions) {
   return positions.map(({ path, x, y }) => {
     const entry = index?.byPath.get(path);
-    if (!entry) throw new TypeError(`Nœud absent de la disposition : ${path}`);
+    if (!entry) throw graphPresentationError(TypeError, 'graph:link.guard.layout', { path });
     return {
       node: entry.kind === STAGE_KIND
         ? { kind: STAGE_KIND, id: entry.node.uuid }

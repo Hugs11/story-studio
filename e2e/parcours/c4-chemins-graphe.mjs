@@ -18,7 +18,7 @@ import { existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:f
 import { join, basename } from 'node:path';
 import { launchApp } from '../lib/launch.mjs';
 import { createRun } from '../lib/run-context.mjs';
-import { newProject, returnHome, generatePack, clickButton, MODALS } from '../lib/actions.mjs';
+import { newProject, returnHome, generatePack, clickButton } from '../lib/actions.mjs';
 import { answerNext, dialogLog } from '../lib/dialogs.mjs';
 import { synthTone, difficultPathsRoot } from '../lib/fixtures.mjs';
 import { readbackPack } from '../lib/oracles.mjs';
@@ -97,7 +97,13 @@ export async function run() {
             && /ajoute au moins un média à un Écran/i.test(empty.refusal ?? ''),
           { refusal: empty.refusal, timeout: empty.timeout });
         await ctx.shot(page, 'etat3-refus-sans-media');
-        await clickButton(page.locator(MODALS).filter({ hasText: /Fabrication impossible — pack sans média/ }).first(), /^Fermer$/);
+        // bac7f94f : ExportRefusalReport est un role=alert dans la pastille,
+        // pas une modale. c50ce2032 renomme « Fabrication » en « Génération ».
+        const refusal = page.locator('.advanced-export__outcome--refused[role="alert"]')
+          .filter({ hasText: 'Génération impossible — pack sans média' }).first();
+        await refusal.waitFor({ timeout: 10_000 });
+        await clickButton(refusal, /^Fermer$/);
+        await refusal.waitFor({ state: 'hidden', timeout: 10_000 });
         const binding = await assignMediaToGraphStage(page, events, { fileStem: 'média accentué éàç', stageName: 'Écran 1' });
         check('[état 3] son lié à un Écran par un geste de l’app', !!binding.via, binding);
         await saveInPlace(page);

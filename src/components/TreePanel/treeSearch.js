@@ -1,4 +1,4 @@
-import { normalizeFrenchSearchText } from '../../utils/frenchText.js';
+import { normalizeSearchText } from '../../utils/frenchText.js';
 import { matchesNodeColor } from '../tree/nodeColorFilter.js';
 
 export function buildVisibleTreeSearchIds({
@@ -7,13 +7,13 @@ export function buildVisibleTreeSearchIds({
   searchTerm,
   selectedColors = new Set(),
 }) {
-  const normalizedTerm = normalizeFrenchSearchText(searchTerm).trim();
+  const normalizedTerm = normalizeSearchText(searchTerm).trim();
   if ((!normalizedTerm && selectedColors.size === 0) || projectType !== 'pack') return null;
 
   const matching = new Set();
   for (const flatEntry of projectIndex.flatEntries ?? []) {
     const matchesTerm = !normalizedTerm
-      || normalizeFrenchSearchText(flatEntry.entry.name).includes(normalizedTerm);
+      || normalizeSearchText(flatEntry.entry.name).includes(normalizedTerm);
     if (matchesTerm && matchesNodeColor(flatEntry.entry.treeColor, selectedColors)) {
       matching.add(flatEntry.entry.id);
     }

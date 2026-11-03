@@ -7,6 +7,8 @@
 //! d'éditabilité reste la responsabilité du classifieur de `pack_reader`, seule
 //! vérité sur ce qu'est un pack ouvrable.
 
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use sha2::{Digest, Sha256};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -63,10 +65,18 @@ pub(crate) fn collect_bundle_children(
         let relative = archive_entry_name(&entry.relative)?;
         let metadata = revalidate_regular_entry(extracted_dir, entry)?;
         if !portable_names.insert(portable_key(&relative)) {
-            return Err(format!(
-                "Archive enveloppe refusée : deux packs y portent un nom que certains \
-                 systèmes de fichiers ne distinguent pas ({relative})."
-            ));
+            return Err({
+                let _msg_relative = (relative).to_string();
+                user_message::UserMessage::new(
+                    codes::IMPORT_BUNDLE_NAME_COLLISION,
+                )
+                    .param("relative", user_message::transport_param(_msg_relative.clone()))
+                    .with_detail(format!(
+                        "Archive enveloppe refusée : deux packs y portent un nom que certains systèmes de fichiers ne distinguent pas ({_msg_relative}).",
+                        _msg_relative = user_message::transport_detail(&_msg_relative),
+                    ))
+                    .into_transport()
+            });
         }
         children.push(BundleChildEntry {
             child_id: child_identity(&relative),
@@ -80,11 +90,24 @@ pub(crate) fn collect_bundle_children(
         return Ok(Vec::new());
     }
     if children.len() > BUNDLE_MAX_CHILDREN {
-        return Err(format!(
-            "Archive enveloppe refusée : elle contient {} packs (maximum {}).",
-            children.len(),
-            BUNDLE_MAX_CHILDREN
-        ));
+        return Err({
+            let _msg_children = (children.len()).to_string();
+            let _msg_bundle_max_children = (BUNDLE_MAX_CHILDREN).to_string();
+            user_message::UserMessage::new(
+                codes::IMPORT_BUNDLE_PACK_COUNT_LIMIT,
+            )
+                .param("children", user_message::transport_param(_msg_children.clone()))
+                .param(
+                    "maxChildren",
+                    user_message::transport_param(_msg_bundle_max_children.clone()),
+                )
+                .with_detail(format!(
+                    "Archive enveloppe refusée : elle contient {_msg_children} packs (maximum {_msg_bundle_max_children}).",
+                    _msg_bundle_max_children = user_message::transport_detail(&_msg_bundle_max_children),
+                    _msg_children = user_message::transport_detail(&_msg_children),
+                ))
+                .into_transport()
+        });
     }
 
     children.sort_by(|left, right| {
@@ -139,7 +162,7 @@ fn child_display_name(relative: &Path) -> String {
 /// NFC + minuscules : la même règle de portabilité que les noms d'assets, pour
 /// les mêmes volumes Windows/macOS insensibles à la casse et les mêmes formes
 /// Unicode composées ou décomposées.
-fn portable_key(value: &str) -> String {
+pub(crate) fn portable_key(value: &str) -> String {
     value.nfc().flat_map(char::to_lowercase).collect()
 }
 
@@ -154,6 +177,7 @@ fn child_identity(relative: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::support::user_message::MessageTransportAssertions as _;
     use std::fs;
 
     fn temp_tree(label: &str) -> PathBuf {
@@ -259,7 +283,10 @@ mod tests {
         // fichiers ; ce test ne vaut donc que là où ils coexistent.
         if fs::read_dir(&root).expect("lecture du dossier").count() == 3 {
             let error = collect_bundle_children(&root).expect_err("collision refusée");
-            assert!(error.contains("ne distinguent pas"), "{error}");
+            assert!(
+                error.contains_any_code(&[codes::IMPORT_BUNDLE_NAME_COLLISION]),
+                "{error}"
+            );
         }
         fs::remove_dir_all(root).expect("cleanup");
     }
@@ -274,7 +301,10 @@ mod tests {
         // des deux fichiers ; ce test ne vaut donc que là où ils coexistent.
         if fs::read_dir(&root).expect("lecture du dossier").count() == 3 {
             let error = collect_bundle_children(&root).expect_err("collision refusée");
-            assert!(error.contains("ne distinguent pas"), "{error}");
+            assert!(
+                error.contains_any_code(&[codes::IMPORT_BUNDLE_NAME_COLLISION]),
+                "{error}"
+            );
         }
         fs::remove_dir_all(root).expect("cleanup");
     }
@@ -286,7 +316,10 @@ mod tests {
             write_child(&root, &format!("pack-{index:03}.zip"), b"a");
         }
         let error = collect_bundle_children(&root).expect_err("limite dépassée");
-        assert!(error.contains("maximum"), "{error}");
+        assert!(
+            error.contains_any_code(&[codes::IMPORT_BUNDLE_PACK_COUNT_LIMIT]),
+            "{error}"
+        );
         fs::remove_dir_all(root).expect("cleanup");
     }
 

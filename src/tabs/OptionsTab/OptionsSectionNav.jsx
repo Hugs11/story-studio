@@ -1,25 +1,28 @@
+import { useTranslation } from 'react-i18next';
+
 const OPTION_GROUPS = [
   {
-    label: 'Général',
+    labelKey: 'settings:navigation.general.label',
     items: [
-      { id: 'save', label: 'Enregistrement' },
-      { id: 'interface', label: 'Interface' },
-      { id: 'projects-media', label: 'Projets et médias' },
+      { id: 'save', labelKey: 'settings:navigation.save.label' },
+      { id: 'interface', labelKey: 'settings:interface.section.title' },
+      { id: 'catalogue', labelKey: 'catalogue:screen.title.label' },
+      { id: 'projects-media', labelKey: 'settings:navigation.projectsMedia.label' },
     ],
   },
   {
-    label: 'Intelligence artificielle',
+    labelKey: 'settings:navigation.ai.label',
     items: [
-      { id: 'xtts', label: 'Voix locale' },
-      { id: 'comfyui', label: 'Images IA' },
+      { id: 'xtts', labelKey: 'settings:navigation.xtts.label' },
+      { id: 'comfyui', labelKey: 'settings:navigation.comfyui.label' },
     ],
   },
   {
-    label: 'Avancé',
+    labelKey: 'settings:navigation.advanced.label',
     items: [
-      { id: 'advanced', label: 'Silences audio' },
-      { id: 'youtube', label: 'YouTube (yt-dlp)' },
-      { id: 'diagnostic', label: 'Diagnostic' },
+      { id: 'advanced', labelKey: 'settings:navigation.silences.label' },
+      { id: 'youtube', labelKey: 'settings:navigation.youtube.label' },
+      { id: 'diagnostic', labelKey: 'settings:navigation.diagnostic.label' },
     ],
   },
 ];
@@ -27,11 +30,12 @@ const OPTION_GROUPS = [
 export const OPTION_SECTION_IDS = OPTION_GROUPS.flatMap((group) => group.items.map((item) => item.id));
 
 export function OptionsSectionNav({ activeSectionId, onNavigate }) {
+  const { t } = useTranslation('settings');
   return (
-    <nav className="opts-nav" aria-label="Sections des préférences">
+    <nav className="opts-nav" aria-label={t('settings:navigation.sections.label')}>
       {OPTION_GROUPS.map((group) => (
-        <div className="opts-nav-group" key={group.label}>
-          <div className="opts-nav-group-title">{group.label}</div>
+        <div className="opts-nav-group" key={group.labelKey}>
+          <div className="opts-nav-group-title">{t(group.labelKey)}</div>
           <div className="opts-nav-items">
             {group.items.map((item) => (
               <button
@@ -40,7 +44,7 @@ export function OptionsSectionNav({ activeSectionId, onNavigate }) {
                 className={`opts-nav-item${activeSectionId === item.id ? ' is-active' : ''}`}
                 onClick={() => onNavigate(item.id)}
               >
-                {item.label}
+                {t(item.labelKey)}
               </button>
             ))}
           </div>

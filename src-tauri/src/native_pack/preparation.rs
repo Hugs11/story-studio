@@ -4,6 +4,7 @@
 //! writer Libre. Elle valide le document d'auteur et ses décisions, clone le
 //! graphe, puis n'applique que les transformations fermées prévues.
 
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use serde::Serialize;
@@ -106,13 +107,12 @@ pub(crate) fn pack_identity_for_export(
         .filter(|value| !value.is_empty())
         .ok_or_else(|| ExportPreparationError::PackIdentity {
             message: identity.unresolved_reason.clone().unwrap_or_else(|| {
-                "La packIdentity stable doit être générée et persistée avant préparation."
-                    .to_string()
+                UserMessage::new(codes::GENERATION_STABLE_IDENTITY_REQUIRED).into_transport()
             }),
         })?;
     if !classify_stage_id(value).bridge_compatible {
         return Err(ExportPreparationError::PackIdentity {
-            message: "La packIdentity stable n'est pas bridge-compatible.".to_string(),
+            message: UserMessage::new(codes::GENERATION_BRIDGE_IDENTITY_INVALID).into_transport(),
         });
     }
     Ok(value)
@@ -303,7 +303,10 @@ pub(crate) fn serialize_prepared_graph_document(
 ) -> Result<String, ExportPreparationError> {
     serde_json::to_string_pretty(prepared.standard_value()).map_err(|error| {
         ExportPreparationError::StandardSerialization {
-            message: format!("Impossible de sérialiser la copie préparée : {error}"),
+            message: UserMessage::new(codes::EXPORT_PREPARED_COPY_ENCODE_FAILED)
+                .param("reason", (error).to_string())
+                .with_detail((error).to_string())
+                .into_transport(),
         }
     })
 }
@@ -420,11 +423,10 @@ fn substitute_archive_names(
         return Ok(());
     }
     Err(ExportPreparationError::StandardSerialization {
-        message: format!(
-            "Table des noms d'archive incomplète : {} référence(s) sans nom ({}).",
-            missing.len(),
-            missing.join(", ")
-        ),
+        message: UserMessage::new(codes::EXPORT_ARCHIVE_NAME_TABLE_INCOMPLETE)
+            .param("missing", (missing.len()).to_string())
+            .param("missing_2", (missing.join(", ")).to_string())
+            .into_transport(),
     })
 }
 
@@ -452,8 +454,7 @@ fn apply_required_standard_shape(
         document.uuid = Presence::Value(pack_identity.to_string());
     } else if !document.version.is_value() {
         return Err(ExportPreparationError::StandardSerialization {
-            message: "Un document importé doit porter une version explicite avant export standard."
-                .to_string(),
+            message: UserMessage::new(codes::EXPORT_IMPORTED_VERSION_REQUIRED).into_transport(),
         });
     }
 
@@ -643,9 +644,9 @@ fn scale_position_to_short_range(position: &Position) -> Result<Position, Export
 
 fn numeric_position_error(position: &Position) -> ExportPreparationError {
     ExportPreparationError::StandardSerialization {
-        message: format!(
-            "Position impossible à mettre à l'échelle vers l'intervalle short : {position:?}."
-        ),
+        message: UserMessage::new(codes::GRAPH_POSITION_SHORT_SCALE_FAILED)
+            .param("position", format!("{:?}", position))
+            .into_transport(),
     }
 }
 
@@ -669,7 +670,10 @@ fn standard_value_with_opaque_members(
 ) -> Result<Value, ExportPreparationError> {
     let mut value = serde_json::to_value(document).map_err(|error| {
         ExportPreparationError::StandardSerialization {
-            message: format!("Impossible de construire le JSON standard : {error}"),
+            message: UserMessage::new(codes::EXPORT_STANDARD_JSON_BUILD_FAILED)
+                .param("reason", (error).to_string())
+                .with_detail((error).to_string())
+                .into_transport(),
         }
     })?;
     let stage_export_indices = stage_paths
@@ -776,8 +780,8 @@ fn descend_object<'a>(
 
 fn opaque_path_error(path: &str) -> ExportPreparationError {
     ExportPreparationError::StandardSerialization {
-        message: format!(
-            "La disposition opaque à {path} ne peut pas être appliquée sans perte à la copie préparée."
-        ),
+        message: UserMessage::new(codes::EXPORT_OPAQUE_LAYOUT_LOSS)
+            .param("path", (path).to_string())
+            .into_transport(),
     }
 }

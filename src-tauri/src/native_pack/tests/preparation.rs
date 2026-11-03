@@ -309,14 +309,6 @@ fn prep_002_refuses_gvi_and_every_unresolved_action_required_family() {
         {
             let mut value = document(
                 vec![stage(ENTRY_ID, Some(true)), stage(CANONICAL_ID, None)],
-                vec![CANONICAL_ID],
-            );
-            value["stageNodes"][0]["duration"] = serde_json::json!(1234);
-            value
-        },
-        {
-            let mut value = document(
-                vec![stage(ENTRY_ID, Some(true)), stage(CANONICAL_ID, None)],
                 vec![CANONICAL_ID, CANONICAL_ID],
             );
             value["stageNodes"][0]["type"] = serde_json::json!("story");
@@ -340,6 +332,17 @@ fn prep_002_refuses_gvi_and_every_unresolved_action_required_family() {
             Err(ExportPreparationError::AuthoringActionRequired { .. })
         ));
     }
+
+    // Une clé inconnue (le `duration` de STUdio) n'est plus une famille
+    // bloquante : elle est ignorée à l'import, comme dans l'éditeur par menus.
+    let mut value = document(
+        vec![stage(ENTRY_ID, Some(true)), stage(CANONICAL_ID, None)],
+        vec![CANONICAL_ID],
+    );
+    value["stageNodes"][0]["duration"] = serde_json::json!(1234);
+    let mut payload = decode(value);
+    payload.context.pack_identity.value = Some(PACK_ID.to_string());
+    prepare_graph_document_for_export(&payload).expect("clé inconnue non bloquante");
 }
 
 #[test]
@@ -371,7 +374,7 @@ fn warning_info_and_untested_alone_do_not_block_preparation() {
 }
 
 #[test]
-fn prep_006_emits_the_closed_standard_shape_and_only_confirmed_extensions() {
+fn prep_006_emits_the_closed_standard_shape_and_never_unknown_keys() {
     let mut value = document(
         vec![stage(ENTRY_ID, Some(true)), stage(CANONICAL_ID, None)],
         vec![CANONICAL_ID],
@@ -392,19 +395,13 @@ fn prep_006_emits_the_closed_standard_shape_and_only_confirmed_extensions() {
     value["actionNodes"][0]["vendor"] = serde_json::json!(false);
     let mut payload = decode(value);
     payload.context.pack_identity.value = Some(PACK_ID.to_string());
-    let members = payload.context.opaque_members.clone();
-    for member in members {
-        if member.kind == OpaqueMemberKind::UnknownExtension {
-            set_opaque_export_disposition(
-                &mut payload,
-                &member.path,
-                &member.key,
-                member.source_occurrence,
-                OpaqueExportDisposition::PreserveUntested,
-            )
-            .expect("disposition extension");
-        }
-    }
+    // Les clés inconnues, à tous les niveaux, sont ignorées à l'import : il
+    // n'y a aucune décision d'export à leur donner.
+    assert!(payload
+        .context
+        .opaque_members
+        .iter()
+        .all(|member| member.kind != OpaqueMemberKind::UnknownExtension));
 
     let prepared = prepare_graph_document_for_export(&payload).expect("préparation");
     let json = prepared.standard_value();
@@ -419,7 +416,7 @@ fn prep_006_emits_the_closed_standard_shape_and_only_confirmed_extensions() {
     );
     assert!(json.get("image").is_none());
     assert!(json.get("official").is_none());
-    assert_eq!(json["storyStudioMetadata"]["owner"], "third-party");
+    assert!(json.get("storyStudioMetadata").is_none());
     let stage = &json["stageNodes"][0];
     for key in [
         "uuid",
@@ -432,23 +429,21 @@ fn prep_006_emits_the_closed_standard_shape_and_only_confirmed_extensions() {
     ] {
         assert!(stage.get(key).is_some(), "Stage.{key}");
     }
-    for key in ["wheel", "ok", "home", "pause", "autoplay", "vendor"] {
+    for key in ["wheel", "ok", "home", "pause", "autoplay"] {
         assert!(
             stage["controlSettings"].get(key).is_some(),
             "controlSettings.{key}"
         );
     }
-    assert_eq!(
-        stage["position"],
-        serde_json::json!({"x": 1.25, "y": -2.5, "unit": "px"})
-    );
-    assert_eq!(stage["duration"], 1234.5);
-    assert_eq!(stage["okTransition"]["trace"], "opaque-id-like");
+    assert!(stage["controlSettings"].get("vendor").is_none());
+    assert_eq!(stage["position"], serde_json::json!({"x": 1.25, "y": -2.5}));
+    assert!(stage.get("duration").is_none());
+    assert!(stage["okTransition"].get("trace").is_none());
     assert!(stage.get("id").is_none(), "alias redondant jamais émis");
     let action = &json["actionNodes"][0];
     assert!(action.get("uuid").is_none(), "alias redondant jamais émis");
     assert_eq!(action["position"], serde_json::json!({"x": 3.5, "y": 4.75}));
-    assert_eq!(action["vendor"], false);
+    assert!(action.get("vendor").is_none());
     let serialized = serialize_prepared_graph_document(&prepared).expect("serializer standard");
     assert_eq!(
         serde_json::from_str::<serde_json::Value>(&serialized).unwrap(),
@@ -626,7 +621,10 @@ fn libre_writer_never_fabricates_a_new_root_identity() {
     ));
     let error = serialize_story_with_pack_uuid(&payload.document, "")
         .expect_err("identité absente refusée");
-    assert!(error.contains("Identité de pack absente"), "{error}");
+    assert!(
+        crate::support::user_message::contains_code(&error, "EXPORT_PACK_IDENTITY_REQUIRED"),
+        "{error}"
+    );
 
     let mut imported = payload.document;
     imported.uuid = Presence::Value("root-imported".to_string());

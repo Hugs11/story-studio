@@ -2,7 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleLocalizations</key>
+  <array>
+    <string>en</string>
+    <string>fr</string>
+    <string>it</string>
+  </array>
   <key>NSMicrophoneUsageDescription</key>
-  <string>Story Studio utilise le microphone uniquement pour enregistrer les histoires demandées par l'utilisateur.</string>
+  <string>Story Studio uses the microphone only to record stories at your request.</string>
 </dict>
 </plist>

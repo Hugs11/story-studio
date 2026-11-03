@@ -23,19 +23,20 @@ const CASES = [
 ];
 
 async function options(page, testCase) {
-  await page.locator('[data-toolbar-id="pack-options"]').click();
-  const drawer = page.locator('.pack-options-popover');
-  await drawer.waitFor({ state: 'visible' });
-  const toggle = drawer.getByRole('button', { name: 'Harmoniser le volume des audios vers -14 LUFS à la génération.', exact: true });
+  await page.locator('.chrome-titlebar-pack-recap').click();
+  const metadata = page.locator('.pack-meta-modal');
+  await metadata.waitFor({ state: 'visible' });
+  const audio = metadata.locator('.pack-meta-audio');
+  const toggle = audio.getByRole('button', { name: 'Harmoniser le volume des audios vers -14 LUFS à la génération.', exact: true });
   if ((await toggle.getAttribute('aria-pressed') === 'true') !== testCase.harmonize) await toggle.click();
-  const mode = drawer.locator('button.pack-options-segment').filter({ hasText: new RegExp(`^${testCase.silence}$`) });
+  const mode = audio.locator('button.pack-meta-audio-segment').filter({ hasText: new RegExp(`^${testCase.silence}$`) });
   await mode.click();
   const state = {
     harmonize: await toggle.getAttribute('aria-pressed') === 'true',
     silenceSelected: await mode.getAttribute('aria-pressed') === 'true',
-    durations: await drawer.locator('.pack-options-silence-duration').innerText(),
+    durations: await audio.locator('.pack-meta-audio-duration').innerText(),
   };
-  await page.keyboard.press('Escape');
+  await metadata.getByRole('button', { name: 'Appliquer', exact: true }).click();
   return state;
 }
 
@@ -129,7 +130,7 @@ export async function run() {
       for (const testCase of CASES) {
         events.setStep(`${editor}-${testCase.name}`);
         const state = await options(page, testCase);
-        ctx.check(`${editor} ${testCase.name} options par le tiroir`, state.harmonize === testCase.harmonize && state.silenceSelected
+        ctx.check(`${editor} ${testCase.name} options par la Fiche du pack`, state.harmonize === testCase.harmonize && state.silenceSelected
           && /0,7/.test(state.durations) && /2,3/.test(state.durations), state);
         await ctx.shot(page, `${editor}-${testCase.name}-options`);
         const generation = await generatePack(page, ctx.dir(editor, testCase.name, 'export'), { events, timeout: 120_000 });

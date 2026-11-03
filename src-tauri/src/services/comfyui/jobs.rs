@@ -1,4 +1,6 @@
 use super::*;
+use crate::support::user_message;
+use crate::support::user_message::codes;
 
 pub(super) fn upload_reference_image_sync(
     server_url: &str,
@@ -6,8 +8,16 @@ pub(super) fn upload_reference_image_sync(
 ) -> Result<String, String> {
     validate_reference_image_extension(image_path)?;
     let client = http_client(Duration::from_secs(30))?;
-    let file_bytes = fs::read(image_path)
-        .map_err(|e| format!("Impossible de lire l'image de référence : {}", e))?;
+    let file_bytes = fs::read(image_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_REFERENCE_READ_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lire l'image de référence : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let file_name = Path::new(image_path)
         .file_name()
         .map(|f| f.to_string_lossy().to_string())
@@ -23,20 +33,49 @@ pub(super) fn upload_reference_image_sync(
         .post(join_url(server_url, "/upload/image"))
         .multipart(form)
         .send()
-        .map_err(|e| format!("Impossible d'uploader l'image : {}", e))?;
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_IMAGE_UPLOAD_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible d'uploader l'image : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
 
     if !response.status().is_success() {
-        return Err(format!("ComfyUI upload HTTP {}", response.status()));
+        return Err({
+            let _msg_response = (response.status()).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_UPLOAD_HTTP_ERROR)
+                .param(
+                    "response",
+                    user_message::transport_param(_msg_response.clone()),
+                )
+                .with_detail(format!(
+                    "ComfyUI upload HTTP {_msg_response}",
+                    _msg_response = user_message::transport_detail(&_msg_response)
+                ))
+                .into_transport()
+        });
     }
 
-    let json: serde_json::Value = response
-        .json()
-        .map_err(|e| format!("Réponse upload invalide : {}", e))?;
+    let json: serde_json::Value = response.json().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_INVALID_UPLOAD_RESPONSE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Réponse upload invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
-    json["name"]
-        .as_str()
-        .map(|s| s.to_string())
-        .ok_or_else(|| "ComfyUI n'a pas retourné le nom du fichier uploadé".to_string())
+    json["name"].as_str().map(|s| s.to_string()).ok_or_else(|| {
+        user_message::UserMessage::new(codes::COMFYUI_UPLOAD_FILENAME_MISSING)
+            .with_detail("ComfyUI n'a pas retourné le nom du fichier uploadé".to_string())
+            .into_transport()
+    })
 }
 
 pub(super) fn patch_workflow(
@@ -46,10 +85,32 @@ pub(super) fn patch_workflow(
     uploaded_filename: Option<&str>,
 ) -> Result<serde_json::Value, String> {
     let api_path = workflow_dir.join(&manifest.api_file);
-    let json_str = fs::read_to_string(&api_path)
-        .map_err(|e| format!("Workflow JSON introuvable ({}) : {}", api_path.display(), e))?;
-    let mut prompt: serde_json::Value =
-        serde_json::from_str(&json_str).map_err(|e| format!("Workflow JSON invalide : {}", e))?;
+    let json_str = fs::read_to_string(&api_path).map_err(|e| {
+        let _msg_api_path = (api_path.display()).to_string();
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_WORKFLOW_JSON_NOT_FOUND)
+            .param(
+                "apiPath",
+                user_message::transport_param(_msg_api_path.clone()),
+            )
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Workflow JSON introuvable ({_msg_api_path}) : {_msg_error}",
+                _msg_api_path = user_message::transport_detail(&_msg_api_path),
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    let mut prompt: serde_json::Value = serde_json::from_str(&json_str).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_INVALID_WORKFLOW_JSON)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Workflow JSON invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     for (slot_name, slot) in &manifest.slots {
         let value: Option<serde_json::Value> = match slot_name.as_str() {
@@ -114,21 +175,50 @@ pub fn submit_job_sync(
         .post(join_url(&settings.server_url, "/prompt"))
         .json(&payload)
         .send()
-        .map_err(|e| format!("Impossible de soumettre le workflow : {}", e))?;
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_WORKFLOW_SUBMIT_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de soumettre le workflow : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
 
     if !response.status().is_success() {
         let body = response.text().unwrap_or_default();
-        return Err(format!("ComfyUI /prompt erreur : {}", body));
+        return Err({
+            let _msg_body = (body).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_PROMPT_REQUEST_ERROR)
+                .param("body", user_message::transport_param(_msg_body.clone()))
+                .with_detail(format!(
+                    "ComfyUI /prompt erreur : {_msg_body}",
+                    _msg_body = user_message::transport_detail(&_msg_body)
+                ))
+                .into_transport()
+        });
     }
 
-    let json: serde_json::Value = response
-        .json()
-        .map_err(|e| format!("Réponse /prompt invalide : {}", e))?;
+    let json: serde_json::Value = response.json().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_INVALID_PROMPT_RESPONSE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Réponse /prompt invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     json["prompt_id"]
         .as_str()
         .map(|s| s.to_string())
-        .ok_or_else(|| "ComfyUI n'a pas retourné de prompt_id".to_string())
+        .ok_or_else(|| {
+            user_message::UserMessage::new(codes::COMFYUI_PROMPT_ID_MISSING)
+                .with_detail("ComfyUI n'a pas retourné de prompt_id".to_string())
+                .into_transport()
+        })
 }
 
 pub fn poll_job_sync(settings: ComfyUiSettings, prompt_id: String) -> Result<SdPollResult, String> {
@@ -136,18 +226,43 @@ pub fn poll_job_sync(settings: ComfyUiSettings, prompt_id: String) -> Result<SdP
     let client = http_client(Duration::from_secs(10))?;
     let progress = fetch_progress_sync(&client, &settings.server_url, &prompt_id);
     let url = join_url(&settings.server_url, &format!("/history/{}", prompt_id));
-    let response = client
-        .get(&url)
-        .send()
-        .map_err(|e| format!("Impossible de vérifier le statut ComfyUI : {}", e))?;
+    let response = client.get(&url).send().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_STATUS_CHECK_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de vérifier le statut ComfyUI : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     if !response.status().is_success() {
-        return Err(format!("ComfyUI /history HTTP {}", response.status()));
+        return Err({
+            let _msg_response = (response.status()).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_HISTORY_HTTP_ERROR)
+                .param(
+                    "response",
+                    user_message::transport_param(_msg_response.clone()),
+                )
+                .with_detail(format!(
+                    "ComfyUI /history HTTP {_msg_response}",
+                    _msg_response = user_message::transport_detail(&_msg_response)
+                ))
+                .into_transport()
+        });
     }
 
-    let json: serde_json::Value = response
-        .json()
-        .map_err(|e| format!("Réponse /history invalide : {}", e))?;
+    let json: serde_json::Value = response.json().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_INVALID_HISTORY_RESPONSE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Réponse /history invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     let entry = match json.get(&prompt_id) {
         None => {
@@ -181,12 +296,21 @@ pub fn poll_job_sync(settings: ComfyUiSettings, prompt_id: String) -> Result<SdP
             .and_then(|m| m.as_array())
             .and_then(|m| m.get(1))
             .and_then(|m| m.as_str())
-            .unwrap_or("Erreur inconnue ComfyUI")
+            .unwrap_or(codes::COMFYUI_SERVICE_ERROR_UNKNOWN_TRANSPORT)
             .to_string();
         return Ok(SdPollResult {
             status: "error".to_string(),
             output_files: vec![],
-            error: Some(error_msg),
+            error: Some(
+                if serde_json::from_str::<user_message::UserMessage>(&error_msg).is_ok() {
+                    error_msg
+                } else {
+                    user_message::UserMessage::new(codes::TOOL_PROCESS_OUTPUT)
+                        .param("output", error_msg.as_str())
+                        .with_detail(error_msg)
+                        .into_transport()
+                },
+            ),
             progress: None,
             progress_label: None,
         });
@@ -217,7 +341,9 @@ pub fn poll_job_sync(settings: ComfyUiSettings, prompt_id: String) -> Result<SdP
         output_files,
         error: None,
         progress: Some(1.0),
-        progress_label: Some("100%".to_string()),
+        progress_label: Some(
+            user_message::UserMessage::new(codes::COMFYUI_PROGRESS_COMPLETE).into_transport(),
+        ),
     })
 }
 
@@ -228,50 +354,116 @@ pub fn watch_progress_sync(
     emit: &dyn Fn(ComfyProgressEvent),
 ) -> Result<(), String> {
     require_local_url(&settings.server_url, "ComfyUI")?;
-    let url = reqwest::Url::parse(&settings.server_url)
-        .map_err(|e| format!("URL ComfyUI invalide : {}", e))?;
+    let url = reqwest::Url::parse(&settings.server_url).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_INVALID_COMFYUI_URL)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "URL ComfyUI invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if url.scheme() != "http" {
-        return Err("Le suivi de progression ComfyUI supporte seulement http local.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::COMFYUI_PROGRESS_SCHEME_UNSUPPORTED)
+                .with_detail(
+                    "Le suivi de progression ComfyUI supporte seulement http local.".to_string(),
+                )
+                .into_transport(),
+        );
     }
     let host = url
         .host_str()
-        .ok_or_else(|| "URL ComfyUI sans host.".to_string())?
+        .ok_or_else(|| {
+            user_message::UserMessage::new(codes::COMFYUI_URL_HOST_MISSING)
+                .with_detail("URL ComfyUI sans host.".to_string())
+                .into_transport()
+        })?
         .to_string();
     let port = url.port_or_known_default().unwrap_or(80);
     let path = ws_path_for_client(&url, &client_id);
     let host_header = format!("{}:{}", host, port);
 
-    let mut stream = TcpStream::connect((host.as_str(), port))
-        .map_err(|e| format!("Connexion WebSocket ComfyUI impossible : {}", e))?;
+    let mut stream = TcpStream::connect((host.as_str(), port)).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_WEBSOCKET_CONNECT_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Connexion WebSocket ComfyUI impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     stream
         .set_read_timeout(Some(Duration::from_secs(900)))
-        .map_err(|e| format!("Timeout WebSocket ComfyUI impossible : {}", e))?;
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_WEBSOCKET_TIMEOUT_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Timeout WebSocket ComfyUI impossible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                ))
+                .into_transport()
+        })?;
     let key = base64_encode(uuid::Uuid::new_v4().as_bytes());
     let request = format!(
         "GET {} HTTP/1.1\r\nHost: {}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {}\r\nSec-WebSocket-Version: 13\r\n\r\n",
         path, host_header, key
     );
-    stream
-        .write_all(request.as_bytes())
-        .map_err(|e| format!("Handshake WebSocket ComfyUI impossible : {}", e))?;
+    stream.write_all(request.as_bytes()).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_WEBSOCKET_HANDSHAKE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Handshake WebSocket ComfyUI impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     let mut headers = Vec::new();
     let mut byte = [0u8; 1];
     while !headers.ends_with(b"\r\n\r\n") {
-        stream
-            .read_exact(&mut byte)
-            .map_err(|e| format!("Réponse WebSocket ComfyUI illisible : {}", e))?;
+        stream.read_exact(&mut byte).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_WEBSOCKET_RESPONSE_UNREADABLE)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Réponse WebSocket ComfyUI illisible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
         headers.push(byte[0]);
         if headers.len() > 8192 {
-            return Err("Réponse WebSocket ComfyUI trop volumineuse.".to_string());
+            return Err(user_message::UserMessage::new(
+                codes::COMFYUI_WEBSOCKET_RESPONSE_OVERSIZED,
+            )
+            .with_detail("Réponse WebSocket ComfyUI trop volumineuse.".to_string())
+            .into_transport());
         }
     }
     let headers = String::from_utf8_lossy(&headers);
     if !headers.starts_with("HTTP/1.1 101") && !headers.starts_with("HTTP/1.0 101") {
-        return Err(format!(
-            "Handshake WebSocket ComfyUI refusé : {}",
-            headers.lines().next().unwrap_or("réponse inconnue")
-        ));
+        return Err({
+            let websocket_status_line = (headers
+                .lines()
+                .next()
+                .unwrap_or(codes::COMFYUI_RESPONSE_UNKNOWN_TRANSPORT))
+            .to_string();
+            user_message::UserMessage::new(codes::COMFYUI_WEBSOCKET_HANDSHAKE_REFUSED)
+                .param(
+                    "error",
+                    user_message::transport_param(websocket_status_line.clone()),
+                )
+                .with_detail(format!(
+                    "Handshake WebSocket ComfyUI refusé : {websocket_status_line}",
+                    websocket_status_line = user_message::transport_detail(&websocket_status_line)
+                ))
+                .into_transport()
+        });
     }
 
     while let Some(text) = read_ws_frame(&mut stream)? {
@@ -291,11 +483,12 @@ pub fn watch_progress_sync(
                         emit(ComfyProgressEvent {
                             job_id: job_id.clone(),
                             progress: Some((value / max).clamp(0.0, 1.0)),
-                            progress_label: Some(format!(
-                                "{}/{}",
-                                value.round() as u64,
-                                max.round() as u64
-                            )),
+                            progress_label: Some(
+                                user_message::UserMessage::new(codes::COMFYUI_PROGRESS_STEPS)
+                                    .param("value", value.round() as u64)
+                                    .param("max", max.round() as u64)
+                                    .into_transport(),
+                            ),
                             error: None,
                         });
                     }
@@ -339,7 +532,10 @@ pub(super) fn fetch_progress_sync(
     let ratio = (value / max).clamp(0.0, 1.0);
     Some((
         ratio,
-        format!("{}/{}", value.round() as u64, max.round() as u64),
+        user_message::UserMessage::new(codes::COMFYUI_PROGRESS_STEPS)
+            .param("value", value.round() as u64)
+            .param("max", max.round() as u64)
+            .into_transport(),
     ))
 }
 
@@ -350,26 +546,53 @@ pub fn download_output_sync(
     prompt_id: String,
     workspace_dir: Option<String>,
     fallback_dir: PathBuf,
+    project_destination: Option<&crate::services::project_files::ProjectMediaDestination>,
 ) -> Result<String, String> {
     require_local_url(&settings.server_url, "ComfyUI")?;
     let client = http_client(Duration::from_secs(60))?;
     let safe_filename = safe_comfyui_output_filename(&filename)?;
 
     let base = join_url(&settings.server_url, "/view");
-    let mut url =
-        reqwest::Url::parse(&base).map_err(|e| format!("URL ComfyUI invalide : {}", e))?;
+    let mut url = reqwest::Url::parse(&base).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_INVALID_COMFYUI_URL)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "URL ComfyUI invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     url.query_pairs_mut()
         .append_pair("filename", &filename)
         .append_pair("subfolder", &subfolder)
         .append_pair("type", "output");
 
-    let response = client
-        .get(url)
-        .send()
-        .map_err(|e| format!("Impossible de télécharger l'image ComfyUI : {}", e))?;
+    let response = client.get(url).send().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_IMAGE_DOWNLOAD_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de télécharger l'image ComfyUI : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     if !response.status().is_success() {
-        return Err(format!("ComfyUI /view HTTP {}", response.status()));
+        return Err({
+            let _msg_response = (response.status()).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_VIEW_HTTP_ERROR)
+                .param(
+                    "response",
+                    user_message::transport_param(_msg_response.clone()),
+                )
+                .with_detail(format!(
+                    "ComfyUI /view HTTP {_msg_response}",
+                    _msg_response = user_message::transport_detail(&_msg_response)
+                ))
+                .into_transport()
+        });
     }
 
     let dest_dir = if let Some(workspace_dir) = workspace_dir
@@ -377,34 +600,78 @@ pub fn download_output_sync(
         .map(str::trim)
         .filter(|value| !value.is_empty())
     {
-        crate::services::project_files::absolute_path(workspace_dir, "Emplacement de travail")?
-            .join("images-generees")
+        crate::services::project_files::media_output_dir(
+            Some(workspace_dir),
+            "images-generees",
+            project_destination,
+            codes::COMFYUI_WORKSPACE_LOCATION_MISSING_TRANSPORT,
+        )?
     } else {
         if !fallback_dir.is_absolute() {
-            return Err("Dossier de repli ComfyUI doit être un chemin absolu.".to_string());
+            return Err(
+                user_message::UserMessage::new(codes::COMFYUI_FALLBACK_PATH_RELATIVE)
+                    .with_detail("Dossier de repli ComfyUI doit être un chemin absolu.".to_string())
+                    .into_transport(),
+            );
         }
         fallback_dir.join(format!("sd_{}", &prompt_id[..prompt_id.len().min(8)]))
     };
-    fs::create_dir_all(&dest_dir)
-        .map_err(|e| format!("Impossible de créer le dossier de destination : {}", e))?;
+    fs::create_dir_all(&dest_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_DESTINATION_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de créer le dossier de destination : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     let dest_path = dest_dir.join(safe_filename);
-    let bytes = response
-        .bytes()
-        .map_err(|e| format!("Impossible de lire les bytes de l'image : {}", e))?;
-    fs::write(&dest_path, &bytes).map_err(|e| format!("Impossible d'écrire l'image : {}", e))?;
+    let bytes = response.bytes().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_IMAGE_BYTES_UNREADABLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lire les bytes de l'image : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    fs::write(&dest_path, &bytes).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_IMAGE_WRITE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible d'écrire l'image : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     Ok(crate::support::paths::path_for_frontend(&dest_path))
 }
 
 pub fn resolve_paths(app: &tauri::AppHandle) -> Result<(PathBuf, PathBuf), String> {
-    let resource_dir = app
-        .path()
-        .resource_dir()
-        .map_err(|e| format!("resource_dir inaccessible : {}", e))?;
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("app_data_dir inaccessible : {}", e))?;
+    let resource_dir = app.path().resource_dir().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_RESOURCE_DIR_INACCESSIBLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "resource_dir inaccessible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    let app_data_dir = app.path().app_data_dir().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_APPDATA_INACCESSIBLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "app_data_dir inaccessible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     Ok((resource_dir, app_data_dir))
 }

@@ -39,6 +39,8 @@ export const config = {
   webkitWebDriver: pick('SS_E2E_WEBKIT_WEB_DRIVER', 'webkitWebDriver'),
   // Dossier racine du corpus d'archives (lecture seule, jamais modifié).
   corpusDir: pick('SS_E2E_CORPUS_DIR', 'corpusDir'),
+  // Jeu local « Demo des quatre formats », copié dans le run de c8-catalogue.
+  catalogueDemoDir: pick('SS_E2E_CATALOGUE_DEMO_DIR', 'catalogueDemoDir'),
   // Installation STUdio web-ui (dossier contenant le jar et `lib/`).
   studioDir: pick('SS_E2E_STUDIO_DIR', 'studioDir'),
   // JDK utilisé pour compiler et lancer le harnais STUdio.

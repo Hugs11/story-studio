@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 // Scroll-spy des sections de préférences : suit la section visible dans le
 // conteneur scrollable, et pilote le clic de nav (scroll doux + flash de la
 // carte cible, avec suppression temporaire de l'observer pendant le scroll).
-export function useOptionsSectionNav({ sectionIds, screenRef, remountKey }) {
+export function useOptionsSectionNav({ sectionIds, screenRef, remountKey, initialSection }) {
   const [activeSectionId, setActiveSectionId] = useState(sectionIds[0]);
   const [highlightedSectionId, setHighlightedSectionId] = useState(null);
   const sectionRefs = useRef({});
@@ -34,6 +34,16 @@ export function useOptionsSectionNav({ sectionIds, screenRef, remountKey }) {
     sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
   }, [remountKey, screenRef, sectionIds]);
+
+  useEffect(() => {
+    if (!sectionIds.includes(initialSection)) return undefined;
+    const frame = requestAnimationFrame(() => {
+      observerSuppressedUntilRef.current = Date.now() + 650;
+      sectionRefs.current[initialSection]?.scrollIntoView({ block: 'start' });
+      setActiveSectionId(initialSection);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [initialSection, remountKey, sectionIds]);
 
   useEffect(() => () => {
     if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current);

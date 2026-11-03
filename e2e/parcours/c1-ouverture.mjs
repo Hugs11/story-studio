@@ -1,10 +1,11 @@
 // Ouvrir un projet, récents, reprise de session après arrêt brutal.
 // Projet vierge créé par le script (aucune donnée personnelle).
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from '../lib/launch.mjs';
 import { createRun } from '../lib/run-context.mjs';
 import { goHome, newProject, projectMenuButton, returnHome } from '../lib/actions.mjs';
+import { createGraphStage, graphNodeListItem } from '../lib/c4-helpers.mjs';
 import { answerNext } from '../lib/dialogs.mjs';
 
 export async function run() {
@@ -55,11 +56,28 @@ export async function run() {
     }
 
     // --- Reprise de session après arrêt brutal ---
-    // Un projet graphe est « digne d'autosauvegarde » dès sa création (isAdvancedProject),
-    // sans qu'il soit nécessaire d'y ajouter du contenu.
+    // D2 (19fb29cf) : aucune reprise pour un projet intact.
+    events.setStep('contre-epreuve-projet-intact');
+    await newProject(page, 'advanced');
+    await page.waitForTimeout(6000);
+    allFaults.push(...events.faults());
+    const intactStop = await app.stop();
+    ctx.check('projet intact : workspace réel intact', intactStop.polluted.length === 0, intactStop);
+    app = await launchApp({ runDir: ctx.dir('relance-intact'), fresh: false, workspaceDir });
+    ({ page, events } = app);
+    await goHome(page);
+    const unexpectedRecovery = await page.locator('.mode-proj-row--recovery').first()
+      .waitFor({ state: 'visible', timeout: 6000 }).then(() => true, () => false);
+    ctx.check('projet non modifié : aucune reprise proposée (D2)', !unexpectedRecovery);
     events.setStep('reprise-preparation');
     await newProject(page, 'advanced');
-    await page.waitForTimeout(6000); // laisse le filet anti-crash écrire son snapshot
+    const addedAt = Date.now();
+    await createGraphStage(page);
+    // Référence v3 (91b0a051), payload IPC : le graphe neuf possède déjà
+    // Écran 1. Le geste ajoute Écran 2, qui est la modification à conserver.
+    await graphNodeListItem(page, 'Écran 2', 'stage').waitFor({ timeout: 60_000 });
+    const snapshot = await waitPublishedStage(page, events, addedAt, 'Écran 2');
+    ctx.check('snapshot final publié avec l’Écran ajouté avant le kill', !!snapshot.uuid, snapshot);
     allFaults.push(...events.faults());
     events.setStep('reprise-kill');
     const firstStop = await app.stop(); // taskkill /F : ni beforeunload, ni fermeture propre
@@ -70,14 +88,19 @@ export async function run() {
     await goHome(page);
     await ctx.shot(page, 'accueil-apres-crash');
     const recoveryButton = page.locator('.mode-proj-row--recovery .mode-proj-open').first();
-    const hasRecovery = await recoveryButton.count() > 0;
+    const hasRecovery = await recoveryButton.waitFor({ state: 'visible', timeout: 15_000 }).then(() => true, () => false);
     ctx.check('l’accueil propose une reprise après arrêt brutal', hasRecovery);
     if (hasRecovery) {
       await recoveryButton.click();
       const recovered = await projectMenuButton(page)
         .waitFor({ timeout: 60_000 }).then(() => true, () => false);
+      const stageRecovered = await graphNodeListItem(page, 'Écran 2', 'stage')
+        .waitFor({ timeout: 60_000 }).then(() => true, () => false);
       await ctx.shot(page, 'apres-reprise');
       ctx.check('la reprise proposée aboutit dans l’éditeur', recovered);
+      const restoredPayload = events.ipc().filter(entry => entry.cmd === 'validate_advanced_payload')
+        .some(entry => JSON.parse(entry.body.payload).document.stageNodes.some(stage => stage.uuid === snapshot.uuid && stage.name === 'Écran 2'));
+      ctx.check('la reprise conserve l’Écran ajouté avant le kill', stageRecovered && restoredPayload, { uuid: snapshot.uuid });
       ctx.check('aucune erreur console pendant la reprise', events.faults().length === 0, { faults: events.faults() });
     } else {
       ctx.check('la reprise proposée aboutit dans l’éditeur', null, { detail: 'aucune reprise proposée' });
@@ -91,4 +114,23 @@ export async function run() {
     ctx.check('rien d’écrit dans le vrai workspace', lastStop.polluted.length === 0, { polluted: lastStop.polluted });
   }
   return ctx.finish();
+}
+
+async function waitPublishedStage(page, events, after, name) {
+  const deadline = Date.now() + 60_000;
+  do {
+    const paths = events.ipc().filter(entry => entry.at >= after && entry.cmd === 'plugin:fs|rename'
+      && entry.body?.newPath?.endsWith('.session-recovery.mbah')).map(entry => entry.body.newPath);
+    for (const path of new Set(paths)) {
+      try {
+        const project = JSON.parse(readFileSync(path, 'utf8'));
+        const stage = JSON.parse(project.authoring.payload).document.stageNodes.find(node => node.name === name);
+        if (stage?.uuid) return { path, uuid: stage.uuid };
+      } catch (error) {
+        if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error;
+      }
+    }
+    await page.waitForTimeout(100);
+  } while (Date.now() < deadline);
+  throw new Error('Snapshot final contenant ' + name + ' non publié sous 60 s');
 }

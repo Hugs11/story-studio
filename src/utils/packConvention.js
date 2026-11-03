@@ -17,16 +17,17 @@ function toIntVersion(value) {
 
 function looksLikeProducerCandidate(value) {
   const parts = String(value || '').split('_').filter(Boolean);
-  if (parts.length < 1 || parts.length > 2) return false;
+  if (parts.length < 1) return false;
   return parts.every((part) => /^[A-Za-zÀ-ž][A-Za-zÀ-ž0-9]*$/.test(part));
 }
 
 export function parseConventionName(raw) {
   if (!raw) return null;
   const value = String(raw).trim().replace(/\.(zip|7z)$/i, '');
-  const ageMatch = value.match(/^(\d+)\+\]/);
+  const ageMatch = value.match(/^(?:(\d+)(?:-(\d+))?|-(\d+))\+\]/);
   if (!ageMatch) return null;
-  const minAge = ageMatch[1];
+  const minAge = ageMatch[1] ?? '';
+  const maxAge = ageMatch[2] ?? ageMatch[3];
   let rest = value.slice(ageMatch[0].length);
 
   let author = '';
@@ -89,6 +90,7 @@ export function parseConventionName(raw) {
     author,
     version,
     minAge,
+    ...(maxAge ? { maxAge } : {}),
     producer,
     bonus,
     description: '',
@@ -119,6 +121,7 @@ export function generateConventionName(metadata = {}) {
       ...metadata,
       title: parsed.title,
       minAge: metadata.minAge || metadata.age || parsed.minAge,
+      maxAge: metadata.maxAge || parsed.maxAge,
       author: metadata.author || parsed.author,
       producer: metadata.producer || parsed.producer,
       bonus: metadata.bonus || parsed.bonus,
@@ -137,12 +140,15 @@ export function generateConventionName(metadata = {}) {
   const rawAuthor = String(metadata.author || '').trim();
   // Sans âge saisi, celui que le titre porte en tête (« 5+ Le prince… ») :
   // retomber sur 3 renommait « 3+] » un pack importé de 5 ans.
-  const minAge = String(metadata.minAge || metadata.age || leading?.minAge || '3').replace(/\D/g, '') || '3';
+  const explicitUnknownAge = metadata.minAge === '' && !leading?.minAge;
+  const minAge = explicitUnknownAge ? '' : String(metadata.minAge === 0 ? 0 : metadata.minAge || metadata.age || leading?.minAge || '3').replace(/\D/g, '') || '3';
   const version = toIntVersion(metadata.version);
   const bonusPart = bonus ? `_(${bonus})` : '';
-  const prefix = `${minAge}+]`;
+  const maxAge = String(metadata.maxAge ?? '').replace(/\D/g, '');
+  const prefixMin = maxAge && !metadata.minAge && !metadata.age && !leading?.minAge ? '' : minAge;
+  const prefix = prefixMin || maxAge ? prefixMin + (maxAge ? '-' + maxAge : '') + '+]' : '';
   const titlePart = producer && (!author || rawProducer !== rawAuthor)
-    ? `${producer}-${title}${bonusPart}`
+    ? `${producer}${looksLikeProducerCandidate(producer) ? '-' : '_-_'}${title}${bonusPart}`
     : `${title}${bonusPart}`;
   const versionSuffix = version > 1 ? `_V${version}` : '';
 

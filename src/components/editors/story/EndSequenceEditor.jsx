@@ -1,3 +1,5 @@
+import { TreeText, useTreeTranslation } from "../../../i18n/useTreeTranslation.jsx";
+import { translateTree as t } from "../../../i18n/treePresentation.js";
 import { AudioField } from '../AudioField';
 import { ImageField } from '../ImageField';
 import { useErrorDialog } from '../../common/Dialog';
@@ -20,17 +22,18 @@ export function EndSequenceEditor({
   homeStep,
   allMenus,
   allStories,
-  packStartReturnLabel = 'Retour à la couverture du pack',
+  packStartReturnLabel = t("tree:navigation.start.return"),
   onUpdate,
 }) {
+  useTreeTranslation();
   const { showConfirmDialog } = useErrorDialog();
 
   function updateSequence(nextSteps) {
-    onUpdate({ afterPlaybackSequence: nextSteps.map((s, i) => normalizeSequenceStep(s, i)) });
+    onUpdate({ afterPlaybackSequence: nextSteps });
   }
 
   function updateStep(index, fields) {
-    updateSequence(steps.map((s, i) => i === index ? normalizeSequenceStep({ ...s, ...fields }, i) : s));
+    updateSequence(steps.map((s, i) => i === index ? { ...s, ...fields } : s));
   }
 
   function updateStepControls(index, key, value) {
@@ -54,9 +57,9 @@ export function EndSequenceEditor({
     const step = steps[index];
     if (!step) return;
     const confirmed = await showConfirmDialog({
-      title: 'Confirmer la suppression',
-      message: `Supprimer l'étape "${step.name || `Étape ${index + 1}`}" ?`,
-      okLabel: 'Supprimer',
+      title: <TreeText messageKey="tree:story.delete.confirmTitle" />,
+      message: { key: "tree:story.sequence.confirmDelete", params: { name: step.name || { key: "tree:story.sequence.stepName", params: { number: index + 1 } } } },
+      okLabel: <TreeText messageKey="common:dialog.delete.label" />,
       okKind: 'danger',
     });
     if (!confirmed) return;
@@ -67,7 +70,7 @@ export function EndSequenceEditor({
     updateSequence([
       ...steps,
       normalizeSequenceStep({
-        name: `Étape ${steps.length + 1}`,
+        name: t("tree:story.sequence.stepName", { number: steps.length + 1 }),
         controlSettings: {
           ...SEQUENCE_CONTROL_DEFAULTS,
           autoplay: steps.length === 0,
@@ -81,7 +84,7 @@ export function EndSequenceEditor({
     onUpdate({
       afterPlaybackHomeStep: normalizeSequenceStep({
         ...(homeStep ?? {
-          name: "Écran d'attente",
+          name: t("tree:story.home.creationName"),
           controlSettings: { ...SEQUENCE_CONTROL_DEFAULTS, ok: true },
         }),
         ...fields,
@@ -119,10 +122,10 @@ export function EndSequenceEditor({
                   className="field-input sequence-step-name"
                   value={step.name || ''}
                   onChange={(e) => updateStep(index, { name: e.target.value })}
-                  placeholder={`Étape ${index + 1}`}
+                  placeholder={t("tree:story.sequence.stepName", { number: index + 1 })}
                 />
                 <div className="sequence-step-actions">
-                  <Tooltip text="Monter">
+                  <Tooltip text={t("tree:story.sequence.moveUp")}>
                     <Button
                       size="sm"
                       className="sequence-icon-btn"
@@ -132,7 +135,7 @@ export function EndSequenceEditor({
                       <MoveUp className="sequence-icon" />
                     </Button>
                   </Tooltip>
-                  <Tooltip text="Descendre">
+                  <Tooltip text={t("tree:story.sequence.moveDown")}>
                     <Button
                       size="sm"
                       className="sequence-icon-btn"
@@ -142,7 +145,7 @@ export function EndSequenceEditor({
                       <MoveDown className="sequence-icon" />
                     </Button>
                   </Tooltip>
-                  <Tooltip text="Supprimer cette étape">
+                  <Tooltip text={t("tree:story.sequence.deleteStep")}>
                     <Button
                       size="sm"
                       className="sequence-icon-btn sequence-icon-btn--danger"
@@ -155,9 +158,11 @@ export function EndSequenceEditor({
               </div>
 
               <AudioField
-                label={`Audio — étape ${index + 1}`}
+                label={t("tree:story.sequence.audioLabel", { number: index + 1 })}
+                labelRef={{ key: "tree:story.sequence.audioLabel", params: { number: index + 1 } }}
                 file={step.audio}
                 ttsTextSuggestion={step.name || node.name || ''}
+                // eslint-disable-next-line i18next/no-literal-string -- repli technique du nom de fichier audio, pas un libellé UI
                 ttsFilenameHint={`fin-${index + 1}-${node.name || 'histoire'}`}
                 xttsTarget={{ kind: 'storySequence', entryId: node.id, stepId: step.id, field: 'audio' }}
                 onPick={(file) => updateStep(index, { audio: file })}
@@ -171,7 +176,7 @@ export function EndSequenceEditor({
                       on={controls[key] ?? def}
                       onChange={(v) => updateStepControls(index, key, v)}
                     />
-                    <span className="sequence-control-title">{label}</span>
+                    <span className="sequence-control-title">{t(label)}</span>
                   </label>
                 ))}
               </div>
@@ -181,7 +186,7 @@ export function EndSequenceEditor({
                   <>
                     <div className="sequence-destination-row">
                       <div className="sequence-destination-copy">
-                        <span className="sequence-destination-title">Destination après cette étape</span>
+                        <span className="sequence-destination-title">{t("tree:story.sequence.destination")}</span>
                       </div>
                       <NavigationTargetSelect
                         value={step.okTarget ?? ''}
@@ -189,24 +194,21 @@ export function EndSequenceEditor({
                         allMenus={allMenus}
                         allStories={allStories}
                         currentStoryId={node.id}
-                        emptyLabel="Comme à la fin de l'histoire"
+                        emptyLabel={t("tree:story.destination.inherited")}
                       />
                     </div>
                     {continuationMenu ? (
                       <div className="sequence-note">
-                        Cette étape mène vers la continuation importée "{continuationMenu.name || 'Suite'}"
-                        {continuationMenu.importedContinuation?.sourceStoryName
-                          ? ` depuis ${continuationMenu.importedContinuation.sourceStoryName}`
-                          : ''}.
+                        {t("tree:story.sequence.continuation", { name: continuationMenu.name || t("tree:story.sequence.continuationFallback"), source: continuationMenu.importedContinuation?.sourceStoryName ? t("tree:story.sequence.source", { name: continuationMenu.importedContinuation.sourceStoryName }) : "" })}
                       </div>
                     ) : null}
                   </>
                 ) : (
-                  <div className="sequence-next-note">Bouton OK enchaîne vers l'étape suivante.</div>
+                  <div className="sequence-next-note">{t("tree:story.sequence.okDescription")}</div>
                 )}
                 <div className="sequence-destination-row">
                   <div className="sequence-destination-copy">
-                    <span className="sequence-destination-title">Destination du bouton Accueil</span>
+                    <span className="sequence-destination-title">{t("tree:story.home.destination")}</span>
                   </div>
                   <NavigationTargetSelect
                     value={homeSelectValue}
@@ -222,7 +224,7 @@ export function EndSequenceEditor({
                     currentStoryId={node.id}
                     includeNone
                     noneLabel={packStartReturnLabel}
-                    emptyLabel="Comme à la fin de l'histoire"
+                    emptyLabel={t("tree:story.destination.inherited")}
                     includeStoryPlay={false}
                   />
                 </div>
@@ -235,7 +237,7 @@ export function EndSequenceEditor({
                       homeTarget: v ? null : step.homeTarget,
                     })}
                   />
-                  <span className="sequence-control-title">Même destination que OK</span>
+                  <span className="sequence-control-title">{t("tree:story.home.sameAsOk")}</span>
                 </label>
               </div>
             </div>
@@ -244,39 +246,31 @@ export function EndSequenceEditor({
       </div>
 
       <div className="sequence-footer">
-        <Button onClick={addStep}>
-          Ajouter une étape
-        </Button>
+        <Button onClick={addStep}>{t("tree:story.sequence.addStep")}</Button>
       </div>
 
       {/* Réaction au bouton Accueil (afterPlaybackHomeStep) */}
       <div className="end-summary" style={{ marginTop: 12 }}>
         <div>
-          <div className="end-summary-title">Réaction au bouton Accueil</div>
-          <div className="end-summary-copy">
-            Étape jouée si l'enfant appuie sur le bouton Accueil pendant l'histoire, avant qu'elle ne se termine.
-          </div>
+          <div className="end-summary-title">{t("tree:story.home.reaction")}</div>
+          <div className="end-summary-copy">{t("tree:story.home.description")}</div>
           {homeStep && node.controlSettings?.home === false && (
-            <div className="end-summary-copy">
-              Accueil est désactivé : cette réaction ne sera pas jouée.
-            </div>
+            <div className="end-summary-copy">{t("tree:story.home.disabledDescription")}</div>
           )}
         </div>
         {homeStep ? (
-          <Tooltip text="Retirer la réaction Accueil">
+          <Tooltip text={t("tree:story.home.remove")}>
             <button
               type="button"
               className="story-prompt-trash"
               onClick={() => onUpdate({ afterPlaybackHomeStep: null })}
-              aria-label="Retirer la réaction Accueil"
+              aria-label={t("tree:story.home.remove")}
             >
               <Trash2 className="card-danger-icon" />
             </button>
           </Tooltip>
         ) : (
-          <Button size="sm" onClick={() => updateHomeStep({})}>
-            Ajouter
-          </Button>
+          <Button size="sm" onClick={() => updateHomeStep({})}>{t("tree:story.home.add")}</Button>
         )}
       </div>
 
@@ -288,13 +282,15 @@ export function EndSequenceEditor({
               className="field-input sequence-step-name"
               value={homeStep.name || ''}
               onChange={(e) => updateHomeStep({ name: e.target.value })}
-              placeholder="Réaction au bouton Accueil"
+              placeholder={t("tree:story.home.reaction")}
             />
           </div>
           <AudioField
-            label="Audio joué quand l'enfant appuie sur Accueil"
+            label={t("tree:story.home.audioLabel")}
+            labelRef={{ key: "tree:story.home.audioLabel" }}
             file={homeStep.audio}
             ttsTextSuggestion={homeStep.name || node.name || ''}
+            // eslint-disable-next-line i18next/no-literal-string -- repli technique du nom de fichier audio, pas un libellé UI
             ttsFilenameHint={`attente-${node.name || 'histoire'}`}
             xttsTarget={{ kind: 'storyHomeStep', entryId: node.id, field: 'audio' }}
             onPick={(file) => updateHomeStep({ audio: file })}
@@ -302,7 +298,7 @@ export function EndSequenceEditor({
           />
           <ImageField
             fieldId={`${node.id}:homeStep:image`}
-            label="Image affichée pendant la réaction Accueil"
+            label={{ key: "tree:story.home.imageLabel" }}
             file={homeStep.image}
             onPick={(file) => updateHomeStep({ image: file })}
             onClear={() => updateHomeStep({ image: null })}
@@ -314,13 +310,13 @@ export function EndSequenceEditor({
                   on={homeStep.controlSettings?.[key] ?? def}
                   onChange={(v) => updateHomeStepControls(key, v)}
                 />
-                <span className="sequence-control-title">{label}</span>
+                <span className="sequence-control-title">{t(label)}</span>
               </label>
             ))}
           </div>
           <div className="sequence-destination-row">
             <div className="sequence-destination-copy">
-              <span className="sequence-destination-title">Destination du bouton Accueil</span>
+              <span className="sequence-destination-title">{t("tree:story.home.destination")}</span>
             </div>
             <NavigationTargetSelect
               value={homeStep.homeNone ? '__none__' : (homeStep.homeTarget ?? '')}
@@ -336,7 +332,7 @@ export function EndSequenceEditor({
               currentStoryId={node.id}
               includeNone
               noneLabel={packStartReturnLabel}
-              emptyLabel="Comme à la fin de l'histoire"
+              emptyLabel={t("tree:story.destination.inherited")}
               includeStoryPlay={false}
             />
           </div>
@@ -349,7 +345,7 @@ export function EndSequenceEditor({
                 homeTarget: v ? null : homeStep.homeTarget,
               })}
             />
-            <span className="sequence-control-title">Même destination que OK</span>
+            <span className="sequence-control-title">{t("tree:story.home.sameAsOk")}</span>
           </label>
         </div>
       ) : null}

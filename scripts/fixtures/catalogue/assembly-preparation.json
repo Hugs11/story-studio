@@ -1,0 +1,8 @@
+{
+  "preparationId": "owned-preparation",
+  "catalogueRevision": 4,
+  "entries": [{"ficheId":"card-a","exemplarId":"zip-a","expectedRevision":4,"zipPath":"/owned/0.zip","packUuid":"00000000-0000-4000-8000-00000000000a","officialProvenance":"notOfficial","officialOriginUuid":null,"title":"Titre corrigé","coverPath":"/owned/0.jpg","ageMin":0,"provenance":[{"field":"title","effective":{"origin":"correction","value":"Titre corrigé"}}],"temporary":true}],
+  "excluded": [{"ficheId":"project-only","reason":"generateFirst"}],
+  "suggestedAgeMin": 0,
+  "ownership": "assistant"
+}

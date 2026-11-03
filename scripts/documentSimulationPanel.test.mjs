@@ -3,6 +3,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { mountSurface } from './chromeBench.mjs';
+import { createElement } from 'react';
+const { LuniiShell } = await import('../src/tabs/EmulatorTab/LuniiShell.jsx');
 
 const source = readFileSync(
   new URL('../src/components/AdvancedWorkspace/DocumentSimulationPanel.jsx', import.meta.url),
@@ -22,7 +25,10 @@ test('la simulation du graphe ne peint plus de bandeau ni de seconde commande de
 test('les boutons physiques évidents de la Lunii restent nommés sans tooltip', () => {
   const buttons = luniiShellSource.match(/<div className="lunii-buttons">([\s\S]*?)<\/div>/)?.[1] ?? '';
   assert.doesNotMatch(buttons, /<Tooltip/);
-  assert.match(buttons, /aria-label="Accueil"/);
-  assert.match(buttons, /aria-label=\{paused \? 'Reprendre' : 'Pause'\}/);
-  assert.match(buttons, /lunii-btn-ok[^>]*>\s*OK\s*<\/button>/);
+  // Les attentes françaises portent sur le rendu, y compris après extraction i18n.
+  const { html } = mountSurface(createElement(LuniiShell, { paused: false }));
+  assert.match(html, /aria-label="Accueil"/);
+  assert.match(html, /aria-label="Pause"/);
+  assert.match(mountSurface(createElement(LuniiShell, { paused: true })).html, /aria-label="Reprendre"/);
+  assert.match(html, /lunii-btn-ok[^>]*>\s*OK\s*<\/button>/);
 });

@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { presentUserMessage, userMessageTransport } from '../i18n/userMessage.js';
+import { useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { addProjectPrefix } from '../utils/fileUtils';
 import { logger } from '../utils/logger';
 import { isTauriRuntime } from '../utils/tauriRuntime';
 import { releaseTauriListener } from '../utils/tauriListener';
@@ -9,6 +9,8 @@ import { releaseTauriListener } from '../utils/tauriListener';
 const MAX_CONCURRENT_SD_JOBS = 1;
 
 export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
+  const polling = useRef(new Set());
+  const finished = useRef(new Set());
   useEffect(() => {
     if (!isTauriRuntime()) return undefined;
 
@@ -51,7 +53,7 @@ export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
       settings: sdStore.sdSettings,
       clientId: next.clientId,
       jobId: next.id,
-    }).catch(e => logger.warn('comfyui:watch-progress-error', String(e)));
+    }).catch(e => logger.warn('comfyui:watch-progress-error', presentUserMessage(e).message));
     invoke('comfyui_submit_job', {
       settings: sdStore.sdSettings,
       request: {
@@ -67,7 +69,7 @@ export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
       },
     })
       .then(promptId => sdStore.updateJob(next.id, { status: 'running', promptId, progress: null, progressLabel: null }))
-      .catch(e => sdStore.updateJob(next.id, { status: 'error', errorMessage: String(e) }));
+      .catch(e => sdStore.updateJob(next.id, { status: 'error', errorMessage: userMessageTransport(e) }));
   }, [sdStore.jobs]);
 
   useEffect(() => {
@@ -77,6 +79,8 @@ export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
     if (running.length === 0) return;
     const interval = setInterval(async () => {
       for (const job of running) {
+        if (polling.current.has(job.id) || finished.current.has(job.id)) continue;
+        polling.current.add(job.id);
         try {
           const result = await invoke('comfyui_poll_job', {
             settings: sdStore.sdSettings,
@@ -91,28 +95,33 @@ export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
             sdStore.updateJob(job.id, fields);
           }
           if (result.status === 'done') {
-            const downloaded = await Promise.all(
+            finished.current.add(job.id);
+            const downloaded = await Promise.allSettled(
               result.outputFiles.map(f =>
                 invoke('comfyui_download_output', {
                   settings: sdStore.sdSettings,
                   filename: f.filename,
                   subfolder: f.subfolder,
                   promptId: job.promptId,
-                  workspaceDir,
+                  ...(job.mediaOutput ?? { workspaceDir }),
                 })
               )
             );
-            const paths = job.projectName
-              ? await Promise.all(downloaded.map(p => addProjectPrefix(p, job.projectName).catch(() => p)))
-              : downloaded;
+            // A failed download does not cancel the other native writes. Keep
+            // the folder reservation until every output has finished.
+            const failure = downloaded.find(result => result.status === 'rejected');
+            if (failure) throw failure.reason;
+            const paths = downloaded.map(result => result.value);
             sdStore.updateJob(job.id, { status: 'done', resultPaths: paths, progress: 1, progressLabel: '100%' });
-            for (const p of paths) onMediaCreated?.(p);
+            for (const p of paths) onMediaCreated?.(p, job);
           } else if (result.status === 'error') {
-            sdStore.updateJob(job.id, { status: 'error', errorMessage: result.error || 'Erreur ComfyUI', progress: null, progressLabel: null });
+            finished.current.add(job.id);
+            sdStore.updateJob(job.id, { status: 'error', errorMessage: userMessageTransport(result.error || { code: 'COMFYUI_SERVICE_ERROR', params: {} }), progress: null, progressLabel: null });
           }
         } catch (e) {
-          sdStore.updateJob(job.id, { status: 'error', errorMessage: String(e) });
-        }
+          finished.current.add(job.id);
+          sdStore.updateJob(job.id, { status: 'error', errorMessage: userMessageTransport(e) });
+        } finally { polling.current.delete(job.id); }
       }
     }, 1500);
     return () => clearInterval(interval);

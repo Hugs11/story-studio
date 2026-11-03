@@ -8,6 +8,39 @@ public version; this file stays as the concise project history.
 
 ---
 
+## [0.9.10] - 2026-11-02
+
+Story Studio 0.9.10 introduces a local audiobook catalogue, direct Lunii management,
+and an interface available in French, English and Italian.
+
+### Added
+
+- Browse sources in a local catalogue, search and filter audiobooks, edit their
+  details, organize favorites and tags. Assemble audiobooks
+  and back up or restore catalogue data.
+- Connect a Lunii to browse its contents, send audiobooks, retrieve
+  them into the catalogue, remove them or restore items to the device list, and
+  safely eject the device.
+- Optionally retrieve official Lunii titles and covers with your consent.
+- Follow podcast and YouTube sources to find new content.
+- Added English and Italian interfaces, translated and reviewed with AI.
+
+### Changed
+
+- Adjust catalogue thumbnail density and switch between grid and list views.
+- Keep cards for missing audiobooks and reconnect them when they return.
+- Improved graph workspace organization and audio settings during device sends.
+
+### Fixed
+
+- Made the simulator advance more reliably after short sounds.
+- Improved media checks during import so a verification timeout does not mark
+  media as missing.
+- Improved send progress after returning home and cancellation during media
+  preparation for a send; protected catalogue cards during concurrent operations.
+
+---
+
 ## [0.9.9] - 2026-10-03
 
 Story Studio v0.9.9 introduces the Graph Editor for branching stories and quizzes,

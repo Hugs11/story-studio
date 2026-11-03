@@ -1,3 +1,6 @@
+import { Select } from '../../components/common/Select.jsx';
+import { TechnicalDetail } from '../../components/common/UserMessage.jsx';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/common/Button';
 import { PIPER_LANGUAGE_OPTIONS } from '../../store/xttsSettings';
 
@@ -12,6 +15,7 @@ export function PiperVoiceSettings({
   updatePiperSpeed,
   preparePiperVoice,
 }) {
+  const { t } = useTranslation('settings');
   const visibleVoices = piperVoices.filter((voice) => voice.language === piperLanguage);
   const voiceOptions = visibleVoices.length > 0
     ? visibleVoices
@@ -19,43 +23,33 @@ export function PiperVoiceSettings({
 
   return (
     <div className="xtts-settings">
-      <div className="opts-row-sub" style={{ marginBottom: 8 }}>
-        Piper ajoute un bouton texte → audio dans tous les champs audio. La voix est téléchargée
-        automatiquement au premier usage.
-      </div>
+      <div className="opts-row-sub" style={{ marginBottom: 8 }}>{t('settings:piper.help.description')}</div>
       <div className="xtts-grid">
-        <label className="xtts-label">
-          Langue
-          <select
+        <label className="xtts-label">{t('settings:voice.language.label')} <Select
             className="xtts-input"
             value={piperLanguage}
-            onChange={(e) => updatePiperLanguage(e.target.value)}
+            onChange={updatePiperLanguage}
             disabled={piperVoices.length === 0}
-          >
-            {PIPER_LANGUAGE_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
+            aria-label={t('settings:voice.language.label')}
+            options={PIPER_LANGUAGE_OPTIONS.map(({ value, labelKey }) => ({ value, label: t(labelKey) }))}
+          />
         </label>
 
-        <label className="xtts-label">
-          Voix
-          <select
+        <label className="xtts-label">{t('settings:voice.voice.label')} <Select
             className="xtts-input"
             value={piperVoice}
-            onChange={(e) => updatePiperVoice(e.target.value)}
+            onChange={updatePiperVoice}
             disabled={piperVoices.length === 0}
-          >
-            {voiceOptions.map((voice) => (
-              <option key={voice.id} value={voice.id}>
-                {voice.label}{voice.installed ? '' : ' — à télécharger'}
-              </option>
-            ))}
-          </select>
+            aria-label={t('settings:voice.voice.label')}
+            options={voiceOptions.map(voice => ({
+              value: voice.id,
+              label: voice.installed ? voice.label : t('settings:piper.voice.download', { name: voice.label }),
+            }))}
+          />
         </label>
 
         <label className="xtts-label">
-          Vitesse ({piperSpeed.toFixed(2)}×)
+          {t('settings:piper.speed.label', { speed: piperSpeed.toFixed(2) })}
           <input
             className="xtts-input"
             type="number"
@@ -73,16 +67,14 @@ export function PiperVoiceSettings({
           onClick={preparePiperVoice}
           disabled={piperProvision.state === 'loading' || piperVoices.length === 0}
         >
-          {piperProvision.state === 'loading' ? 'Téléchargement…' : 'Préparer la voix maintenant'}
+          {piperProvision.state === 'loading' ? t('settings:piper.download.progress') : t('settings:piper.prepare.action')}
         </Button>
-        <span className="opts-row-sub">
-          Optionnel : prépare la voix sélectionnée à l’avance pour éviter l’attente au 1er usage.
-        </span>
+        <span className="opts-row-sub">{t('settings:piper.prepare.description')}</span>
       </div>
 
       {piperProvision.state !== 'idle' && (
         <div className={`info-box ${piperProvision.state === 'error' ? 'warn' : ''}`}>
-          {piperProvision.message}
+          {piperProvision.message}<TechnicalDetail value={piperProvision.technicalDetail} />
         </div>
       )}
     </div>

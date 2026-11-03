@@ -3,6 +3,10 @@
 
 use crate::support::executable::{target_for, validate_executable_file};
 use crate::support::tool_resolver::{push_candidate, resource_dir};
+use crate::support::user_message;
+use crate::support::user_message::codes;
+#[cfg(test)]
+use crate::support::user_message::MessageTransportAssertions as _;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -108,7 +112,19 @@ fn runtime_target(os: &str, arch: &str) -> Result<&'static RuntimeTarget, String
     RUNTIME_TARGETS
         .iter()
         .find(|target| target.os == os && target.arch == arch)
-        .ok_or_else(|| format!("Piper n'est pas disponible pour {os} / {arch}."))
+        .ok_or_else(|| {
+            let _msg_os = (os).to_string();
+            let _msg_arch = (arch).to_string();
+            user_message::UserMessage::new(codes::PIPER_PLATFORM_RUNTIME_UNAVAILABLE)
+                .param("os", user_message::transport_param(_msg_os.clone()))
+                .param("arch", user_message::transport_param(_msg_arch.clone()))
+                .with_detail(format!(
+                    "Piper n'est pas disponible pour {_msg_os} / {_msg_arch}.",
+                    _msg_arch = user_message::transport_detail(&_msg_arch),
+                    _msg_os = user_message::transport_detail(&_msg_os)
+                ))
+                .into_transport()
+        })
 }
 
 fn runtime_candidates(context: &PiperResolutionContext, target: &RuntimeTarget) -> Vec<PathBuf> {
@@ -142,85 +158,194 @@ fn runtime_candidates(context: &PiperResolutionContext, target: &RuntimeTarget) 
 }
 
 fn require_regular_file(path: &Path, label: &str) -> Result<(), String> {
-    let metadata = std::fs::symlink_metadata(path)
-        .map_err(|_| format!("{label} introuvable : {}.", path.display()))?;
+    let metadata = std::fs::symlink_metadata(path).map_err(|_| {
+        let _msg_label = (label).to_string();
+        let _msg_path = (path.display()).to_string();
+        user_message::UserMessage::new(codes::PIPER_NOT_FOUND)
+            .param("label", user_message::transport_param(_msg_label.clone()))
+            .param("path", user_message::transport_param(_msg_path.clone()))
+            .with_detail(format!(
+                "{_msg_label} introuvable : {_msg_path}.",
+                _msg_label = user_message::transport_detail(&_msg_label),
+                _msg_path = user_message::transport_detail(&_msg_path)
+            ))
+            .into_transport()
+    })?;
     if metadata.file_type().is_symlink() || !metadata.is_file() {
-        return Err(format!(
-            "{label} doit être un fichier régulier : {}.",
-            path.display()
-        ));
+        return Err({
+            let _msg_label = (label).to_string();
+            let _msg_path = (path.display()).to_string();
+            user_message::UserMessage::new(codes::PIPER_RUNTIME_FILE_IRREGULAR)
+                .param("label", user_message::transport_param(_msg_label.clone()))
+                .param("path", user_message::transport_param(_msg_path.clone()))
+                .with_detail(format!(
+                    "{_msg_label} doit être un fichier régulier : {_msg_path}.",
+                    _msg_label = user_message::transport_detail(&_msg_label),
+                    _msg_path = user_message::transport_detail(&_msg_path)
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }
 
 fn sha256_file(path: &Path) -> Result<String, String> {
-    let bytes = std::fs::read(path)
-        .map_err(|error| format!("Lecture de {} impossible : {error}", path.display()))?;
+    let bytes = std::fs::read(path).map_err(|error| {
+        let _msg_path = (path.display()).to_string();
+        let _msg_error = (error).to_string();
+        user_message::UserMessage::new(codes::PIPER_RUNTIME_READ_FAILED)
+            .param("path", user_message::transport_param(_msg_path.clone()))
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Lecture de {_msg_path} impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+                _msg_path = user_message::transport_detail(&_msg_path)
+            ))
+            .into_transport()
+    })?;
     Ok(format!("{:x}", Sha256::digest(bytes)))
 }
 
 fn validate_runtime(root: &Path, target: &RuntimeTarget) -> Result<PiperRuntime, String> {
-    let root_metadata = std::fs::symlink_metadata(root)
-        .map_err(|_| format!("Runtime Piper introuvable : {}.", root.display()))?;
+    let root_metadata = std::fs::symlink_metadata(root).map_err(|_| {
+        let _msg_root = (root.display()).to_string();
+        user_message::UserMessage::new(codes::PIPER_RUNTIME_NOT_FOUND)
+            .param("root", user_message::transport_param(_msg_root.clone()))
+            .with_detail(format!(
+                "Runtime Piper introuvable : {_msg_root}.",
+                _msg_root = user_message::transport_detail(&_msg_root)
+            ))
+            .into_transport()
+    })?;
     if root_metadata.file_type().is_symlink() || !root_metadata.is_dir() {
-        return Err(format!(
-            "Le runtime Piper doit être un dossier régulier : {}.",
-            root.display()
-        ));
+        return Err({
+            let _msg_root = (root.display()).to_string();
+            user_message::UserMessage::new(codes::PIPER_RUNTIME_FOLDER_IRREGULAR)
+                .param("root", user_message::transport_param(_msg_root.clone()))
+                .with_detail(format!(
+                    "Le runtime Piper doit être un dossier régulier : {_msg_root}.",
+                    _msg_root = user_message::transport_detail(&_msg_root)
+                ))
+                .into_transport()
+        });
     }
 
     let manifest_path = root.join("piper-runtime.json");
-    require_regular_file(&manifest_path, "Manifeste Piper")?;
-    let manifest_bytes = std::fs::read(&manifest_path)
-        .map_err(|error| format!("Lecture du manifeste Piper impossible : {error}"))?;
-    let manifest: RuntimeManifest = serde_json::from_slice(&manifest_bytes)
-        .map_err(|error| format!("Manifeste Piper invalide : {error}"))?;
+    require_regular_file(
+        &manifest_path,
+        codes::PIPER_RUNTIME_MANIFEST_LABEL_TRANSPORT,
+    )?;
+    let manifest_bytes = std::fs::read(&manifest_path).map_err(|error| {
+        let _msg_error = (error).to_string();
+        user_message::UserMessage::new(codes::PIPER_MANIFEST_READ_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Lecture du manifeste Piper impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    let manifest: RuntimeManifest = serde_json::from_slice(&manifest_bytes).map_err(|error| {
+        let _msg_error = (error).to_string();
+        user_message::UserMessage::new(codes::PIPER_RUNTIME_MANIFEST_INVALID)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Manifeste Piper invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if manifest.schema_version != 1
         || manifest.piper.version != PIPER_VERSION
         || manifest.piper.commit != PIPER_COMMIT
         || manifest.target.key != target.manifest_key
         || manifest.target.platform_name != target.platform_name
     {
-        return Err("Le manifeste Piper ne correspond pas au runtime attendu.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::PIPER_MANIFEST_RUNTIME_MISMATCH)
+                .with_detail("Le manifeste Piper ne correspond pas au runtime attendu.".to_string())
+                .into_transport(),
+        );
     }
 
     for name in target.runtime_files {
         let path = root.join(name);
-        require_regular_file(&path, "Fichier du runtime Piper")?;
-        let expected = manifest
-            .runtime_files
-            .get(*name)
-            .ok_or_else(|| format!("{name} absent du manifeste Piper."))?;
+        require_regular_file(&path, codes::PIPER_RUNTIME_FILE_LABEL_TRANSPORT)?;
+        let expected = manifest.runtime_files.get(*name).ok_or_else(|| {
+            let _msg_name = (name).to_string();
+            user_message::UserMessage::new(codes::PIPER_MANIFEST_ENTRY_MISSING)
+                .param("name", user_message::transport_param(_msg_name.clone()))
+                .with_detail(format!(
+                    "{_msg_name} absent du manifeste Piper.",
+                    _msg_name = user_message::transport_detail(&_msg_name)
+                ))
+                .into_transport()
+        })?;
         let actual = sha256_file(&path)?;
         if !actual.eq_ignore_ascii_case(&expected.sha256) {
-            return Err(format!("Intégrité du runtime Piper invalide : {name}."));
+            return Err({
+                let _msg_name = (name).to_string();
+                user_message::UserMessage::new(codes::PIPER_RUNTIME_INTEGRITY_INVALID)
+                    .param("name", user_message::transport_param(_msg_name.clone()))
+                    .with_detail(format!(
+                        "Intégrité du runtime Piper invalide : {_msg_name}.",
+                        _msg_name = user_message::transport_detail(&_msg_name)
+                    ))
+                    .into_transport()
+            });
         }
     }
 
     let executable = root.join(target.executable);
-    let executable_target = target_for(target.os, target.arch)
-        .ok_or_else(|| "Architecture Piper non prise en charge.".to_string())?;
+    let executable_target = target_for(target.os, target.arch).ok_or_else(|| {
+        user_message::UserMessage::new(codes::PIPER_RUNTIME_ARCHITECTURE_UNSUPPORTED)
+            .with_detail("Architecture Piper non prise en charge.".to_string())
+            .into_transport()
+    })?;
     validate_executable_file(&executable, executable_target)?;
 
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         let mode = std::fs::metadata(&executable)
-            .map_err(|error| format!("Permissions Piper illisibles : {error}"))?
+            .map_err(|error| {
+                let _msg_error = (error).to_string();
+                user_message::UserMessage::new(codes::PIPER_RUNTIME_PERMISSIONS_UNREADABLE)
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Permissions Piper illisibles : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error)
+                    ))
+                    .into_transport()
+            })?
             .permissions()
             .mode();
         if mode & 0o111 == 0 {
-            return Err("L'exécutable Piper n'a pas le bit d'exécution.".to_string());
+            return Err(
+                user_message::UserMessage::new(codes::PIPER_EXECUTABLE_EXEC_BIT_MISSING)
+                    .with_detail("L'exécutable Piper n'a pas le bit d'exécution.".to_string())
+                    .into_transport(),
+            );
         }
     }
 
     let espeak_data = root.join("espeak-ng-data");
-    let espeak_metadata = std::fs::symlink_metadata(&espeak_data)
-        .map_err(|_| "Données espeak-ng Piper introuvables.".to_string())?;
+    let espeak_metadata = std::fs::symlink_metadata(&espeak_data).map_err(|_| {
+        user_message::UserMessage::new(codes::PIPER_ESPEAK_DATA_MISSING)
+            .with_detail("Données espeak-ng Piper introuvables.".to_string())
+            .into_transport()
+    })?;
     if espeak_metadata.file_type().is_symlink() || !espeak_metadata.is_dir() {
-        return Err("Le dossier espeak-ng-data Piper est invalide.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::PIPER_ESPEAK_FOLDER_INVALID)
+                .with_detail("Le dossier espeak-ng-data Piper est invalide.".to_string())
+                .into_transport(),
+        );
     }
-    require_regular_file(&espeak_data.join("phondata"), "Données phonétiques Piper")?;
+    require_regular_file(
+        &espeak_data.join("phondata"),
+        codes::PIPER_PHONETIC_DATA_LABEL_TRANSPORT,
+    )?;
 
     Ok(PiperRuntime {
         root: root.to_path_buf(),
@@ -234,7 +359,20 @@ fn resolve_from_context(context: &PiperResolutionContext) -> Result<PiperRuntime
     for candidate in &candidates {
         if std::fs::symlink_metadata(candidate).is_ok() {
             return validate_runtime(candidate, target).map_err(|error| {
-                format!("Runtime Piper refusé ({}): {error}", candidate.display())
+                let _msg_candidate = (candidate.display()).to_string();
+                let _msg_error = (error).to_string();
+                user_message::UserMessage::new(codes::PIPER_RUNTIME_REFUSED)
+                    .param(
+                        "candidate",
+                        user_message::transport_param(_msg_candidate.clone()),
+                    )
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Runtime Piper refusé ({_msg_candidate}): {_msg_error}",
+                        _msg_candidate = user_message::transport_detail(&_msg_candidate),
+                        _msg_error = user_message::transport_detail(&_msg_error)
+                    ))
+                    .into_transport()
             });
         }
     }
@@ -243,9 +381,19 @@ fn resolve_from_context(context: &PiperResolutionContext) -> Result<PiperRuntime
         .map(|path| format!("  - {}", path.display()))
         .collect::<Vec<_>>()
         .join("\n");
-    Err(format!(
-        "Runtime Piper 1.6 introuvable. Candidats recherchés :\n{searched}"
-    ))
+    Err({
+        let _msg_searched = (searched).to_string();
+        user_message::UserMessage::new(codes::PIPER_BUNDLED_RUNTIME_MISSING)
+            .param(
+                "searched",
+                user_message::transport_param(_msg_searched.clone()),
+            )
+            .with_detail(format!(
+                "Runtime Piper 1.6 introuvable. Candidats recherchés :\n{_msg_searched}",
+                _msg_searched = user_message::transport_detail(&_msg_searched),
+            ))
+            .into_transport()
+    })
 }
 
 pub(super) fn resolve_piper_runtime() -> Result<PiperRuntime, String> {
@@ -370,7 +518,7 @@ mod tests {
         let target = runtime_target("linux", "x86_64").unwrap();
         write_fixture(&dir, target, &elf(183));
         let error = validate_runtime(&dir, target).unwrap_err();
-        assert!(error.contains("Architecture exécutable incompatible"));
+        assert!(error.contains_any_code(&[codes::FILES_EXECUTABLE_ARCHITECTURE_MISMATCH]));
         fs::remove_dir_all(dir).unwrap();
     }
 
@@ -383,7 +531,7 @@ mod tests {
         fs::write(tampered.join("libpiper.so"), b"modified").unwrap();
         assert!(validate_runtime(&tampered, target)
             .unwrap_err()
-            .contains("Intégrité"));
+            .contains_any_code(&[codes::PIPER_RUNTIME_INTEGRITY_INVALID]));
         fs::remove_dir_all(tampered).unwrap();
 
         let wrong_identity = temp_dir("identity");
@@ -395,7 +543,7 @@ mod tests {
         fs::write(&manifest_path, serde_json::to_vec(&manifest).unwrap()).unwrap();
         assert!(validate_runtime(&wrong_identity, target)
             .unwrap_err()
-            .contains("ne correspond pas"));
+            .contains_any_code(&[codes::PIPER_MANIFEST_RUNTIME_MISMATCH]));
         fs::remove_dir_all(wrong_identity).unwrap();
     }
 }

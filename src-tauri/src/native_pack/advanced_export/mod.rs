@@ -41,6 +41,7 @@
 //! une archive non validée.
 
 use crate::native_pack::NativeGenerationWarning;
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -114,6 +115,9 @@ pub(crate) struct AdvancedExportResult {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub(crate) enum AdvancedExportError {
+    OutputIdentity {
+        message: UserMessage,
+    },
     PayloadDecode {
         error: PersistenceError,
     },
@@ -139,6 +143,7 @@ pub(crate) enum AdvancedExportError {
 impl std::fmt::Display for AdvancedExportError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::OutputIdentity { message } => formatter.write_str(&message.clone().into_transport()),
             Self::PayloadDecode { error } => write!(formatter, "Payload illisible : {error}"),
             Self::Preparation { error } => error.fmt(formatter),
             Self::MediaUnavailable { entries } => write!(
@@ -223,6 +228,7 @@ impl From<ZipWriteError> for AdvancedExportError {
 /// L'annulation est éprouvée avant publication : chaque étape la reteste, et un
 /// abandon détruit l'espace de travail sans avoir rien publié.
 #[allow(clippy::too_many_arguments)]
+#[cfg(test)]
 pub(crate) fn export_advanced_pack_with_cancel(
     payload: &str,
     bindings: &[AdvancedMediaBinding],
@@ -247,6 +253,37 @@ pub(crate) fn export_advanced_pack_with_cancel(
         emit,
         should_cancel,
         None,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn export_advanced_pack_with_catalogue(
+    catalogue: &crate::services::catalogue::CatalogueState,
+    payload: &str,
+    bindings: &[AdvancedMediaBinding],
+    output_folder: &Path,
+    options: &AdvancedAudioOptions,
+    archive_name: Option<&str>,
+    story_title: Option<&str>,
+    project_name: Option<&str>,
+    cover_image: Option<&Path>,
+    emit: &dyn Fn(&str),
+    should_cancel: &(dyn Fn() -> bool + Sync),
+) -> Result<AdvancedExportResult, AdvancedExportError> {
+    export_advanced_pack_inner(
+        payload,
+        bindings,
+        output_folder,
+        options,
+        archive_name,
+        story_title,
+        project_name,
+        cover_image,
+        emit,
+        should_cancel,
+        None,
+        Some(catalogue),
     )
 }
 
@@ -279,6 +316,7 @@ pub(super) fn export_advanced_pack_within(
         emit,
         should_cancel,
         Some(workspace_root),
+        None,
     )
 }
 
@@ -295,6 +333,7 @@ fn export_advanced_pack_inner(
     emit: &dyn Fn(&str),
     should_cancel: &(dyn Fn() -> bool + Sync),
     workspace_root: Option<PathBuf>,
+    catalogue: Option<&dyn crate::services::official_packs::OfficialCatalogue<Error = UserMessage>>,
 ) -> Result<AdvancedExportResult, AdvancedExportError> {
     // ── Étape 1 : décodage. Aucune écriture. ────────────────────────────────
     let decoded = decode_authoring_payload(payload)
@@ -312,12 +351,14 @@ fn export_advanced_pack_inner(
     // préparation. La readiness ne bloque pas sur une identité non résolue ;
     // sans cette porte, un média manquant masquerait le défaut d'identité. ───
     let pack_identity = pack_identity_for_export(&decoded.context.pack_identity)?.to_string();
+    let identity = super::output_identity::for_context(&decoded.context, &pack_identity, catalogue)
+        .map_err(|message| AdvancedExportError::OutputIdentity { message })?;
     check_cancelled(should_cancel)?;
 
     // ── Étape 4 : préflight. Il écrit une sonde et ne publie aucune archive.
     // Il est ici pour éviter de convertir une heure de son avant de découvrir
     // un dossier non inscriptible. ──────────────────────────────────────────
-    emit("🔍 Contrôle du dossier de destination...");
+    emit(&UserMessage::new(codes::GENERATION_DESTINATION_FOLDER_CHECK).into_transport());
     preflight_output_directory(output_folder).map_err(|message| {
         AdvancedExportError::OutputWrite {
             path: output_folder.to_string_lossy().to_string(),
@@ -330,6 +371,7 @@ fn export_advanced_pack_inner(
     // nulle part ailleurs. Il est détruit sur tous les chemins de sortie.
     let workspace = ExportWorkspace::at(workspace_root.unwrap_or_else(unique_workspace_root))?;
     let outcome = run_within_workspace(
+        &identity,
         &decoded,
         &pack_identity,
         bindings,
@@ -357,6 +399,7 @@ fn export_advanced_pack_inner(
 
 #[allow(clippy::too_many_arguments)]
 fn run_within_workspace(
+    identity: &super::output_identity::OutputIdentity,
     decoded: &DecodedStoryDocument,
     pack_identity: &str,
     bindings: &[AdvancedMediaBinding],
@@ -373,7 +416,7 @@ fn run_within_workspace(
     // ── Étapes 5 à 8 : préparation des médias. L'inventaire est
     // complet avant la première conversion, et l'oracle de rattachement est
     // vérifié avant que le moindre nom entre dans la copie. ─────────────────
-    emit("🧪 Préparation des médias du projet avancé...");
+    emit(&UserMessage::new(codes::GENERATION_ADVANCED_MEDIA_PREPARING).into_transport());
     let ffmpeg = resolve_ffmpeg(&decoded.document)?;
     let prepared_assets = prepare_advanced_assets(
         &decoded.document,
@@ -382,11 +425,18 @@ fn run_within_workspace(
         &ffmpeg,
         options,
     )?;
-    emit(&format!(
-        "  {} média(s) préparé(s), {} fichier(s) à écrire.",
-        prepared_assets.assets.len(),
-        prepared_assets.archive_entries.len()
-    ));
+    emit(
+        &UserMessage::new(codes::GENERATION_MEDIA_PREPARED_SUMMARY)
+            .param(
+                "prepared_assets_assets",
+                (prepared_assets.assets.len()).to_string(),
+            )
+            .param(
+                "prepared_assets_archive_entries",
+                (prepared_assets.archive_entries.len()).to_string(),
+            )
+            .into_transport(),
+    );
     check_cancelled(should_cancel)?;
 
     // ── Étape 9 : préparation de la **copie**, portant la table de noms. La
@@ -400,13 +450,19 @@ fn run_within_workspace(
     check_cancelled(should_cancel)?;
 
     // ── Étape 10 : sérialisation standard de la copie. ──────────────────────
-    let story_json = serialize_prepared_graph_document(&prepared)?;
+    let story_json = identity
+        .serialize(&serialize_prepared_graph_document(&prepared)?)
+        .map_err(|message| AdvancedExportError::OutputWrite {
+            path: "story.json".into(),
+            message,
+        })?;
     check_cancelled(should_cancel)?;
 
     // ── Étape 11 : ZIP **local**. Aucune archive n'est publiée ici. ─────────
-    emit("📦 Assemblage du ZIP dans l'espace de travail...");
+    emit(&UserMessage::new(codes::GENERATION_ZIP_WORKSPACE_ASSEMBLY).into_transport());
     let thumbnail_png = build_cover(&decoded.document, &prepared_assets, cover_image)?;
     let local_zip_path = write_local_archive(
+        identity,
         &story_json,
         &prepared_assets,
         thumbnail_png.clone(),
@@ -418,21 +474,22 @@ fn run_within_workspace(
 
     // ── Étape 12 : relecture réelle et contrôle exact d'archive. Elle
     // n'emprunte pas la fonction qui vient d'écrire. ────────────────────────
-    emit("🔎 Relecture de l'archive et contrôle des médias...");
+    emit(&UserMessage::new(codes::GENERATION_ARCHIVE_MEDIA_REVIEW).into_transport());
     let ArchiveVerification { entry_names } = verify_written_archive(
         &local_zip_path,
         &story_json,
         &prepared_assets,
         thumbnail_png.is_some(),
     )?;
-    emit(&format!(
-        "  {} entrée(s) relue(s) et rattachée(s).",
-        entry_names.len()
-    ));
+    emit(
+        &UserMessage::new(codes::GENERATION_ENTRIES_REATTACHED_LOG)
+            .param("entry_names", (entry_names.len()).to_string())
+            .into_transport(),
+    );
     check_cancelled(should_cancel)?;
 
     // ── Étape 13 : publication. Point unique, postérieur à tout. ────────────
-    emit("📤 Transfert de l'archive vers le dossier choisi...");
+    emit(&UserMessage::new(codes::GENERATION_ARCHIVE_TRANSFER_START).into_transport());
     // Le transfert rend une issue **typée** : une annulation demandée pendant la
     // copie reste `export-cancelled`, elle ne devient pas une panne d'écriture.
     // Le motif rendu à l'interface ne doit pas dépendre de l'instant où
@@ -443,10 +500,11 @@ fn run_within_workspace(
         &archive_base_name(&decoded.document, archive_name),
         should_cancel,
     )?;
-    emit(&format!(
-        "✅ Pack avancé exporté : {}",
-        published.to_string_lossy()
-    ));
+    emit(
+        &UserMessage::new(codes::GENERATION_ADVANCED_PACK_EXPORTED)
+            .param("published", (published.to_string_lossy()).to_string())
+            .into_transport(),
+    );
 
     Ok(AdvancedExportResult {
         zip_path: path_for_frontend(&published),
@@ -548,6 +606,7 @@ fn build_cover(
 }
 
 fn write_local_archive(
+    identity: &super::output_identity::OutputIdentity,
     story_json: &str,
     prepared: &AdvancedAssetPreparation,
     thumbnail_png: Option<Vec<u8>>,
@@ -571,6 +630,7 @@ fn write_local_archive(
         .collect();
     write_pack_zip(
         &ArchiveContents {
+            identity,
             story_json,
             assets,
             thumbnail_png,

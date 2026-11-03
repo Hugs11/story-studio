@@ -56,7 +56,7 @@ test('GraphInspector rend la nature et le rôle d’entrée sans répéter les b
   }));
 
   assert.match(html, /advanced-inspector__kind">Écran/);
-  assert.match(html, /advanced-inspector__badge--entry">Racine/);
+  assert.match(html, /advanced-inspector__badge--entry">Entrée/);
   assert.doesNotMatch(html, /1 à corriger/);
   assert.doesNotMatch(html, /Identifiant dupliqué/);
   assert.doesNotMatch(html, /GVI-TEST/);
@@ -75,7 +75,7 @@ test('GraphInspector préserve absent, null, valeur, provenance et occurrence', 
   assert.match(html, /Position<\/span><span class="advanced-inspector__cell">12, 34<\/span>/);
   assert.doesNotMatch(html, /derived|authored|fallback/);
   assert.doesNotMatch(html, /hors domaine sûr/);
-  assert.match(html, /utilisé par 3 écrans/);
+  assert.match(html, /utilisé par 3 Écrans/);
 });
 
 test('GraphInspector rend un état vide explicatif', () => {
@@ -85,7 +85,7 @@ test('GraphInspector rend un état vide explicatif', () => {
   }));
 
   assert.match(html, /Aucun nœud sélectionné/);
-  assert.match(html, /Choisissez un nœud dans la liste/);
+  assert.match(html, /Choisis un nœud dans la liste/);
 });
 
 test('GraphInspector conserve l’ordre et les cibles nulles des options d’Action', () => {

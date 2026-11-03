@@ -274,7 +274,7 @@ test('projet jamais enregistré : question « Projet non enregistré »', async 
   const { allowed, dialog, labels } = await askedDialog({ project, savePath: null, projectName: 'Brouillon', pristine: false });
   assert.equal(allowed, false);
   assert.equal(dialog.title, 'Projet non enregistré');
-  assert.equal(dialog.message, "Ton travail n'est pas enregistré et sera définitivement perdu.");
+  assert.equal(dialog.message, 'Ton travail n’est pas enregistré et sera définitivement perdu.');
   assert.deepEqual(labels, ['Annuler', 'Quitter sans enregistrer', 'Enregistrer comme projet']);
 });
 

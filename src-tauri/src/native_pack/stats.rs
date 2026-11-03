@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, UserMessage};
 use serde::Serialize;
 
 use crate::domain::project::SilenceMode;
@@ -17,8 +18,8 @@ pub(crate) fn build_asset_notes(
     stats: &NativeAssetStats,
 ) -> Vec<String> {
     let mut notes = Vec::new();
-    notes.push("Le pipeline assets natif prepare deja les medias hors SPG.".to_string());
-    notes.push("Les audios sont reencodes en mp3 44.1 kHz mono et normalises.".to_string());
+    notes.push(UserMessage::new(codes::GENERATION_NATIVE_MEDIA_PIPELINE_NOTICE).into_transport());
+    notes.push(UserMessage::new(codes::GENERATION_AUDIO_NORMALIZATION_NOTICE).into_transport());
     match options.silence_mode {
         SilenceMode::Off => {}
         SilenceMode::Add => {
@@ -26,20 +27,14 @@ pub(crate) fn build_asset_notes(
                 .push("Le silence debut/fin est ajoute pendant la preparation native.".to_string());
         }
         SilenceMode::Normalize => {
-            notes.push(
-                "Le silence debut/fin est mesure puis pose pendant la preparation native."
-                    .to_string(),
-            );
+            notes.push(UserMessage::new(codes::GENERATION_AUDIO_SILENCE_NOTICE).into_transport());
         }
     }
     if stats.imported_zip_count > 0 {
-        notes.push("Les ZIPs importes sont prepares pour fusion native sans SPG.".to_string());
+        notes.push(UserMessage::new(codes::GENERATION_IMPORTED_ZIP_MERGE_NOTICE).into_transport());
     }
     if stats.unique_asset_count < stats.requested_asset_count {
-        notes.push(
-            "La deduplication de contenu fonctionne deja au niveau des assets prepares."
-                .to_string(),
-        );
+        notes.push(UserMessage::new(codes::GENERATION_ASSET_DEDUPLICATION_NOTICE).into_transport());
     }
     notes
 }

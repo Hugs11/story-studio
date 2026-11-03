@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { readMediaBindings, visitProjectEntries } from '../store/projectModel';
-import { FILE_REFRESH_THROTTLE_MS, hasFreshPathSnapshot, readPathSnapshot } from '../store/fileMetadataCache';
+import { FILE_REFRESH_THROTTLE_MS, FILE_RETRY_DELAYS_MS, hasFreshPathSnapshot, readPathSnapshot } from '../store/fileMetadataCache';
 import { dirname, joinPath } from '../utils/fileUtils';
 
 const FILE_AUDIT_CONCURRENCY = 16;
@@ -78,8 +78,12 @@ export function useProjectFileAudit(project, projectIndex = null, savePath = nul
 
   useEffect(() => {
     let cancelled = false;
+    let retryTimer;
+    let retryAttempt = 0;
 
-    async function runAudit({ allowThrottle = false } = {}) {
+    async function runAudit({ allowThrottle = false, automatic = false } = {}) {
+      clearTimeout(retryTimer);
+      if (!automatic) retryAttempt = 0;
       if (paths.length === 0) {
         setStatusByPath((previousStatus) => (Object.keys(previousStatus).length === 0 ? previousStatus : {}));
         setPending(false);
@@ -99,16 +103,30 @@ export function useProjectFileAudit(project, projectIndex = null, savePath = nul
           const snapshot = await readPathSnapshot(auditPath, {
             maxAgeMs: allowThrottle ? FILE_REFRESH_THROTTLE_MS : 0,
           });
-          snapshots.push({ sourcePath, exists: snapshot.exists });
+          snapshots.push({ sourcePath, snapshot });
         }
       }));
 
       if (cancelled) return;
-      const nextStatus = Object.fromEntries(snapshots.map((snapshot) => [snapshot.sourcePath, snapshot.exists]));
-      setStatusByPath((previousStatus) => (
-        areStatusMapsEqual(previousStatus, nextStatus) ? previousStatus : nextStatus
-      ));
+      setStatusByPath((previousStatus) => {
+        const nextStatus = {};
+        for (const { sourcePath, snapshot } of snapshots) {
+          if (snapshot.current) nextStatus[sourcePath] = snapshot.exists;
+          else if (Object.hasOwn(previousStatus, sourcePath)) nextStatus[sourcePath] = previousStatus[sourcePath];
+        }
+        return areStatusMapsEqual(previousStatus, nextStatus) ? previousStatus : nextStatus;
+      });
       setPending(false);
+      if (retryAttempt < FILE_RETRY_DELAYS_MS.length
+        && snapshots.some(({ snapshot }) => snapshot.current && snapshot.exists === null)) {
+        // Deux audits peuvent finir ensemble après un focus : ne conserver
+        // qu'une reprise, et annuler toute minuterie remplacée.
+        clearTimeout(retryTimer);
+        const delay = FILE_RETRY_DELAYS_MS[retryAttempt++];
+        retryTimer = setTimeout(() => {
+          if (!cancelled) void runAudit({ allowThrottle: true, automatic: true });
+        }, delay);
+      }
     }
 
     function handleFocus() {
@@ -121,6 +139,7 @@ export function useProjectFileAudit(project, projectIndex = null, savePath = nul
     window.addEventListener('focus', handleFocus);
     return () => {
       cancelled = true;
+      clearTimeout(retryTimer);
       window.removeEventListener('focus', handleFocus);
     };
   }, [paths]);

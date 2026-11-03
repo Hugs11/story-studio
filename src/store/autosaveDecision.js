@@ -28,6 +28,7 @@ export function decideAutosaveAction({
   sessionMode = 'project',
   ephemeralSnapshotPath = null,
   lastEphemeralSnapshot = null,
+  lastExplicitAutosave = null,
 } = {}) {
   if (isSaving) return { kind: AUTOSAVE_ACTIONS.SKIP_BUSY };
   if (currentSnapshot === savedSnapshot) return { kind: AUTOSAVE_ACTIONS.SKIP_UNCHANGED };
@@ -35,7 +36,26 @@ export function decideAutosaveAction({
     return { kind: AUTOSAVE_ACTIONS.SKIP_UNCHANGED };
   }
   if (!isDirty) return { kind: AUTOSAVE_ACTIONS.SKIP_EMPTY };
-  if (savePath) return { kind: AUTOSAVE_ACTIONS.SAVE_EXPLICIT, path: savePath };
+  // Un projet enregistré dont la session éphémère n'a pas pu être promue
+  // (dépendances encore dans le dossier de session, transfert incomplet) :
+  // l'écriture silencieuse de son fichier le déclarerait enregistré alors que
+  // ses médias vivent dans un dossier voué au nettoyage. L'instantané de
+  // session, lui, ne déclare rien ; le prochain enregistrement manuel tranche.
+  if (savePath && sessionMode !== 'ephemeral') {
+    // Le même travail a déjà été traité pour ce fichier par une échéance
+    // précédente — écrit sans être déclaré enregistré (transfert différé), ou
+    // refusé par le disque — et rien n'a été enregistré depuis : le réécrire
+    // ne ferait que pousser les versions de sécurité utiles, ou répéter le
+    // même échec. Un enregistrement manuel entre-temps change `savedSnapshot`
+    // et rend la main à l'échéance.
+    if (lastExplicitAutosave
+      && lastExplicitAutosave.path === savePath
+      && lastExplicitAutosave.snapshot === currentSnapshot
+      && lastExplicitAutosave.savedSnapshot === savedSnapshot) {
+      return { kind: AUTOSAVE_ACTIONS.SKIP_UNCHANGED };
+    }
+    return { kind: AUTOSAVE_ACTIONS.SAVE_EXPLICIT, path: savePath };
+  }
   if (sessionMode === 'ephemeral') {
     if (!workspaceDir || !ephemeralSnapshotPath) return { kind: AUTOSAVE_ACTIONS.SKIP_NO_TARGET };
     return { kind: AUTOSAVE_ACTIONS.AUTOSAVE_EPHEMERAL, path: ephemeralSnapshotPath, workspaceDir };

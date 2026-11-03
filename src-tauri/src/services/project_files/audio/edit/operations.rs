@@ -1,5 +1,7 @@
 use super::super::working_output_extension;
 use super::*;
+use crate::support::user_message;
+use crate::support::user_message::codes;
 
 pub fn trim_audio(
     input_path: &str,
@@ -7,17 +9,38 @@ pub fn trim_audio(
     end_sec: f64,
     save_path: Option<&str>,
     workspace_dir: Option<&str>,
+    project_destination: Option<&crate::services::project_files::ProjectMediaDestination>,
 ) -> Result<TrimAudioResult, String> {
     if start_sec < 0.0 {
-        return Err("Le point de départ ne peut pas être négatif.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::AUDIO_SELECTION_START_NEGATIVE)
+                .with_detail("Le point de départ ne peut pas être négatif.".to_string())
+                .into_transport(),
+        );
     }
     if end_sec <= start_sec {
-        return Err("Le point de fin doit être après le point de départ.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::AUDIO_SELECTION_END_INVALID)
+                .with_detail("Le point de fin doit être après le point de départ.".to_string())
+                .into_transport(),
+        );
     }
 
     let input = Path::new(input_path);
     if !input.exists() {
-        return Err(format!("Fichier audio introuvable : {}", input_path));
+        return Err({
+            let _msg_input_path = (input_path).to_string();
+            user_message::UserMessage::new(codes::FILES_AUDIO_FILE_NOT_FOUND)
+                .param(
+                    "inputPath",
+                    user_message::transport_param(_msg_input_path.clone()),
+                )
+                .with_detail(format!(
+                    "Fichier audio introuvable : {_msg_input_path}",
+                    _msg_input_path = user_message::transport_detail(&_msg_input_path)
+                ))
+                .into_transport()
+        });
     }
 
     let input_ext = input
@@ -58,10 +81,16 @@ pub fn trim_audio(
             Ok(()) => {}
             Err(e) => {
                 let _ = fs::remove_file(&tmp_path);
-                return Err(format!(
-                    "Impossible de remplacer le fichier original : {}",
-                    e
-                ));
+                return Err({
+                    let _msg_error = (e).to_string();
+                    user_message::UserMessage::new(codes::AUDIO_ORIGINAL_REPLACE_FAILED)
+                        .param("error", user_message::transport_param(_msg_error.clone()))
+                        .with_detail(format!(
+                            "Impossible de remplacer le fichier original : {_msg_error}",
+                            _msg_error = user_message::transport_detail(&_msg_error),
+                        ))
+                        .into_transport()
+                });
             }
         }
 
@@ -71,13 +100,22 @@ pub fn trim_audio(
             original_path: None,
         })
     } else {
-        let importes_dir = media_output_root(
+        let importes_dir = media_output_dir(
             workspace_dir,
-            "Définissez un emplacement de travail pour découper un fichier externe.",
-        )?
-        .join("fichiers-importes");
-        fs::create_dir_all(&importes_dir)
-            .map_err(|e| format!("Impossible de créer fichiers-importes : {}", e))?;
+            "fichiers-importes",
+            project_destination,
+            codes::AUDIO_TRIM_WORKSPACE_REQUIRED_TRANSPORT,
+        )?;
+        fs::create_dir_all(&importes_dir).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::AUDIO_IMPORT_FOLDER_CREATE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de créer fichiers-importes : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
 
         let stem = input
             .file_stem()
@@ -109,17 +147,38 @@ pub fn cut_audio(
     cut_end: f64,
     save_path: Option<&str>,
     workspace_dir: Option<&str>,
+    project_destination: Option<&crate::services::project_files::ProjectMediaDestination>,
 ) -> Result<TrimAudioResult, String> {
     if cut_start < 0.001 {
-        return Err("Le point d'entrée doit être après le début du fichier.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::AUDIO_CUT_INPOINT_INVALID)
+                .with_detail("Le point d'entrée doit être après le début du fichier.".to_string())
+                .into_transport(),
+        );
     }
     if cut_end <= cut_start {
-        return Err("Le point de sortie doit être après le point d'entrée.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::AUDIO_CUT_OUTPOINT_INVALID)
+                .with_detail("Le point de sortie doit être après le point d'entrée.".to_string())
+                .into_transport(),
+        );
     }
 
     let input = Path::new(input_path);
     if !input.exists() {
-        return Err(format!("Fichier audio introuvable : {}", input_path));
+        return Err({
+            let _msg_input_path = (input_path).to_string();
+            user_message::UserMessage::new(codes::FILES_AUDIO_FILE_NOT_FOUND)
+                .param(
+                    "inputPath",
+                    user_message::transport_param(_msg_input_path.clone()),
+                )
+                .with_detail(format!(
+                    "Fichier audio introuvable : {_msg_input_path}",
+                    _msg_input_path = user_message::transport_detail(&_msg_input_path)
+                ))
+                .into_transport()
+        });
     }
 
     let input_ext = input
@@ -164,10 +223,16 @@ pub fn cut_audio(
             Ok(()) => {}
             Err(e) => {
                 let _ = fs::remove_file(&tmp_path);
-                return Err(format!(
-                    "Impossible de remplacer le fichier original : {}",
-                    e
-                ));
+                return Err({
+                    let _msg_error = (e).to_string();
+                    user_message::UserMessage::new(codes::AUDIO_ORIGINAL_REPLACE_FAILED)
+                        .param("error", user_message::transport_param(_msg_error.clone()))
+                        .with_detail(format!(
+                            "Impossible de remplacer le fichier original : {_msg_error}",
+                            _msg_error = user_message::transport_detail(&_msg_error),
+                        ))
+                        .into_transport()
+                });
             }
         }
 
@@ -177,13 +242,22 @@ pub fn cut_audio(
             original_path: None,
         })
     } else {
-        let importes_dir = media_output_root(
+        let importes_dir = media_output_dir(
             workspace_dir,
-            "Définissez un emplacement de travail pour couper un fichier externe.",
-        )?
-        .join("fichiers-importes");
-        fs::create_dir_all(&importes_dir)
-            .map_err(|e| format!("Impossible de créer fichiers-importes : {}", e))?;
+            "fichiers-importes",
+            project_destination,
+            codes::AUDIO_CUT_WORKSPACE_REQUIRED_TRANSPORT,
+        )?;
+        fs::create_dir_all(&importes_dir).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::AUDIO_IMPORT_FOLDER_CREATE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de créer fichiers-importes : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
 
         let stem = input
             .file_stem()
@@ -216,7 +290,7 @@ pub fn audio_edit_info(
     _save_path: Option<&str>,
     _workspace_dir: Option<&str>,
 ) -> Result<AudioEditInfo, String> {
-    let input = validate_existing_file_path(input_path, "Fichier audio")?;
+    let input = validate_existing_file_path(input_path, codes::AUDIO_FILE_LABEL_TRANSPORT)?;
     let sidecar = read_audio_edit_sidecar(&input);
     let original_path = sidecar
         .as_ref()
@@ -241,18 +315,29 @@ pub fn restore_audio_original(
     save_path: Option<&str>,
     workspace_dir: Option<&str>,
 ) -> Result<TrimAudioResult, String> {
-    let input = validate_existing_file_path(input_path, "Fichier audio")?;
+    let input = validate_existing_file_path(input_path, codes::AUDIO_FILE_LABEL_TRANSPORT)?;
     if !is_in_trim_dir(input_path, workspace_dir, save_path)? {
         return Err(
-            "La restauration est réservée aux fichiers audio gérés par le projet.".to_string(),
+            user_message::UserMessage::new(codes::AUDIO_RESTORE_MANAGED_REQUIRED)
+                .with_detail(
+                    "La restauration est réservée aux fichiers audio gérés par le projet."
+                        .to_string(),
+                )
+                .into_transport(),
         );
     }
-    let sidecar = read_audio_edit_sidecar(&input)
-        .ok_or_else(|| "Aucun original enregistré pour cet audio.".to_string())?;
+    let sidecar = read_audio_edit_sidecar(&input).ok_or_else(|| {
+        user_message::UserMessage::new(codes::AUDIO_ORIGINAL_COPY_MISSING)
+            .with_detail("Aucun original enregistré pour cet audio.".to_string())
+            .into_transport()
+    })?;
     // L'original peut être soit en sibling visible (nouvelle convention),
     // soit dans `.story-studio-audio-edits/` (legacy). Les deux cas sont gérés
     // par `validate_existing_file_path` qui canonicalise et vérifie l'existence.
-    let original = validate_existing_file_path(&sidecar.original_path, "Audio original")?;
+    let original = validate_existing_file_path(
+        &sidecar.original_path,
+        codes::AUDIO_ORIGINAL_FILE_LABEL_TRANSPORT,
+    )?;
     let expected_backup = is_expected_audio_original_path(&input, &original);
     let switch_to_managed_original =
         !expected_backup && is_in_managed_media_dir(&original, workspace_dir, save_path);
@@ -273,8 +358,16 @@ pub fn restore_audio_original(
             original_path: Some(path_for_frontend(&original)),
         });
     }
-    fs::copy(&original, &input)
-        .map_err(|e| format!("Impossible de restaurer l'audio original : {}", e))?;
+    fs::copy(&original, &input).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_ORIGINAL_RESTORE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de restaurer l'audio original : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     // Nettoyage du fichier original désormais redondant (best-effort), uniquement
     // si le chemin correspond bien à une sauvegarde générée par Story Studio.
     if expected_backup {
@@ -294,10 +387,18 @@ pub fn preview_audio_edit(
     request: AudioEditRequest<'_>,
     preview_root: &Path,
 ) -> Result<String, String> {
-    let input = validate_existing_file_path(request.input_path, "Fichier audio")?;
+    let input = validate_existing_file_path(request.input_path, codes::AUDIO_FILE_LABEL_TRANSPORT)?;
     let source = audio_edit_source_for(&input);
-    fs::create_dir_all(preview_root)
-        .map_err(|e| format!("Impossible de créer le dossier des aperçus audio : {}", e))?;
+    fs::create_dir_all(preview_root).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_PREVIEW_FOLDER_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de créer le dossier des aperçus audio : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let output = preview_root.join(format!(
         "{}{}.wav",
         AUDIO_PREVIEW_PREFIX,
@@ -320,6 +421,7 @@ pub fn commit_audio_preview(
     save_path: Option<&str>,
     workspace_dir: Option<&str>,
     preview_root: &Path,
+    project_destination: Option<&crate::services::project_files::ProjectMediaDestination>,
 ) -> Result<TrimAudioResult, String> {
     commit_audio_preview_in(
         input_path,
@@ -327,6 +429,7 @@ pub fn commit_audio_preview(
         save_path,
         workspace_dir,
         preview_root,
+        project_destination,
     )
 }
 
@@ -336,10 +439,15 @@ pub(crate) fn commit_audio_preview_in(
     save_path: Option<&str>,
     workspace_dir: Option<&str>,
     preview_temp_root: &Path,
+    project_destination: Option<&crate::services::project_files::ProjectMediaDestination>,
 ) -> Result<TrimAudioResult, String> {
-    let input = validate_existing_file_path(input_path, "Fichier audio")?;
+    let input = validate_existing_file_path(input_path, codes::AUDIO_FILE_LABEL_TRANSPORT)?;
     let preview = validate_managed_audio_preview_in(Path::new(preview_path), preview_temp_root)?
-        .ok_or_else(|| "Aperçu audio introuvable.".to_string())?;
+        .ok_or_else(|| {
+            user_message::UserMessage::new(codes::FILES_AUDIO_PREVIEW_NOT_FOUND)
+                .with_detail("Aperçu audio introuvable.".to_string())
+                .into_transport()
+        })?;
     let input_ext = input
         .extension()
         .and_then(|e| e.to_str())
@@ -361,13 +469,22 @@ pub(crate) fn commit_audio_preview_in(
         let tmp_path = parent.join(format!("{}_edit_tmp_{}.{}", stem, now_millis(), ext));
         (tmp_path, input.clone(), false)
     } else {
-        let importes_dir = media_output_root(
+        let importes_dir = media_output_dir(
             workspace_dir,
-            "Définissez un emplacement de travail pour éditer un fichier externe.",
-        )?
-        .join("fichiers-importes");
-        fs::create_dir_all(&importes_dir)
-            .map_err(|e| format!("Impossible de créer fichiers-importes : {}", e))?;
+            "fichiers-importes",
+            project_destination,
+            codes::AUDIO_EDIT_WORKSPACE_REQUIRED_TRANSPORT,
+        )?;
+        fs::create_dir_all(&importes_dir).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::AUDIO_IMPORT_FOLDER_CREATE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de créer fichiers-importes : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
         let stem = input
             .file_stem()
             .and_then(|s| s.to_str())
@@ -406,10 +523,16 @@ pub(crate) fn commit_audio_preview_in(
             Ok(()) => {}
             Err(e) => {
                 let _ = fs::remove_file(&output);
-                return Err(format!(
-                    "Impossible de remplacer le fichier original : {}",
-                    e
-                ));
+                return Err({
+                    let _msg_error = (e).to_string();
+                    user_message::UserMessage::new(codes::AUDIO_ORIGINAL_REPLACE_FAILED)
+                        .param("error", user_message::transport_param(_msg_error.clone()))
+                        .with_detail(format!(
+                            "Impossible de remplacer le fichier original : {_msg_error}",
+                            _msg_error = user_message::transport_detail(&_msg_error),
+                        ))
+                        .into_transport()
+                });
             }
         }
     }
@@ -444,7 +567,7 @@ pub(crate) fn commit_audio_preview_in(
 }
 
 pub fn apply_audio_edit(request: AudioEditRequest<'_>) -> Result<TrimAudioResult, String> {
-    let input = validate_existing_file_path(request.input_path, "Fichier audio")?;
+    let input = validate_existing_file_path(request.input_path, codes::AUDIO_FILE_LABEL_TRANSPORT)?;
     let input_ext = input
         .extension()
         .and_then(|e| e.to_str())
@@ -470,13 +593,22 @@ pub fn apply_audio_edit(request: AudioEditRequest<'_>) -> Result<TrimAudioResult
         let tmp_path = parent.join(format!("{}_edit_tmp_{}.{}", stem, now_millis(), ext));
         (tmp_path, input.clone(), false)
     } else {
-        let importes_dir = media_output_root(
+        let importes_dir = media_output_dir(
             request.workspace_dir,
-            "Définissez un emplacement de travail pour éditer un fichier externe.",
-        )?
-        .join("fichiers-importes");
-        fs::create_dir_all(&importes_dir)
-            .map_err(|e| format!("Impossible de créer fichiers-importes : {}", e))?;
+            "fichiers-importes",
+            request.project_destination,
+            codes::AUDIO_EDIT_WORKSPACE_REQUIRED_TRANSPORT,
+        )?;
+        fs::create_dir_all(&importes_dir).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::AUDIO_IMPORT_FOLDER_CREATE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de créer fichiers-importes : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
         let stem = input
             .file_stem()
             .and_then(|s| s.to_str())
@@ -516,10 +648,16 @@ pub fn apply_audio_edit(request: AudioEditRequest<'_>) -> Result<TrimAudioResult
             Ok(()) => {}
             Err(e) => {
                 let _ = fs::remove_file(&output);
-                return Err(format!(
-                    "Impossible de remplacer le fichier original : {}",
-                    e
-                ));
+                return Err({
+                    let _msg_error = (e).to_string();
+                    user_message::UserMessage::new(codes::AUDIO_ORIGINAL_REPLACE_FAILED)
+                        .param("error", user_message::transport_param(_msg_error.clone()))
+                        .with_detail(format!(
+                            "Impossible de remplacer le fichier original : {_msg_error}",
+                            _msg_error = user_message::transport_detail(&_msg_error),
+                        ))
+                        .into_transport()
+                });
             }
         }
     }

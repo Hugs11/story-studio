@@ -1,3 +1,4 @@
+import { presentCommon, translateCommon as t, useCommonTranslation } from '../../i18n/commonPresentation.js';
 // La barre d'outils — **une seule**, pour les deux éditeurs.
 //
 // Un projet graphe n'a pas d'arbre : la séparation entre l'universel et le
@@ -22,10 +23,9 @@ import {
   Undo2,
 } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
-import { DEFAULT_SHORTCUT_LABELS, withShortcut } from '../../store/keyboardShortcuts';
+import { DEFAULT_SHORTCUT_LABELS } from '../../store/keyboardShortcuts';
 import { TOOLBAR_GROUPS, toolbarGroup } from '../../store/toolbarModel';
 import { ValidationPill } from './ValidationPill';
-import { PackOptionsPopover } from './PackOptionsPopover';
 import { ProjectMenuPopover } from './ProjectMenuPopover';
 import { PanelSortContext, SortablePanelItem } from '../../workspace/PanelSortContext';
 import {
@@ -35,7 +35,7 @@ import {
 } from '../../workspace/panelLayout';
 import './Toolbar.css';
 
-function ToolbarIcon({ Icon, className = 'chrome-icon' }) {
+export function ToolbarIcon({ Icon, className = 'chrome-icon' }) {
   return <Icon className={className} aria-hidden="true" strokeWidth={2} absoluteStrokeWidth />;
 }
 
@@ -44,11 +44,13 @@ function ToolbarIcon({ Icon, className = 'chrome-icon' }) {
 // et dit pourquoi ; c'est le comportement acquis de la barre avancée.
 function commandTitle(entry) {
   if (!entry) return '';
-  const label = withShortcut(entry.label, entry.shortcut);
-  return entry.available ? label : `${label} — ${entry.unavailableReason}`;
+  const label = entry.shortcut
+    ? t('common:toolbar.shortcut.tooltip', { label: entry.label, shortcut: entry.shortcut })
+    : entry.label;
+  return entry.available ? label : t('common:toolbar.command.unavailable', { label, reason: presentCommon(entry.unavailableReason) });
 }
 
-function ToolbarButton({
+export function ToolbarButton({
   id,
   title,
   label,
@@ -58,9 +60,10 @@ function ToolbarButton({
   children,
   trailing = null,
   iconOnly = false,
+  tooltipDisabled = false,
 }) {
   return (
-    <Tooltip text={title}>
+    <Tooltip text={title} disabled={tooltipDisabled}>
       <button
         data-toolbar-id={id}
         className={`chrome-toolbar-btn ${active ? 'is-active' : ''} ${iconOnly ? 'is-icon-only' : ''}`}
@@ -82,6 +85,7 @@ function ToolbarButton({
 // création, et elles doivent rester **le même bouton** que dans cette barre.
 // Les réimiter ailleurs les aurait fait diverger au premier changement de style.
 export function CommandButton({ entry, onClick, Icon, iconOnly = false, className = null }) {
+  useCommonTranslation();
   if (!entry) return null;
   const title = commandTitle(entry);
   return (
@@ -170,6 +174,7 @@ export function Toolbar({
   // leur place. `null` quand rien n'est suspendu.
   suspensionNotice = null,
   onNewProject,
+  onReturnToCatalogue,
   onOpenProject,
   onOpenPack,
   onSaveProject,
@@ -177,7 +182,6 @@ export function Toolbar({
   onContinueInGraph,
   onUndo,
   onRedo,
-  onOpenPreferences,
   // ── Groupes structurels de l'éditeur libre ──────────────────────────────
   panels = { showTree: true, showSettings: true, showDiagram: false },
   panelOrder = DEFAULT_WORKSPACE_PANEL_ORDER,
@@ -187,10 +191,6 @@ export function Toolbar({
   onToggleDiagram,
   onToggleNodeList,
   onToggleInspector,
-  packOptionsOpen = false,
-  onPackOptionsOpenChange,
-  projectType,
-  globalOptions,
   // La commande de production, **une seule** : elle achemine elle-même vers la
   // chaîne du projet ouvert. La barre ne sait pas laquelle, et n'a pas à le
   // savoir.
@@ -202,8 +202,8 @@ export function Toolbar({
   validationOpen = false,
   onValidationOpenChange,
   onSelectIssue,
-  onUpdateGlobalOption,
 }) {
+  const { t } = useCommonTranslation();
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [successToast, setSuccessToast] = useState(false);
   const successToastTimerRef = useRef(null);
@@ -221,7 +221,6 @@ export function Toolbar({
   const find = (id) => inventory.find((entry) => entry.id === id) ?? null;
   const fileGroup = toolbarGroup(inventory, TOOLBAR_GROUPS.FILE);
   const hasPanels = toolbarGroup(inventory, TOOLBAR_GROUPS.PANELS).length > 0;
-  const packOptions = find('openPackOptions');
   const generate = find('generate');
   const undo = find('undo');
   const redo = find('redo');
@@ -237,6 +236,7 @@ export function Toolbar({
           shortcutLabels={shortcutLabels}
           commands={fileGroup}
           onNewProject={onNewProject}
+          onReturnToCatalogue={onReturnToCatalogue}
           onOpenProject={onOpenProject}
           onOpenPack={onOpenPack}
           onSaveProject={onSaveProject}
@@ -245,10 +245,11 @@ export function Toolbar({
           trigger={({ openPopover }) => (
             <ToolbarButton
               id="project-menu"
-              title="Actions du projet"
-              label="Projet"
+              title={t('common:toolbar.project.tooltip')}
+              label={t('common:project.menu.title')}
               onClick={openPopover}
               active={projectMenuOpen}
+              tooltipDisabled={projectMenuOpen}
               trailing={<span className="chrome-project-caret" aria-hidden="true">▾</span>}
             >
               <ToolbarIcon Icon={PanelLeft} />
@@ -267,7 +268,7 @@ export function Toolbar({
       <div className="chrome-toolbar-center">
         {hasPanels ? (
           <PanelSortContext items={panelOrder} onMove={onMovePanel}>
-            <div className="chrome-panel-pill" role="group" aria-label="Panneaux visibles et réorganisables">
+            <div className="chrome-panel-pill" role="group" aria-label={t('common:toolbar.panels.ariaLabel')}>
               {panelOrder.map((panelId) => {
                 const panel = {
                   [WORKSPACE_PANEL_IDS.STRUCTURE]: {
@@ -300,7 +301,7 @@ export function Toolbar({
                   },
                   [ADVANCED_WORKSPACE_PANEL_IDS.GRAPH]: {
                     id: 'advanced-graph',
-                    title: 'Graphe — surface principale toujours visible',
+                    title: t('common:toolbar.graph.tooltip'),
                     Icon: Network,
                     active: true,
                     fixed: true,
@@ -335,38 +336,11 @@ export function Toolbar({
 
         {/* La raison de la suspension, à côté des commandes tenues. */}
         {suspensionNotice ? (
-          <span className="chrome-toolbar-notice" role="status" aria-live="polite">{suspensionNotice}</span>
+          <span className="chrome-toolbar-notice" role="status" aria-live="polite">{presentCommon(suspensionNotice)}</span>
         ) : null}
       </div>
 
       <div className="chrome-toolbar-right">
-        {packOptions ? (
-          <>
-            <PackOptionsPopover
-              open={packOptionsOpen}
-              projectType={projectType}
-              globalOptions={globalOptions}
-              onOpenChange={onPackOptionsOpenChange}
-              onUpdateOption={onUpdateGlobalOption}
-              onOpenPreferences={onOpenPreferences}
-              preferencesShortcut={shortcutLabels.tabOptions}
-              trigger={(
-                <ToolbarButton
-                  id="pack-options"
-                  title={commandTitle(packOptions)}
-                  label={packOptions.label}
-                  onClick={() => onPackOptionsOpenChange?.(true)}
-                  active={packOptionsOpen}
-                  trailing={<span className="chrome-pack-options-caret" aria-hidden="true">▾</span>}
-                >
-                  <ToolbarIcon Icon={SlidersHorizontal} />
-                </ToolbarButton>
-              )}
-            />
-            <span className="chrome-toolbar-sep" />
-          </>
-        ) : null}
-
         {find('toggleValidation') ? (
           <>
             <ValidationPill
@@ -393,7 +367,7 @@ export function Toolbar({
             {successToast ? (
               <div className="validation-success-toast" role="status" aria-live="polite">
                 <CircleCheck width={13} height={13} aria-hidden="true" />
-                <span>Aucun élément à corriger</span>
+                <span>{t('common:toolbar.issues.empty')}</span>
               </div>
             ) : null}
             <Tooltip text={commandTitle(generate)}>

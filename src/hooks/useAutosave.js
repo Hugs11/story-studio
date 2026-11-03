@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { autoSaveEphemeralProject, autoSaveNewProject, getWorkspaceDir, saveProject } from '../store/projectIO';
 import { createWorkSnapshot } from '../store/projectHelpers';
 import { normalizeWorkProject } from '../store/projectWorkState';
@@ -32,6 +32,9 @@ export function useAutosave({
   setSaveToast,
   saveHandlerRef,
 }) {
+  // Dernier travail traité en place par cette boucle :
+  // `{ path, snapshot, savedSnapshot }`.
+  const lastExplicitAutosaveRef = useRef(null);
   useEffect(() => {
     if (!enabled) return undefined;
     const interval = setInterval(async () => {
@@ -64,6 +67,7 @@ export function useAutosave({
         sessionMode,
         ephemeralSnapshotPath: ephemeralSnapshotPathRef?.current ?? null,
         lastEphemeralSnapshot: ephemeralSeedState?.savedSnapshot ?? null,
+        lastExplicitAutosave: lastExplicitAutosaveRef.current,
       });
       switch (action.kind) {
         case AUTOSAVE_ACTIONS.SKIP_EMPTY:
@@ -73,9 +77,29 @@ export function useAutosave({
         case AUTOSAVE_ACTIONS.SKIP_UNCHANGED:
         case AUTOSAVE_ACTIONS.SKIP_NO_TARGET:
           return;
-        case AUTOSAVE_ACTIONS.SAVE_EXPLICIT:
-          saveHandlerRef.current?.({ silent: true });
+        case AUTOSAVE_ACTIONS.SAVE_EXPLICIT: {
+          // Enregistrement en place **silencieux** : ni barre de progression,
+          // ni proposition de transfert, ni boîte d'erreur, dernier dossier
+          // inchangé. Le gestionnaire journalise lui-même ses échecs et rend
+          // `{ status, path }` (`null` s'il n'a rien tenté : créneau occupé,
+          // verrou d'auteur, aucun fichier) ; il ne retombe jamais sur
+          // « Enregistrer sous ».
+          try {
+            const outcome = await saveHandlerRef.current?.({ silent: true });
+            if (outcome?.path && (workEpochRef?.current ?? null) === workEpochAtStart) {
+              lastExplicitAutosaveRef.current = {
+                path: outcome.path,
+                // Écrit : la signature publiée (catalogue réconcilié compris).
+                // Refusé : celle de cette échéance, à ne pas retenter telle quelle.
+                snapshot: outcome.status === 'saved' ? outcome.writtenSnapshot : current,
+                savedSnapshot: savedSnapshotRef.current,
+              };
+            }
+          } catch (e) {
+            logger.error('autosave:explicit-error', e);
+          }
           return;
+        }
         default:
           break;
       }

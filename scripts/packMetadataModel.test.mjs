@@ -209,7 +209,7 @@ test('le bandeau ne compose pas un âge minimum que le graphe n’a pas', () => 
   // Un document créé sans version en recevra une à la production — `1`, le
   // défaut. La ligne le dit, au lieu d'afficher « v1 » comme si l'auteur
   // l'avait posée.
-  assert.deepEqual(advancedPackRecap(created), { title: 'Brouillon', line: 'v1 par défaut à la production' });
+  assert.deepEqual(advancedPackRecap(created), { title: 'Brouillon', line: 'v1 par défaut à la génération' });
   assert.equal(advancedPackRecap(null), null);
 });
 

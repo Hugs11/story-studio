@@ -1,3 +1,5 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
@@ -46,22 +48,22 @@ enum AudioEdge {
 impl AudioEdge {
     fn label(self) -> &'static str {
         match self {
-            Self::Leading => "début",
-            Self::Trailing => "fin",
+            Self::Leading => codes::LABEL_SILENCE_START_TRANSPORT,
+            Self::Trailing => codes::LABEL_SILENCE_END_TRANSPORT,
         }
     }
 
     fn short_code(self) -> &'static str {
         match self {
-            Self::Leading => "audioLeadingSilenceTooShort",
-            Self::Trailing => "audioTrailingSilenceTooShort",
+            Self::Leading => codes::CHECKER_AUDIO_LEADING_SHORT,
+            Self::Trailing => codes::CHECKER_AUDIO_TRAILING_SHORT,
         }
     }
 
     fn long_code(self) -> &'static str {
         match self {
-            Self::Leading => "audioLeadingSilenceLong",
-            Self::Trailing => "audioTrailingSilenceLong",
+            Self::Leading => codes::CHECKER_AUDIO_LEADING_LONG,
+            Self::Trailing => codes::CHECKER_AUDIO_TRAILING_LONG,
         }
     }
 }
@@ -161,9 +163,19 @@ pub(crate) fn automatic_fix_plan(
 
 #[derive(Debug, Clone, Copy)]
 struct AudioIssueTarget<'a> {
+    code: Option<&'static str>,
     label: &'a str,
     file_path: &'a str,
     item_type: &'a str,
+}
+
+impl<'a> AudioIssueTarget<'a> {
+    fn with_code(self, code: &'static str) -> Self {
+        Self {
+            code: Some(code),
+            ..self
+        }
+    }
 }
 
 pub(crate) fn analyze_audio_file(
@@ -180,6 +192,7 @@ pub(crate) fn analyze_audio_file(
     let mut manual_block = false;
     let file_path = format!("assets/{}", asset_name);
     let target = AudioIssueTarget {
+        code: None,
         label,
         file_path: &file_path,
         item_type,
@@ -200,38 +213,77 @@ pub(crate) fn analyze_audio_file(
         push_audio_issue(
             &mut issues,
             PackValidationSeverity::Error,
-            target,
-            "Cet audio n'est pas au bon format pour la Lunii.",
-            Some(format!(
-                "Détecté : extension {}, codec {}. Attendu : MP3.",
-                if ext.is_empty() { "inconnue" } else { &ext },
-                probe.codec.as_deref().unwrap_or("inconnu")
-            )),
+            target.with_code(codes::CHECKER_AUDIO_FORMAT),
+            codes::CHECKER_AUDIO_FORMAT_TRANSPORT,
+            Some({
+                let detected_extension = (if ext.is_empty() {
+                    codes::LABEL_AUDIO_CODEC_UNKNOWN_TRANSPORT
+                } else {
+                    &ext
+                })
+                .to_string();
+                let detected_audio_codec = (probe
+                    .codec
+                    .as_deref()
+                    .unwrap_or(codes::LABEL_IMAGE_FORMAT_UNKNOWN_TRANSPORT))
+                .to_string();
+                user_message::UserMessage::new(
+                codes::CHECKER_AUDIO_CODEC_UNEXPECTED,
+            )
+                .param(
+                    "extension",
+                    user_message::transport_param(detected_extension.clone()),
+                )
+                .param("codec", user_message::transport_param(detected_audio_codec.clone()))
+                .with_detail(format!(
+                    "Détecté : extension {detected_extension}, codec {detected_audio_codec}. Attendu : MP3.",
+                    detected_extension = user_message::transport_detail(&detected_extension),
+                    detected_audio_codec = user_message::transport_detail(&detected_audio_codec),
+                ))
+                .into_transport()
+            }),
             true,
-            Some("Convertir en MP3.".to_string()),
+            Some(
+                user_message::UserMessage::new(codes::CHECKER_MP3_CONVERSION_TITLE)
+                    .with_detail("Convertir en MP3.".to_string())
+                    .into_transport(),
+            ),
         );
         status = PackValidationSeverity::Error;
-        fix_parts.push("convertir en MP3");
+        fix_parts.push(codes::CHECKER_MP3_CONVERSION_DESCRIPTION_TRANSPORT);
     }
 
     if probe.sample_rate != Some(44_100) {
         push_audio_issue(
             &mut issues,
             PackValidationSeverity::Error,
-            target,
-            "Cet audio n'a pas la bonne fréquence pour la Lunii.",
-            Some(format!(
-                "Détecté : {}. Attendu : 44.1 kHz.",
-                probe
+            target.with_code(codes::CHECKER_AUDIO_SAMPLE_RATE),
+            codes::CHECKER_AUDIO_SAMPLE_RATE_TRANSPORT,
+            Some({
+                let sample_rate = probe
                     .sample_rate
                     .map(|value| format!("{} Hz", value))
-                    .unwrap_or_else(|| "inconnu".to_string())
-            )),
+                    .unwrap_or_else(|| codes::LABEL_IMAGE_FORMAT_UNKNOWN_TRANSPORT.to_string());
+                user_message::UserMessage::new(codes::CHECKER_AUDIO_SAMPLERATE_UNEXPECTED)
+                    .param(
+                        "sampleRate",
+                        user_message::transport_param(sample_rate.clone()),
+                    )
+                    .with_detail(format!(
+                        "Détecté : {}. Attendu : 44.1 kHz.",
+                        user_message::transport_detail(&sample_rate),
+                    ))
+                    .into_transport()
+            }),
             true,
-            Some("Convertir en 44.1 kHz.".to_string()),
+            Some(
+                user_message::UserMessage::new(codes::CHECKER_SAMPLERATE_CONVERSION_TITLE)
+                    .with_detail("Convertir en 44.1 kHz.".to_string())
+                    .into_transport(),
+            ),
         );
         status = PackValidationSeverity::Error;
-        fix_parts.push("convertir en 44.1 kHz");
+        fix_parts.push(codes::CHECKER_SAMPLERATE_CONVERT_DESCRIPTION_TRANSPORT);
     }
 
     let is_mono = probe
@@ -243,17 +295,33 @@ pub(crate) fn analyze_audio_file(
         push_audio_issue(
             &mut issues,
             PackValidationSeverity::Error,
-            target,
-            "Cet audio n'est pas en mono.",
-            Some(format!(
-                "Détecté : {}. Attendu : mono.",
-                probe.channels.as_deref().unwrap_or("inconnu")
-            )),
+            target.with_code(codes::CHECKER_AUDIO_CHANNELS),
+            codes::CHECKER_AUDIO_CHANNELS_TRANSPORT,
+            Some({
+                let channels = probe
+                    .channels
+                    .as_deref()
+                    .unwrap_or(codes::LABEL_IMAGE_FORMAT_UNKNOWN_TRANSPORT);
+                user_message::UserMessage::new(codes::CHECKER_AUDIO_CHANNELS_UNEXPECTED)
+                    .param(
+                        "channels",
+                        user_message::transport_param(channels.to_string()),
+                    )
+                    .with_detail(format!(
+                        "Détecté : {}. Attendu : mono.",
+                        user_message::transport_detail(channels),
+                    ))
+                    .into_transport()
+            }),
             true,
-            Some("Convertir en mono.".to_string()),
+            Some(
+                user_message::UserMessage::new(codes::CHECKER_MONO_CONVERSION_TITLE)
+                    .with_detail("Convertir en mono.".to_string())
+                    .into_transport(),
+            ),
         );
         status = PackValidationSeverity::Error;
-        fix_parts.push("convertir en mono");
+        fix_parts.push(codes::CHECKER_MONO_CONVERSION_DESCRIPTION_TRANSPORT);
     }
 
     if let Some(duration) = probe.duration_secs {
@@ -261,9 +329,21 @@ pub(crate) fn analyze_audio_file(
             push_audio_issue(
                 &mut issues,
                 PackValidationSeverity::Error,
-                target,
-                "Cet audio est trop court pour être corrigé automatiquement.",
-                Some(format!("Durée détectée : {:.2} s.", duration)),
+                target.with_code(codes::CHECKER_AUDIO_TOO_SHORT),
+                codes::CHECKER_AUDIO_TOO_SHORT_TRANSPORT,
+                Some({
+                    let _msg_duration = format!("{:.2}", duration);
+                    user_message::UserMessage::new(codes::CHECKER_AUDIO_DURATION_DETECTED)
+                        .param(
+                            "duration",
+                            user_message::transport_param(_msg_duration.clone()),
+                        )
+                        .with_detail(format!(
+                            "Durée détectée : {_msg_duration} s.",
+                            _msg_duration = user_message::transport_detail(&_msg_duration),
+                        ))
+                        .into_transport()
+                }),
                 false,
                 None,
             );
@@ -274,8 +354,8 @@ pub(crate) fn analyze_audio_file(
         push_audio_issue(
             &mut issues,
             PackValidationSeverity::Error,
-            target,
-            "Story Studio n'arrive pas à mesurer cet audio.",
+            target.with_code(codes::CHECKER_AUDIO_UNMEASURABLE),
+            codes::CHECKER_AUDIO_UNMEASURABLE_TRANSPORT,
             None,
             false,
             None,
@@ -288,9 +368,15 @@ pub(crate) fn analyze_audio_file(
         push_audio_issue(
             &mut issues,
             PackValidationSeverity::Error,
-            target,
-            "Cet audio ne contient aucun son audible.",
-            Some("Aucun contenu détecté au-dessus du plancher de bruit.".to_string()),
+            target.with_code(codes::CHECKER_AUDIO_SILENT),
+            codes::CHECKER_AUDIO_SILENT_TRANSPORT,
+            Some(
+                user_message::UserMessage::new(codes::CHECKER_AUDIO_CONTENT_UNDETECTED)
+                    .with_detail(
+                        "Aucun contenu détecté au-dessus du plancher de bruit.".to_string(),
+                    )
+                    .into_transport(),
+            ),
             false,
             None,
         );
@@ -325,33 +411,47 @@ pub(crate) fn analyze_audio_file(
             push_audio_issue(
                 &mut issues,
                 PackValidationSeverity::Warning,
-                target,
-                "Cet audio semble presque muet.",
-                Some(format!(
-                    "Volume moyen mesuré : {:.1} LUFS. Story Studio peut l'amplifier fortement, mais le bruit de fond peut devenir plus audible.",
-                    lufs
-                )),
+                target.with_code(codes::CHECKER_AUDIO_NEAR_MUTE),
+                codes::CHECKER_AUDIO_NEAR_MUTE_TRANSPORT,
+                Some({
+                    let _msg_lufs = format!("{:.1}", lufs);
+                    user_message::UserMessage::new(
+                    codes::CHECKER_VOLUME_BOOST_NOISE_RISK,
+                )
+                    .param("lufs", user_message::transport_param(_msg_lufs.clone()))
+                    .with_detail(format!(
+                        "Volume moyen mesuré : {_msg_lufs} LUFS. Story Studio peut l'amplifier fortement, mais le bruit de fond peut devenir plus audible.",
+                        _msg_lufs = user_message::transport_detail(&_msg_lufs),
+                    ))
+                    .into_transport()
+                }),
                 can_normalize,
-                can_normalize.then(|| "Amplifier et normaliser le volume.".to_string()),
+                can_normalize.then(|| {
+                    user_message::UserMessage::new(codes::CHECKER_VOLUME_BOOST_NORMALIZE)
+                        .with_detail("Amplifier et normaliser le volume.".to_string())
+                        .into_transport()
+                }),
             );
             if status != PackValidationSeverity::Error {
                 status = PackValidationSeverity::Warning;
             }
             if can_normalize {
-                fix_parts.push("normaliser le volume");
+                fix_parts.push(codes::CHECKER_VOLUME_NORMALIZATION_TITLE_TRANSPORT);
             }
         }
         Some(lufs) if !loudness_in_validation_window(lufs) => {
             let direction = if lufs < VALIDATION_WINDOW_LUFS.0 {
-                "trop faible"
+                codes::CHECKER_VOLUME_TOO_QUIET_TRANSPORT
             } else {
-                "trop fort"
+                codes::CHECKER_VOLUME_TOO_LOUD_TRANSPORT
             };
             let action = probe
                 .true_peak_db
                 .map(|peak| plan_loudness_fix(lufs, peak))
                 .unwrap_or_else(|| LoudnessAction::Uncorrectable {
-                    reason: "crête vraie non mesurée".to_string(),
+                    reason: user_message::UserMessage::new(codes::CHECKER_PEAK_NOT_MEASURED)
+                        .with_detail("crête vraie non mesurée".to_string())
+                        .into_transport(),
                 });
             let can_normalize = action.is_correctable();
             let strong_limiting = matches!(
@@ -362,44 +462,118 @@ pub(crate) fn analyze_audio_file(
                 } if *expected_limiting_db > MAX_LIMITING_DB
             );
             let details = if can_normalize {
-                let mut details = format!(
-                    "Volume moyen mesuré : {:.1} LUFS. Fenêtre valide : {:.0} à {:.0} LUFS. Correction visée : {:.0} LUFS, crête MP3 attendue ≈ {:.1} dBTP.",
-                    lufs,
-                    VALIDATION_WINDOW_LUFS.0,
-                    VALIDATION_WINDOW_LUFS.1,
-                    TARGET_LUFS,
-                    EXPECTED_FINAL_TRUE_PEAK_DBTP
-                );
+                let mut details = {
+                    let _msg_lufs = format!("{:.1}", lufs);
+                    let minimum_volume_lufs = format!("{:.0}", VALIDATION_WINDOW_LUFS.0);
+                    let maximum_volume_lufs = format!("{:.0}", VALIDATION_WINDOW_LUFS.1);
+                    let _msg_target_lufs = format!("{:.0}", TARGET_LUFS);
+                    let expected_peak_dbtp = format!("{:.1}", EXPECTED_FINAL_TRUE_PEAK_DBTP);
+                    user_message::UserMessage::new(
+                        codes::CHECKER_VOLUME_CORRECTION_MEASUREMENTS,
+                    )
+                        .param("lufs", user_message::transport_param(_msg_lufs.clone()))
+                        .param(
+                            "minLufs",
+                            user_message::transport_param(minimum_volume_lufs.clone()),
+                        )
+                        .param(
+                            "maxLufs",
+                            user_message::transport_param(maximum_volume_lufs.clone()),
+                        )
+                        .param(
+                            "targetLufs",
+                            user_message::transport_param(_msg_target_lufs.clone()),
+                        )
+                        .param(
+                            "expectedTruePeakDbtp",
+                            user_message::transport_param(expected_peak_dbtp.clone()),
+                        )
+                        .with_detail(format!(
+                            "Volume moyen mesuré : {_msg_lufs} LUFS. Fenêtre valide : {minimum_volume_lufs} à {maximum_volume_lufs} LUFS. Correction visée : {_msg_target_lufs} LUFS, crête MP3 attendue ≈ {expected_peak_dbtp} dBTP.",
+                            expected_peak_dbtp = user_message::transport_detail(&expected_peak_dbtp),
+                            _msg_lufs = user_message::transport_detail(&_msg_lufs),
+                            _msg_target_lufs = user_message::transport_detail(&_msg_target_lufs),
+                            minimum_volume_lufs = user_message::transport_detail(&minimum_volume_lufs),
+                            maximum_volume_lufs = user_message::transport_detail(&maximum_volume_lufs),
+                        ))
+                        .into_transport()
+                };
                 if strong_limiting {
-                    details.push_str(
-                        " La mise à niveau demandera une forte limitation : certaines pointes peuvent sembler comprimées.",
+                    details = crate::support::user_message::compose_messages(
+                        &[
+                            details,
+                            codes::CHECKER_VOLUME_LIMITING_WARNING_TRANSPORT.to_string(),
+                        ],
+                        "",
                     );
                 }
                 details
             } else {
-                format!(
-                    "Volume moyen mesuré : {:.1} LUFS, crête vraie : {:.1} dBTP. Fenêtre valide : {:.0} à {:.0} LUFS. Normalisation automatique indisponible : {}.",
-                    lufs,
-                    probe.true_peak_db.unwrap_or_default(),
-                    VALIDATION_WINDOW_LUFS.0,
-                    VALIDATION_WINDOW_LUFS.1,
-                    loudness_action_reason(&action)
-                )
+                {
+                    let _msg_lufs = format!("{:.1}", lufs);
+                    let measured_true_peak =
+                        format!("{:.1}", probe.true_peak_db.unwrap_or_default());
+                    let minimum_volume_lufs = format!("{:.0}", VALIDATION_WINDOW_LUFS.0);
+                    let maximum_volume_lufs = format!("{:.0}", VALIDATION_WINDOW_LUFS.1);
+                    let volume_adjustment_reason = (loudness_action_reason(&action)).to_string();
+                    user_message::UserMessage::new(
+                        codes::CHECKER_VOLUME_NORMALIZATION_UNAVAILABLE,
+                    )
+                        .param("lufs", user_message::transport_param(_msg_lufs.clone()))
+                        .param("peak", user_message::transport_param(measured_true_peak.clone()))
+                        .param(
+                            "minLufs",
+                            user_message::transport_param(minimum_volume_lufs.clone()),
+                        )
+                        .param(
+                            "maxLufs",
+                            user_message::transport_param(maximum_volume_lufs.clone()),
+                        )
+                        .param(
+                            "normalizationReason",
+                            user_message::transport_param(volume_adjustment_reason.clone()),
+                        )
+                        .with_detail(format!(
+                            "Volume moyen mesuré : {_msg_lufs} LUFS, crête vraie : {measured_true_peak} dBTP. Fenêtre valide : {minimum_volume_lufs} à {maximum_volume_lufs} LUFS. Normalisation automatique indisponible : {volume_adjustment_reason}.",
+                            volume_adjustment_reason = user_message::transport_detail(&volume_adjustment_reason),
+                            _msg_lufs = user_message::transport_detail(&_msg_lufs),
+                            minimum_volume_lufs = user_message::transport_detail(&minimum_volume_lufs),
+                            maximum_volume_lufs = user_message::transport_detail(&maximum_volume_lufs),
+                            measured_true_peak = user_message::transport_detail(&measured_true_peak),
+                        ))
+                        .into_transport()
+                }
             };
             push_audio_issue(
                 &mut issues,
                 PackValidationSeverity::Warning,
-                target,
-                format!("Le volume moyen de cet audio est {}.", direction),
+                target.with_code(codes::CHECKER_AUDIO_VOLUME),
+                {
+                    let _msg_direction = (direction).to_string();
+                    user_message::UserMessage::new(codes::CHECKER_AUDIO_VOLUME)
+                        .param(
+                            "direction",
+                            user_message::transport_param(_msg_direction.clone()),
+                        )
+                        .with_detail(format!(
+                            "Le volume moyen de cet audio est {_msg_direction}.",
+                            _msg_direction = user_message::transport_detail(&_msg_direction),
+                        ))
+                        .into_transport()
+                },
                 Some(details),
                 can_normalize,
-                can_normalize.then(|| "Normaliser le volume.".to_string()),
+                can_normalize.then(|| {
+                    user_message::UserMessage::new(codes::CHECKER_VOLUME_NORMALIZATION_DESCRIPTION)
+                        .with_detail("Normaliser le volume.".to_string())
+                        .into_transport()
+                }),
             );
             if status != PackValidationSeverity::Error {
                 status = PackValidationSeverity::Warning;
             }
             if can_normalize {
-                fix_parts.push("normaliser le volume");
+                fix_parts.push(codes::CHECKER_VOLUME_NORMALIZATION_TITLE_TRANSPORT);
             }
         }
         // Volume dans la fenêtre valide : jamais un avertissement, rien à faire.
@@ -410,8 +584,8 @@ pub(crate) fn analyze_audio_file(
             push_audio_issue(
                 &mut issues,
                 PackValidationSeverity::Warning,
-                target,
-                "Le volume n'a pas pu être mesuré précisément.",
+                target.with_code(codes::CHECKER_AUDIO_VOLUME_UNMEASURABLE),
+                codes::CHECKER_AUDIO_VOLUME_UNMEASURABLE_TRANSPORT,
                 None,
                 false,
                 None,
@@ -434,17 +608,37 @@ pub(crate) fn analyze_audio_file(
                 let pct = 100.0 * clipped as f64 / total as f64;
                 let peak = probe
                     .true_peak_db
-                    .map(|p| format!(" (crête vraie {:.1} dBTP)", p))
+                    .map(|p| {
+                        let _msg_p = format!("{:.1}", p);
+                        user_message::UserMessage::new(codes::CHECKER_PEAK_MEASUREMENT_VALUE)
+                            .param("peak", user_message::transport_param(_msg_p.clone()))
+                            .with_detail(format!(
+                                " (crête vraie {_msg_p} dBTP)",
+                                _msg_p = user_message::transport_detail(&_msg_p),
+                            ))
+                            .into_transport()
+                    })
                     .unwrap_or_default();
                 push_audio_issue(
                     &mut issues,
                     PackValidationSeverity::Warning,
-                    target,
-                    "Cet audio est saturé : qualité dégradée par la source.",
-                    Some(format!(
-                        "Écrêtage détecté sur {:.2} % des échantillons{}. La saturation est déjà présente dans le fichier d'origine ; aucune régénération ne la restaure. Conseil : vérifiez la source et, si possible, remplacez-la par un enregistrement de meilleure qualité.",
-                        pct, peak
-                    )),
+                    target.with_code(codes::CHECKER_AUDIO_CLIPPED),
+                    codes::CHECKER_AUDIO_CLIPPED_TRANSPORT,
+                    Some({
+                        let _msg_pct = format!("{:.2}", pct);
+                        let _msg_peak = (peak).to_string();
+                        user_message::UserMessage::new(
+                        codes::CHECKER_AUDIO_ORIGINAL_CLIPPING,
+                    )
+                        .param("percent", user_message::transport_param(_msg_pct.clone()))
+                        .param("peak", user_message::transport_param(_msg_peak.clone()))
+                        .with_detail(format!(
+                            "Écrêtage détecté sur {_msg_pct} % des échantillons{_msg_peak}. La saturation est déjà présente dans le fichier d'origine ; aucune régénération ne la restaure. Conseil : vérifiez la source et, si possible, remplacez-la par un enregistrement de meilleure qualité.",
+                            _msg_pct = user_message::transport_detail(&_msg_pct),
+                            _msg_peak = user_message::transport_detail(&_msg_peak),
+                        ))
+                        .into_transport()
+                    }),
                     false,
                     None,
                 );
@@ -502,10 +696,19 @@ pub(crate) fn fix_audio_file(
     plan: AudioFixPlan,
 ) -> Result<(), String> {
     if !plan.has_operations() {
-        return Err(format!(
-            "Plan de correction audio vide : {}",
-            item.file_path
-        ));
+        return Err({
+            let _msg_item_file_path = (item.file_path).to_string();
+            user_message::UserMessage::new(codes::CHECKER_AUDIO_CORRECTION_PLAN_EMPTY)
+                .param(
+                    "itemFilePath",
+                    user_message::transport_param(_msg_item_file_path.clone()),
+                )
+                .with_detail(format!(
+                    "Plan de correction audio vide : {_msg_item_file_path}",
+                    _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path),
+                ))
+                .into_transport()
+        });
     }
     let rebuild_leading = plan.rebuild_leading_silence;
     let rebuild_trailing = plan.rebuild_trailing_silence;
@@ -516,10 +719,19 @@ pub(crate) fn fix_audio_file(
         + if rebuild_trailing { trim_trailing } else { 0.0 };
     if let Some(duration) = item.duration_secs {
         if selected_trim >= duration - 0.05 {
-            return Err(format!(
-                "Audio trop court après ajustement des silences : {}",
-                item.file_path
-            ));
+            return Err({
+                let _msg_item_file_path = (item.file_path).to_string();
+                user_message::UserMessage::new(codes::CHECKER_AUDIO_CORRECTED_TOO_SHORT)
+                    .param(
+                        "itemFilePath",
+                        user_message::transport_param(_msg_item_file_path.clone()),
+                    )
+                    .with_detail(format!(
+                        "Audio trop court après ajustement des silences : {_msg_item_file_path}",
+                        _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path),
+                    ))
+                    .into_transport()
+            });
         }
     }
     let edge_filters = build_selected_edge_silence_filters(
@@ -539,10 +751,21 @@ pub(crate) fn fix_audio_file(
     {
         if let Some(duration) = item.duration_secs {
             if duration <= 0.05 {
-                return Err(format!(
-                    "Audio trop court après ajustement des silences : {}",
-                    item.file_path
-                ));
+                return Err({
+                    let _msg_item_file_path = (item.file_path).to_string();
+                    user_message::UserMessage::new(
+                        codes::CHECKER_AUDIO_CORRECTED_TOO_SHORT,
+                    )
+                        .param(
+                            "itemFilePath",
+                            user_message::transport_param(_msg_item_file_path.clone()),
+                        )
+                        .with_detail(format!(
+                            "Audio trop court après ajustement des silences : {_msg_item_file_path}",
+                            _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path),
+                        ))
+                        .into_transport()
+                });
             }
         }
     }
@@ -555,18 +778,48 @@ pub(crate) fn fix_audio_file(
         measurement_filters.push("aformat=channel_layouts=mono".to_string());
         let measure =
             measure_loudness_ebur128(ffmpeg, input, &measurement_filters).map_err(|e| {
-                format!(
-                    "Mesure de niveau impossible pendant la correction de {} : {}",
-                    item.file_path, e
+                {
+                let _msg_item_file_path = (item.file_path).to_string();
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(
+                    codes::CHECKER_CORRECTION_LEVEL_MEASURE_FAILED,
                 )
+                    .param(
+                        "itemFilePath",
+                        user_message::transport_param(_msg_item_file_path.clone()),
+                    )
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Mesure de niveau impossible pendant la correction de {_msg_item_file_path} : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                        _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path),
+                    ))
+                    .into_transport()
+                }
             })?;
         let action = plan_loudness_fix(measure.integrated_lufs, measure.true_peak_db);
         if matches!(action, LoudnessAction::Uncorrectable { .. }) {
-            return Err(format!(
-                "Normalisation audio indisponible pour {} : {}",
-                item.file_path,
-                loudness_action_reason(&action)
-            ));
+            return Err({
+                let _msg_item_file_path = (item.file_path).to_string();
+                let volume_adjustment_reason = (loudness_action_reason(&action)).to_string();
+                user_message::UserMessage::new(
+                    codes::CHECKER_AUDIO_NORMALIZATION_UNAVAILABLE,
+                )
+                    .param(
+                        "itemFilePath",
+                        user_message::transport_param(_msg_item_file_path.clone()),
+                    )
+                    .param(
+                        "normalizationReason",
+                        user_message::transport_param(volume_adjustment_reason.clone()),
+                    )
+                    .with_detail(format!(
+                        "Normalisation audio indisponible pour {_msg_item_file_path} : {volume_adjustment_reason}",
+                        _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path),
+                        volume_adjustment_reason = user_message::transport_detail(&volume_adjustment_reason),
+                    ))
+                    .into_transport()
+            });
         }
         output_filters.extend(build_loudness_filters(&action));
     }
@@ -598,15 +851,36 @@ pub(crate) fn fix_audio_file(
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
     apply_no_window(&mut cmd);
-    let out = cmd
-        .output()
-        .map_err(|e| format!("Impossible de lancer FFmpeg : {}", e))?;
+    let out = cmd.output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::CHECKER_FFMPEG_START_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer FFmpeg : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if !out.status.success() {
-        return Err(format!(
-            "Correction audio échouée pour {} :\n{}",
-            item.file_path,
-            compact_ffmpeg_error(&out.stderr)
-        ));
+        return Err({
+            let _msg_item_file_path = (item.file_path).to_string();
+            let ffmpeg_error_message = (compact_ffmpeg_error(&out.stderr)).to_string();
+            user_message::UserMessage::new(codes::CHECKER_AUDIO_CORRECTION_FAILED)
+                .param(
+                    "itemFilePath",
+                    user_message::transport_param(_msg_item_file_path.clone()),
+                )
+                .param(
+                    "toolError",
+                    user_message::transport_param(ffmpeg_error_message.clone()),
+                )
+                .with_detail(format!(
+                    "Correction audio échouée pour {_msg_item_file_path} :\n{ffmpeg_error_message}",
+                    ffmpeg_error_message = user_message::transport_detail(&ffmpeg_error_message),
+                    _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path),
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }
@@ -735,9 +1009,16 @@ fn run_ffmpeg(ffmpeg: &Path, input: &Path, args: &[&str]) -> Result<String, Stri
     }
     cmd.stdout(Stdio::null()).stderr(Stdio::piped());
     apply_no_window(&mut cmd);
-    let out = cmd
-        .output()
-        .map_err(|e| format!("Impossible de lancer FFmpeg : {}", e))?;
+    let out = cmd.output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::CHECKER_FFMPEG_START_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer FFmpeg : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     Ok(String::from_utf8_lossy(&out.stderr).to_string())
 }
 
@@ -798,8 +1079,22 @@ fn add_silence_issue(
             push_audio_issue(
                 issues,
                 PackValidationSeverity::Warning,
-                target,
-                format!("Le silence de {} n'a pas pu être mesuré.", side),
+                target.with_code(match edge {
+                    AudioEdge::Leading => codes::CHECKER_AUDIO_LEADING_UNMEASURABLE,
+                    AudioEdge::Trailing => codes::CHECKER_AUDIO_TRAILING_UNMEASURABLE,
+                }),
+                {
+                    let _msg_side = (side).to_string();
+                    user_message::UserMessage::new(match edge {
+                        AudioEdge::Leading => codes::CHECKER_AUDIO_LEADING_UNMEASURABLE,
+                        AudioEdge::Trailing => codes::CHECKER_AUDIO_TRAILING_UNMEASURABLE,
+                    })
+                    .with_detail(format!(
+                        "Le silence de {_msg_side} n'a pas pu être mesuré.",
+                        _msg_side = user_message::transport_detail(&_msg_side)
+                    ))
+                    .into_transport()
+                },
                 None,
                 false,
                 None,
@@ -811,41 +1106,142 @@ fn add_silence_issue(
             let mut entry = make_audio_issue(
                 PackValidationSeverity::Error,
                 target,
-                format!("Le silence au {} est trop court.", side),
-                Some(format!(
-                    "Détecté : {:.2} s. Minimum attendu : {:.2} s (tolérance de mesure : {:.2} s). Correction proposée : atteindre {:.2} s.",
-                    measured,
-                    EDGE_SILENCE_SEC,
-                    AUDIO_EDGE_SILENCE_MEASUREMENT_TOLERANCE_SECONDS,
-                    EDGE_SILENCE_SEC
-                )),
+                {
+                    let _msg_side = (side).to_string();
+                    user_message::UserMessage::new(edge.short_code())
+                        .with_detail(format!(
+                            "Le silence au {_msg_side} est trop court.",
+                            _msg_side = user_message::transport_detail(&_msg_side)
+                        ))
+                        .into_transport()
+                },
+                Some({
+                    let _msg_measured = format!("{:.2}", measured);
+                    let _msg_edge_silence_sec = format!("{:.2}", EDGE_SILENCE_SEC);
+                    let silence_measurement_tolerance =
+                        format!("{:.2}", AUDIO_EDGE_SILENCE_MEASUREMENT_TOLERANCE_SECONDS);
+                    let _msg_edge_silence_sec2 = format!("{:.2}", EDGE_SILENCE_SEC);
+                    user_message::UserMessage::new(
+                    codes::CHECKER_SILENCE_MINIMUM_MEASUREMENTS,
+                )
+                    .param(
+                        "measured",
+                        user_message::transport_param(_msg_measured.clone()),
+                    )
+                    .param(
+                        "targetSilenceSeconds",
+                        user_message::transport_param(_msg_edge_silence_sec.clone()),
+                    )
+                    .param(
+                        "measurementToleranceSeconds",
+                        user_message::transport_param(silence_measurement_tolerance.clone()),
+                    )
+                    .param(
+                        "proposedSilenceSeconds",
+                        user_message::transport_param(_msg_edge_silence_sec2.clone()),
+                    )
+                    .with_detail(format!(
+                        "Détecté : {_msg_measured} s. Minimum attendu : {_msg_edge_silence_sec} s (tolérance de mesure : {silence_measurement_tolerance} s). Correction proposée : atteindre {_msg_edge_silence_sec2} s.",
+                        _msg_edge_silence_sec = user_message::transport_detail(&_msg_edge_silence_sec),
+                        _msg_edge_silence_sec2 = user_message::transport_detail(&_msg_edge_silence_sec2),
+                        _msg_measured = user_message::transport_detail(&_msg_measured),
+                        silence_measurement_tolerance = user_message::transport_detail(&silence_measurement_tolerance),
+                    ))
+                    .into_transport()
+                }),
                 true,
-                Some(format!("Ajouter du silence au {} pour atteindre {:.2} s.", side, EDGE_SILENCE_SEC)),
+                Some({
+                    let _msg_side = (side).to_string();
+                    let _msg_edge_silence_sec = format!("{:.2}", EDGE_SILENCE_SEC);
+                    user_message::UserMessage::new(
+                    codes::CHECKER_SILENCE_PADDING_DESCRIPTION,
+                )
+                    .param("side", user_message::transport_param(_msg_side.clone()))
+                    .param(
+                        "targetSilenceSeconds",
+                        user_message::transport_param(_msg_edge_silence_sec.clone()),
+                    )
+                    .with_detail(format!(
+                        "Ajouter du silence au {_msg_side} pour atteindre {_msg_edge_silence_sec} s.",
+                        _msg_edge_silence_sec = user_message::transport_detail(&_msg_edge_silence_sec),
+                        _msg_side = user_message::transport_detail(&_msg_side),
+                    ))
+                    .into_transport()
+                }),
             );
             entry.code = Some(edge.short_code().to_string());
             entry.fix_disposition = FixDisposition::Automatic;
             issues.push(entry);
             raise_status(status, PackValidationSeverity::Error);
-            fix_parts.push("ajuster les silences");
+            fix_parts.push(codes::CHECKER_SILENCE_ADJUSTMENT_TITLE_TRANSPORT);
         }
         EdgeSilenceClassification::LongSuggestion => {
             let measured = measured.unwrap_or_default();
             let mut entry = make_audio_issue(
                 PackValidationSeverity::Info,
                 target,
-                format!("Le silence au {} est long.", side),
-                Some(format!(
-                    "Détecté : {:.2} s. Au-delà de {:.2} s, Story Studio propose facultativement de ramener ce bord à {:.2} s.",
-                    measured, AUDIO_MAX_EDGE_SILENCE_SECONDS, EDGE_SILENCE_SEC
-                )),
+                {
+                    let _msg_side = (side).to_string();
+                    user_message::UserMessage::new(edge.long_code())
+                        .with_detail(format!(
+                            "Le silence au {_msg_side} est long.",
+                            _msg_side = user_message::transport_detail(&_msg_side)
+                        ))
+                        .into_transport()
+                },
+                Some({
+                    let _msg_measured = format!("{:.2}", measured);
+                    let edge_silence_limit_seconds =
+                        format!("{:.2}", AUDIO_MAX_EDGE_SILENCE_SECONDS);
+                    let _msg_edge_silence_sec = format!("{:.2}", EDGE_SILENCE_SEC);
+                    user_message::UserMessage::new(
+                    codes::CHECKER_SILENCE_EXCESS_MEASUREMENTS,
+                )
+                    .param(
+                        "measured",
+                        user_message::transport_param(_msg_measured.clone()),
+                    )
+                    .param(
+                        "maxEdgeSilenceSeconds",
+                        user_message::transport_param(edge_silence_limit_seconds.clone()),
+                    )
+                    .param(
+                        "targetSilenceSeconds",
+                        user_message::transport_param(_msg_edge_silence_sec.clone()),
+                    )
+                    .with_detail(format!(
+                        "Détecté : {_msg_measured} s. Au-delà de {edge_silence_limit_seconds} s, Story Studio propose facultativement de ramener ce bord à {_msg_edge_silence_sec} s.",
+                        edge_silence_limit_seconds = user_message::transport_detail(&edge_silence_limit_seconds),
+                        _msg_edge_silence_sec = user_message::transport_detail(&_msg_edge_silence_sec),
+                        _msg_measured = user_message::transport_detail(&_msg_measured),
+                    ))
+                    .into_transport()
+                }),
                 true,
-                Some(format!("Ramener facultativement le silence au {} à {:.2} s.", side, EDGE_SILENCE_SEC)),
+                Some({
+                    let _msg_side = (side).to_string();
+                    let _msg_edge_silence_sec = format!("{:.2}", EDGE_SILENCE_SEC);
+                    user_message::UserMessage::new(
+                    codes::CHECKER_SILENCE_REDUCTION_DESCRIPTION,
+                )
+                    .param("side", user_message::transport_param(_msg_side.clone()))
+                    .param(
+                        "targetSilenceSeconds",
+                        user_message::transport_param(_msg_edge_silence_sec.clone()),
+                    )
+                    .with_detail(format!(
+                        "Ramener facultativement le silence au {_msg_side} à {_msg_edge_silence_sec} s.",
+                        _msg_edge_silence_sec = user_message::transport_detail(&_msg_edge_silence_sec),
+                        _msg_side = user_message::transport_detail(&_msg_side),
+                    ))
+                    .into_transport()
+                }),
             );
             entry.code = Some(edge.long_code().to_string());
             entry.fix_disposition = FixDisposition::Optional;
             issues.push(entry);
             raise_status(status, PackValidationSeverity::Info);
-            fix_parts.push("ajuster les silences");
+            fix_parts.push(codes::CHECKER_SILENCE_ADJUSTMENT_TITLE_TRANSPORT);
         }
         EdgeSilenceClassification::Accepted => {}
     }
@@ -895,6 +1291,7 @@ fn make_audio_issue(
     auto_fix_description: Option<String>,
 ) -> PackValidationIssue {
     let mut entry = issue(severity, "audio", target.label, message);
+    entry.code = target.code.map(str::to_string);
     entry.technical_details = technical_details;
     entry.file_path = Some(target.file_path.to_string());
     entry.item_type = Some(target.item_type.to_string());
@@ -913,7 +1310,10 @@ fn unique_join(parts: &[&str]) -> String {
             out.push(*part);
         }
     }
-    out.join(", ")
+    crate::support::user_message::compose_messages(
+        &out.iter().map(|part| part.to_string()).collect::<Vec<_>>(),
+        ", ",
+    )
 }
 
 fn compact_ffmpeg_error(stderr: &[u8]) -> String {
@@ -924,7 +1324,9 @@ fn compact_ffmpeg_error(stderr: &[u8]) -> String {
         .filter(|line| !line.is_empty())
         .collect();
     if lines.is_empty() {
-        return "Erreur FFmpeg inconnue.".to_string();
+        return user_message::UserMessage::new(codes::CHECKER_FFMPEG_ERROR_UNKNOWN)
+            .with_detail("Erreur FFmpeg inconnue.".to_string())
+            .into_transport();
     }
     let start = lines.len().saturating_sub(8);
     lines[start..].join("\n")
@@ -933,7 +1335,7 @@ fn compact_ffmpeg_error(stderr: &[u8]) -> String {
 fn loudness_action_reason(action: &LoudnessAction) -> &str {
     match action {
         LoudnessAction::Uncorrectable { reason } => reason,
-        _ => "correction non requise",
+        _ => codes::CHECKER_CORRECTION_NOT_REQUIRED_TRANSPORT,
     }
 }
 
@@ -972,6 +1374,7 @@ mod tests {
     #[test]
     fn silence_issues_expose_edge_codes_and_fix_dispositions() {
         let target = AudioIssueTarget {
+            code: None,
             label: "Audio",
             file_path: "assets/test.mp3",
             item_type: "story",

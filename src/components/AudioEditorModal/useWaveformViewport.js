@@ -58,6 +58,8 @@ export function useWaveformViewport({
       instance.zoom(nextZoom);
       return true;
     } catch (err) {
+      // Message technique de wavesurfer (anglais, stable) : rien à traduire ici.
+      // eslint-disable-next-line i18next/no-literal-string -- motif de sortie brute d'une bibliothèque, jamais affiché.
       if (!String(err).includes('No audio loaded')) {
         onError(String(err));
       }

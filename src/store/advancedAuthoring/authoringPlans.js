@@ -1,3 +1,4 @@
+import { translateGraph as t } from '../../i18n/graphPresentation.js';
 // Ce qu'un geste destructeur touche, calculé **avant** de le demander.
 //
 // Rust reste l'autorité : il refuse un plan incomplet et joint l'inventaire des
@@ -216,10 +217,11 @@ export function selectionRemovalImpact(index, paths) {
     entries,
     entryIncluded,
     loose: plan ? plan.options.length + plan.transitions.length : 0,
-    counted: [
-      stages > 0 ? `${stages} Écran${stages > 1 ? 's' : ''}` : null,
-      actions > 0 ? `${actions} liste${actions > 1 ? 's' : ''} de choix` : null,
-    ].filter(Boolean).join(' et '),
+    get counted() {
+      const stageCount = t('graph:selection.stages.count', { count: stages });
+      const actionCount = t('graph:selection.actions.count', { count: actions });
+      return stages > 0 && actions > 0 ? t('graph:selection.counts.join', { stages: stageCount, actions: actionCount }) : stages > 0 ? stageCount : actions > 0 ? actionCount : '';
+    },
     gesture: plan && !entryIncluded ? advancedGestures.deleteSubgraph(plan) : null,
   };
 }

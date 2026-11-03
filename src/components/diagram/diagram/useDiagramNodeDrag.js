@@ -89,7 +89,7 @@ export function useDiagramNodeDrag({
         containerId,
       );
       if (!status.allowed) {
-        const visibleReason = status.reason === 'menu_depth_limit' || status.reason === 'menu_cycle'
+        const visibleReason = status.reason === 'VALIDATION_MENU_DEPTH_LIMIT' || status.reason === 'menu_cycle'
           ? status.reason
           : null;
         dragOverContainerIdRef.current = visibleReason ? containerId : undefined;
@@ -144,7 +144,7 @@ export function useDiagramNodeDrag({
             .filter((id) => currentSelectedIds.has(id))
           : [activeId];
         const getParentId = (id) => findParentMenuId(snapshot, id, snapshotIndex) ?? null;
-        if (dragBlockedReasonRef.current === 'menu_depth_limit') {
+        if (dragBlockedReasonRef.current === 'VALIDATION_MENU_DEPTH_LIMIT') {
           const topLevelIds = filterTopLevelSelectedIds(orderedCandidates, getParentId);
           onMoveToMenuRef.current?.(topLevelIds, null, targetContainerId);
           clearDragState();

@@ -1,4 +1,4 @@
-import { normalizeFrenchSearchText } from '../../../utils/frenchText.js';
+import { normalizeSearchText } from '../../../utils/frenchText.js';
 import { matchesNodeColor } from '../../tree/nodeColorFilter.js';
 
 export function filterDiagramSearchCandidates(
@@ -7,12 +7,12 @@ export function filterDiagramSearchCandidates(
   limit = 12,
   selectedColors = new Set(),
 ) {
-  const normalizedTerm = normalizeFrenchSearchText(term).trim();
+  const normalizedTerm = normalizeSearchText(term).trim();
   if (!normalizedTerm && selectedColors.size === 0) return [];
 
   return (candidates ?? [])
     .filter((candidate) => (
-      (!normalizedTerm || normalizeFrenchSearchText(candidate.label).includes(normalizedTerm))
+      (!normalizedTerm || normalizeSearchText(candidate.label).includes(normalizedTerm))
       && matchesNodeColor(candidate.treeColor, selectedColors)
     ))
     .slice(0, limit);

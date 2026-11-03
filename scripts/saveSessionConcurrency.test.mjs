@@ -586,11 +586,14 @@ const io = await import('../src/store/projectIO.js');
 
 async function managedCopies(c) {
   const found = [];
-  for (const category of [IMAGES_GENEREES, FICHIERS_IMPORTES]) {
-    const entries = await fs.readdir(`${c.harness.workspace}/${category}`, { withFileTypes: true })
-      .catch(() => []);
-    found.push(...entries.filter((entry) => entry.isFile()).map((entry) => `${category}/${entry.name}`));
-  }
+  const visit = async (directory, relative) => {
+    for (const entry of await fs.readdir(directory, {withFileTypes:true}).catch(() => [])) {
+      if (entry.name.startsWith('.')) continue;
+      if (entry.isDirectory()) await visit(`${directory}/${entry.name}`, `${relative}/${entry.name}`);
+      else if (entry.isFile()) found.push(`${relative}/${entry.name}`);
+    }
+  };
+  for (const category of [IMAGES_GENEREES, FICHIERS_IMPORTES]) await visit(`${c.harness.workspace}/${category}`, category);
   return found;
 }
 
@@ -695,7 +698,7 @@ test('copie sous éphémère dont l’écriture échoue : aucune copie ne reste'
   const saved = await c.api.handleSaveProjectAs();
 
   assert.equal(saved, null);
-  assert.equal(c.harness.countCalls('plugin:fs|copy_file'), 3, 'l’image et les deux médias ont été copiés');
+  assert.equal(c.harness.countCalls('plugin:fs|copy_file') + c.harness.countCalls('copy_project_media'), 3, 'l’image et les deux médias ont été copiés');
   assert.equal(await c.harness.exists(target), false, 'aucun fichier n’est posé');
   assert.deepEqual(await managedCopies(c), [], 'les copies faites pour ce fichier sont retirées');
   assert.equal(dialogs.at(-1)?.title, 'Enregistrement impossible');
@@ -906,4 +909,57 @@ test('enregistrement en place d’un projet hors workspace : l’image temporair
   assert.equal(pathKey(c.store.project.thumbnailImage).startsWith(pathKey(c.harness.workspace)), true,
     'le projet désigne la copie de l’emplacement de travail');
   assert.deepEqual(await managedDirsBeside(c, 'projet'), []);
+}));
+
+test('a newly saved current project retains a native editor lease before publication', async () => withHooks(async (c) => {
+  const path = c.harness.dir('New.mbah');
+  c.harness.answerSave(path);
+  const events = [];
+  const invoke = window.__TAURI_INTERNALS__.invoke;
+  globalThis.isTauri = true;
+  window.__TAURI_INTERNALS__.invoke = async (command, args, ...rest) => {
+    if (command === 'catalogue_project_access') {
+      events.push(args);
+      return { token: args.action === 'open' ? 'editor-lease' : 'write-lease' };
+    }
+    return invoke(command, args, ...rest);
+  };
+  try {
+    await c.api.handleSaveProject();
+    assert.ok(events.some(e => e.action === 'open' && e.path === path));
+    assert.ok(events.some(e => e.action === 'bind' && e.token === 'editor-lease'));
+    assert.equal(events.some(e => e.action === 'release' && e.token === 'editor-lease'), false);
+    c.render();
+    assert.equal(c.store.savePath, path);
+  } finally {
+    const { releaseActiveProjectAccess } = await import('../src/store/projectSessionAccess.js');
+    await releaseActiveProjectAccess();
+    delete globalThis.isTauri;
+  }
+}));
+
+for (const code of ['CATALOG_PROJECT_IN_USE', 'CATALOG_FILE_RECOVERY_REQUIRED']) test(`a successful disk save remains published when editor access fails: ${code}`, async () => withHooks(async (c) => {
+  const path = c.harness.dir('Saved.mbah');
+  c.harness.answerSave(path);
+  const dialogs = [];
+  c.props.showErrorDialog = dialog => dialogs.push(dialog);
+  c.render();
+  const invoke = window.__TAURI_INTERNALS__.invoke;
+  globalThis.isTauri = true;
+  window.__TAURI_INTERNALS__.invoke = async (command, args, ...rest) => {
+    if (command === 'catalogue_project_access') {
+      if (args.action === 'open') throw { code, params: {} };
+      return { token: 'write-token' };
+    }
+    return invoke(command, args, ...rest);
+  };
+  try {
+    assert.equal(await c.api.handleSaveProject(), path);
+    assert.ok((await fs.readFile(path, 'utf8')).length > 0);
+    c.render();
+    assert.equal(c.store.savePath, path);
+    assert.equal(c.refs.savedSnapshotRef.current, createWorkSnapshot(c.store.project, c.refs.mediaLibraryPathsRef.current, c.store.mediaTags));
+    assert.equal(dialogs.length, 1);
+    assert.ok(dialogs[0].message);
+  } finally { delete globalThis.isTauri; }
 }));

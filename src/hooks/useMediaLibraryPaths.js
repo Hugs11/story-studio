@@ -39,10 +39,10 @@ export function useMediaLibraryPaths({
     setMediaLibraryPaths(reconciled);
   }, [store.project]);
 
-  const handleMediaCreated = useCallback((path) => {
-    if (!path) return;
+  const handleMediaCreated = useCallback((path, job = null) => {
+    if (!path || (job?.projectEpoch != null && job.projectEpoch !== store.workEpochRef.current)) return;
     addPathsToMediaLibrary([path]);
-  }, [addPathsToMediaLibrary]);
+  }, [addPathsToMediaLibrary, store.workEpochRef]);
 
   const handleDeleteMedia = useCallback(async (item, { deleteFromDisk = false } = {}) => {
     if (!item?.path) return { removed: false, diskDeleted: false, diskError: null };

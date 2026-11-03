@@ -15,14 +15,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  commitWithHistory,
   createAdvancedAuthoringSession,
   GESTURE_APPLIED,
   GESTURE_REFUSED,
   GESTURE_STALE,
 } from '../store/advancedAuthoring/authoringSession.js';
-import { applyAdvancedGesture } from '../store/projectModel/authoring.js';
+import { applyAdvancedGesture, readAuthoringPayload } from '../store/projectModel/authoring.js';
 import { readAuthoringRevision } from '../store/projectModel/authoringRevision.js';
+import { createAdvancedViewBridge } from '../store/advancedGraphView/advancedViewBridge.js';
 import { logger } from '../utils/logger.js';
+import { prepareExampleInsertion } from '../store/advancedExamples/transaction.js';
 
 // Les deux états que l'interface a besoin de distinguer : un refus ferme les
 // dialogues autrement qu'un succès, et rend au canvas la position du document ;
@@ -30,13 +33,20 @@ import { logger } from '../utils/logger.js';
 // Les autres issues sont lues dans la session, qui les nomme toutes.
 export { GESTURE_APPLIED, GESTURE_REFUSED };
 
-export function useAdvancedAuthoring({ store, applyGesture = applyAdvancedGesture }) {
+const exampleViewBridge = createAdvancedViewBridge();
+const readExampleView = (project) => exampleViewBridge.readGraphView(readAuthoringPayload(project));
+
+export function useAdvancedAuthoring({ store, applyGesture = applyAdvancedGesture, readView = readExampleView }) {
   // La dernière valeur **acceptée**, tenue dans une ref parce qu'un geste peut
   // partir entre l'installation et le rendu suivant : lire l'état de rendu
   // ferait alors repartir le geste d'un payload déjà remplacé.
   const projectRef = useRef(store.project);
   projectRef.current = store.project;
   const epochRef = store.workEpochRef;
+  // Un rétablissement en attente interdit de fondre un geste dans l'étape
+  // précédente : le redo restaurerait un état qui ne le contient pas.
+  const canRedoRef = useRef(store.canRedo);
+  canRedoRef.current = store.canRedo;
   const [state, setState] = useState({
     busy: false, busyIntent: null, queuedIntent: null, refusal: null, lastReport: null, held: null,
   });
@@ -59,14 +69,25 @@ export function useAdvancedAuthoring({ store, applyGesture = applyAdvancedGestur
     applyGesture: (project, gesture) => applyGesture(project, gesture),
     // Un geste marqué `history: false` modifie le projet sans ouvrir d'étape
     // d'undo : c'est le rangement posé seul à l'ouverture d'un pack sans
-    // disposition, qu'un Ctrl+Z ne doit pas ré-empiler.
+    // disposition, qu'un Ctrl+Z ne doit pas ré-empiler. Une fonction décide au
+    // commit (médias d'un exemple, voir `advancedExamples/exampleHistory.js`).
+    // `projectRef` tient encore ici le document dont le geste est parti : la
+    // session vient de vérifier que sa révision n'a pas bougé.
     commit: ({ project, intent }) => {
+      const from = projectRef.current;
       projectRef.current = project;
-      if (intent?.history === false) store.syncProjectWithoutHistory(project);
-      else store.setProject(project);
+      const historyMark = store.readHistoryMark?.();
+      if (commitWithHistory(intent, { from, to: project, canRedo: canRedoRef.current, historyMark })) {
+        store.setProject(project);
+        // Une nouvelle étape vide la pile de rétablissement, avant même le rendu.
+        canRedoRef.current = false;
+      } else store.syncProjectWithoutHistory(project);
+      // Le repère de l'étape qui vient d'être posée, lu dans le commit même :
+      // aucun autre geste ne peut s'intercaler entre les deux.
+      intent?.onCommitted?.({ project, historyMark: store.readHistoryMark?.() });
     },
     onChange: setState,
-  }), [applyGesture, epochRef, store.setProject, store.syncProjectWithoutHistory]);
+  }), [applyGesture, epochRef, store.setProject, store.syncProjectWithoutHistory, store.readHistoryMark]);
 
   // Un changement de projet vide la file : une intention en attente désigne un
   // document qui n'est plus ouvert. Les réponses en vol, elles, se périment
@@ -103,9 +124,23 @@ export function useAdvancedAuthoring({ store, applyGesture = applyAdvancedGestur
   // des références change à chaque geste accepté. L'assembler au rendu la ferait
   // partir contre un document déjà remplacé.
   const runGestureFor = useCallback(
-    async (name, build) => describe(await session.run({ build }), name),
+    async (name, build, { history = true } = {}) => describe(
+      await session.run(history === true ? { build } : { build, history }),
+      name,
+    ),
     [describe, session],
   );
+
+  const runExample = useCallback(async (example, { onCommitted, ...options } = {}) => describe(await session.run({
+    kind: 'insert-example',
+    onCommitted,
+    execute: (project, { applyGesture: apply, isCurrent }) => prepareExampleInsertion(project, example, {
+      ...options,
+      applyGesture: apply,
+      isCurrent,
+      readView,
+    }),
+  }), 'insert-example'), [describe, readView, session]);
 
   // Intention continue : la fin d'un glisser. `build` relit le projet au moment
   // de l'envoi — la file ne capture jamais un payload.
@@ -131,6 +166,7 @@ export function useAdvancedAuthoring({ store, applyGesture = applyAdvancedGestur
     isLocked,
     runGesture,
     runGestureFor,
+    runExample,
     coalesceGesture,
     clearRefusal: session.clearRefusal,
     hold: session.hold,

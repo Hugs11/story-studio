@@ -4,11 +4,12 @@ import { readFileSync } from 'node:fs';
 import { RELEASE_NOTES, shouldShowReleaseNotes } from '../src/config/releaseNotes.js';
 
 test('les nouveautés apparaissent à la première ouverture et après une mise à jour', () => {
-  assert.equal(shouldShowReleaseNotes('0.9.9', null), true);
-  assert.equal(shouldShowReleaseNotes('0.9.9', '0.9.8'), true);
-  assert.equal(shouldShowReleaseNotes('0.9.9', '0.9.9'), false);
+  assert.equal(shouldShowReleaseNotes('0.9.10', null), true);
+  assert.equal(shouldShowReleaseNotes('0.9.10', '0.9.9'), true);
+  assert.equal(shouldShowReleaseNotes('0.9.10', '0.9.10'), false);
   assert.equal(shouldShowReleaseNotes('', null), false);
-  assert.equal(shouldShowReleaseNotes('0.9.10', '0.9.9'), false);
+  assert.equal(shouldShowReleaseNotes('0.9.10', '0.9.10-beta.1'), true);
+  assert.equal(shouldShowReleaseNotes('0.9.10-beta.1', null), false);
 });
 
 test('la fenêtre annonce la version et la date publiées dans le changelog', () => {

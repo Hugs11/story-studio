@@ -25,6 +25,7 @@
 //! survivre. Le geste ne la consulte pas davantage : un document non
 //! exportable reste éditable et enregistrable.
 
+use crate::support::user_message::{codes, UserMessage};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -96,9 +97,11 @@ use crate::native_pack::{
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct GestureError {
-    pub(crate) code: &'static str,
+    pub(crate) code: String,
     pub(crate) path: String,
     pub(crate) message: String,
+    #[serde(default)]
+    pub(crate) params: serde_json::Map<String, serde_json::Value>,
     /// L'inventaire des références qui motivent le refus, en chemins d'auteur.
     ///
     /// Un refus de suppression nomme ce qui désigne encore la cible : l'interface
@@ -110,17 +113,32 @@ pub(crate) struct GestureError {
 }
 
 impl GestureError {
-    pub(crate) fn new(code: &'static str, path: &str, message: String) -> Self {
+    pub(crate) fn new(code: impl Into<String>, path: &str, message: String) -> Self {
+        let code = code.into();
+        let params = serde_json::from_str::<UserMessage>(&message)
+            .map(|mut ui| {
+                if ui.code != code {
+                    ui.params
+                        .insert("context".into(), serde_json::Value::String(ui.code));
+                }
+                ui.params
+            })
+            .unwrap_or_default();
         Self {
             code,
             path: path.to_string(),
             message,
             references: Vec::new(),
+            params,
         }
     }
 
     pub(crate) fn with_references(mut self, references: Vec<String>) -> Self {
         self.references = references;
+        self
+    }
+    fn with_user_message(mut self, message: UserMessage) -> Self {
+        self.params = message.params;
         self
     }
 }
@@ -142,9 +160,10 @@ impl std::error::Error for GestureError {}
 impl From<PersistenceError> for GestureError {
     fn from(error: PersistenceError) -> Self {
         Self {
-            code: error.code,
+            code: error.code.to_owned(),
             path: error.path.clone(),
             message: error.to_string(),
+            params: UserMessage::from(error).params,
             references: Vec::new(),
         }
     }
@@ -725,7 +744,8 @@ pub(crate) fn apply_advanced_gesture_with(
             introduced,
             "Le geste détacherait un ancrage de contexte : il est refusé plutôt qu'appliqué."
                 .to_string(),
-        ));
+        )
+        .with_user_message(UserMessage::new(codes::ORPHAN_CONTEXT_ANCHOR)));
     }
     report.anchors.preexisting_orphans = remaining;
 

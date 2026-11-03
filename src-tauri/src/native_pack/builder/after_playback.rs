@@ -1,5 +1,6 @@
 use super::core::StoryBuilder;
 use super::story::EndNavContext;
+use crate::support::user_message::{codes, UserMessage};
 
 use super::super::*;
 use super::transitions::*;
@@ -122,7 +123,7 @@ impl<'a> StoryBuilder<'a> {
             if is_last && step.ok_choice_targets.len() > 1 {
                 let mut options = Vec::new();
                 for target in &step.ok_choice_targets {
-                    // Résolveur unifié (sucre au-dessus de `ref`) : préalloué pour les
+                    // Résolveur unifié des cibles typées : préalloué pour les
                     // convergences « en avant », repli sur le retour de lecture (indulgent).
                     if let Some(stage_id) =
                         self.resolve_target_stage(target, Some(play_return_transition.clone()))
@@ -209,10 +210,9 @@ impl<'a> StoryBuilder<'a> {
             );
         }
 
-        let first_action_id = action_ids
-            .drain(..1)
-            .next()
-            .ok_or_else(|| "Sequence de fin vide.".to_string())?;
+        let first_action_id = action_ids.drain(..1).next().ok_or_else(|| {
+            UserMessage::new(codes::GENERATION_ENDING_SEQUENCE_EMPTY).into_transport()
+        })?;
         stage_ids.clear();
         Ok(AfterPlaybackSequenceTransitions {
             ok: transition(&first_action_id, 0),

@@ -1,3 +1,5 @@
+import { useMessageLanguage } from '../../i18n/useMessageLanguage.js';
+import { translateProduction as t } from '../../i18n/productionPresentation.js';
 // Ce qu'un travail **graphe** de la file de rendu a produit, ou ce qu'un refus a
 // empêché.
 //
@@ -26,12 +28,13 @@ export function AdvancedJobReport({
   onOpenDiagnostics = null,
   onReview = null,
 }) {
+  useMessageLanguage();
   if (job.status === JOB_STATUS.DONE && job.result) {
     if (!onReview) return null;
     return (
       <div className="production-report__actions">
         <Button size="sm" variant="primary" onClick={() => onReview(job.result)}>
-          Simuler le pack produit
+          {t('production:report.preview.action')}
         </Button>
       </div>
     );

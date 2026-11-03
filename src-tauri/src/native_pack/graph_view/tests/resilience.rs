@@ -272,8 +272,8 @@ fn un_membre_opaque_est_rendu_borne_et_sa_decision_perimee_visible() {
     let context = format!(
         r#"{{"documentOrigin":"imported-studio","defaultValueOrigin":"source-studio",
 "opaqueMembers":[
-{{"scope":"stage","path":"/stageNodes/@uuid=s1#0","key":"cadence","sourceOccurrence":0,
-"kind":"unknown-extension","origin":"source-studio","value":"{long}",
+{{"scope":"stage","path":"/stageNodes/@uuid=s1#0","key":"id","sourceOccurrence":0,
+"kind":"known-alias","origin":"source-studio","value":"{long}",
 "exportDisposition":"preserve-untested","exportDispositionValue":"autre chose",
 "exportDispositionOrigin":"source-studio"}}]}}"#
     );
@@ -286,6 +286,29 @@ fn un_membre_opaque_est_rendu_borne_et_sa_decision_perimee_visible() {
     // La décision portait sur une autre valeur : elle est périmée, et la vue
     // le dit au lieu de la présenter comme courante.
     assert!(member.disposition_stale);
+}
+
+#[test]
+fn une_extension_inconnue_d_un_projet_enregistre_n_est_plus_ni_montree_ni_diagnostiquee() {
+    // Projet graphe enregistré avant que les clés inconnues soient ignorées :
+    // le `duration` de STUdio y est encore un membre opaque, avec ou sans
+    // décision. La relecture le retire.
+    let document = r#"{"format":"v1","stageNodes":[{"uuid":"s1","squareOne":true}],
+"actionNodes":[]}"#;
+    let context = r#"{"documentOrigin":"imported-studio","defaultValueOrigin":"source-studio",
+"opaqueMembers":[
+{"scope":"stage","path":"/stageNodes/@uuid=s1#0","key":"duration","sourceOccurrence":0,
+"kind":"unknown-extension","origin":"source-studio","value":1234,"exportDisposition":null},
+{"scope":"root","path":"/","key":"vendor","sourceOccurrence":0,
+"kind":"unknown-extension","origin":"source-studio","value":{"a":1},
+"exportDisposition":"preserve-untested","exportDispositionValue":{"a":1},
+"exportDispositionOrigin":"source-studio"}]}"#;
+    let view = view(&payload(document, context));
+    assert!(view.opaque_members.is_empty());
+    assert!(!view
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code.starts_with("OPAQUE_EXTENSION_")));
 }
 
 #[test]

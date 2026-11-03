@@ -99,7 +99,7 @@ test('les accès à la liste viennent après son ordre : par OK, par HOME, et un
   // lequel il ouvre la liste — réglable sur place, comme depuis l'Écran.
   const opens = (origin, position, target) => new RegExp(
     `>${origin}</button></span></div><div class="advanced-exit__landing">`
-    + `.*?commence sur</label></span><select[^>]*>.*?<option value="[0-9]+" selected="">${position} · ${target}</option>`,
+    + `.*?commence sur</label></span><button[^>]*role="combobox"[^>]*><span class="select-value">${position} · ${target}</span>`,
     's',
   );
   assert.match(html, opens('Écran depart', '1/2', 'Écran a'), 'par OK, chaque Écran dit sur quel choix il ouvre la liste');
@@ -124,7 +124,7 @@ test('une liste d’un seul choix ne demande pas où commencer', async () => {
   })).html;
   assert.equal(mount({ rank: 0 }), '', 'rien à régler');
   const random = mount({ random: true });
-  assert.match(random, /<option value="random" selected="">/, 'un hasard importé reste visible, pour être corrigé');
+  assert.match(random, /<span class="select-value">Au hasard, à chaque fois<\/span>/, 'un hasard importé reste visible, pour être corrigé');
 });
 
 test('une liste d’un seul choix ne répète ni le compte ni le point de départ de ses retours', () => {

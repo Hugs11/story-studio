@@ -188,7 +188,7 @@ export function useTreeDnd({
     });
     if (idsToMove.length === 0) return;
 
-    if (finalDropInfo.invalidReason === 'menu_depth_limit') {
+    if (finalDropInfo.invalidReason === 'VALIDATION_MENU_DEPTH_LIMIT') {
       // Le store refait le calcul et émet le message partagé, sans mutation.
       onMoveToMenu(idsToMove, null, targetContainerId);
       return;

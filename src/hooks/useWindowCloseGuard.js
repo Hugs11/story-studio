@@ -20,6 +20,7 @@ export function createWindowCloseHandler({ readCurrent, win, lock = nativeGenera
       }
       const canClose = await askSaveBeforeLeave(saveHandlerRef.current);
       if (!canClose || readCurrent().isCloseBlocked?.()) return;
+      // eslint-disable-next-line i18next/no-literal-string -- Diagnostic interne du verrou, jamais rendu par la garde.
       const permit = lock.acquire({ owner: 'closing', label: 'fermeture de fenêtre' });
       if (!permit) return;
       try {

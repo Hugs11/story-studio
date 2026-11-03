@@ -1,3 +1,5 @@
+import { presentUserMessage } from '../../i18n/userMessage.js';
+import { translateChecker } from '../../i18n/checkerPresentation.js';
 // Ce que l'export rend, et ce qu'un refus dit — sans jamais lire une phrase.
 //
 // Tous les refus de `export_advanced_pack` portent un `kind`, et les refus de
@@ -18,6 +20,7 @@
 //   dossier.
 
 export const EXPORT_REFUSAL = Object.freeze({
+  OUTPUT_IDENTITY: 'output-identity',
   PAYLOAD_DECODE: 'payload-decode',
   PREPARATION: 'preparation',
   MEDIA_UNAVAILABLE: 'media-unavailable',
@@ -43,50 +46,65 @@ export const PREPARATION_REFUSAL = Object.freeze({
   STANDARD_SERIALIZATION: 'standard-serialization',
 });
 
+// Tables de clés, résolues à chaque lecture : un refus déjà classé suit la
+// langue active (rapport ou popover resté ouvert).
 const REFUSAL_TITLES = Object.freeze({
-  [EXPORT_REFUSAL.PAYLOAD_DECODE]: 'Document illisible',
-  [EXPORT_REFUSAL.PREPARATION]: 'Préparation refusée',
-  [EXPORT_REFUSAL.MEDIA_UNAVAILABLE]: 'Médias indisponibles',
-  [EXPORT_REFUSAL.ARCHIVE_NAME_COLLISION]: "Collision de noms dans l'archive",
-  [EXPORT_REFUSAL.MEDIA_ORACLE]: 'Rattachement des médias en désaccord',
-  [EXPORT_REFUSAL.CANCELLED]: 'Export annulé',
-  [EXPORT_REFUSAL.OUTPUT_WRITE]: 'Écriture impossible',
-  [EXPORT_REFUSAL.UNTYPED]: 'Export interrompu',
-  [EXPORT_REFUSAL.REQUEST]: 'Export impossible',
+  [EXPORT_REFUSAL.PAYLOAD_DECODE]: 'checker:refusal.title.decode',
+  [EXPORT_REFUSAL.OUTPUT_IDENTITY]: 'checker:refusal.title.preparation',
+  [EXPORT_REFUSAL.PREPARATION]: 'checker:refusal.title.preparation',
+  [EXPORT_REFUSAL.MEDIA_UNAVAILABLE]: 'checker:refusal.title.media',
+  [EXPORT_REFUSAL.ARCHIVE_NAME_COLLISION]: 'checker:refusal.title.collision',
+  [EXPORT_REFUSAL.MEDIA_ORACLE]: 'checker:refusal.title.oracle',
+  [EXPORT_REFUSAL.CANCELLED]: 'checker:refusal.title.cancelled',
+  [EXPORT_REFUSAL.OUTPUT_WRITE]: 'checker:refusal.title.write',
+  [EXPORT_REFUSAL.UNTYPED]: 'checker:refusal.title.untyped',
+  [EXPORT_REFUSAL.REQUEST]: 'checker:refusal.title.request',
 });
 
 const PREPARATION_TITLES = Object.freeze({
-  [PREPARATION_REFUSAL.GRAPH_INTEGRITY]: 'Intégrité du graphe',
-  [PREPARATION_REFUSAL.AUTHORING_ACTION_REQUIRED]: "Décision d'auteur requise",
-  [PREPARATION_REFUSAL.PACK_IDENTITY]: 'Identité du pack',
-  [PREPARATION_REFUSAL.READINESS_BLOCKED]: "Qualification d'export bloquée",
-  [PREPARATION_REFUSAL.STANDARD_SERIALIZATION]: 'Sérialisation du document',
+  [PREPARATION_REFUSAL.GRAPH_INTEGRITY]: 'checker:refusal.preparation.integrity',
+  [PREPARATION_REFUSAL.AUTHORING_ACTION_REQUIRED]: 'checker:refusal.preparation.author',
+  [PREPARATION_REFUSAL.PACK_IDENTITY]: 'checker:refusal.preparation.identity',
+  [PREPARATION_REFUSAL.READINESS_BLOCKED]: 'checker:refusal.preparation.readiness',
+  [PREPARATION_REFUSAL.STANDARD_SERIALIZATION]: 'checker:refusal.preparation.serialization',
 });
 
 const MEDIA_CAUSE_LABELS = Object.freeze({
-  'binding-absent': 'aucune liaison enregistrée pour cette référence',
-  'path-null': 'liaison sans chemin : le fichier doit être choisi par référence',
-  'not-found': 'fichier introuvable au chemin enregistré',
-  'not-regular': "le chemin ne désigne pas un fichier régulier",
-  'read-denied': 'lecture refusée par le système',
-  empty: 'fichier vide',
-  undecodable: 'contenu non décodable',
+  'binding-absent': 'checker:media.cause.bindingAbsent',
+  'path-null': 'checker:media.cause.pathNull',
+  'not-found': 'checker:media.cause.notFound',
+  'not-regular': 'checker:media.cause.notRegular',
+  'read-denied': 'checker:media.cause.readDenied',
+  empty: 'checker:media.cause.empty',
+  undecodable: 'checker:media.cause.undecodable',
   // Un décodage partiel puis échoué emprunte cette cause. Ce n'est pas la
   // preuve que l'auteur a fourni un fichier volontairement invalide.
-  'validation-failed': 'le fichier a été rejeté par la validation',
-  'tool-unavailable': "l'outil de conversion n'est pas disponible",
-  'tool-interrupted': "l'outil de conversion a été interrompu",
-  'processing-failed': 'la conversion a échoué',
+  'validation-failed': 'checker:media.cause.validationFailed',
+  'tool-unavailable': 'checker:media.cause.toolUnavailable',
+  'tool-interrupted': 'checker:media.cause.toolInterrupted',
+  'processing-failed': 'checker:media.cause.processingFailed',
 });
 
 const TRANSFORMATION_LABELS = Object.freeze({
-  verbatim: 'copié tel quel',
-  renamed: 'renommé pour le paquet',
-  reencoded: 'ré-encodé pour le paquet',
-  resized: 'redimensionné pour le paquet',
+  verbatim: 'checker:media.transformation.verbatim',
+  renamed: 'checker:media.transformation.renamed',
+  reencoded: 'checker:media.transformation.reencoded',
+  resized: 'checker:media.transformation.resized',
 });
 
-const MEDIA_FIELD_LABELS = Object.freeze({ image: 'image', audio: 'audio' });
+const MEDIA_FIELD_LABELS = Object.freeze({ image: 'checker:media.field.image', audio: 'checker:media.field.audio' });
+
+// Valeur inconnue d'une table fermée : la donnée brute reste affichée.
+function label(table, value, fallback = value) {
+  return Object.hasOwn(table, value ?? '') ? translateChecker(table[value]) : fallback;
+}
+
+function refusalTitle(kind, preparationKind) {
+  const title = label(REFUSAL_TITLES, kind);
+  return preparationKind
+    ? translateChecker('production:native.title.qualified', { title, qualification: label(PREPARATION_TITLES, preparationKind) })
+    : title;
+}
 
 // `path-null` exige une sélection **par référence** : il n'y a pas d'ancien
 // chemin à retrouver. L'interface s'en sert pour offrir la bonne réparation.
@@ -106,10 +124,10 @@ export function classifyExportRefusal(error) {
     return {
       kind: EXPORT_REFUSAL.UNTYPED,
       preparationKind: null,
-      title: REFUSAL_TITLES[EXPORT_REFUSAL.UNTYPED],
+      get title() { return refusalTitle(EXPORT_REFUSAL.UNTYPED, null); },
       // Un refus non typé n'est pas rangé dans `export-cancelled` : l'auteur
       // doit voir qu'il n'a pas reçu de diagnostic contractuel.
-      message: typeof error === 'string' ? error : String(error?.message ?? error),
+      get message() { return presentUserMessage(error).message; },
       cancelled: false,
       residue: false,
       entries: [],
@@ -129,12 +147,12 @@ export function classifyExportRefusal(error) {
   return {
     kind,
     preparationKind,
-    title: preparationKind
-      ? `${REFUSAL_TITLES[kind] ?? kind} — ${PREPARATION_TITLES[preparationKind] ?? preparationKind}`
-      : (REFUSAL_TITLES[kind] ?? kind),
-    message: kind === EXPORT_REFUSAL.OUTPUT_WRITE
-      ? String(error.message ?? '')
-      : String(error.error?.message ?? error.message ?? ''),
+    get title() { return refusalTitle(kind, preparationKind); },
+    get message() {
+      return kind === EXPORT_REFUSAL.OUTPUT_WRITE
+        ? presentUserMessage(error.message ?? '').message
+        : presentUserMessage(error.error?.message ?? error.message ?? '').message;
+    },
     // Seul `export-cancelled` est une annulation. Un `output-write` survenu
     // pendant un abandon reste une panne d'écriture : c'est la branche du
     // nettoyage `.partial`.
@@ -164,13 +182,14 @@ export function groupUnavailableMedia(entries) {
       existing.fields = [...new Set([...existing.fields, entry.field].filter(Boolean))];
       continue;
     }
+    const cause = entry?.cause ?? null;
     byRef.set(key, {
       assetRef: key,
       fields: [entry?.field].filter(Boolean),
       stageIds: [...asList(entry?.stageIds)],
       lastKnownPath: entry?.lastKnownPath ?? null,
-      cause: entry?.cause ?? null,
-      causeLabel: MEDIA_CAUSE_LABELS[entry?.cause] ?? entry?.cause ?? 'cause inconnue',
+      cause,
+      get causeLabel() { return label(MEDIA_CAUSE_LABELS, cause, cause ?? translateChecker('checker:media.cause.unknown')); },
       detail: entry?.detail ?? '',
       byReferenceOnly: repairByReferenceOnly(entry),
     });
@@ -179,7 +198,7 @@ export function groupUnavailableMedia(entries) {
 }
 
 export function mediaFieldLabel(field) {
-  return MEDIA_FIELD_LABELS[field] ?? field ?? 'média';
+  return label(MEDIA_FIELD_LABELS, field, field ?? translateChecker('checker:media.field.fallback'));
 }
 
 // La relecture porte-t-elle encore sur le document ouvert ?
@@ -219,7 +238,7 @@ export function summarizeExportSuccess(result) {
       .map(([transformation, count]) => ({
         transformation,
         count,
-        label: TRANSFORMATION_LABELS[transformation] ?? transformation,
+        get label() { return label(TRANSFORMATION_LABELS, transformation); },
       }))
       .sort((left, right) => left.transformation.localeCompare(right.transformation)),
     // Une conversion a eu lieu dès qu'une ligne n'est pas `verbatim`. C'est ce

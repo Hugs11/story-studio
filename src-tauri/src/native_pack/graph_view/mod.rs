@@ -93,6 +93,20 @@ pub(crate) fn project_graph_view(payload: &DecodedStoryDocument) -> AdvancedGrap
         // reçoit pas : `read_advanced_graph_view` la renseigne. Une projection
         // faite sur un document déjà décodé n'en a pas, et le dit.
         document_fingerprint: String::new(),
+        official_provenance: payload.context.official_provenance,
+        identity_locked: crate::domain::official_provenance::is_official_origin::<
+            crate::services::catalogue::CatalogueState,
+        >(
+            payload.context.official_provenance,
+            payload
+                .context
+                .pack_identity
+                .value
+                .as_deref()
+                .unwrap_or_default(),
+            None,
+        )
+        .expect("no catalogue lookup"),
         document_origin: payload.context.document_origin,
         default_value_origin: payload.context.default_value_origin,
         pack_identity: PackIdentityView {
@@ -677,6 +691,7 @@ fn project_diagnostics(
                 node_path: index.node_path_of(&error.path),
                 path: error.path,
                 message: error.message,
+                params: error.params,
                 resolutions: Vec::new(),
             });
         }
@@ -690,6 +705,7 @@ fn project_diagnostics(
             node_path: index.node_path_of(&diagnostic.path),
             path: diagnostic.path,
             message: diagnostic.message,
+            params: diagnostic.params,
             resolutions: diagnostic.resolutions,
         });
     }
@@ -702,6 +718,7 @@ fn project_diagnostics(
             node_path: index.node_path_of(&diagnostic.path),
             path: diagnostic.path.clone(),
             message: diagnostic.message.clone(),
+            params: diagnostic.params.clone(),
             resolutions: Vec::new(),
         });
     }

@@ -14,7 +14,7 @@ test('labels story selection image jobs from field id', () => {
 
   assert.equal(
     getImageJobTargetLabel({ fieldId: 'story-1:itemImage' }, projectIndex),
-    'Example story - image de selection',
+    'Example story - image de sélection',
   );
 });
 

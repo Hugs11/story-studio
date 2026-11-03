@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+import { presentUserMessage } from '../i18n/userMessage.js';
 import { invoke } from '@tauri-apps/api/core';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { pickWorkspaceDir, consolidateProject, rememberRecentProject } from '../store/projectIO';
@@ -5,14 +7,13 @@ import { saveXttsSettings } from '../store/xttsSettings';
 import { saveVerboseLoggingPref, verboseLevelName } from '../store/loggingPreference';
 import { logger, setLogLevel } from '../utils/logger';
 import { isTauriRuntime } from '../utils/tauriRuntime';
-import { formatFrenchCount } from '../utils/frenchText.js';
 import { collectEndMessagePresentations } from '../store/generatedNavigation';
 
 // Grappe « préférences & réglages » extraite d'AppContent : dossier workspace,
 // logging verbeux (+ chemins de log), consolidation projet,
-// options globales du pack, message de fin (end node) et réglages XTTS. Ce sont les
+// message de fin (end node) et réglages XTTS. Ce sont les
 // actions qui alimentent la modale de Préférences (OptionsTab asModal) et les
-// éditeurs qui consomment onUpdateGlobalOption / onAddEndNode / onRemoveEndNode
+// éditeurs qui consomment onAddEndNode / onRemoveEndNode
 // (via ProjectActionsContext).
 //
 // Couplage assumé au cycle de sauvegarde : handleConsolidateProject pilote l'UI de
@@ -96,31 +97,30 @@ export function useAppPreferences({
     const destinationDir = await openDialog({
       directory: true,
       multiple: false,
-      title: 'Choisir le dossier de consolidation',
+      title: i18next.t('native:settings.consolidate.directoryTitle'),
     });
     if (!destinationDir) return null;
-    setSaveProgress({ lines: ['Consolidation du projet...'], complete: false });
+    setSaveProgress({ lines: [{ key: 'settings:consolidate.start.progress' }], complete: false });
     try {
       const result = await consolidateProject(store.project, store.savePath, destinationDir, (step) => {
         setSaveProgress(prev => prev ? { ...prev, lines: [...prev.lines, step] } : { lines: [step], complete: false });
       });
-      const summary = formatFrenchCount(
-        result.copiedCount,
-        'fichier copié',
-        'fichiers copiés',
-      );
-      const warnings = result.errors.length > 0
-        ? `, ${formatFrenchCount(result.errors.length, 'erreur', 'erreurs')}`
-        : '';
-      setSaveProgress(prev => prev ? { ...prev, lines: [...prev.lines, `${summary}${warnings}`], complete: true } : null);
+      const files = result.copiedCount === 0
+        ? { key: 'settings:consolidate.files.noneCopied' }
+        : { key: 'settings:consolidate.files.count', params: { count: result.copiedCount } };
+      const summary = result.errors.length > 0
+        ? { key: 'settings:consolidate.summary.warning', params: { files, errors: { key: 'settings:consolidate.errors.count', params: { count: result.errors.length } } } }
+        : files;
+      setSaveProgress(prev => prev ? { ...prev, lines: [...prev.lines, summary], complete: true } : null);
       setTimeout(() => setSaveProgress(null), 2200);
       if (result.path && result.project) {
         setRecentProjects(rememberRecentProject(result.project, result.path));
       }
       if (result.errors.length > 0) {
         showErrorDialog({
-          title: 'Projet consolidé',
-          message: `Projet consolidé avec des fichiers manquants :\n\n${result.errors.slice(0, 5).map((error) => `• ${error.path}\n  ${error.error}`).join('\n')}`,
+          get title() { return i18next.t('settings:consolidate.success.title'); },
+          message: { key: 'settings:consolidate.missing.message', params: { details: { parts: result.errors.slice(0, 5).map(error => ({ parts: [`• ${error.path}\n  `, { userMessage: error.error, codedOnly: true }] })), separator: '\n' } } },
+          technicalDetail: result.errors.map(error => presentUserMessage(error.error).technicalDetail).join('\n'),
           variant: 'warning',
         });
       }
@@ -128,15 +128,12 @@ export function useAppPreferences({
     } catch (error) {
       setSaveProgress(null);
       showErrorDialog({
-        title: 'Consolidation impossible',
-        message: `Consolidation impossible : ${error}`,
+        get title() { return i18next.t('settings:consolidate.error.title'); },
+        message: { key: 'settings:consolidate.error.message', params: { message: { userMessage: error, codedOnly: true } } },
+        technicalDetail: presentUserMessage(error).technicalDetail,
       });
       return null;
     }
-  }
-
-  async function handleUpdateGlobalOption(key, value) {
-    store.updateGlobalOption(key, value);
   }
 
   function handleAddEndNode() {
@@ -152,14 +149,17 @@ export function useAppPreferences({
     )).length;
     if (!options?.skipConfirm) {
       const confirmed = await showConfirmDialog({
-        title: 'Supprimer le message de fin',
-        message:
-          `Le message sera retiré de ${globalCount} histoire${globalCount > 1 ? 's' : ''}. `
-          + `${localCount} fin${localCount !== 1 ? 's locales seront' : ' locale sera'} conservée${localCount !== 1 ? 's' : ''}.`,
+        get title() { return i18next.t('settings:end.remove.title'); },
+        message: { key: 'settings:end.remove.message', params: {
+          stories: { key: 'settings:end.remove.stories', params: { count: globalCount } },
+          local: localCount === 0
+            ? { key: 'settings:end.remove.noLocalEndings' }
+            : { key: 'settings:end.remove.local', params: { count: localCount } },
+        } },
         variant: 'warning',
-        okLabel: 'Supprimer',
+        get okLabel() { return i18next.t('common:dialog.delete.label'); },
         okKind: 'danger',
-        cancelLabel: 'Annuler',
+        get cancelLabel() { return i18next.t('common:dialog.cancel.label'); },
       });
       if (!confirmed) return false;
     }
@@ -182,7 +182,6 @@ export function useAppPreferences({
     handleResolveLogPath,
     handleCopyLogPath,
     handleConsolidateProject,
-    handleUpdateGlobalOption,
     handleAddEndNode,
     handleRemoveEndNode,
     handleUpdateXttsSettings,

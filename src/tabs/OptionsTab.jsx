@@ -1,10 +1,12 @@
-import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '../components/common/Button';
 import { KeyboardShortcutsModal } from '../components/StorySettingsModal/KeyboardShortcutsModal';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 import { OPTION_SECTION_IDS, OptionsSectionNav } from './OptionsTab/OptionsSectionNav';
 import { useOptionsSectionNav } from './OptionsTab/useOptionsSectionNav';
 import { SaveSection } from './OptionsTab/SaveSection';
+import { CatalogueSection } from './OptionsTab/CatalogueSection';
 import { InterfaceSection } from './OptionsTab/InterfaceSection';
 import { ProjectsMediaSection } from './OptionsTab/ProjectsMediaSection';
 import { VoiceSection } from './OptionsTab/VoiceSection';
@@ -41,9 +43,12 @@ export function OptionsTab({
   onCopyLogPath = null,
   onResolveLogPath = null,
   project = null,
+  initialSection = null,
+  initialFocus = null,
   asModal = false,
   onClose = null,
 }) {
+  const { t } = useTranslation('settings');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   // En modale : Escape ferme les Préférences. La modale des raccourcis, montée
@@ -55,16 +60,25 @@ export function OptionsTab({
     sectionClass,
     registerSection,
     scrollToSection,
-  } = useOptionsSectionNav({ sectionIds: OPTION_SECTION_IDS, screenRef, remountKey: asModal });
+  } = useOptionsSectionNav({ sectionIds: OPTION_SECTION_IDS, screenRef, remountKey: asModal, initialSection });
+  useEffect(() => {
+    if (!asModal) return undefined;
+    const previous = document.activeElement;
+    const target = initialFocus ? document.getElementById(initialFocus) : null;
+    if (target && screenRef.current?.contains(target)) {
+      target.focus({ preventScroll: true });
+    } else {
+      screenRef.current?.closest('[role="dialog"]')?.querySelector('button')?.focus();
+    }
+    return () => { if (previous?.isConnected) previous.focus(); };
+  }, [asModal, initialFocus]);
   const displayedWorkspaceDir = configuredWorkspaceDir || workspaceDir || '';
 
   const content = (
     <div className={`opts-screen${asModal ? ' is-modal' : ''}`} ref={screenRef}>
       {onBackToHome && (
         <div className="opts-back-row">
-          <Button onClick={onBackToHome}>
-            Retour à l'accueil
-          </Button>
+          <Button onClick={onBackToHome}>{t('settings:preferences.home.action')}</Button>
         </div>
       )}
       <div className="opts-layout">
@@ -77,6 +91,7 @@ export function OptionsTab({
             onAutoSaveChange={onAutoSaveChange}
             autoSaveBackupLimit={autoSaveBackupLimit}
             onAutoSaveBackupLimitChange={onAutoSaveBackupLimitChange}
+            shortcuts={keyboardShortcuts}
           />
           <InterfaceSection
             className={sectionClass('interface')}
@@ -84,6 +99,11 @@ export function OptionsTab({
             themePreference={themePreference}
             onThemePreferenceChange={onThemePreferenceChange}
             onOpenShortcuts={() => setShortcutsOpen(true)}
+          />
+          <CatalogueSection
+            className={sectionClass('catalogue')}
+            sectionRef={registerSection('catalogue')}
+            workspaceDir={useWorkspaceForNewProjects ? displayedWorkspaceDir : null}
           />
           <ProjectsMediaSection
             className={sectionClass('projects-media')}
@@ -134,9 +154,9 @@ export function OptionsTab({
     return (
       <>
         <div className="modal-overlay" onClick={onClose}>
-          <div className="modal-box opts-modal-box" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label={t('settings:preferences.dialog.title')} className="modal-box opts-modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <span>Préférences</span>
+              <span>{t('settings:preferences.dialog.title')}</span>
               <Button variant="icon" className="modal-close" onClick={onClose}>×</Button>
             </div>
             {content}

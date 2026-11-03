@@ -11,6 +11,7 @@
 use super::*;
 use crate::commands::generation::ui_projects_tests::{write_flat_png, write_tone_wav};
 use crate::commands::project_codec::{apply_advanced_gesture, create_advanced_document};
+use crate::native_pack::advanced_export::export_advanced_pack_with_cancel;
 use crate::native_pack::persistence::decode_authoring_payload;
 use crate::support::lunii_zip_validator::validate_lunii_zip;
 use serde_json::{json, Value};
@@ -91,7 +92,7 @@ fn a_graph_editor_document_built_by_its_gestures_exports_a_valid_pack() {
 
     // Nouveau projet graphe.
     let mut session = GraphSession {
-        payload: create_advanced_document("Pack graphe de test".to_string())
+        payload: create_advanced_document("Pack graphe de test".to_string(), None)
             .expect("document créé"),
         bindings: Vec::new(),
     };

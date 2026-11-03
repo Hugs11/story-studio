@@ -1,7 +1,11 @@
+import { AppModals } from './components/AppModals.jsx';
+import { presentStoredError, presentUserMessage } from './i18n/userMessage.js';
+import { useCommonTranslation } from './i18n/commonPresentation.js';
+import { useMediaSubscriptions } from './hooks/useMediaSubscriptions';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useProjectStore } from './store/projectStore';
 import { ensureWorkspaceDir } from './store/projectIO';
-import { MENU_DEPTH_LIMIT_TITLE, buildProjectIndex } from './store/projectModel';
+import { getMenuMutationDialog, buildProjectIndex } from './store/projectModel';
 import { buildToolbarInventory, SUSPENDED_BY_EXPORT, SUSPENDED_BY_GESTURE, toolbarAvailability } from './store/toolbarModel';
 import { createProductionCommand } from './store/production/productionRouting';
 import {
@@ -14,6 +18,7 @@ import { ADVANCED_WORK } from './store/production/advancedRenderWork';
 import { WORK_NATURE } from './store/production/renderQueueWork';
 import { exportWorkspaceDir, mediaOutputWorkspaceDir } from './store/workspaceDirs';
 import { advancedPackAudioOptions } from './store/production/packAudioOptions';
+import { readPackAudioEdgeSilenceOverrides, readPackAudioProcessing } from './config/audioProcessing';
 import { summarizeReadiness } from './store/advancedExport/exportReadiness';
 import { archiveNamingFields } from './store/advancedExport/archiveName';
 import {
@@ -41,6 +46,8 @@ import { useAdvancedAuthoring } from './hooks/useAdvancedAuthoring';
 import { useAdvancedExport } from './hooks/useAdvancedExport';
 import { useAdvancedProjectEntry } from './hooks/useAdvancedProjectEntry';
 import { ErrorDialogProvider, useErrorDialog } from './components/common/Dialog';
+import { CatalogueScreen } from './components/Catalogue/CatalogueScreen.jsx';
+import { ProjectContext } from './store/ProjectContext';
 import { AppShell } from './components/AppShell';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
 import { useEscapeKey } from './hooks/useEscapeKey';
@@ -78,25 +85,26 @@ import { useXttsJobs } from './hooks/useXttsJobs';
 import { useWorkspaceViewState } from './workspace/useWorkspaceViewState';
 import { useAdvancedWorkspaceViewState } from './workspace/useAdvancedWorkspaceViewState';
 import { isAdvancedProject } from './store/projectWorkState';
+import { useCatalogueGeneration } from './hooks/useCatalogueGeneration.js';
+import { useCatalogueEditorHost } from './hooks/useCatalogueEditorHost.jsx';
+import { startupPage } from './store/catalogue/startupPage.js';
+import { KEYS, read } from './store/persistentSettings';
 import { EDITOR_LAYOUT_SCOPE } from './store/persistentSettings';
 import { assessAdvancedProjectReadiness, readAuthoringPayload } from './store/projectModel/authoring';
 import { createAdvancedViewBridge } from './store/advancedGraphView/advancedViewBridge';
-import { getProjectFilePrefix } from './utils/projectPrefix';
 import './styles/variables.css';
 import './styles/layout.css';
 import './components/layout/AppChrome.css';
 import './components/RenderQueuePanel/RenderQueuePanel.css';
 
 function AppContent() {
+  const { t, language } = useCommonTranslation();
   const store = useProjectStore();
   const advancedAuthoring = useAdvancedAuthoring({ store });
   const { showErrorDialog, showConfirmDialog, showChoiceDialog } = useErrorDialog();
   useEffect(() => {
     if (!store.mutationError) return;
-    showErrorDialog({
-      title: store.mutationError.title ?? MENU_DEPTH_LIMIT_TITLE,
-      message: store.mutationError.message,
-    });
+    showErrorDialog(getMenuMutationDialog(store.mutationError));
     store.clearMutationError();
   }, [showErrorDialog, store.clearMutationError, store.mutationError]);
   const renderQueue = useRenderQueueStore();
@@ -127,9 +135,9 @@ function AppContent() {
   // qui portent une donnée restent des useState dédiés (toolbarTtsTarget,
   // youtubeFunnelMode, pendingSimulateZip).
   const modals = useDisclosures([
-    'credits', 'packOptions', 'record', 'tts', 'podcastImport', 'podcastFunnel',
-    'aggregatePacks', 'packChecker', 'editPack', 'prefs', 'validation',
-  ]);
+    'credits', 'record', 'tts', 'podcastImport', 'podcastFunnel',
+    'catalogue', 'aggregatePacks', 'packChecker', 'editPack', 'prefs', 'validation',
+  ], startupPage(read(KEYS.CATALOGUE_STARTUP_PAGE)) === 'catalogue' ? ['catalogue'] : []);
   const [toolbarTtsTarget, setToolbarTtsTarget] = useState(null);
   // null = fermé ; 'home' = entrée accueil (session éphémère) ; 'editor' = import
   // dans le projet courant (éditeur libre).
@@ -329,6 +337,12 @@ function AppContent() {
     sessionWorkspaceDir,
     configuredWorkspaceDir,
   });
+  const mediaStorage = {
+    root: mediaWorkspaceDir, storage: store.project.storage, ephemeral: sessionMode === 'ephemeral',
+    onFallback: () => showErrorDialog({ get title() { return t('common:app.imageCache.title'); }, get message() { return t('common:app.imageCache.message'); }, variant: 'info' }),
+  };
+  const mediaStorageRef = useRef(mediaStorage);
+  mediaStorageRef.current = mediaStorage;
   const mediaWorkspaceDirRef = useRef(mediaWorkspaceDir);
   mediaWorkspaceDirRef.current = mediaWorkspaceDir;
   const preferredExportWorkspaceDir = exportWorkspaceDir({
@@ -376,12 +390,12 @@ function AppContent() {
   const confirmBackgroundWorkBeforeClose = useCallback(async () => {
     if (!backgroundWorkActiveRef.current) return true;
     const choice = await showChoiceDialog({
-      title: 'Travail en cours',
-      message: "Un travail est encore en cours. Quitter maintenant l'interrompra.",
+      get title() { return t('common:app.backgroundWork.title'); },
+      get message() { return t('common:app.backgroundWork.message'); },
       cancelValue: 'stay',
       actions: [
-        { value: 'stay', label: 'Rester', kind: 'primary', autoFocus: true },
-        { value: 'quit', label: 'Quitter quand même', kind: 'danger-outline' },
+        { value: 'stay', get label() { return t('common:app.backgroundWork.stay'); }, kind: 'primary', autoFocus: true },
+        { value: 'quit', get label() { return t('common:app.backgroundWork.quit'); }, kind: 'danger-outline' },
       ],
     });
     return choice === 'quit';
@@ -423,6 +437,7 @@ function AppContent() {
   // à sa cible. Appelé AVANT useSDJobs/useXttsJobs : applyGeneratedAudioToTarget
   // leur est passé et doit exister au moment du câblage.
   const {
+    relocateMediaJobPaths,
     handleOpenAiQueue,
     handleOpenSDGenerate,
     handleRegenerateImageJob,
@@ -431,6 +446,7 @@ function AppContent() {
     handleQueueXttsGenerate,
     sdGenerate,
   } = useAiGeneration({
+    mediaStorageRef,
     store,
     sdStore,
     xttsStore,
@@ -453,6 +469,8 @@ function AppContent() {
 
   const { getAudioJobUsage, getImageJobUsage } = useAiJobUsage({ project: store.project, projectIndex, advancedMediaUsages });
 
+  const onCatalogueGenerated = useCatalogueGeneration({ readProject: readLiveProject, savePathRef, savedSnapshotRef, mediaLibraryPathsRef, mediaTagsRef });
+
   // Grappe « générer le pack » : étape métadonnées (PackNameModal), gardes de
   // validation, résolution du dossier d'export et enfilement du job dans la file de
   // rendu. `importedPackPendingMetaRef` est partagée avec useWorkSession : le hook la
@@ -462,6 +480,7 @@ function AppContent() {
     handleSavePackMetadata,
     packMetadata,
   } = usePackGeneration({
+    onGenerated: onCatalogueGenerated,
     store,
     renderQueue,
     pathAudit,
@@ -495,12 +514,15 @@ function AppContent() {
   const {
     maybeCopyToProject,
     copyGeneratedMediaToProject,
+    keepFolderPack,
     dropOnNode,
     notifyCutPaste,
     extractAudioEmbeddedImage,
     maybeOfferTransferIntoProject,
     handleCopyImportedFilesChange,
   } = useMediaTransferHandlers({
+    mediaStorageRef,
+    sessionModeRef,
     store,
     copyImportedFilesEnabled,
     setCopyImportedFilesEnabled,
@@ -533,6 +555,7 @@ function AppContent() {
     handleSaveProjectAs,
     persistProjectSnapshot,
   } = useSaveProgress({
+    onMediaPathsRelocated: relocateMediaJobPaths,
     store,
     configuredWorkspaceDir,
     mediaLibraryPathsRef,
@@ -544,20 +567,14 @@ function AppContent() {
     captureWorkSession,
     isWorkSessionCurrent,
     isSavingRef,
+    mediaLibraryCountRef,
     setSaveToast,
     showErrorDialog,
     setRecentProjects,
     maybeOfferTransferIntoProject,
-    // Le dossier trié est celui que l'enregistrement a épinglé à son départ, et
-    // non la session devenue courante entre-temps.
-    triageSessionMedia: ({ project, savePath, sessionDir, targetWorkspaceDir, transferCopies, isSessionCurrent }) => triageSessionMedia({
-      project,
-      sessionDir,
-      targetWorkspaceDir,
-      transferCopies,
-      isSessionCurrent,
-      projectName: getProjectFilePrefix(project, savePath),
-    }),
+    // The save's captured session, destination and saveToken reach the triage
+    // unchanged; rebuilding this context would lose the transaction's lock token.
+    triageSessionMedia,
     onProjectSaved: async (result, options = {}) => {
       // Seule la promotion « Enregistrer comme projet » (handleSaveProjectAs) nettoie
       // le dossier de session et bascule en mode projet. Un enregistrement en place
@@ -585,7 +602,7 @@ function AppContent() {
     (result) => graphCopyRouteRef.current?.(result) ?? false,
     [],
   );
-  const { applyLoadedProject, handleLoad, handleLoadRecent } = useProjectLoading({
+  const { applyLoadedProject, handleLoad, handleLoadRecent, openProjectFromPath } = useProjectLoading({
     store,
     sdStore,
     xttsStore,
@@ -601,6 +618,18 @@ function AppContent() {
     onProjectLoaded: enterProjectMode,
     onBeforeProjectReplaced: cleanupEphemeralSession,
     routeLoadedProject: routeLoadedToGraphCopy,
+  });
+
+  const [subscriptionImportSource, setSubscriptionImportSource] = useState(null);
+  const subscriptions = useMediaSubscriptions({
+    store,
+    openProject: handleLoadRecent,
+    onShowImport: (source) => {
+      setSubscriptionImportSource(source);
+      if (source.source === 'podcast') modals.open('podcastImport');
+      else setYoutubeFunnelMode('editor');
+    },
+    showErrorDialog,
   });
 
   const graphCopy = useGraphCopy({
@@ -655,7 +684,10 @@ function AppContent() {
     handleYoutubeFunnelImport,
     handleYoutubeEditorImport,
   } = useMediaImport({
+    mediaStorageRef,
+    sessionModeRef,
     store,
+    subscriptions,
     projectIndex,
     maybeCopyToProject,
     copyGeneratedMediaToProject,
@@ -686,11 +718,15 @@ function AppContent() {
   // partagée avec useWindowCloseGuard) et lui est passée en entrée.
   const {
     handleNewProject,
+    handleReturnToCatalogue,
     handleSelectProjectType,
     handleEditExistingPack,
     handleLandEditablePack,
+    handleLandAggregate,
     handleSimulatePackReady,
   } = useProjectLifecycle({
+    onOpenCatalogue: () => modals.open('catalogue'),
+    confirmBackgroundWork: confirmBackgroundWorkBeforeClose,
     store,
     askSaveBeforeLeaveCurrent,
     handleSave,
@@ -728,8 +764,9 @@ function AppContent() {
       await startAdvancedProject();
     } catch (error) {
       showErrorDialog({
-        title: 'Éditeur graphe',
-        message: `Impossible de créer le projet : ${error?.message ?? error}`,
+        get title() { return t('common:app.graph.title'); },
+        get message() { return t('common:app.graph.createError', { error: presentStoredError(error) }); },
+        technicalDetail: presentUserMessage(error).technicalDetail,
       });
     }
   }
@@ -743,6 +780,7 @@ function AppContent() {
   // de rendu — la même que celle de l'éditeur Libre. Comme la session
   // d'édition, elle ne fait rien tant qu'aucun projet avancé n'est ouvert.
   const advancedExport = useAdvancedExport({
+    onGenerated: onCatalogueGenerated,
     store,
     authoring: advancedAuthoring,
     // Le titre et la version du document, pour **nommer le fichier produit** et
@@ -776,6 +814,8 @@ function AppContent() {
   // reçoivent désormais la table gardée, de sorte qu'aucune porte ne contourne
   // le verrou. La navigation de vue et l'annulation de l'export n'en sont pas :
   // elles ne mutent rien et restent la seule sortie pendant l'écriture.
+
+
   const commands = useAuthorCommandLock({
     isLocked: advancedAuthoring.isLocked,
     commands: {
@@ -784,6 +824,7 @@ function AppContent() {
       save: handleSave,
       saveAs: handleSaveProjectAs,
       newProject: handleNewProject,
+      returnToCatalogue: handleReturnToCatalogue,
       openProject: handleLoad,
       openPack: handleEditExistingPack,
       openRecentProject: handleLoadRecent,
@@ -806,7 +847,6 @@ function AppContent() {
     handleResolveLogPath,
     handleCopyLogPath,
     handleConsolidateProject,
-    handleUpdateGlobalOption,
     handleAddEndNode,
     handleRemoveEndNode,
     handleUpdateXttsSettings,
@@ -895,8 +935,13 @@ function AppContent() {
     // d'auteur, un dossier perdu entre le sélecteur et l'envoi. Il se rapporte
     // au même endroit que les autres, et le parcours doit le savoir.
     let refusedAtCapture = false;
+    // **Le projet est relu, jamais pris dans la closure.** « Appliquer &
+    // générer » appelle cette fonction juste après avoir écrit la fiche par
+    // `setProject`, sans rendu entre les deux : `store.project` serait encore
+    // le projet d'avant, et l'archive partirait avec les anciens réglages.
     const result = await runAdvancedProduction({
-      readProject: () => store.project,
+      readProject: store.readProject,
+      fileAudit: pathAudit,
       assessReadiness: async (project) => {
         readinessSummary = summarizeReadiness(
           await assessAdvancedProjectReadiness(project),
@@ -923,7 +968,8 @@ function AppContent() {
         }
         renderQueue.addJob({
           nature: WORK_NATURE.ADVANCED,
-          projectName: store.project?.projectName || '(sans nom)',
+          ...(prepared.onGenerated ? { onGenerated: prepared.onGenerated } : {}),
+          projectName: store.readProject()?.projectName || '',
           savePath: store.savePath ?? null,
           outputFolder,
           request: prepared.request,
@@ -940,7 +986,8 @@ function AppContent() {
       refuse: advancedExport.refuseBeforeStart,
       // Le traitement demandé vient du projet, les durées des préférences :
       // c'est le même assemblage que `projectToRustExport` fait pour le Libre.
-      options: advancedPackAudioOptions(store.project?.globalOptions),
+      // Lu au départ, pour la même raison que `readProject`.
+      options: advancedPackAudioOptions(store.readProject()?.globalOptions),
     });
     // La pastille porte ce qui parle du document **avant** la fabrication : la
     // qualification, et le refus prononcé sans rien demander au moteur. Elle
@@ -950,7 +997,7 @@ function AppContent() {
       setAdvancedPendingCommand('export');
     }
     return result;
-  }, [store, advancedExport, renderQueue]);
+  }, [store, advancedExport, renderQueue, pathAudit]);
 
   // Les deux chaînes commencent donc par **la même étape** : la fiche du pack.
   // Côté Libre elle est ouverte par `handleGenerate`, qui la connaît depuis
@@ -961,6 +1008,15 @@ function AppContent() {
     startFree: handleGenerate,
     startAdvanced: () => packMetadata.openPackMetadata(),
   }), [authoringMode, handleGenerate, packMetadata]);
+
+  const catalogueEditorHost = useCatalogueEditorHost({
+    onGenerate: handleProduce, editorReady: projectOpen, onRecoverSession: handleRecoverSession,
+    active: modals.isOpen('catalogue'),
+    openProjectFromPath, onLand: handleLandEditablePack, onLandAdvanced: landAdvancedPack,
+    onBeforeReplace: () => askSaveBeforeLeaveCurrent(handleSave),
+    onCloseCatalogue: () => modals.close('catalogue'), onNotice: setImportNotice,
+    onError: error => showErrorDialog({ message: error }),
+  });
 
   function handleToolbarRecord() {
     modals.open('record');
@@ -1042,7 +1098,7 @@ function AppContent() {
     authoringMode, shortcutLabels, store.canUndo, store.canRedo,
     advancedAuthoring.locked, advancedAuthoring.busy, canGenerate,
     advancedGenerateBlocked, advancedGeneratePending,
-    isAdvanced, advancedDocumentInfo,
+    isAdvanced, advancedDocumentInfo, language,
   ]);
   const toolbarCommands = useMemo(() => toolbarAvailability(toolbarInventory), [toolbarInventory]);
 
@@ -1072,7 +1128,7 @@ function AppContent() {
     isAdvanced && advancedDocumentInfo
       ? {
           draft: advancedPackMetadataDraft(advancedDocumentInfo, store.project),
-          governance: advancedFieldGovernance(advancedDocumentInfo.documentOrigin),
+          governance: advancedFieldGovernance(advancedDocumentInfo.documentOrigin, advancedDocumentInfo.identityLocked),
           counters: advancedPackMetadataCounters(
             advancedDocumentInfo,
             advancedMediaBindings ?? [],
@@ -1096,6 +1152,7 @@ function AppContent() {
       ? await askImportedUuidRevision({
           ...requestedDraft,
           originalUuid: advancedImportedIdentity(advancedDocumentInfo),
+          identityLocked: !!advancedDocumentInfo?.identityLocked,
         }, showChoiceDialog)
       : requestedDraft;
     const gesture = advancedMetadataGesture(advancedDocumentInfo, draft);
@@ -1110,13 +1167,42 @@ function AppContent() {
     // nom du fichier exporté et n'entrent dans aucun pack. Ils vivent dans
     // l'enveloppe du projet, exactement là où la chaîne Libre les garde déjà,
     // et `setProject` leur donne le même pas d'annulation qu'à elle.
+    // Comparé au projet courant : le geste ci-dessus vient peut-être de le
+    // republier, et la closure n'a pas encore vu ce rendu.
+    const liveProject = store.readProject();
     const naming = archiveNamingFields(draft?.naming ?? {});
-    const current = archiveNamingFields(store.project?.packMetadata ?? {});
-    const changed = Object.keys(naming).some((field) => naming[field] !== current[field]);
-    if (changed) {
+    const current = archiveNamingFields(liveProject?.packMetadata ?? {});
+    const namingChanged = Object.keys(naming).some((field) => naming[field] !== current[field]);
+    const audioSettings = {};
+    for (const field of ['harmonizeLoudness', 'silenceMode', 'leadingSilenceSec', 'trailingSilenceSec']) {
+      if (Object.hasOwn(draft ?? {}, field)) audioSettings[field] = draft[field];
+    }
+    const currentAudio = {
+      ...readPackAudioProcessing(liveProject?.globalOptions),
+      ...readPackAudioEdgeSilenceOverrides(liveProject?.globalOptions),
+    };
+    const audioChanged = Object.keys(audioSettings)
+      .some((field) => audioSettings[field] !== currentAudio[field]);
+
+    // Si la fiche ne demande qu'une modification de l'enveloppe, il n'y a pas
+    // de geste de document pour faire respecter le verrou. Tester la session
+    // immédiatement avant l'écriture évite qu'Appliquer modifie le projet sous
+    // un export ou pendant un autre geste.
+    if (!gesture && audioChanged && (advancedAuthoring.isLocked() || advancedAuthoring.busy)) {
+      return metadataSaveDecision({
+        status: advancedAuthoring.isLocked() ? 'held' : 'busy',
+      });
+    }
+
+    if (namingChanged || audioChanged) {
       store.setProject((project) => ({
         ...project,
-        packMetadata: { ...(project.packMetadata ?? {}), ...naming },
+        ...(namingChanged ? {
+          packMetadata: { ...(project.packMetadata ?? {}), ...naming },
+        } : {}),
+        ...(audioChanged ? {
+          globalOptions: { ...(project.globalOptions ?? {}), ...audioSettings },
+        } : {}),
       }));
     }
     // La vignette catalogue est un média d'**enveloppe**, pas un nœud du
@@ -1195,6 +1281,7 @@ function AppContent() {
   });
 
   const optionsTabProps = useOptionsTabProps({
+    onOpen: () => modals.open('prefs'),
     copyImportedFilesEnabled,
     handleCopyImportedFilesChange,
     workspaceDir,
@@ -1224,6 +1311,7 @@ function AppContent() {
   });
 
   const projectContextValue = useProjectContextValue({
+    mediaStorage,
     savePath: store.savePath,
     projectName: effectiveProjectFilePrefix,
     workspaceDir: mediaWorkspaceDir,
@@ -1233,6 +1321,7 @@ function AppContent() {
     xttsStore,
     pathAudit,
     maybeCopyToProject,
+    keepFolderPack,
     extractAudioEmbeddedImage,
     handleSaveProject,
     handleOpenSDGenerate,
@@ -1245,6 +1334,8 @@ function AppContent() {
   // renommer aucune clé pour éviter les fautes de frappe silencieuses.
   const appModalsProps = {
     modals,
+    subscriptionImportSource,
+    onSubscriptionImportClosed: () => setSubscriptionImportSource(null),
     youtubeFunnelMode,
     setYoutubeFunnelMode,
     toolbarTtsTarget,
@@ -1268,6 +1359,7 @@ function AppContent() {
     onSavePackMetadata: handleSavePackMetadata,
     advancedMetadataForm,
     onSaveAdvancedPackMetadata: handleSaveAdvancedPackMetadata,
+    onLandAggregate: handleLandAggregate,
     onLandEditablePack: handleLandEditablePack,
     onLandAdvancedPack: landAdvancedPack,
     onBeforeReplacePack: () => askSaveBeforeLeaveCurrent(handleSave),
@@ -1294,6 +1386,7 @@ function AppContent() {
   // Groupes de props du shell présentational. Aucune logique métier :
   // uniquement du branchement de valeurs/gestionnaires déjà calculés vers le chrome.
   const appShellProps = {
+    subscriptions: { ...subscriptions.panelProps, home: !projectOpen },
     mediaTransfer: {
       dropOnNode,
       prepareMediaForProject: maybeCopyToProject,
@@ -1322,6 +1415,7 @@ function AppContent() {
       showProjectMeta: projectOpen,
       onOpenPackMetadata: projectOpen ? packMetadata.openPackMetadata : null,
       onOpenCredits: () => modals.open('credits'),
+      onOpenPreferences: () => modals.open('prefs'),
     },
     // La barre unique. Son contenu vient de l'inventaire ; ce groupe ne porte
     // plus que les gestionnaires et l'état des widgets structurels.
@@ -1330,6 +1424,7 @@ function AppContent() {
       shortcutLabels,
       suspensionNotice,
       onNewProject: commands.newProject,
+      onReturnToCatalogue: commands.returnToCatalogue,
       onOpenProject: commands.openProject,
       onOpenPack: commands.openPack,
       onSaveProject: commands.save,
@@ -1337,7 +1432,6 @@ function AppContent() {
       onContinueInGraph: commands.continueInGraph,
       onUndo: commands.undo,
       onRedo: commands.redo,
-      onOpenPreferences: () => modals.open('prefs'),
       panels: isAdvanced ? {
         showGraph: true,
         showNodeList: advancedWorkspaceViewState.showNodeList,
@@ -1358,11 +1452,6 @@ function AppContent() {
       onToggleDiagram: workspaceViewState.toggleDiagram,
       onToggleNodeList: advancedWorkspaceViewState.toggleNodeList,
       onToggleInspector: advancedWorkspaceViewState.toggleInspector,
-      packOptionsOpen: modals.isOpen('packOptions'),
-      onPackOptionsOpenChange: (open) => modals.set('packOptions', open),
-      projectType: store.project.projectType,
-      globalOptions: store.project.globalOptions,
-      onUpdateGlobalOption: handleUpdateGlobalOption,
       onGenerate: handleProduce,
       issueKind: isAdvanced ? 'advanced' : 'hierarchical',
       validationIssues,
@@ -1388,10 +1477,11 @@ function AppContent() {
       onYoutubeFunnel: () => setYoutubeFunnelMode('home'),
       onAggregatePacks: () => modals.open('aggregatePacks'),
       onCheckPack: () => modals.open('packChecker'),
+      onOpenCatalogue: () => modals.open('catalogue'),
       pendingSimulateZipPath: pendingSimulateZip,
       onSimulateConsumed: () => setPendingSimulateZip(null),
       onOpenProject: commands.openProject,
-      onOpenPreferences: () => modals.open('prefs'),
+      onOpenPreferences: optionsTabProps.openPreferences,
       recentProjects,
       onOpenRecentProject: commands.openRecentProject,
       sessionRecoveries,
@@ -1526,6 +1616,11 @@ function AppContent() {
     },
   };
 
+  if (modals.isOpen('catalogue')) return <ProjectContext.Provider value={projectContextValue}><CatalogueScreen onLandAggregate={handleLandAggregate} workspaceDir={useWorkspaceForNewProjects ? configuredWorkspaceDir : null} editorHost={catalogueEditorHost}
+    sessionRecoveries={sessionRecoveries} onRecoverSession={catalogueEditorHost.recover}
+    titleBar={{ onOpenCredits: appShellProps.titleBar.onOpenCredits, preferencesShortcut: shortcutLabels?.tabOptions }} bottomBar={appShellProps.bottomBar}
+    preferencesSurface={modals.isOpen('prefs') || modals.isOpen('credits') ? <AppModals {...appModalsProps} preferencesSection="catalogue" /> : null} onPreferences={() => modals.open('prefs')}
+    onIgnoreSessionRecovery={handleIgnoreSessionRecovery} onClose={() => modals.close('catalogue')} /></ProjectContext.Provider>;
   return <AppShell {...appShellProps} />;
 }
 

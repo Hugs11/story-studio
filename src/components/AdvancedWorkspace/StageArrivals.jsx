@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import { graphTranslationEngine, translateGraph as t } from '../../i18n/graphPresentation.js';
 // Comment on arrive sur un Écran : par les listes de choix où il figure.
 //
 // Sur la Lunii, on n'arrive jamais sur un Écran sans passer par une liste :
@@ -32,11 +34,13 @@ import { advancedGestures, optionTarget } from '../../store/projectModel/advance
 // 170 Écrans.
 const SHOWN_ARRIVALS = 3;
 
-const HOW = { ok: 'par sa suite du parcours', home: 'par son bouton Accueil' };
+const HOW = { ok: 'graph:arrivals.route.label', home: 'graph:arrivals.home.label' };
+const RANDOM_HOW = { ok: 'graph:arrivals.route.random', home: 'graph:arrivals.home.random' };
 
-const WHEEL_HELP = 'C’est la molette des choix voisins qui amène ici : sur l’un d’eux, tourner la molette passe à ce choix. La molette de cet Écran-ci règle où l’on va en partant, dans l’encadré « Molette ».';
+const WHEEL_HELP = 'graph:arrivals.wheel.help';
 
 function ArrivalLine({ label, help = null, children }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   return (
     <div className="advanced-arrival__line">
       <span className="advanced-arrival__label">
@@ -49,6 +53,7 @@ function ArrivalLine({ label, help = null, children }) {
 }
 
 function DirectArrivals({ row, thumbnails, onFocusPath }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const [open, setOpen] = useState(false);
   const shown = open ? row.direct : row.direct.slice(0, SHOWN_ARRIVALS);
   const hidden = row.direct.length - shown.length;
@@ -59,14 +64,14 @@ function DirectArrivals({ row, thumbnails, onFocusPath }) {
           <NodeThumbnail path={opener.sourcePath} thumbnails={thumbnails} />
           <NodeLink path={opener.sourcePath} label={opener.source.label.label} onFocusPath={onFocusPath} />
           <span className="advanced-arrival__how">
-            {HOW[opener.slot]}{opener.random ? ', au hasard parmi les choix' : ''}
+            {opener.random ? t(RANDOM_HOW[opener.slot]) : t(HOW[opener.slot])}
           </span>
         </li>
       ))}
       {hidden > 0 && (
         <li>
           <button type="button" className="advanced-link" onClick={() => setOpen(true)}>
-            et {hidden} autre{hidden > 1 ? 's' : ''}
+            {t('graph:arrivals.hidden.count', { count: hidden })}
           </button>
         </li>
       )}
@@ -80,15 +85,16 @@ function wheelArrivals(row) {
   return row.neighbours.filter((neighbour) => neighbour.wheel === true && neighbour.stagePath);
 }
 
-function WheelArrivals({ active, thumbnails, onFocusPath }) {
+function WheelArrivals({ index, active, thumbnails, onFocusPath }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   return (
     <ul className="advanced-arrival__list">
       {active.map((neighbour) => (
         <li key={neighbour.key} className="advanced-arrival__item">
-          <span className="advanced-arrival__how">depuis</span>
+          <span className="advanced-arrival__how">{t('graph:arrivals.from.label')}</span>
           <NodeThumbnail path={neighbour.stagePath} thumbnails={thumbnails} />
-          <NodeLink path={neighbour.stagePath} label={neighbour.label} onFocusPath={onFocusPath} />
-          <span className="advanced-arrival__how">choix {neighbour.rank + 1}</span>
+          <NodeLink path={neighbour.stagePath} label={index?.byPath.get(neighbour.stagePath)?.label?.label ?? neighbour.label} onFocusPath={onFocusPath} />
+          <span className="advanced-arrival__how">{t('graph:wheel.choice.label', { ordinal: neighbour.rank + 1 })}</span>
         </li>
       ))}
     </ul>
@@ -98,13 +104,14 @@ function WheelArrivals({ active, thumbnails, onFocusPath }) {
 // Seuls les chemins qui existent sont montrés : l'encadré répond à « comment
 // arrive-t-on ici ? », pas à ce qui n'y mène pas. La seule absence dite est
 // celle qui compte : rien ne mène ici par cette liste.
-function ListArrival({ row, disabled, thumbnails, onFocusPath, onRemove }) {
+function ListArrival({ index, row, disabled, thumbnails, onFocusPath, onRemove }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const byWheel = wheelArrivals(row);
   const unreachable = row.direct.length === 0 && byWheel.length === 0;
   return (
     <li className="advanced-arrival">
       <div className="advanced-arrival__head">
-        <span className="advanced-arrival__place">Choix {row.rank + 1}/{row.count} de</span>
+        <span className="advanced-arrival__place">{t('graph:arrivals.choice.position', { ordinal: row.rank + 1, total: row.count })}</span>
         <NodeThumbnail path={row.actionPath} thumbnails={thumbnails} nature="action" />
         <NodeLink path={row.actionPath} label={row.action.label.label} onFocusPath={onFocusPath} />
         <Button
@@ -113,30 +120,27 @@ function ListArrival({ row, disabled, thumbnails, onFocusPath, onRemove }) {
           className="advanced-arrival__remove"
           disabled={disabled}
           onClick={onRemove}
-        >
-          Retirer de la liste
-        </Button>
+        >{t('graph:arrivals.list.remove')}</Button>
       </div>
       {row.direct.length > 0 && (
-        <ArrivalLine label="À l’ouverture">
+        <ArrivalLine label={t('graph:arrivals.open.label')}>
           <DirectArrivals row={row} thumbnails={thumbnails} onFocusPath={onFocusPath} />
         </ArrivalLine>
       )}
       {byWheel.length > 0 && (
-        <ArrivalLine label="À la molette" help={WHEEL_HELP}>
-          <WheelArrivals active={byWheel} thumbnails={thumbnails} onFocusPath={onFocusPath} />
+        <ArrivalLine label={t('graph:arrivals.wheel.label')} help={t(WHEEL_HELP)}>
+          <WheelArrivals index={index} active={byWheel} thumbnails={thumbnails} onFocusPath={onFocusPath} />
         </ArrivalLine>
       )}
       {unreachable && (
-        <p className="advanced-field__warning advanced-arrival__warning">
-          Rien ne mène ici par cette liste.
-        </p>
+        <p className="advanced-field__warning advanced-arrival__warning">{t('graph:arrivals.unreachable.description')}</p>
       )}
     </li>
   );
 }
 
 function AddToListForm({ stage, index, disabled, onGesture, onClose }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const [actionPath, setActionPath] = useState(null);
   const chosen = actionPath ? index?.byPath.get(actionPath) : null;
   const apply = () => {
@@ -151,10 +155,8 @@ function AddToListForm({ stage, index, disabled, onGesture, onClose }) {
   };
   return (
     <div className="advanced-field__form">
-      <p className="advanced-field__note">
-        Cet Écran devient le dernier choix de la liste choisie.
-      </p>
-      <label htmlFor="advanced-arrival-action">Liste de choix</label>
+      <p className="advanced-field__note">{t('graph:arrivals.add.description')}</p>
+      <label htmlFor="advanced-arrival-action">{t('graph:type.action.label')}</label>
       <NodePicker
         id="advanced-arrival-action"
         index={index}
@@ -164,10 +166,8 @@ function AddToListForm({ stage, index, disabled, onGesture, onClose }) {
         disabled={disabled}
       />
       <div className="advanced-field__actions">
-        <Button size="sm" onClick={onClose}>Annuler</Button>
-        <Button size="sm" variant="primary" disabled={disabled || !chosen} onClick={apply}>
-          Ajouter à la liste
-        </Button>
+        <Button size="sm" onClick={onClose}>{t('common:dialog.cancel.label')}</Button>
+        <Button size="sm" variant="primary" disabled={disabled || !chosen} onClick={apply}>{t('graph:arrivals.add.confirm')}</Button>
       </div>
     </div>
   );
@@ -176,6 +176,7 @@ function AddToListForm({ stage, index, disabled, onGesture, onClose }) {
 export function StageArrivals({
   stage, memberships, index, disabled, thumbnails, onGesture, onFocusPath, onRemoveOption, onViewConnections,
 }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
@@ -187,26 +188,25 @@ export function StageArrivals({
   return (
     <section className="card advanced-editor__section">
       <div className="advanced-editor__section-heading advanced-editor__section-heading--list">
-        <div className="card-title">Comment on arrive sur cet Écran</div>
+        <div className="card-title">{t('graph:arrivals.title.label')}</div>
         {onViewConnections && (
-          <button type="button" className="advanced-link" onClick={() => onViewConnections(stage.path)}>
-            Voir dans le graphe
-          </button>
+          <button type="button" className="advanced-link" onClick={() => onViewConnections(stage.path)}>{t('graph:connections.reveal.label')}</button>
         )}
       </div>
 
       {isEntry && (
-        <p className="advanced-field__note">C’est l’Écran d’entrée : le pack commence ici.</p>
+        <p className="advanced-field__note">{t('graph:arrivals.entry.description')}</p>
       )}
 
       {memberships.length === 0
         ? !isEntry && (
-          <p className="advanced-field__warning">Cet Écran n’est dans aucune liste de choix : rien n’y mène.</p>
+          <p className="advanced-field__warning">{t('graph:arrivals.list.absent')}</p>
         )
         : (
           <ol className="advanced-arrivals">
             {memberships.map((row) => (
               <ListArrival
+                index={index}
                 key={row.key}
                 row={row}
                 disabled={disabled}
@@ -222,8 +222,7 @@ export function StageArrivals({
       {!isEntry && (
         <div className="advanced-field__actions">
           <Button size="sm" disabled={disabled} onClick={() => setAdding(true)}>
-            <Plus /> Ajouter à une liste
-          </Button>
+            <Plus />{t('graph:arrivals.add.open')}</Button>
         </div>
       )}
       {adding && !isEntry && (

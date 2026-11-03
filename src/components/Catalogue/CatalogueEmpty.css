@@ -1,0 +1,21 @@
+/* États vides : socle puis variantes (spécificités conservées). */
+.catalogue-empty {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.catalogue-screen .catalogue-empty p { margin: 0; max-width: 340px; line-height: 1.5; }
+/* États vides. */
+.catalogue-empty-icon { display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--bg2); width: 44px; height: 44px; }
+.catalogue-empty[data-empty-state='noSources'] .catalogue-empty-icon { background: var(--accent-dim); color: var(--accent-text); }
+.catalogue-empty h2 { color: var(--text); margin: 4px 0 0; font-size: 16px; font-weight: var(--weight-semibold); }
+.catalogue-empty .catalogue-actions { justify-content: center; }
+.catalogue-screen .catalogue-empty[data-empty-state] { gap: 12px; font-size: 14px; }
+.catalogue-screen .catalogue-empty[data-empty-state] p { max-width: 440px; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }

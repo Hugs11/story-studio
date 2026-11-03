@@ -1,3 +1,4 @@
+import { useCommonTranslation } from '../../i18n/commonPresentation.js';
 import { useMemo, useRef, useState } from 'react';
 import { MediaExplorer } from '../MediaExplorer/MediaExplorer';
 import { RenderQueuePanel } from '../RenderQueuePanel/RenderQueuePanel';
@@ -60,6 +61,7 @@ export function BottomWorkspacePanel({
   pendingMediaReveal = null,
   onMediaRevealConsumed,
 }) {
+  const { t } = useCommonTranslation();
   const [height, setHeight] = useState(() => loadHeight(heightKey));
   const dragRef = useRef(null);
 
@@ -115,28 +117,22 @@ export function BottomWorkspacePanel({
           type="button"
           className={tabClassName('media')}
           onClick={() => onActiveTabChange('media')}
-        >
-          Médias
-          <span>{mediaCount}</span>
+        >{t('common:workspace.media.tab')}<span>{mediaCount}</span>
         </button>
         <button
           type="button"
           className={tabClassName('queue')}
           onClick={() => onActiveTabChange('queue')}
-        >
-          File de rendu
-          {activeCount > 0 && <span>{activeCount}</span>}
+        >{t('common:workspace.renderQueue.tab')}{activeCount > 0 && <span>{activeCount}</span>}
         </button>
         <button
           type="button"
           className={tabClassName('ai')}
           onClick={() => onActiveTabChange('ai')}
-        >
-          File IA
-          {aiActiveCount > 0 ? <span>{aiActiveCount}</span> : aiDoneCount > 0 ? <span>✓</span> : null}
+        >{t('common:workspace.aiQueue.tab')}{aiActiveCount > 0 ? <span>{aiActiveCount}</span> : aiDoneCount > 0 ? <span>✓</span> : null}
         </button>
         <div className="bottom-workspace-spacer" />
-        <button type="button" className="bottom-workspace-close" onClick={onClose} title="Réduire">×</button>
+        <button type="button" className="bottom-workspace-close" onClick={onClose} title={t('common:window.minimize.label')}>×</button>
       </div>
       <div className="bottom-workspace-body">
         {activeTab === 'media' ? (

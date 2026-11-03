@@ -1,3 +1,5 @@
+import { translateGraph as t } from '../i18n/graphPresentation.js';
+import { createProjectStorage } from '../store/projectStorage';
 // Les entrées de l'Éditeur avancé, et elles seules.
 //
 // Trois portes, toutes **explicites** :
@@ -67,7 +69,7 @@ export function useAdvancedProjectEntry({
     setMediaLibraryPaths([]);
   }
 
-  async function startAdvancedProject({ title = 'Nouveau pack' } = {}) {
+  async function startAdvancedProject({ title = t('graph:creation.pack.defaultName') } = {}) {
     await runFunnelLanding('advanced', async () => {
       const acquired = await acquireCreated({ title, projectName: title });
       installAdvancedProject(acquired);
@@ -81,11 +83,13 @@ export function useAdvancedProjectEntry({
   // Libre, et elle compte : poser un type hiérarchique ferait monter l'espace
   // Libre le temps de l'acquisition, sur un projet qui n'a pas d'arbre.
   async function landAdvancedPack({ zipPath, packLabel }) {
-    await runFunnelLanding('advanced', async (workspaceDir) => {
+    await runFunnelLanding('advanced', async (workspaceDir, session) => {
       const acquired = await acquire({
         packPath: zipPath,
         assetsDir: advancedAssetsDir(workspaceDir, zipPath, packLabel),
         workspaceDir,
+        storage: createProjectStorage(),
+        ephemeral: session?.mode !== 'project',
         projectName: (packLabel || basename(zipPath) || '').replace(/\.(zip|7z)$/i, ''),
       });
       // Version d'origine + 1, comme au Libre ; bloc Story Studio préservé.

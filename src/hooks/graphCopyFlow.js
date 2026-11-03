@@ -1,3 +1,6 @@
+import frGraph from '../locales/fr/graph.json' with { type: 'json' };
+import { translateGraph as t } from '../i18n/graphPresentation.js';
+import { presentUserMessage } from '../i18n/userMessage.js';
 // Déroulé de la copie graphe d'un projet par menus, sans React ni disque :
 // chaque accès (dialogue, fichier, moteur) est fourni par l'appelant. C'est ce
 // qui permet d'éprouver l'ordre des questions et l'absence d'écriture sur
@@ -6,20 +9,21 @@
 import { isAdvancedProject } from '../store/projectWorkState.js';
 import { nextGraphCopyPath } from '../store/graphCopy.js';
 
-export const GRAPH_COPY_TITLE = 'Continuer dans l’éditeur graphe';
+// Export de compatibilité des essais existants ; jamais utilisé pour l’affichage.
+export const GRAPH_COPY_TITLE = frGraph['copy.continueInTheGraphEditor.label'];
+const GRAPH_COPY_TITLE_KEY = 'graph:copy.continueInTheGraphEditor.label';
 
 function fileLabel(path) {
   return String(path ?? '').split(/[\\/]/).pop();
 }
 
 function graphCopyWarning(copyPath) {
-  return `Story Studio va créer une copie de ton projet pour l’éditeur graphe : « ${fileLabel(copyPath)} », `
-    + 'à côté de l’original. Ton projet reste tel quel. '
-    + 'La copie graphe ne pourra pas forcément revenir dans l’éditeur d’origine.';
+  return t('graph:copy.confirmation.message', { name: fileLabel(copyPath) });
 }
 
-export const SAVE_ORIGINAL_FIRST =
-  'Enregistre d’abord ton projet : la copie graphe sera créée à côté de lui.';
+// Export de compatibilité des essais existants ; jamais utilisé pour l’affichage.
+export const SAVE_ORIGINAL_FIRST = frGraph['copy.saveYourProjectFirstTheGraphCopyWillBe.label'];
+const SAVE_ORIGINAL_FIRST_KEY = 'graph:copy.saveYourProjectFirstTheGraphCopyWillBe.label';
 
 /**
  * @param {Object} deps
@@ -38,13 +42,13 @@ export const SAVE_ORIGINAL_FIRST =
 export function createGraphCopyFlow(deps) {
   async function confirmCopy(copyPath) {
     const choice = await deps.choose({
-      title: GRAPH_COPY_TITLE,
-      message: graphCopyWarning(copyPath),
+      get title() { return t(GRAPH_COPY_TITLE_KEY); },
+      get message() { return graphCopyWarning(copyPath); },
       variant: 'info',
       cancelValue: null,
       actions: [
-        { value: null, label: 'Annuler', kind: 'ghost' },
-        { value: 'copy', label: 'Créer la copie', kind: 'primary', autoFocus: true },
+        { value: null, get label() { return t("common:dialog.cancel.label"); }, kind: 'ghost' },
+        { value: 'copy', get label() { return t("graph:copy.creerLaCopie.label"); }, kind: 'primary', autoFocus: true },
       ],
     });
     return choice === 'copy';
@@ -57,13 +61,13 @@ export function createGraphCopyFlow(deps) {
     const current = deps.currentSavePath();
     if (current) return current;
     const choice = await deps.choose({
-      title: GRAPH_COPY_TITLE,
-      message: SAVE_ORIGINAL_FIRST,
+      get title() { return t(GRAPH_COPY_TITLE_KEY); },
+      get message() { return t(SAVE_ORIGINAL_FIRST_KEY); },
       variant: 'info',
       cancelValue: null,
       actions: [
-        { value: null, label: 'Annuler', kind: 'ghost' },
-        { value: 'save', label: 'Enregistrer le projet', kind: 'primary', autoFocus: true },
+        { value: null, get label() { return t("common:dialog.cancel.label"); }, kind: 'ghost' },
+        { value: 'save', get label() { return t("graph:copy.saveProject.label"); }, kind: 'primary', autoFocus: true },
       ],
     });
     if (choice !== 'save') return null;
@@ -81,12 +85,16 @@ export function createGraphCopyFlow(deps) {
       await deps.openCopy(copyPath);
       return true;
     } catch (error) {
-      const detail = String(error?.message ?? error);
+      const presented = presentUserMessage(error);
       deps.showError({
-        title: GRAPH_COPY_TITLE,
-        message: written
-          ? `La copie a été créée (${fileLabel(copyPath)}), mais elle n’a pas pu s’ouvrir :\n${detail}`
-          : detail,
+        get title() { return t(GRAPH_COPY_TITLE_KEY); },
+        technicalDetail: presented.technicalDetail,
+        get message() {
+          const detail = presentUserMessage(error).message;
+          return written
+            ? t("graph:copy.theCopyWasCreatedButCouldNotBeOpened.label", { name: fileLabel(copyPath), detail })
+            : detail;
+        },
       });
       return false;
     }

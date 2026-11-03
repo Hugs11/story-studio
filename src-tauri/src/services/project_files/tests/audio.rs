@@ -1,4 +1,7 @@
 use super::*;
+use crate::support::user_message::codes;
+#[cfg(test)]
+use crate::support::user_message::MessageTransportAssertions as _;
 
 #[test]
 fn audio_assembly_filename_forces_flac_and_rejects_paths() {
@@ -13,9 +16,9 @@ fn audio_assembly_filename_forces_flac_and_rejects_paths() {
         "histoire_complete.flac"
     );
     let err = validate_audio_assembly_filename("../histoire.mp3").unwrap_err();
-    assert!(err.contains("invalide"));
+    assert!(err.contains_any_code(&[codes::FILES_INVALID_FINAL_FILE_NAME]));
     let err = validate_audio_assembly_filename("histoire:complete.mp3").unwrap_err();
-    assert!(err.contains("interdits"));
+    assert!(err.contains_any_code(&[codes::FILES_FINAL_NAME_CHARS_INVALID]));
 }
 
 #[test]
@@ -47,8 +50,8 @@ fn audio_assembly_unique_path_never_overwrites() {
 
 #[test]
 fn concat_audio_files_requires_two_inputs_before_ffmpeg() {
-    let err = concat_audio_files(&[], "sortie.mp3", 0.0, None).unwrap_err();
-    assert!(err.contains("au moins deux"));
+    let err = concat_audio_files(&[], "sortie.mp3", 0.0, None, None).unwrap_err();
+    assert!(err.contains_any_code(&[codes::AUDIO_ASSEMBLY_INPUTS_REQUIRED]));
 }
 
 #[test]
@@ -71,6 +74,7 @@ fn concat_audio_files_smoke_with_ffmpeg_when_available() {
         "histoire_complete.mp3",
         0.05,
         Some(project_dir.to_str().unwrap()),
+        None,
     )
     .expect("concat audio files");
     let output_path = PathBuf::from(output);
@@ -115,13 +119,16 @@ fn split_audio_segments_keeps_successes_when_one_segment_fails() {
             },
         ],
         Some(workspace.to_str().unwrap()),
+        None,
     )
     .expect("split audio segments");
 
     assert_eq!(result.created.len(), 1);
     assert_eq!(result.failed.len(), 1);
     assert!(PathBuf::from(&result.created[0].output_path).is_file());
-    assert!(result.failed[0].error.contains("après"));
+    assert!(result.failed[0]
+        .error
+        .contains_any_code(&[codes::AUDIO_CUT_OUTPOINT_INVALID]));
 
     fs::remove_dir_all(workspace).expect("cleanup workspace");
 }
@@ -488,7 +495,7 @@ fn managed_audio_preview_rejects_outside_similar_prefix_and_wrong_extension() {
     write_temp_file(&outside_preview, b"outside");
     assert!(validate_managed_audio_preview_in(&outside_preview, &root)
         .unwrap_err()
-        .contains("hors"));
+        .contains_any_code(&[codes::AUDIO_PREVIEW_PATH_OUTSIDE]));
 
     let similar = root.join("story_studio_audio_previews_similar.wav");
     write_temp_file(&similar, b"similar");
@@ -521,7 +528,7 @@ fn managed_audio_preview_rejects_subdirectories_and_symlinks() {
     if symlink_result.is_ok() {
         assert!(validate_managed_audio_preview_in(&link, &root)
             .unwrap_err()
-            .contains("symbolique"));
+            .contains_any_code(&[codes::AUDIO_PREVIEW_SYMLINK_FORBIDDEN]));
     }
 
     fs::remove_dir_all(root).expect("cleanup");
@@ -558,6 +565,7 @@ fn commit_audio_preview_removes_managed_preview_after_success() {
         None,
         Some(workspace.to_str().unwrap()),
         &root,
+        None,
     )
     .expect("commit preview");
 

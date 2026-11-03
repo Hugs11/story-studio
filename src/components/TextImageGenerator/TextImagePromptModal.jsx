@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import { translateAi as t } from '../../i18n/aiPresentation.js';
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { generateTextImage } from './generateTextImage';
@@ -19,11 +21,12 @@ const OVERLAY_STYLE = {
 };
 
 export function TextImagePromptModal({ defaultText, workspaceDir: workspaceOverride, onConfirm, onCancel }) {
+  useTranslation();
   const [text, setText] = useState(defaultText || '');
   const [generating, setGenerating] = useState(false);
   const canvasRef = useRef(null);
   const inputRef = useRef(null);
-  const { workspaceDir: contextWorkspaceDir } = useProjectContext();
+  const { workspaceDir: contextWorkspaceDir, mediaStorage } = useProjectContext();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -33,16 +36,17 @@ export function TextImagePromptModal({ defaultText, workspaceDir: workspaceOverr
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    drawTextImage(canvas.getContext('2d'), text || 'Sans titre');
-  }, [text]);
+    drawTextImage(canvas.getContext('2d'), text || t("ai:textImage.title.fallback"));
+  }, [text, t("ai:textImage.title.fallback")]);
 
   async function handleGenerate() {
     if (generating) return;
     setGenerating(true);
     try {
       const path = await generateTextImage(
-        text || 'Sans titre',
+        text || t("ai:textImage.title.fallback"),
         workspaceOverride || contextWorkspaceDir,
+        { mediaStorage },
       );
       onConfirm(path);
     } finally {
@@ -63,7 +67,7 @@ export function TextImagePromptModal({ defaultText, workspaceDir: workspaceOverr
     // raccourcis globaux (utils/modalSurfaces.js).
     <div style={OVERLAY_STYLE} data-modal-surface="" onClick={onCancel}>
       <div className="text-img-box" onClick={e => e.stopPropagation()}>
-        <div className="text-img-header">Générer une image-titre</div>
+        <div className="text-img-header">{t("ai:textImage.generation.title")}</div>
         <div className="text-img-body">
           <input
             ref={inputRef}
@@ -71,7 +75,7 @@ export function TextImagePromptModal({ defaultText, workspaceDir: workspaceOverr
             value={text}
             onChange={e => setText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Texte à afficher"
+            placeholder={t("ai:textImage.text.placeholder")}
             maxLength={200}
           />
           <canvas
@@ -82,9 +86,9 @@ export function TextImagePromptModal({ defaultText, workspaceDir: workspaceOverr
           />
         </div>
         <div className="text-img-footer">
-          <Button variant="ghost" onClick={onCancel}>Annuler</Button>
+          <Button variant="ghost" onClick={onCancel}>{t("common:dialog.cancel.label")}</Button>
           <Button variant="primary-violet" onClick={handleGenerate} disabled={generating}>
-            {generating ? 'Génération…' : 'Générer'}
+            {generating ? t("ai:textImage.generation.progress") : t("ai:generation.submit.action")}
           </Button>
         </div>
       </div>

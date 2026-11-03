@@ -1,11 +1,9 @@
 // Les raccourcis suivent l'éditeur ouvert.
 //
 // Le piège : `projectActionsVisible` veut dire « un projet est ouvert », et non
-// « ce projet a un arbre ». Des raccourcis structurels — les trois bascules de
-// panneaux et les options du pack — qui y seraient adossés feraient, dans
-// l'éditeur graphe, écrire à `Ctrl+1/2/3` les **préférences de panneaux du
-// Libre** au lieu de commander un panneau du graphe, et un panneau pourrait
-// avoir disparu au retour dans l'autre éditeur.
+// « ce projet a un arbre ». Les trois bascules de panneaux ne doivent pas
+// écrire les préférences du Libre depuis l'éditeur graphe.
+// Les Préférences restent disponibles dans les deux éditeurs.
 //
 // Ces tests exercent la vraie table de commandes du listener, avec la vraie
 // table d'actions bâtie sur le vrai inventaire. Ce qui reste hors de leur
@@ -26,9 +24,6 @@ import {
 // éditeur qui ne les offre pas : les trois bascules écrivent les préférences de
 // panneaux du Libre, qui n'existent pas côté graphe.
 //
-// **`storySettings` n'en fait pas partie.** Le tiroir d'options du
-// pack sert les deux éditeurs : son raccourci doit donc répondre des deux
-// côtés, et ne rien atteindre serait le défaut inverse.
 const STRUCTURAL = ['toggleTree', 'toggleSettings', 'toggleDiagram'];
 
 function harness({ workspaceMode, hasProjectTree, projectType }) {
@@ -91,15 +86,15 @@ test('dans le graphe, aucun raccourci de panneau n’atteint son geste', () => {
   assert.deepEqual(reached, []);
 });
 
-test('dans le graphe, le raccourci du tiroir d’options du pack répond', () => {
+test('dans le graphe, le raccourci Préférences répond', () => {
   const { actions, reached } = graph();
-  assert.equal(runShortcutCommand('storySettings', actions), 'ran');
+  assert.equal(runShortcutCommand('tabOptions', actions), 'ran');
   assert.deepEqual(reached, ['openModal']);
 });
 
 test('dans le libre, ces mêmes raccourcis répondent', () => {
   const { actions, reached } = free();
-  for (const id of ['storySettings', ...STRUCTURAL]) {
+  for (const id of ['tabOptions', ...STRUCTURAL]) {
     assert.equal(runShortcutCommand(id, actions), 'ran', id);
   }
   assert.deepEqual(reached, ['openModal', 'toggleTree', 'toggleSettings', 'toggleDiagram']);

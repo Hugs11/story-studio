@@ -8,9 +8,9 @@ import { useMemo, useReducer } from 'react';
 // NE PAS y absorber les flags qui portent une DONNÉE (mode d'un funnel, id de menu
 // cible, payload) : ceux-là restent des useState dédiés — on perdrait l'information
 // en les réduisant à un booléen.
-function initState(names) {
+function initState({ names, initialOpen }) {
   const state = {};
-  for (const name of names) state[name] = false;
+  for (const name of names) state[name] = initialOpen.includes(name);
   return state;
 }
 
@@ -31,8 +31,8 @@ function reducer(state, action) {
   }
 }
 
-export function useDisclosures(names) {
-  const [state, dispatch] = useReducer(reducer, names, initState);
+export function useDisclosures(names, initialOpen = []) {
+  const [state, dispatch] = useReducer(reducer, { names, initialOpen }, initState);
   return useMemo(() => ({
     isOpen: (name) => !!state[name],
     open: (name) => dispatch({ type: 'open', name }),

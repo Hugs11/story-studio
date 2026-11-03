@@ -1,0 +1,130 @@
+{
+  "description": "Media references a project file names, resolved for a project saved in projectFolder. expected: what the interface's loader walks and resolves (walkProjectMediaReferences, fromProjectRelativeMediaPath); rustOnly: the containers of older files and the covers of a ZIP entry, also read by the engine. Paths compared without '.' nor '..'.",
+  "consumedBy": [
+    "scripts/catalogueDeclaredMedia.test.mjs",
+    "src-tauri/src/services/catalogue/open/tests.rs (declared_references_match_the_interface_loader)"
+  ],
+  "projectFolder": "/projets/demo",
+  "cases": [
+    {
+      "name": "ui-built menu project",
+      "file": "scripts/fixtures/ui-built-projects/menus.json",
+      "expected": [
+        "/ui-media/titre.wav",
+        "/ui-media/couverture.png",
+        "/ui-media/dossier.wav",
+        "/ui-media/dossier.png",
+        "/ui-media/histoire-1.wav",
+        "/ui-media/histoire-1-titre.wav",
+        "/ui-media/histoire-1.png",
+        "/ui-media/histoire-2.wav",
+        "/ui-media/histoire-2-titre.wav",
+        "/ui-media/histoire-2.png",
+        "/ui-media/fin.wav"
+      ],
+      "rustOnly": []
+    },
+    {
+      "name": "ui-built single story project",
+      "file": "scripts/fixtures/ui-built-projects/simple.json",
+      "expected": ["/ui-media/titre.wav", "/ui-media/couverture.png", "/ui-media/recit.wav"],
+      "rustOnly": []
+    },
+    {
+      "name": "graph project of advancedMediaBindings.test.mjs, saved relative, plus a media elsewhere",
+      "project": {
+        "schemaVersion": 4,
+        "authoringMode": "advanced",
+        "projectType": "advanced",
+        "projectName": "renard-avance",
+        "packMetadata": { "title": "Le renard", "uuid": "e3b0-inerte", "version": 1 },
+        "rootEntries": [],
+        "authoring": {
+          "payload": "{\"payloadVersion\":1,\"document\":{\"stageNodes\":[{\"uuid\":\"stage-1\",\"squareOne\":true,\"audio\":\"a1b2c3.mp3\",\"image\":\"d4e5f6.png\"}],\"actionNodes\":[],\"extensions\":{\"legacyAsset\":{\"audio\":\"ne-pas-toucher.mp3\",\"path\":\"/ancien/dossier/piste.wav\"}}}}",
+          "mediaBindings": [
+            { "assetRef": "a1b2c3.mp3", "path": "./medias/intro.mp3", "status": "resolved" },
+            { "assetRef": "z9y8x7.mp3", "path": "./voix/intro.mp3", "status": "resolved" },
+            { "assetRef": "d4e5f6.png", "path": null, "status": "missing" },
+            { "assetRef": "musique.mp3", "path": "/home/conteur/Musique/intro.mp3", "status": "resolved" },
+            { "assetRef": "fond.mp3", "path": "../Musique/fond.mp3", "status": "resolved" }
+          ]
+        }
+      },
+      "expected": [
+        "/projets/demo/medias/intro.mp3",
+        "/projets/demo/voix/intro.mp3",
+        "/home/conteur/Musique/intro.mp3",
+        "/projets/Musique/fond.mp3"
+      ],
+      "rustOnly": []
+    },
+    {
+      "name": "menu project: steps after playback, native graphs, ZIP and reference entries",
+      "project": {
+        "schemaVersion": 3,
+        "authoringMode": "free",
+        "projectType": "pack",
+        "rootAudio": "./titre.mp3",
+        "nightModeAudio": "/home/conteur/Musique/nuit.mp3",
+        "nativeGraph": { "document": { "stageNodes": [
+          { "uuid": "n1", "audio": "./natif/racine.mp3", "image": "./natif/racine.png" }
+        ] } },
+        "rootEntries": [
+          {
+            "id": "m1", "type": "menu", "name": "Menu",
+            "audio": "./menu.mp3", "image": "",
+            "nativeGraph": { "document": { "stageNodes": [{ "uuid": "n2", "audio": "/natif/menu.mp3" }] } },
+            "children": [
+              {
+                "id": "s1", "type": "story", "name": "Histoire",
+                "audio": "./histoire.mp3",
+                "afterPlaybackPromptAudio": "./fin.mp3",
+                "afterPlaybackSequence": [
+                  { "audio": "./sequence-1.mp3", "image": "./sequence-1.png" },
+                  { "audio": null }
+                ],
+                "afterPlaybackHomeStep": { "audio": "./maison.mp3", "image": "/images/maison.png" }
+              },
+              { "id": "z1", "type": "zip", "name": "Archive", "zipPath": "/packs/archive.zip" },
+              { "id": "r1", "type": "ref", "target": "menu:m1" }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        "/projets/demo/titre.mp3",
+        "/home/conteur/Musique/nuit.mp3",
+        "/projets/demo/natif/racine.mp3",
+        "/projets/demo/natif/racine.png",
+        "/projets/demo/menu.mp3",
+        "/natif/menu.mp3",
+        "/projets/demo/histoire.mp3",
+        "/projets/demo/fin.mp3",
+        "/projets/demo/sequence-1.mp3",
+        "/projets/demo/sequence-1.png",
+        "/projets/demo/maison.mp3",
+        "/images/maison.png",
+        "/packs/archive.zip"
+      ],
+      "rustOnly": []
+    },
+    {
+      "name": "older file: rootItems, menus and items, covers of a ZIP entry",
+      "project": {
+        "projectType": "pack",
+        "rootImage": "./couverture.png",
+        "rootItems": [{ "name": "Histoire", "audio": "/ancien/histoire.mp3" }],
+        "menus": [{ "name": "Menu", "audio": "./ancien-menu.mp3", "items": [{ "name": "Suite", "itemAudio": "/ancien/suite.mp3" }] }],
+        "rootEntries": [
+          { "id": "z1", "type": "zip", "name": "Archive", "zipPath": "./archive.zip", "coverImage": "/couvertures/archive.png", "coverAudio": "./archive.mp3" }
+        ]
+      },
+      "expected": ["/projets/demo/couverture.png", "/projets/demo/archive.zip", "/couvertures/archive.png", "/projets/demo/archive.mp3"],
+      "rustOnly": [
+        "/ancien/histoire.mp3",
+        "/projets/demo/ancien-menu.mp3",
+        "/ancien/suite.mp3"
+      ]
+    }
+  ]
+}

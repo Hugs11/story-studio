@@ -91,6 +91,9 @@ fn pack(disk: &Disk, entries: Vec<ProjectEntry>, options: GlobalOptions) -> Proj
         native_graph: None,
         pack_version: 1,
         pack_description: String::new(),
+        official_provenance: Default::default(),
+        official_origin_uuid: None,
+        contains_official_content: false,
         pack_uuid: String::new(),
         root_entries: entries,
         shared_entries: Vec::new(),
@@ -138,7 +141,10 @@ fn without_auto_next_the_same_end_targets_block() {
     let disk = Disk::new("z1-04-control");
     let project = pack(&disk, stale_end_targets(&disk), options(false, false));
     let errors = validate_project_for_generation(&project).expect_err("destinations actives");
-    assert!(errors.contains("introuvable"), "{errors}");
+    assert!(
+        crate::support::user_message::contains_code(&errors, "VALIDATION_PROJECT_TARGET_MISSING"),
+        "{errors}"
+    );
 }
 
 // --- Médias de fin inactifs sous Auto-next ---
@@ -232,7 +238,14 @@ fn deleted_global_end_return_target_blocks() {
     let mut project = global_end_project(&disk);
     project.night_mode_return = Some("story:gone".to_string());
     let errors = validate_project_for_generation(&project).expect_err("destination OK perdue");
-    assert!(errors.contains("Message de fin"), "{errors}");
+    assert!(
+        crate::support::user_message::contains_code(&errors, "VALIDATION_PROJECT_TARGET_MISSING"),
+        "{errors}"
+    );
+    assert!(
+        crate::support::user_message::contains_code(&errors, "LABEL_PROJECT_END_MESSAGE"),
+        "{errors}"
+    );
 }
 
 #[test]
@@ -241,7 +254,14 @@ fn deleted_global_end_home_target_blocks() {
     let mut project = global_end_project(&disk);
     project.night_mode_home_return = Some("menu:gone".to_string());
     let errors = validate_project_for_generation(&project).expect_err("destination Accueil perdue");
-    assert!(errors.contains("Message de fin"), "{errors}");
+    assert!(
+        crate::support::user_message::contains_code(&errors, "VALIDATION_PROJECT_TARGET_MISSING"),
+        "{errors}"
+    );
+    assert!(
+        crate::support::user_message::contains_code(&errors, "LABEL_PROJECT_END_MESSAGE"),
+        "{errors}"
+    );
 }
 
 #[test]
@@ -373,12 +393,14 @@ fn home_reaction_not_written_by_a_single_step_is_not_checked() {
 //
 // Le constructeur ne construit la réaction Accueil de X que si
 // `end_home_step_is_active` : une cible `story_home_step:X` vers une réaction
-// non construite ne se résoudrait pas (Lien) ou retomberait en silence sur un
-// repli (destination de fin). Elle est donc « à corriger ».
+// non construite retomberait en silence sur un repli. Elle est donc « à corriger ».
 
-enum HomeStepTargetVia {
-    Link,
+/// Ce qui porte la cible `story_home_step:x` dans l'histoire Y.
+enum HomeStepTargetCarrier {
+    /// Destination OK d'une étape de fin de Y (inactive sous Auto-next).
     EndDestination,
+    /// Destination du bouton Accueil pendant Y, vérifiée même sous Auto-next.
+    HomeButton,
 }
 
 fn home_step_target_project(
@@ -386,7 +408,7 @@ fn home_step_target_project(
     x_home: bool,
     x_steps: usize,
     auto_next: bool,
-    via: HomeStepTargetVia,
+    carrier: HomeStepTargetCarrier,
 ) -> Project {
     let mut x = story(disk, "x");
     x.after_playback_sequence = (0..x_steps)
@@ -397,68 +419,72 @@ fn home_step_target_project(
         home: Some(x_home),
         ..Default::default()
     });
-    let mut entries = vec![x];
-    match via {
-        HomeStepTargetVia::Link => {
-            entries.push(story(disk, "y"));
-            entries.push(ProjectEntry {
-                id: "lien".to_string(),
-                entry_type: "ref".to_string(),
-                name: "Lien".to_string(),
-                target: Some("story_home_step:x".to_string()),
-                ..ProjectEntry::default()
-            });
-        }
-        HomeStepTargetVia::EndDestination => {
-            let mut y = story(disk, "y");
+    let mut y = story(disk, "y");
+    match carrier {
+        HomeStepTargetCarrier::EndDestination => {
             y.after_playback_sequence = vec![AfterPlaybackSequenceStep {
                 ok_target: Some("story_home_step:x".to_string()),
                 ..step(Some(disk.file("y-end.mp3")), None)
             }];
-            entries.push(y);
+        }
+        HomeStepTargetCarrier::HomeButton => {
+            y.return_on_home = Some("story_home_step:x".to_string());
         }
     }
-    pack(disk, entries, options(auto_next, false))
-}
-
-#[test]
-fn link_to_the_home_reaction_of_a_story_whose_home_is_disabled_blocks() {
-    let disk = Disk::new("c5-link-home");
-    let project = home_step_target_project(&disk, false, 2, false, HomeStepTargetVia::Link);
-    let errors = validate_project_for_generation(&project).expect_err("réaction non construite");
-    assert!(errors.contains("retour de fin introuvable"), "{errors}");
-}
-
-#[test]
-fn link_to_the_home_reaction_of_a_single_step_end_blocks() {
-    let disk = Disk::new("c5-link-single");
-    let project = home_step_target_project(&disk, true, 1, false, HomeStepTargetVia::Link);
-    let errors = validate_project_for_generation(&project).expect_err("réaction non construite");
-    assert!(errors.contains("retour de fin introuvable"), "{errors}");
-}
-
-#[test]
-fn link_to_a_home_reaction_under_auto_next_blocks() {
-    let disk = Disk::new("c5-link-auto-next");
-    let project = home_step_target_project(&disk, true, 2, true, HomeStepTargetVia::Link);
-    let errors = validate_project_for_generation(&project).expect_err("réaction non construite");
-    assert!(errors.contains("retour de fin introuvable"), "{errors}");
+    pack(disk, vec![x, y], options(auto_next, false))
 }
 
 #[test]
 fn end_destination_to_the_home_reaction_of_a_story_whose_home_is_disabled_blocks() {
     let disk = Disk::new("c5-end-home");
-    let project =
-        home_step_target_project(&disk, false, 2, false, HomeStepTargetVia::EndDestination);
+    let project = home_step_target_project(
+        &disk,
+        false,
+        2,
+        false,
+        HomeStepTargetCarrier::EndDestination,
+    );
     let errors = validate_project_for_generation(&project).expect_err("réaction non construite");
-    assert!(errors.contains("retour de fin introuvable"), "{errors}");
+    assert!(
+        crate::support::user_message::contains_code(&errors, "VALIDATION_ENDING_RETURN_MISSING"),
+        "{errors}"
+    );
+}
+
+#[test]
+fn end_destination_to_the_home_reaction_of_a_single_step_end_blocks() {
+    let disk = Disk::new("c5-end-single");
+    let project =
+        home_step_target_project(&disk, true, 1, false, HomeStepTargetCarrier::EndDestination);
+    let errors = validate_project_for_generation(&project).expect_err("réaction non construite");
+    assert!(
+        crate::support::user_message::contains_code(&errors, "VALIDATION_ENDING_RETURN_MISSING"),
+        "{errors}"
+    );
+}
+
+// Sous Auto-next, les étapes de fin de Y ne sont pas construites ni vérifiées :
+// une destination de fin ne peut pas exercer ce cas. Le bouton Accueil de Y,
+// lui, reste construit et vérifié.
+#[test]
+fn home_button_to_a_home_reaction_under_auto_next_blocks() {
+    let disk = Disk::new("c5-home-auto-next");
+    let project = home_step_target_project(&disk, true, 2, true, HomeStepTargetCarrier::HomeButton);
+    let errors = validate_project_for_generation(&project).expect_err("réaction non construite");
+    assert!(
+        crate::support::user_message::contains_code(&errors, "VALIDATION_ENDING_RETURN_MISSING"),
+        "{errors}"
+    );
 }
 
 #[test]
 fn targets_to_a_built_home_reaction_pass() {
     let disk = Disk::new("c5-built");
-    for via in [HomeStepTargetVia::Link, HomeStepTargetVia::EndDestination] {
-        let project = home_step_target_project(&disk, true, 2, false, via);
+    for carrier in [
+        HomeStepTargetCarrier::EndDestination,
+        HomeStepTargetCarrier::HomeButton,
+    ] {
+        let project = home_step_target_project(&disk, true, 2, false, carrier);
         validate_project_for_generation(&project).expect("réaction construite");
     }
 }

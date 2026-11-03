@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import { graphTranslationEngine, translateGraph as t } from '../../i18n/graphPresentation.js';
 // L'Inspecteur d'une sélection de plusieurs nœuds du graphe : ce qui se fait
 // d'un coup sur tous, comme la sélection multiple du Libre (`MultiEditor`).
 //
@@ -30,7 +32,6 @@ import { useProjectContext } from '../../store/ProjectContext';
 import { STAGE_KIND, isEntryStage } from '../../store/advancedGraphView/graphViewModel.js';
 import { batchTitleVoice, isTtsAvailable } from '../../store/xttsSettings';
 
-const plural = (count, one, many) => `${count} ${count > 1 ? many : one}`;
 
 // L'état d'un bouton sur plusieurs Écrans : allumé partout, éteint partout,
 // ou mixte — y compris quand un Écran le laisse indéfini.
@@ -58,17 +59,19 @@ export function GraphSelectionEditor({
   onAssignMedia,
   onDelete,
 }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const {
     xttsSettings,
     onQueueXttsGenerate,
     onMediaCreated,
     savePath,
     workspaceDir,
+    mediaStorage,
   } = useProjectContext();
   const { showErrorDialog } = useErrorDialog();
   const [imagesBusy, setImagesBusy] = useState(false);
   const [audiosBusy, setAudiosBusy] = useState(false);
-  const [batchError, setBatchError] = useState('');
+  const [batchError, setBatchError] = useState([]);
 
   const paths = entries.map((entry) => entry.path);
   const stages = entries.filter((entry) => entry.kind === STAGE_KIND);
@@ -80,43 +83,43 @@ export function GraphSelectionEditor({
   const withoutControlsCount = stages.length - withControls.length;
 
   const parts = [];
-  if (stages.length > 0) parts.push(plural(stages.length, 'Écran', 'Écrans'));
-  if (actionCount > 0) parts.push(plural(actionCount, 'liste de choix', 'listes de choix'));
+  if (stages.length > 0) parts.push(t('graph:selection.stages.count', { count: stages.length }));
+  if (actionCount > 0) parts.push(t('graph:selection.actions.count', { count: actionCount }));
 
   const colors = [...new Set(entries.map((entry) => entry.node?.personalColor ?? null))];
   const currentColor = colors.length === 1 ? colors[0] : '__mixed__';
 
   async function generateImages() {
     if (batchBusy || disabled) return;
-    setBatchError('');
+    setBatchError([]);
     setImagesBusy(true);
     const errors = [];
     try {
       for (const entry of titled) {
         const title = stageTitle(entry);
         try {
-          const imagePath = await generateTextImage(title, workspaceDir);
+          const imagePath = await generateTextImage(title, workspaceDir, { mediaStorage });
           if (!imagePath) continue;
           onMediaCreated?.(imagePath);
           await onAssignMedia(entry.node.uuid, 'image', imagePath);
         } catch {
-          errors.push(`${title} : image-titre impossible à générer`);
+          errors.push({ key: 'graph:selection.error.image', params: { name: title } });
         }
       }
     } finally {
       setImagesBusy(false);
-      if (errors.length > 0) setBatchError(errors.join(' · '));
+      if (errors.length > 0) setBatchError(errors);
     }
   }
 
   async function generateAudios() {
     if (batchBusy || disabled) return;
-    setBatchError('');
+    setBatchError([]);
     const voice = batchTitleVoice(xttsSettings);
     if (!voice) {
-      const message = 'Choisis une voix XTTS une première fois (depuis le bouton TTS d’un audio) avant de lancer la génération groupée.';
-      setBatchError(message);
-      showErrorDialog({ title: 'Génération audio', message, variant: 'warning' });
+      const message = { key: 'graph:selection.error.voice' };
+      setBatchError([message]);
+      showErrorDialog({ get title() { return t('graph:selection.error.title'); }, get message() { return t('graph:selection.error.voice'); }, variant: 'warning' });
       return;
     }
     setAudiosBusy(true);
@@ -132,7 +135,7 @@ export function GraphSelectionEditor({
               projectEpoch,
               apply: (path) => onAssignMedia(stageUuid, 'audio', path),
             },
-            targetLabel: `${title} — titre`,
+            targetLabelRef: { key: 'graph:selection.audio.target', params: { name: title } },
             voiceLabel: voice,
             request: {
               text: title,
@@ -144,12 +147,12 @@ export function GraphSelectionEditor({
             },
           });
         } catch {
-          errors.push(`${title} : job de voix non ajouté`);
+          errors.push({ key: 'graph:selection.error.audio', params: { name: title } });
         }
       }
     } finally {
       setAudiosBusy(false);
-      if (errors.length > 0) setBatchError(errors.join(' · '));
+      if (errors.length > 0) setBatchError(errors);
     }
   }
 
@@ -158,23 +161,23 @@ export function GraphSelectionEditor({
   return (
     <div className="advanced-selection-editor">
       <div className="advanced-selection-editor__banner">
-        {entries.length} nœuds sélectionnés : {parts.join(', ')}.
+        {t('graph:selection.banner.count', { count: entries.length, selection: parts.length === 2 ? t('graph:selection.counts.list', { stages: parts[0], actions: parts[1] }) : parts[0] ?? '' })}
       </div>
 
       {stages.length > 0 && (
         <div className="card">
           <div className="card-title-row">
-            <div className="card-title">Génération groupée</div>
+            <div className="card-title">{t('graph:selection.generate.title')}</div>
           </div>
           <div className="editor-setting-row is-action-row">
             <div className="editor-setting-copy">
-              <div className="editor-setting-title">Générer à partir des noms</div>
+              <div className="editor-setting-title">{t('graph:selection.generate.label')}</div>
               <div className="editor-setting-desc">
                 {titled.length > 0
-                  ? `Crée d'un coup une image-titre ou un audio (le nom prononcé) pour ${plural(titled.length, 'Écran nommé', 'Écrans nommés')}. Chacun remplace le média de son Écran.`
-                  : 'Aucun Écran sélectionné ne porte de nom : il n’y a pas de titre à générer.'}
+                  ? t('graph:selection.generate.description', { count: titled.length })
+                  : t('graph:selection.generate.empty')}
                 {untitledCount > 0 && titled.length > 0
-                  && ` ${plural(untitledCount, 'Écran sans nom est ignoré', 'Écrans sans nom sont ignorés')}.`}
+                  && t('graph:selection.generate.ignored', { count: untitledCount })}
               </div>
             </div>
             <div className="editor-setting-actions">
@@ -185,7 +188,7 @@ export function GraphSelectionEditor({
                 disabled={disabled || batchBusy || titled.length === 0}
               >
                 <Sparkles className="batch-generate-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-                {imagesBusy ? 'Images…' : 'Images-titres'}
+                {imagesBusy ? t('graph:selection.images.busy') : t('graph:selection.images.label')}
               </button>
               {canGenerateAudio && (
                 <button
@@ -195,13 +198,13 @@ export function GraphSelectionEditor({
                   disabled={disabled || batchBusy || titled.length === 0}
                 >
                   <Speech className="batch-generate-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-                  {audiosBusy ? 'Audios…' : 'Audios titres'}
+                  {audiosBusy ? t('graph:selection.audios.busy') : t('graph:selection.audios.label')}
                 </button>
               )}
             </div>
           </div>
-          {batchError && (
-            <div className="advanced-selection-editor__error" role="alert">{batchError}</div>
+          {batchError.length > 0 && (
+            <div className="advanced-selection-editor__error" role="alert">{batchError.map((message) => t(message.key, message.params)).join(' · ')}</div>
           )}
         </div>
       )}
@@ -209,18 +212,16 @@ export function GraphSelectionEditor({
       {stages.length > 0 && (
         <section className="card advanced-editor__section advanced-controls">
           <div className="card-title-row">
-            <div className="card-title">Boutons des Écrans</div>
+            <div className="card-title">{t('graph:selection.controls.title')}</div>
             <div className="card-copy card-copy--inline">
               {withControls.length > 0
-                ? `Réglés d’un coup sur ${plural(withControls.length, 'Écran', 'Écrans')}. Les destinations se règlent Écran par Écran.`
-                : 'Aucun Écran sélectionné n’a de boutons définis.'}
+                ? t('graph:selection.controls.description', { count: withControls.length })
+                : t('graph:selection.controls.empty')}
             </div>
           </div>
           {withoutControlsCount > 0 && (
             <p className="advanced-field__note">
-              {plural(withoutControlsCount, 'Écran n’a', 'Écrans n’ont')} pas encore de boutons
-              définis : {withoutControlsCount > 1 ? 'ils sont laissés' : 'il est laissé'} de côté.
-              Définissez-les Écran par Écran, depuis son propre panneau.
+              {t('graph:selection.controls.undefined', { count: withoutControlsCount })}
             </p>
           )}
           {withControls.length > 0 && (
@@ -242,7 +243,7 @@ export function GraphSelectionEditor({
                         control,
                         value,
                       )}
-                      ariaLabel={`${label} — sur la sélection`}
+                      ariaLabel={t('graph:selection.controls.aria', { control: label })}
                       disabled={disabled}
                     />
                   </label>
@@ -256,8 +257,8 @@ export function GraphSelectionEditor({
       <div className="card">
         <NodeColorPicker
           label={currentColor === '__mixed__'
-            ? `Couleur — différente sur ${entries.length} nœuds, choisir pour uniformiser`
-            : `Couleur des ${entries.length} nœuds`}
+            ? t('graph:selection.color.mixed', { count: entries.length })
+            : t('graph:selection.color.label', { count: entries.length })}
           currentColor={currentColor}
           disabled={disabled}
           onChange={(color) => onSetColor(paths, color)}
@@ -271,13 +272,13 @@ export function GraphSelectionEditor({
             type="button"
             onClick={() => onDelete(paths)}
             disabled={disabled}
-            aria-label="Retirer la sélection"
+            aria-label={t('graph:selection.remove.label')}
           >
             <Trash2 className="card-danger-icon" />
           </button>
-          <span className="card-danger-title">Retirer la sélection</span>
+          <span className="card-danger-title">{t('graph:selection.remove.label')}</span>
           <p className="card-danger-desc">
-            Retire {parts.join(' et ')} du graphe, après confirmation.
+            {t('graph:selection.remove.description', { selection: parts.length === 2 ? t('graph:selection.counts.join', { stages: parts[0], actions: parts[1] }) : parts[0] ?? '' })}
           </p>
         </div>
       </div>

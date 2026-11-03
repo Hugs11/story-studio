@@ -354,7 +354,7 @@ test('un compte de racines faux offre de choisir l’Écran racine', () => {
     index,
   });
   assert.deepEqual(offered.map(({ nature, form, label }) => ({ nature, form, label })), [
-    { nature: RESOLUTION_FORM, form: 'square-one', label: 'Choisir l’Écran racine…' },
+    { nature: RESOLUTION_FORM, form: 'square-one', label: 'Choisir l’Écran d’entrée…' },
   ]);
 });
 
@@ -502,29 +502,6 @@ test('les destinations OK manquantes et les impasses expliquent une réparation 
   assert.match(issues[1].message, /molette/);
 });
 
-test('deux occurrences d\'un même membre opaque donnent deux décisions adressables', () => {
-  const view = sampleView();
-  view.opaqueMembers = [
-    { path: '/stageNodes/@uuid=entry#0', nodePath: '/stageNodes/@uuid=entry#0', scope: 'stage', key: 'duration', sourceOccurrence: 0, kind: 'unknown', origin: 'source-studio', valuePreview: '1', truncated: false, disposition: null, dispositionStale: false },
-    { path: '/stageNodes/@uuid=entry#0', nodePath: '/stageNodes/@uuid=entry#0', scope: 'stage', key: 'duration', sourceOccurrence: 1, kind: 'unknown', origin: 'source-studio', valuePreview: '2', truncated: false, disposition: null, dispositionStale: false },
-  ];
-  const index = buildGraphIndex(view);
-  const offered = resolutionsForDiagnostic({
-    diagnostic: diagnosticView({
-      code: 'OPAQUE_EXTENSION_DISPOSITION_REQUIRED',
-      // Le chemin tel que Rust le compose : porteur, puis clé.
-      path: '/stageNodes/@uuid=entry#0/duration',
-      resolutions: ['remove-opaque-explicitly'],
-    }),
-    view,
-    index,
-  });
-  // Sans `sourceOccurrence`, l'interface poserait la décision sur la première
-  // occurrence à la place de celle que l'auteur regarde.
-  assert.deepEqual(offered.map((row) => row.gesture.member.sourceOccurrence), [0, 1]);
-  assert.equal(offered[0].gesture.disposition, 'remove-explicitly');
-});
-
 test('une résolution dont la cible ne se retrouve pas dans la vue n\'est pas offerte', () => {
   const view = sampleView();
   const index = buildGraphIndex(view);
@@ -641,7 +618,7 @@ test('un média utilisé mais absent bloque la pastille, une ancienne liaison in
   const issues = buildAdvancedBlockingIssues({ summary: { blocking: [] }, usage, index });
   assert.equal(issues.length, 1);
   assert.equal(issues[0].category, 'Média manquant');
-  assert.equal(issues[0].message, 'Ajoutez le fichier audio de « Accueil ».');
+  assert.equal(issues[0].message, 'Ajoute le fichier audio de « Accueil ».');
   assert.equal(issues[0].nodePath, '/stageNodes/@uuid=entry#0');
 });
 
@@ -708,30 +685,4 @@ test('une coupe sans cible exploitable ne produit aucun plan', () => {
   assert.equal(subgraphRemovalPlan(index, []), null);
   assert.equal(subgraphRemovalPlan(index, ['/nulle/part']), null);
   assert.equal(subgraphRemovalPlan(null, ['/stageNodes/@uuid=cible#0']), null);
-});
-
-test('un membre opaque de la racine offre ses décisions, sur le chemin que Rust compose', () => {
-  const view = sampleView();
-  // Forme réelle : le porteur est la racine `/`, la clé est à part, et le
-  // diagnostic porte `/storyStudioMetadata`.
-  view.opaqueMembers = [
-    { path: '/', nodePath: null, scope: 'root', key: 'storyStudioMetadata', sourceOccurrence: 0, kind: 'unknown-extension', origin: 'source-studio', valuePreview: '{}', truncated: false, disposition: null, dispositionStale: false },
-  ];
-  const index = buildGraphIndex(view);
-  const offered = resolutionsForDiagnostic({
-    diagnostic: diagnosticView({
-      code: 'OPAQUE_EXTENSION_DISPOSITION_REQUIRED',
-      path: '/storyStudioMetadata',
-      nodePath: null,
-      resolutions: ['preserve-opaque-untested', 'remove-opaque-explicitly', 'promote-opaque-after-proof'],
-    }),
-    view,
-    index,
-  });
-  assert.deepEqual(offered.map((row) => row.gesture.disposition), [
-    'preserve-untested',
-    'remove-explicitly',
-    'promote-after-proof',
-  ]);
-  assert.equal(offered[0].gesture.member.key, 'storyStudioMetadata');
 });

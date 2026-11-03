@@ -79,6 +79,7 @@ pub(crate) enum PlanStep {
     Mp3Encode,
     Resize320x240,
     PngEncode,
+    BmpRle4Encode,
 }
 
 impl PlanStep {
@@ -93,6 +94,7 @@ impl PlanStep {
             PlanStep::Mp3Encode => "mp3-encode",
             PlanStep::Resize320x240 => "resize-320x240",
             PlanStep::PngEncode => "png-encode",
+            PlanStep::BmpRle4Encode => "bmp-rle4-gray16-encode",
         }
     }
 }
@@ -116,6 +118,7 @@ pub(crate) enum ConversionPlan {
         extension: &'static str,
     },
     ImageResizePng,
+    ImageBmpRle4,
 }
 
 impl ConversionPlan {
@@ -125,6 +128,7 @@ impl ConversionPlan {
             ConversionPlan::AudioVerbatim | ConversionPlan::AudioEncode { .. } => "mp3",
             ConversionPlan::ImageVerbatim { extension } => extension,
             ConversionPlan::ImageResizePng => "png",
+            ConversionPlan::ImageBmpRle4 => "bmp",
         }
     }
 
@@ -139,6 +143,7 @@ impl ConversionPlan {
         match self {
             ConversionPlan::AudioVerbatim | ConversionPlan::ImageVerbatim { .. } => Vec::new(),
             ConversionPlan::AudioEncode { applied, .. } => applied.clone(),
+            ConversionPlan::ImageBmpRle4 => vec![PlanStep::Resize320x240, PlanStep::BmpRle4Encode],
             ConversionPlan::ImageResizePng => {
                 vec![PlanStep::Resize320x240, PlanStep::PngEncode]
             }
@@ -161,6 +166,9 @@ impl ConversionPlan {
                 format!("image:verbatim:{extension}")
             }
             ConversionPlan::ImageResizePng => "image:resize-320x240-lanczos3:png".to_string(),
+            ConversionPlan::ImageBmpRle4 => {
+                "image:resize-320x240-lanczos3:luma-optimal16:rle4-v1".to_string()
+            }
         }
     }
 }

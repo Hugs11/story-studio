@@ -1,4 +1,5 @@
 use super::*;
+use crate::support::user_message::{codes, UserMessage};
 use image::{DynamicImage, ImageFormat, Rgb, RgbImage};
 use std::io::{Cursor, Read};
 
@@ -101,8 +102,17 @@ fn output_preflight_reports_the_blocked_destination() {
 
     let error = preflight_output_directory(&base).expect_err("preflight should fail");
 
-    assert!(error.contains("dossier de destination"));
-    assert!(error.contains(&base.to_string_lossy().to_string()));
+    assert!(crate::support::user_message::contains_code(
+        &error,
+        "EXPORT_DESTINATION_FOLDER_INACCESSIBLE"
+    ));
+    // Decode the transport: in raw JSON a Windows path has its separators escaped.
+    let message: crate::support::user_message::UserMessage =
+        serde_json::from_str(&error).expect("transport message");
+    assert_eq!(
+        message.params["output_dir"].as_str(),
+        Some(base.display().to_string().as_str())
+    );
 
     let _ = fs::remove_file(base);
 }
@@ -175,8 +185,9 @@ fn cancelled_zip_transfer_removes_the_partial_file() {
     // L'annulation est typée à la source (reprise B-01) : le transfert ne la
     // confond plus avec une panne d'écriture.
     assert_eq!(error, TransferError::Cancelled);
-    // Et le mode Libre en tire toujours exactement le même message qu'avant.
-    assert_eq!(error.into_message(), "Génération annulée.");
+    let message: UserMessage = serde_json::from_str(&error.into_message()).unwrap();
+    assert_eq!(message.code, codes::GENERATION_CANCELLED);
+    assert_eq!(message.detail.as_deref(), Some("Génération annulée."));
     assert!(fs::read_dir(&output_dir)
         .expect("read output dir")
         .next()

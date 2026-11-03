@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 // Construit la surface de props de l'onglet Préférences :
 // l'objet transmis à <AppModals optionsTabProps> puis à OptionsTab.
 // RECONSTRUIT À CHAQUE RENDU : plusieurs valeurs — settings, project — changent
@@ -6,6 +8,7 @@
 // préférences (useAppPreferences), média (useMediaTransferHandlers), store SD, states
 // de shell (thème, raccourcis, autosave, logging).
 export function useOptionsTabProps({
+  onOpen,
   copyImportedFilesEnabled,
   handleCopyImportedFilesChange,
   workspaceDir,
@@ -33,7 +36,16 @@ export function useOptionsTabProps({
   project,
   savePath,
 }) {
+  const [target, setTarget] = useState(null);
+  function openPreferences({ section = null, focus = null } = {}) {
+    setTarget({ section, focus });
+    onOpen?.();
+  }
   return {
+    openPreferences,
+    initialSection: target?.section ?? null,
+    initialFocus: target?.focus ?? null,
+    onPreferencesClosed: () => setTarget(null),
     copyFilesEnabled: copyImportedFilesEnabled,
     onCopyFilesChange: handleCopyImportedFilesChange,
     workspaceDir,

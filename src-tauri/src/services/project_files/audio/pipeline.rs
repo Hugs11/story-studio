@@ -1,9 +1,11 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::super::{media_output_root, validate_existing_file_path};
+use super::super::{media_output_dir, validate_existing_file_path};
 use super::WORKING_AUDIO_EXTENSION;
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 use crate::support::paths::path_for_frontend;
@@ -13,17 +15,26 @@ pub(crate) const AUDIO_ASSEMBLY_EXTENSIONS: &[&str] =
 pub(crate) fn validate_audio_assembly_filename(output_file_name: &str) -> Result<String, String> {
     let trimmed = output_file_name.trim();
     let path = Path::new(trimmed);
-    let file_name = path
-        .file_name()
-        .and_then(OsStr::to_str)
-        .ok_or_else(|| "Nom du fichier final invalide.".to_string())?;
+    let file_name = path.file_name().and_then(OsStr::to_str).ok_or_else(|| {
+        user_message::UserMessage::new(codes::FILES_INVALID_FINAL_FILE_NAME)
+            .with_detail("Nom du fichier final invalide.".to_string())
+            .into_transport()
+    })?;
     if file_name != trimmed || file_name.is_empty() || file_name == "." || file_name == ".." {
-        return Err("Nom du fichier final invalide.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::FILES_INVALID_FINAL_FILE_NAME)
+                .with_detail("Nom du fichier final invalide.".to_string())
+                .into_transport(),
+        );
     }
     if file_name.chars().any(|c| {
         c.is_control() || matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|')
     }) {
-        return Err("Nom du fichier final contient des caractères interdits.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::FILES_FINAL_NAME_CHARS_INVALID)
+                .with_detail("Nom du fichier final contient des caractères interdits.".to_string())
+                .into_transport(),
+        );
     }
 
     let stem = path
@@ -31,7 +42,11 @@ pub(crate) fn validate_audio_assembly_filename(output_file_name: &str) -> Result
         .and_then(OsStr::to_str)
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .ok_or_else(|| "Nom du fichier final invalide.".to_string())?;
+        .ok_or_else(|| {
+            user_message::UserMessage::new(codes::FILES_INVALID_FINAL_FILE_NAME)
+                .with_detail("Nom du fichier final invalide.".to_string())
+                .into_transport()
+        })?;
     Ok(format!("{}.{}", stem, WORKING_AUDIO_EXTENSION))
 }
 
@@ -68,21 +83,31 @@ pub(crate) fn unique_audio_assembly_path(
             return Ok(candidate);
         }
     }
-    Err("Impossible de trouver un nom de fichier disponible.".to_string())
+    Err(
+        user_message::UserMessage::new(codes::FILES_AVAILABLE_NAME_EXHAUSTED)
+            .with_detail("Impossible de trouver un nom de fichier disponible.".to_string())
+            .into_transport(),
+    )
 }
 
 pub(crate) fn validate_audio_assembly_input(path: &str) -> Result<PathBuf, String> {
-    let input = validate_existing_file_path(path, "Fichier audio")?;
+    let input = validate_existing_file_path(path, codes::AUDIO_FILE_LABEL_TRANSPORT)?;
     let ext = input
         .extension()
         .and_then(OsStr::to_str)
         .unwrap_or("")
         .to_ascii_lowercase();
     if !AUDIO_ASSEMBLY_EXTENSIONS.contains(&ext.as_str()) {
-        return Err(format!(
-            "Format audio non pris en charge pour l'assemblage : {}",
-            input.display()
-        ));
+        return Err({
+            let _msg_input = (input.display()).to_string();
+            user_message::UserMessage::new(codes::AUDIO_ASSEMBLY_FORMAT_UNSUPPORTED)
+                .param("input", user_message::transport_param(_msg_input.clone()))
+                .with_detail(format!(
+                    "Format audio non pris en charge pour l'assemblage : {_msg_input}",
+                    _msg_input = user_message::transport_detail(&_msg_input)
+                ))
+                .into_transport()
+        });
     }
     Ok(input)
 }
@@ -95,7 +120,9 @@ pub(crate) fn compact_ffmpeg_error(stderr: &[u8]) -> String {
         .filter(|line| !line.is_empty())
         .collect();
     if lines.is_empty() {
-        return "Erreur FFmpeg inconnue.".to_string();
+        return user_message::UserMessage::new(codes::FILES_UNKNOWN_FFMPEG_ERROR)
+            .with_detail("Erreur FFmpeg inconnue.".to_string())
+            .into_transport();
     }
     let start = lines.len().saturating_sub(10);
     lines[start..].join("\n")
@@ -120,15 +147,31 @@ pub(crate) fn run_ffmpeg_normalize_audio(
         .arg("pcm_s16le")
         .arg(output);
 
-    let out = cmd
-        .output()
-        .map_err(|e| format!("Impossible de lancer FFmpeg : {}", e))?;
+    let out = cmd.output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_ASSEMBLY_FFMPEG_START_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer FFmpeg : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if !out.status.success() {
         let _ = fs::remove_file(output);
-        return Err(format!(
-            "Préparation audio échouée :\n{}",
-            compact_ffmpeg_error(&out.stderr)
-        ));
+        return Err({
+            let ffmpeg_error_message = (compact_ffmpeg_error(&out.stderr)).to_string();
+            user_message::UserMessage::new(codes::FILES_AUDIO_PREPARATION_FAILED)
+                .param(
+                    "toolError",
+                    user_message::transport_param(ffmpeg_error_message.clone()),
+                )
+                .with_detail(format!(
+                    "Préparation audio échouée :\n{ffmpeg_error_message}",
+                    ffmpeg_error_message = user_message::transport_detail(&ffmpeg_error_message)
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }
@@ -151,15 +194,31 @@ pub(crate) fn run_ffmpeg_make_silence(
         .arg("pcm_s16le")
         .arg(output);
 
-    let out = cmd
-        .output()
-        .map_err(|e| format!("Impossible de lancer FFmpeg : {}", e))?;
+    let out = cmd.output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_ASSEMBLY_FFMPEG_START_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer FFmpeg : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if !out.status.success() {
         let _ = fs::remove_file(output);
-        return Err(format!(
-            "Création du silence échouée :\n{}",
-            compact_ffmpeg_error(&out.stderr)
-        ));
+        return Err({
+            let ffmpeg_error_message = (compact_ffmpeg_error(&out.stderr)).to_string();
+            user_message::UserMessage::new(codes::FILES_SILENCE_CREATION_FAILED)
+                .param(
+                    "toolError",
+                    user_message::transport_param(ffmpeg_error_message.clone()),
+                )
+                .with_detail(format!(
+                    "Création du silence échouée :\n{ffmpeg_error_message}",
+                    ffmpeg_error_message = user_message::transport_detail(&ffmpeg_error_message)
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }
@@ -191,15 +250,31 @@ pub(crate) fn run_ffmpeg_concat_audio(
         .arg("flac")
         .arg(output);
 
-    let out = cmd
-        .output()
-        .map_err(|e| format!("Impossible de lancer FFmpeg : {}", e))?;
+    let out = cmd.output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_ASSEMBLY_FFMPEG_START_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer FFmpeg : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if !out.status.success() {
         let _ = fs::remove_file(output);
-        return Err(format!(
-            "Assemblage audio échoué :\n{}",
-            compact_ffmpeg_error(&out.stderr)
-        ));
+        return Err({
+            let ffmpeg_error_message = (compact_ffmpeg_error(&out.stderr)).to_string();
+            user_message::UserMessage::new(codes::FILES_AUDIO_ASSEMBLY_FAILED)
+                .param(
+                    "toolError",
+                    user_message::transport_param(ffmpeg_error_message.clone()),
+                )
+                .with_detail(format!(
+                    "Assemblage audio échoué :\n{ffmpeg_error_message}",
+                    ffmpeg_error_message = user_message::transport_detail(&ffmpeg_error_message)
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }
@@ -209,12 +284,23 @@ pub fn concat_audio_files(
     output_file_name: &str,
     silence_between_sec: f64,
     workspace_dir: Option<&str>,
+    project_destination: Option<&crate::services::project_files::ProjectMediaDestination>,
 ) -> Result<String, String> {
     if input_paths.len() < 2 {
-        return Err("Sélectionnez au moins deux audios à assembler.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::AUDIO_ASSEMBLY_INPUTS_REQUIRED)
+                .with_detail("Sélectionnez au moins deux audios à assembler.".to_string())
+                .into_transport(),
+        );
     }
     if !silence_between_sec.is_finite() || !(0.0..=30.0).contains(&silence_between_sec) {
-        return Err("La durée du silence doit être comprise entre 0 et 30 secondes.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::AUDIO_SILENCE_DURATION_INVALID)
+                .with_detail(
+                    "La durée du silence doit être comprise entre 0 et 30 secondes.".to_string(),
+                )
+                .into_transport(),
+        );
     }
 
     let inputs: Vec<PathBuf> = input_paths
@@ -222,15 +308,32 @@ pub fn concat_audio_files(
         .map(|path| validate_audio_assembly_input(path))
         .collect::<Result<Vec<_>, _>>()?;
     let output_name = validate_audio_assembly_filename(output_file_name)?;
-    let target_dir = media_output_root(
+    let target_dir = media_output_dir(
         workspace_dir,
-        "Aucun emplacement de travail : impossible de créer un fichier assemblé.",
-    )?
-    .join("fichiers-importes");
-    fs::create_dir_all(&target_dir)
-        .map_err(|e| format!("Impossible de créer fichiers-importes : {}", e))?;
-    let target_dir = fs::canonicalize(&target_dir)
-        .map_err(|e| format!("Dossier fichiers-importes inaccessible : {}", e))?;
+        "fichiers-importes",
+        project_destination,
+        codes::AUDIO_ASSEMBLY_WORKSPACE_REQUIRED_TRANSPORT,
+    )?;
+    fs::create_dir_all(&target_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_IMPORT_FOLDER_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de créer fichiers-importes : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    let target_dir = fs::canonicalize(&target_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_IMPORT_FOLDER_INACCESSIBLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Dossier fichiers-importes inaccessible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let output_path = unique_audio_assembly_path(&target_dir, &output_name)?;
 
     let ffmpeg = get_ffmpeg_path()?;
@@ -239,8 +342,16 @@ pub fn concat_audio_files(
         std::process::id(),
         now_millis()
     ));
-    fs::create_dir_all(&temp_dir)
-        .map_err(|e| format!("Impossible de créer le dossier temporaire audio : {}", e))?;
+    fs::create_dir_all(&temp_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_TEMP_FOLDER_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de créer le dossier temporaire audio : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     let result = (|| {
         let silence_enabled = silence_between_sec > 0.001;
@@ -262,8 +373,16 @@ pub fn concat_audio_files(
             .iter()
             .map(|path| concat_list_line(path))
             .collect();
-        fs::write(&list_path, list_content)
-            .map_err(|e| format!("Impossible de préparer la liste d'assemblage : {}", e))?;
+        fs::write(&list_path, list_content).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::AUDIO_ASSEMBLY_LIST_PREPARE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de préparer la liste d'assemblage : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
 
         run_ffmpeg_concat_audio(&ffmpeg, &list_path, &output_path)?;
         Ok(path_for_frontend(&output_path))

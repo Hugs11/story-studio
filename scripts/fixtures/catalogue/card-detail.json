@@ -1,0 +1,18 @@
+{
+  "ficheId": "card",
+  "ficheRevision": 0,
+  "catalogueRevision": 1,
+  "sourcesRevision": 1,
+  "favorite": false,
+  "tagIds": [], "tags": [],
+  "uuid": "12345678-1234-4234-8234-123456789abc",
+  "uuidProvenance": {},
+  "reference": {"exemplarId": "copy", "state": "available", "selectedAt": 1},
+  "fields": [
+    {"field": "title", "effective": {"value": "Source", "origin": "reference"}, "correction": {"state": "none"}, "referenceValue": {"value": "Source", "provenanceId": "p"}},
+    {"field": "ageMin", "effective": {"value": null, "origin": "none"}, "correction": {"state": "none"}},
+    {"field": "ageMax", "effective": {"value": null, "origin": "none"}, "correction": {"state": "none"}}
+  ],
+  "provenance": [{"id": "p", "kind": "file", "exemplarId": "copy"}],
+  "exemplars": [{"id": "copy", "format": "project", "path": "/source.mbah", "state": "available", "availability": "available", "modifiedAt": 1, "declaredVersion": null, "fields": {"title": {"presence": "present", "validity": "valid", "value": "Source", "provenanceId": "p"}}, "stale": false}]
+}

@@ -1,3 +1,4 @@
+import { translateCommon as t } from '../i18n/commonPresentation.js';
 import { hasUnsavedWork } from '../store/projectHelpers';
 
 // Garde commune de départ : fermeture de fenêtre, nouveau projet ou funnel,
@@ -16,20 +17,20 @@ import { hasUnsavedWork } from '../store/projectHelpers';
 // et `projectName` (le nom que montre la barre de titre) sont lus avec le reste
 // de l'état ; `hasUnsavedWork` les ignore.
 const NEVER_SAVED_DIALOG = {
-  title: 'Projet non enregistré',
-  message: "Ton travail n'est pas enregistré et sera définitivement perdu.",
-  discardLabel: 'Quitter sans enregistrer',
-  saveLabel: 'Enregistrer comme projet',
+  get title() { return t('common:project.unsaved.label'); },
+  get message() { return t('common:saveBeforeLeave.unsaved.message'); },
+  get discardLabel() { return t('common:saveBeforeLeave.discard.label'); },
+  get saveLabel() { return t('common:saveBeforeLeave.saveAs.label'); },
 };
 
 function leaveDialog(work) {
   if (!work.savePath) return NEVER_SAVED_DIALOG;
-  const name = String(work.projectName ?? '').trim() || 'Nouveau projet';
+  const authorName = String(work.projectName ?? '').trim();
   return {
-    title: 'Modifications non enregistrées',
-    message: `Les modifications de « ${name} » depuis le dernier enregistrement seront perdues.`,
-    discardLabel: 'Ne pas enregistrer',
-    saveLabel: 'Enregistrer',
+    get title() { return t('common:saveBeforeLeave.dirty.title'); },
+    get message() { return t('common:saveBeforeLeave.dirty.message', { name: authorName || t('common:project.new.fallback') }); },
+    get discardLabel() { return t('common:saveBeforeLeave.noSave.label'); },
+    get saveLabel() { return t('common:project.save.label'); },
   };
 }
 
@@ -38,14 +39,14 @@ export async function askSaveBeforeLeave(readWork, onSave, showChoiceDialog) {
   if (!hasUnsavedWork(work)) return true;
   const dialog = leaveDialog(work);
   const choice = await showChoiceDialog({
-    title: dialog.title,
-    message: dialog.message,
+    get title() { return dialog.title; },
+    get message() { return dialog.message; },
     variant: 'warning',
     cancelValue: 'cancel',
     actions: [
-      { value: 'cancel', label: 'Annuler', autoFocus: true },
-      { value: 'discard', label: dialog.discardLabel, kind: 'danger-outline' },
-      { value: 'save', label: dialog.saveLabel, kind: 'primary' },
+      { value: 'cancel', get label() { return t('common:dialog.cancel.label'); }, autoFocus: true },
+      { value: 'discard', get label() { return dialog.discardLabel; }, kind: 'danger-outline' },
+      { value: 'save', get label() { return dialog.saveLabel; }, kind: 'primary' },
     ],
   });
   if (choice === 'save') {

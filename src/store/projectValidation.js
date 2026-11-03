@@ -1,3 +1,4 @@
+import { presentImportWarning } from '../i18n/importWarnings.js';
 // Validation projet cote frontend.
 //
 // Contrat partage avec Rust : src-tauri/src/domain/validation.rs#validate_project_for_generation.
@@ -12,7 +13,7 @@
 //   - Story : itemImage obligatoire, itemAudio obligatoire sauf titre explicite silencieux.
 //   - Zip : zipPath obligatoire et fichier accessible.
 //   - Pack non-vide : au moins une histoire jouable.
-//   - Cibles de navigation cassees (returnAfterPlay, returnOnHome, refs, sequences,
+//   - Cibles de navigation cassees (returnAfterPlay, returnOnHome, sequences,
 //     destinations du message de fin global).
 //   - Regles d'activite (native_pack/canonical.rs) : un champ que le reglage courant
 //     rend inutile (fin locale sous Auto-next, image d'un Ecran transparent, message
@@ -41,10 +42,32 @@
 
 import { buildProjectIndex, getPlayableDescendantCount, visitProjectEntries } from './projectModel.js';
 import { decodeNavigationMenuId, decodeNavigationStoryId, isCurrentMenuNavigationTarget, isNextStoryNavigationTarget, isRootNavigationTarget, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget } from './navigationTargets.js';
-import { VALIDATION_MESSAGES, brokenField, emptyTarget, missingField, missingTarget } from './validationMessages.js';
+import { VALIDATION_MESSAGES as PRESENTED_MESSAGES, brokenField as presentBrokenField, emptyTarget as presentEmptyTarget, missingField as presentMissingField, missingTarget as presentMissingTarget, validationLabel } from './validationMessages.js';
 import { isStorySelectionAudioRequired } from './storyTitleStage.js';
 import { isEndHomeStepActive, isEndPromptActive, isEndSequenceActive, projectReachesEndNode } from './generatedNavigation.js';
 import { getGeneratedStoryPlayControls } from './generatedPlayback.js';
+
+// Le texte d'une issue est relu à chaque lecture (accesseur) : la liste déjà
+// calculée suit un changement de langue sans recalcul du projet. Les codes,
+// paramètres et statuts restent ceux de la validation.
+const lazy = (present) => (...args) => () => present(...args);
+const missingField = lazy(presentMissingField);
+const brokenField = lazy(presentBrokenField);
+const missingTarget = lazy(presentMissingTarget);
+const emptyTarget = lazy(presentEmptyTarget);
+const VALIDATION_MESSAGES = Object.freeze({
+  get noProjectType() { return () => PRESENTED_MESSAGES.noProjectType; },
+  get importedTransitionUnmodeled() { return () => PRESENTED_MESSAGES.importedTransitionUnmodeled; },
+  get rootReservedId() { return () => PRESENTED_MESSAGES.rootReservedId; },
+  get emptyPack() { return () => PRESENTED_MESSAGES.emptyPack; },
+  missingInternalId: lazy(PRESENTED_MESSAGES.missingInternalId),
+  unsupportedEntryType: lazy(PRESENTED_MESSAGES.unsupportedEntryType),
+  reservedIdInvalid: lazy(PRESENTED_MESSAGES.reservedIdInvalid),
+  duplicateId: lazy(PRESENTED_MESSAGES.duplicateId),
+  storyReturnLost: lazy(PRESENTED_MESSAGES.storyReturnLost),
+  storyWithoutExit: lazy(PRESENTED_MESSAGES.storyWithoutExit),
+  emptyMenu: lazy(PRESENTED_MESSAGES.emptyMenu),
+});
 
 function hasPath(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -61,12 +84,21 @@ function labelOrFallback(value, fallback) {
 // status === 'error'   → vraie erreur structurelle (référence cassée, donnée corrompue)
 // status === 'warning' → projet en construction (champ manquant, fichier introuvable, contenu vide)
 // Les deux bloquent la génération ; seule la couleur d'affichage diffère.
-function pushError(issues, id, text) {
-  issues.push({ id, status: 'error', text });
+// `navigation` ('return' | 'home') : identifiant stable de la destination
+// vérifiée, lu par les badges de l'arbre au lieu du texte (qui suit la langue).
+function pushIssue(issues, id, status, text, extra = null) {
+  const issue = { id, status, ...extra };
+  if (typeof text === 'function') Object.defineProperty(issue, 'text', { enumerable: true, configurable: true, get: text });
+  else issue.text = text;
+  issues.push(issue);
+}
+
+function pushError(issues, id, text, extra = null) {
+  pushIssue(issues, id, 'error', text, extra);
 }
 
 function pushWarning(issues, id, text) {
-  issues.push({ id, status: 'warning', text });
+  pushIssue(issues, id, 'warning', text);
 }
 
 function collectProjectGraphStats(projectIndex) {
@@ -80,7 +112,8 @@ function collectProjectGraphStats(projectIndex) {
 
 // `navigation` : les dossiers existants et le projet, dont les réglages
 // décident quelles réactions Accueil le constructeur construit.
-function validateNavigationTarget(issues, id, label, target, projectIndex, navigation) {
+function validateNavigationTarget(issues, id, label, target, projectIndex, navigation, navigationKind = null) {
+  const extra = navigationKind ? { navigation: navigationKind } : null;
   const normalized = normalizeNavigationTarget(target);
   if (!normalized) return;
   if (isRootNavigationTarget(normalized) || isCurrentMenuNavigationTarget(normalized) || isNextStoryNavigationTarget(normalized)) {
@@ -90,21 +123,21 @@ function validateNavigationTarget(issues, id, label, target, projectIndex, navig
     const storyId = decodeNavigationStoryId(normalized);
     const entry = storyId ? projectIndex.entryById.get(storyId) : null;
     if (!entry || entry.type !== 'story') {
-      pushError(issues, id, missingTarget(label, 'histoire'));
+      pushError(issues, id, missingTarget(label, 'histoire'), extra);
     } else if (
       isStoryHomeStepNavigationTarget(normalized)
       && !(entry.afterPlaybackHomeStep && isEndHomeStepActive(entry, navigation.project))
     ) {
       // « Retour de fin » ne vise qu'une réaction que le constructeur construit.
-      pushError(issues, id, VALIDATION_MESSAGES.storyReturnLost(label));
+      pushError(issues, id, VALIDATION_MESSAGES.storyReturnLost(label), extra);
     }
     return;
   }
   const menuId = decodeNavigationMenuId(normalized);
   if (!menuId || !navigation.menuIds.has(menuId)) {
-    pushError(issues, id, missingTarget(label, 'dossier'));
+    pushError(issues, id, missingTarget(label, 'dossier'), extra);
   } else if (getPlayableDescendantCount(projectIndex, menuId) === 0) {
-    pushError(issues, id, emptyTarget(label, 'dossier'));
+    pushError(issues, id, emptyTarget(label, 'dossier'), extra);
   }
 }
 
@@ -126,8 +159,8 @@ function validateStorySelectionItem(issues, item, fallbackName, fileAudit, proje
   }
   if (isEndSequenceActive(item, project)) {
     for (const [index, step] of item.afterPlaybackSequence.entries()) {
-      if (isBrokenPath(step?.audio, fileAudit)) pushWarning(issues, itemId, brokenField(name, `audio de fin ${index + 1}`));
-      if (isBrokenPath(step?.image, fileAudit)) pushWarning(issues, itemId, brokenField(name, `image de fin ${index + 1}`));
+      if (isBrokenPath(step?.audio, fileAudit)) pushWarning(issues, itemId, brokenField(name, { code: 'VALIDATION_FIELD_ENDING_AUDIO_NUMBERED', params: { index: index + 1 } }));
+      if (isBrokenPath(step?.image, fileAudit)) pushWarning(issues, itemId, brokenField(name, { code: 'VALIDATION_FIELD_ENDING_IMAGE_NUMBERED', params: { index: index + 1 } }));
     }
   }
   const homeStep = item?.afterPlaybackHomeStep;
@@ -146,7 +179,7 @@ function validateZipItem(issues, item, fallbackName, fileAudit) {
 export function getProjectValidationIssues(project, fileAudit = {}, providedProjectIndex = null) {
   const issues = [];
   const projectType = project?.projectType;
-  const rootName = labelOrFallback(project?.projectName || project?.packMetadata?.title, 'Pack sans nom');
+  const rootName = labelOrFallback(project?.projectName || project?.packMetadata?.title, validationLabel('LABEL_PROJECT_UNNAMED_PACK'));
   const autoNext = !!project?.globalOptions?.autoNext;
   const nightMode = !!project?.globalOptions?.nightMode;
   // Le message de fin global n'est vérifié que si une histoire l'emprunte : remplacé
@@ -167,7 +200,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
     pushWarning(
       issues,
       warning?.entryId ?? 'root',
-      warning?.message || VALIDATION_MESSAGES.importedTransitionUnmodeled,
+      warning?.message ? () => presentImportWarning(warning) : VALIDATION_MESSAGES.importedTransitionUnmodeled,
     );
   }
 
@@ -180,19 +213,19 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
     pushError(issues, 'root', VALIDATION_MESSAGES.rootReservedId);
   }
 
-  if (!hasPath(project?.rootAudio)) pushWarning(issues, 'root', missingField('Menu racine', 'audio intro'));
-  else if (isBrokenPath(project?.rootAudio, fileAudit)) pushWarning(issues, 'root', brokenField('Menu racine', 'audio intro'));
-  if (!hasPath(project?.rootImage)) pushWarning(issues, 'root', missingField('Menu racine', 'image de couverture', { feminine: true }));
-  else if (isBrokenPath(project?.rootImage, fileAudit)) pushWarning(issues, 'root', brokenField('Menu racine', 'image de couverture'));
+  if (!hasPath(project?.rootAudio)) pushWarning(issues, 'root', missingField(validationLabel('LABEL_PROJECT_ROOT_MENU'), 'audio intro'));
+  else if (isBrokenPath(project?.rootAudio, fileAudit)) pushWarning(issues, 'root', brokenField(validationLabel('LABEL_PROJECT_ROOT_MENU'), 'audio intro'));
+  if (!hasPath(project?.rootImage)) pushWarning(issues, 'root', missingField(validationLabel('LABEL_PROJECT_ROOT_MENU'), 'image de couverture', { feminine: true }));
+  else if (isBrokenPath(project?.rootImage, fileAudit)) pushWarning(issues, 'root', brokenField(validationLabel('LABEL_PROJECT_ROOT_MENU'), 'image de couverture'));
   // Sans vignette propre, le catalogue reprend l'image racine : il ne manque
   // donc jamais de vignette. Une vignette propre se vérifie comme un média.
   if (!project?.sameImage && hasPath(project?.thumbnailImage) && isBrokenPath(project?.thumbnailImage, fileAudit)) {
-    pushWarning(issues, 'root', brokenField('Fiche du pack', 'vignette catalogue'));
+    pushWarning(issues, 'root', brokenField(validationLabel('LABEL_PROJECT_PACK_CARD'), 'vignette catalogue'));
   }
   if (hasEndNode && !hasPath(project?.nightModeAudio)) {
-    pushWarning(issues, 'end-node', missingField('Message de fin', 'audio'));
+    pushWarning(issues, 'end-node', missingField(validationLabel('LABEL_PROJECT_END_MESSAGE'), 'audio'));
   } else if (hasEndNode && isBrokenPath(project?.nightModeAudio, fileAudit)) {
-    pushWarning(issues, 'end-node', brokenField('Message de fin', 'audio'));
+    pushWarning(issues, 'end-node', brokenField(validationLabel('LABEL_PROJECT_END_MESSAGE'), 'audio'));
   }
 
   if (projectType === 'simple') {
@@ -208,38 +241,19 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
   // dossier supprimé) reste visible et à corriger : le moteur la remplacerait
   // sans le dire par le retour propre à chaque histoire.
   if (hasEndNode) {
-    validateNavigationTarget(issues, 'end-node', 'Message de fin — destination après le message', project?.nightModeReturn, projectIndex, navigation);
-    validateNavigationTarget(issues, 'end-node', 'Message de fin — bouton Accueil', project?.nightModeHomeReturn, projectIndex, navigation);
+    validateNavigationTarget(issues, 'end-node', validationLabel('LABEL_PROJECT_END_AFTER'), project?.nightModeReturn, projectIndex, navigation);
+    validateNavigationTarget(issues, 'end-node', validationLabel('LABEL_PROJECT_END_HOME'), project?.nightModeHomeReturn, projectIndex, navigation);
   }
 
   visitProjectEntries(project, (entry, ancestors) => {
-    const entryLabel = labelOrFallback(entry?.name, entry?.type === 'menu' ? 'Collection' : 'Element');
-    const pathLabel = [...ancestors.map((parent) => labelOrFallback(parent?.name, 'Collection')), entryLabel]
-      .join(' / ');
+    const entryLabel = labelOrFallback(entry?.name, entry?.type === 'menu' ? validationLabel('LABEL_PROJECT_COLLECTION') : validationLabel('LABEL_PROJECT_ELEMENT'));
+    const pathLabel = { messages: [...ancestors.map((parent) => labelOrFallback(parent?.name, validationLabel('LABEL_PROJECT_COLLECTION'))), entryLabel], separator: ' / ', data: true };
     const entryId = typeof entry?.id === 'string' ? entry.id.trim() : '';
     if (!entryId) {
       pushError(issues, null, VALIDATION_MESSAGES.missingInternalId(pathLabel));
     } else if (entryId === 'root') {
       pushError(issues, entryId, VALIDATION_MESSAGES.reservedIdInvalid(pathLabel));
     }
-    if (entry?.type === 'ref') {
-      // Une reference est un pointeur pur : sa seule contrainte est de resoudre
-      // vers une cible existante. On reutilise le resolveur de navigation.
-      if (!hasPath(entry?.target)) {
-        pushError(issues, entry?.id ?? null, VALIDATION_MESSAGES.refTargetMissing(pathLabel));
-      } else {
-        validateNavigationTarget(
-          issues,
-          entry?.id ?? null,
-          `${entryLabel} — référence`,
-          entry?.target,
-          projectIndex,
-          navigation,
-        );
-      }
-      return;
-    }
-
     if (entry?.type !== 'menu' && entry?.type !== 'story' && entry?.type !== 'zip') {
       pushError(issues, entry?.id ?? null, VALIDATION_MESSAGES.unsupportedEntryType(pathLabel));
       return;
@@ -264,16 +278,17 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
         validateNavigationTarget(
           issues,
           menuId,
-          `${entryLabel} — destination des histoires`,
+          validationLabel('LABEL_UI_STORIES_TARGET', { label: entryLabel }),
           entry?.returnAfterPlay,
           projectIndex,
           navigation,
+          'return',
         );
       }
       validateNavigationTarget(
         issues,
         menuId,
-        `${entryLabel} — Accueil du dossier`,
+        validationLabel('LABEL_UI_FOLDER_HOME', { label: entryLabel }),
         entry?.returnOnHome,
         projectIndex,
         navigation,
@@ -285,10 +300,11 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
       validateNavigationTarget(
         issues,
         entry?.id ?? null,
-        `${entryLabel} — destination de fin`,
+        validationLabel('LABEL_UI_ENDING_TARGET', { label: entryLabel }),
         entry?.returnAfterPlay,
         projectIndex,
         navigation,
+        'return',
       );
     }
 
@@ -296,10 +312,11 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
       validateNavigationTarget(
         issues,
         entry?.id ?? null,
-        `${entryLabel} — bouton Accueil`,
+        validationLabel('LABEL_UI_HOME_BUTTON', { label: entryLabel }),
         entry?.returnOnHome,
         projectIndex,
         navigation,
+        'home',
       );
     }
 
@@ -307,7 +324,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
       validateNavigationTarget(
         issues,
         entry?.id ?? null,
-        `${entryLabel} — Accueil du titre`,
+        validationLabel('LABEL_UI_TITLE_HOME', { label: entryLabel }),
         entry?.titleReturnOnHome,
         projectIndex,
         navigation,
@@ -332,7 +349,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
         validateNavigationTarget(
           issues,
           entry?.id ?? null,
-          `${entryLabel} — OK du prompt final`,
+          validationLabel('LABEL_UI_PROMPT_OK', { label: entryLabel }),
           entry?.afterPlaybackPromptOkTarget,
           projectIndex,
           navigation,
@@ -341,7 +358,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
           validateNavigationTarget(
             issues,
             entry?.id ?? null,
-            `${entryLabel} — Accueil du prompt final`,
+            validationLabel('LABEL_UI_PROMPT_HOME', { label: entryLabel }),
             entry?.afterPlaybackPromptHomeTarget,
             projectIndex,
             navigation,
@@ -353,7 +370,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
           validateNavigationTarget(
             issues,
             entry?.id ?? null,
-            `${entryLabel} — OK fin ${index + 1}`,
+            validationLabel('LABEL_UI_ENDING_OK', { label: entryLabel, index: index + 1 }),
             step?.okTarget,
             projectIndex,
             navigation,
@@ -362,7 +379,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
             validateNavigationTarget(
               issues,
               entry?.id ?? null,
-              `${entryLabel} — OK fin ${index + 1}`,
+              validationLabel('LABEL_UI_ENDING_OK', { label: entryLabel, index: index + 1 }),
               target,
               projectIndex,
               navigation,
@@ -372,7 +389,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
             validateNavigationTarget(
               issues,
               entry?.id ?? null,
-              `${entryLabel} — Accueil fin ${index + 1}`,
+              validationLabel('LABEL_UI_ENDING_HOME', { label: entryLabel, index: index + 1 }),
               step?.homeTarget,
               projectIndex,
               navigation,
@@ -388,7 +405,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
           validateNavigationTarget(
             issues,
             entry?.id ?? null,
-            `${entryLabel} — OK de la réaction Accueil`,
+            validationLabel('LABEL_UI_REACTION_OK', { label: entryLabel }),
             target,
             projectIndex,
             navigation,
@@ -398,7 +415,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
           validateNavigationTarget(
             issues,
             entry?.id ?? null,
-            `${entryLabel} — Accueil de la réaction Accueil`,
+            validationLabel('LABEL_UI_REACTION_HOME', { label: entryLabel }),
             homeStep.homeTarget,
             projectIndex,
             navigation,

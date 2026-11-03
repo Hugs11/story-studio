@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, MessageLabel, UserMessage};
 use sha1::{Digest, Sha1};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -178,8 +179,12 @@ fn audio_can_copy_verbatim(
     ) {
         return Ok(false);
     }
-    let bytes = read_leading_bytes(source, MP3_HEADER_SCAN_BYTES)
-        .map_err(|e| format!("Lecture audio pour copie verbatim échouée : {}", e))?;
+    let bytes = read_leading_bytes(source, MP3_HEADER_SCAN_BYTES).map_err(|e| {
+        UserMessage::new(codes::GENERATION_AUDIO_VERBATIM_READ_FAILED)
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })?;
     Ok(mp3_header_is_native_compatible(&bytes))
 }
 
@@ -287,20 +292,26 @@ fn encode_audio_asset(
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
     apply_no_window(&mut cmd);
-    let output_result = cmd
-        .output()
-        .map_err(|e| format!("ffmpeg introuvable pour {} : {}", role, e))?;
+    let output_result = cmd.output().map_err(|e| {
+        UserMessage::new(codes::AUDIO_ROLE_FFMPEG_MISSING)
+            .param("role", (role).to_string())
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })?;
     if !output_result.status.success() {
         let stderr = String::from_utf8_lossy(&output_result.stderr);
         let summary = stderr
             .lines()
             .rev()
             .find(|line| !line.trim().is_empty())
-            .unwrap_or("Erreur ffmpeg inconnue");
-        return Err(format!(
-            "Preparation audio native echouee pour {} : {}",
-            role, summary
-        ));
+            .map(str::to_string)
+            .unwrap_or_else(|| UserMessage::new(codes::FFMPEG_UNKNOWN_ERROR).into_transport());
+        return Err(UserMessage::new(codes::GENERATION_AUDIO_PREPARE_FAILED)
+            .param("role", (role).to_string())
+            .param("summary", (summary).to_string())
+            .with_detail(stderr.into_owned())
+            .into_transport());
     }
     Ok(output)
 }
@@ -451,15 +462,18 @@ fn edge_plan_for_generation(
     trailing_silence_sec: f64,
     role: &str,
 ) -> Result<GenerationEdgePlan, String> {
-    let measured_edges = match measure_edge_silence(ffmpeg, source)
-        .map_err(|e| format!("Mesure des silences native échouée pour {} : {}", role, e))?
-    {
+    let measured_edges = match measure_edge_silence(ffmpeg, source).map_err(|e| {
+        UserMessage::new(codes::GENERATION_AUDIO_SILENCE_MEASURE_FAILED)
+            .param("role", (role).to_string())
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })? {
         EdgeMeasure::Measured { leading, trailing } => Some((leading, trailing)),
         EdgeMeasure::AllSilence => {
-            return Err(format!(
-                "Preparation audio native impossible pour {} : audio silencieux",
-                role
-            ))
+            return Err(UserMessage::new(codes::GENERATION_AUDIO_SILENT_REFUSED)
+                .param("role", (role).to_string())
+                .into_transport())
         }
         EdgeMeasure::Unreadable => None,
     };
@@ -503,15 +517,24 @@ fn loudness_action_for_generation(
             pending_warning: None,
         });
     }
-    let measure = measure_loudness_ebur128(ffmpeg, source, measure_filters)
-        .map_err(|e| format!("Mesure audio native échouée pour {} : {}", role, e))?;
+    let measure = measure_loudness_ebur128(ffmpeg, source, measure_filters).map_err(|e| {
+        UserMessage::new(codes::GENERATION_AUDIO_LEVEL_MEASURE_FAILED)
+            .param("role", (role).to_string())
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })?;
     let action = plan_loudness_fix(measure.integrated_lufs, measure.true_peak_db);
     if matches!(action, LoudnessAction::Uncorrectable { .. }) {
-        return Err(format!(
-            "Preparation audio native impossible pour {} : {}",
-            role,
-            loudness_action_reason(&action)
-        ));
+        return Err(
+            UserMessage::new(codes::GENERATION_AUDIO_PREPARE_UNAVAILABLE)
+                .param("role", (role).to_string())
+                .param(
+                    "loudness_action_reason_action",
+                    serde_json::json!({"code": codes::AUDIO_INVALID_LEVEL_LABEL, "params": {}}),
+                )
+                .into_transport(),
+        );
     }
     let pending_warning = harmonization_notice(measure.integrated_lufs, &action);
     Ok(GenerationLoudnessPlan {
@@ -541,25 +564,23 @@ pub(crate) fn harmonization_warning(
     ffmpeg: &Path,
     output: &Path,
     role: String,
-    label: String,
+    label: MessageLabel,
     pending: HarmonizationNotice,
 ) -> NativeGenerationWarning {
     let final_integrated_lufs = measure_prepared_output_loudness(ffmpeg, output);
     let message = if pending.code == NOTICE_NEAR_MUTE_BOOST {
-        format!(
-            "L'audio « {} » était presque muet et a été fortement amplifié ; le bruit de fond peut être plus audible.",
-            label
-        )
+        UserMessage::new(codes::AUDIO_NEAR_MUTE_BOOST)
+            .param("label", label.value())
+            .into_transport()
     } else {
-        format!(
-            "L'audio « {} » a nécessité une forte limitation pour être harmonisé ; certaines pointes peuvent sembler comprimées.",
-            label
-        )
+        UserMessage::new(codes::AUDIO_STRONG_LIMITING)
+            .param("label", label.value())
+            .into_transport()
     };
     NativeGenerationWarning {
         code: pending.code.to_string(),
         role,
-        label,
+        label: label.to_string(),
         message,
         initial_integrated_lufs: pending.initial_integrated_lufs,
         final_integrated_lufs,
@@ -581,32 +602,31 @@ fn measure_prepared_output_loudness(ffmpeg: &Path, output: &Path) -> Option<f64>
         .map(|measure| measure.integrated_lufs)
 }
 
-fn generation_audio_label(role: &str) -> String {
+fn generation_audio_label(role: &str) -> MessageLabel {
     match role {
-        "rootAudio" => return "Accueil du pack".to_string(),
-        "nightModeAudio" => return "Mode nuit".to_string(),
+        "rootAudio" => {
+            return MessageLabel::literal("Accueil du pack", codes::GENERATION_AUDIO_ROOT_LABEL)
+        }
+        "nightModeAudio" => {
+            return MessageLabel::literal("Mode nuit", codes::GENERATION_AUDIO_NIGHT_LABEL)
+        }
         _ => {}
     }
     let without_field = role
         .rsplit_once('/')
         .map(|(prefix, _)| prefix)
         .unwrap_or(role);
-    without_field
-        .rsplit('/')
-        .next()
-        .unwrap_or(without_field)
-        .split('#')
-        .next()
-        .filter(|label| !label.trim().is_empty())
-        .unwrap_or(role)
-        .to_string()
-}
-
-fn loudness_action_reason(action: &LoudnessAction) -> &str {
-    match action {
-        LoudnessAction::Uncorrectable { reason } => reason,
-        _ => "correction non requise",
-    }
+    MessageLabel::data(
+        without_field
+            .rsplit('/')
+            .next()
+            .unwrap_or(without_field)
+            .split('#')
+            .next()
+            .filter(|label| !label.trim().is_empty())
+            .unwrap_or(role)
+            .to_string(),
+    )
 }
 
 fn normalized_silence_duration_sec(value: f64) -> f64 {
@@ -654,6 +674,52 @@ pub(crate) fn processed_audio_output_name(role: &str) -> String {
 mod tests {
     use super::*;
     use crate::support::audio_norm::MAX_LIMITING_DB;
+
+    #[test]
+    fn warning_label_stays_raw_while_only_its_message_parameter_is_translated() {
+        for (role, raw, code) in [
+            (
+                "rootAudio",
+                "Accueil du pack",
+                codes::GENERATION_AUDIO_ROOT_LABEL,
+            ),
+            (
+                "nightModeAudio",
+                "Mode nuit",
+                codes::GENERATION_AUDIO_NIGHT_LABEL,
+            ),
+        ] {
+            let pending = HarmonizationNotice {
+                code: NOTICE_NEAR_MUTE_BOOST,
+                initial_integrated_lufs: -50.0,
+                gain_db: 20.0,
+                expected_limiting_db: 0.0,
+            };
+            let warning = harmonization_warning(
+                Path::new("/missing/ffmpeg"),
+                Path::new("/missing/audio"),
+                role.to_string(),
+                generation_audio_label(role),
+                pending.clone(),
+            );
+            let serialized = serde_json::to_value(&warning).unwrap();
+            assert_eq!(serialized["label"], raw);
+            let message: UserMessage = serde_json::from_str(&warning.message).unwrap();
+            assert_eq!(message.params["label"]["code"], code);
+            // An advanced asset can have the same technical role as rootAudio:
+            // its author-supplied stage name must stay literal.
+            let authored = harmonization_warning(
+                Path::new("/missing/ffmpeg"),
+                Path::new("/missing/audio"),
+                role.to_string(),
+                MessageLabel::data("Titre choisi"),
+                pending,
+            );
+            let message: UserMessage = serde_json::from_str(&authored.message).unwrap();
+            assert_eq!(authored.label, "Titre choisi");
+            assert_eq!(message.params["label"], "Titre choisi");
+        }
+    }
 
     #[test]
     fn verbatim_silence_conform_in_off_mode() {
@@ -781,7 +847,8 @@ mod tests {
         assert_eq!(
             generation_audio_label(
                 "root/Example story#ae2bedd3-34a0-4618-b1ef-2091f2671ad0/storyAudio"
-            ),
+            )
+            .to_string(),
             "Example story"
         );
     }

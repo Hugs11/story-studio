@@ -12,10 +12,11 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from '../lib/launch.mjs';
 import { createRun } from '../lib/run-context.mjs';
-import { newProject, returnHome, projectMenuButton, generatePack } from '../lib/actions.mjs';
-import { synthTone, difficultPathsRoot } from '../lib/fixtures.mjs';
+import { newProject, returnHome, projectMenuButton, generatePack, waitValidationSettled } from '../lib/actions.mjs';
+import { synthTone, synthImage, difficultPathsRoot } from '../lib/fixtures.mjs';
 import { readbackPack, inventory } from '../lib/oracles.mjs';
-import { setUseWorkspaceForNewProjectsPreference, dropOnTree, hasMissingMediaModal, openProjectDialog } from '../lib/c2-helpers.mjs';
+import { setUseWorkspaceForNewProjectsPreference, dropOnTree, hasMissingMediaModal, openProjectDialog,
+  treeRoot, editorCard, pickImageField, pickAudioField, setPackTitle } from '../lib/c2-helpers.mjs';
 
 const AUTOSAVE_INTERVAL_MS = 5 * 60 * 1000;
 const MARGIN_MS = 60_000;
@@ -46,6 +47,21 @@ export async function run() {
     await ctx.shot(page, '01-nouveau-projet-mode-workspace');
     const media = synthTone(difficult.spaces, 'histoire avec espaces.wav', 440);
     await dropOnTree(page, media);
+    // Fixture exportable dès avant le palier : le récit seul ne remplit ni
+    // l'identité racine ni les médias de sélection de l'histoire.
+    const storyCard = editorCard(page, "L'histoire");
+    const storyImage = await pickImageField(page, storyCard, synthImage(ctx.dir('images'), 'histoire.png', 1));
+    const storyAudio = await pickAudioField(page, storyCard, 'Audio de sélection', synthTone(ctx.dir('titres'), 'selection.wav', 520));
+    await treeRoot(page).click();
+    const rootCard = page.locator('.root-identity-card').first();
+    const rootImage = await pickImageField(page, rootCard, synthImage(ctx.dir('images'), 'couverture.png', 0));
+    const rootAudio = await pickAudioField(page, rootCard, 'Titre audio', synthTone(ctx.dir('titres'), 'racine.wav', 330));
+    const titled = await setPackTitle(page, 'Autosauvegarde C2');
+    ctx.check('[fixture] identité racine et médias de sélection remplis par l’interface',
+      storyImage && storyAudio && rootImage && rootAudio && titled, { storyImage, storyAudio, rootImage, rootAudio, titled });
+    const readiness = await waitValidationSettled(page);
+    ctx.check('[fixture] aucun blocage de génération avant le palier', readiness.settled && readiness.count === 0, readiness);
+    if (!readiness.settled || readiness.count !== 0) throw new Error('Fixture autosave non exportable avant le palier');
     await ctx.shot(page, '02-media-depose');
 
     const sauvegardesDir = join(workspaceDir, 'sauvegardes');

@@ -1,6 +1,6 @@
-import { makeId, normalizeMenuEntry, normalizeRefEntry, normalizeStoryEntry, normalizeZipEntry } from './schema.js';
+import { translateTree as t } from "../../i18n/treePresentation.js";
+import { makeId, normalizeMenuEntry, normalizeStoryEntry, normalizeZipEntry } from './schema.js';
 import { walkMediaBindingReferences } from './mediaBindings.js';
-import { refTargetEntryId } from '../navigationTargets.js';
 
 function buildProjectIndexEntries(entries, ancestors, level, index) {
   let playableCount = 0;
@@ -37,9 +37,7 @@ function buildProjectIndexEntries(entries, ancestors, level, index) {
     let entryPlayableCount = 0;
     if (entry.type === 'menu') {
       entryPlayableCount = buildProjectIndexEntries(entry.children ?? [], path, level + 1, index);
-    } else if (entry.type === 'story' || entry.type === 'zip' || entry.type === 'ref') {
-      // Une `ref` est un choix navigable (vers un nœud existant) → elle compte comme jouable
-      // (sinon un dossier de liens serait considéré « vide »). Cible pendante : signalée à part.
+    } else if (entry.type === 'story' || entry.type === 'zip') {
       entryPlayableCount = 1;
     }
 
@@ -91,7 +89,7 @@ function walkEntries(entries, visitor, ancestors = []) {
 }
 
 export function createMenuEntry(fields = {}) {
-  return normalizeMenuEntry({ name: 'Nouveau dossier', ...fields });
+  return normalizeMenuEntry({ name: t("tree:menu.creation.name"), ...fields });
 }
 
 export function createStoryEntry(fields = {}) {
@@ -100,12 +98,6 @@ export function createStoryEntry(fields = {}) {
 
 export function createZipEntry(fields = {}) {
   return normalizeZipEntry(fields);
-}
-
-// Crée un nœud `ref` (« → nœud existant ») pointant vers une cible typée.
-// `target` réutilise l'encodage navigation (menu:/story:/story_play:/story_home_step:).
-export function createRefEntry({ target, refKind = 'continue', label = '' } = {}) {
-  return normalizeRefEntry({ target, refKind, label });
 }
 
 export function deepCloneEntry(entry) {
@@ -183,34 +175,6 @@ export function visitProjectEntries(project, visitor, projectIndex = null) {
     return;
   }
   walkEntries(project.rootEntries ?? [], visitor);
-}
-
-// Ids de l'entrée + tout son sous-arbre (ce qui disparaît si on la supprime).
-function collectEntrySubtreeIds(entry) {
-  const ids = new Set();
-  const walk = (node) => {
-    if (!node?.id) return;
-    ids.add(node.id);
-    (node.children ?? []).forEach(walk);
-  };
-  walk(entry);
-  return ids;
-}
-
-// Refs ENTRANTES qui deviendraient pendantes si on supprimait `entryId` (et son sous-arbre).
-// Garde-fou authoring : on ne laisse pas une `ref` viser une cible disparue (cf. validation).
-// Les refs situées DANS le sous-arbre supprimé ne comptent pas (elles partent avec lui).
-export function findIncomingRefs(project, entryId, projectIndex = null) {
-  const target = findEntryById(project, entryId, projectIndex);
-  if (!target) return [];
-  const removedIds = collectEntrySubtreeIds(target);
-  const incoming = [];
-  visitProjectEntries(project, (entry) => {
-    if (entry.type !== 'ref' || removedIds.has(entry.id)) return;
-    const targetId = refTargetEntryId(entry.target);
-    if (targetId && removedIds.has(targetId)) incoming.push(entry);
-  }, projectIndex);
-  return incoming;
 }
 
 export function collectAllMenus(project, projectIndex = null) {
@@ -299,7 +263,7 @@ export function* walkProjectMediaReferences(project) {
 
   yield* walkRootReferences(project);
   yield* walkMediaBindingReferences(project);
-  yield* walkNativeGraphReferences(project.nativeGraph, 'graphe natif (racine)');
+  yield* walkNativeGraphReferences(project.nativeGraph, { key: "tree:media.nativeRoot.label" });
   yield* walkEntriesMedia(project.rootEntries ?? []);
 }
 
@@ -308,7 +272,7 @@ function* walkEntriesMedia(entries) {
     if (!entry || typeof entry !== 'object') continue;
     if (entry.type === 'menu') {
       yield* walkMenuReferences(entry);
-      yield* walkNativeGraphReferences(entry.nativeGraph, `graphe natif: ${entry.name || 'menu'}`);
+      yield* walkNativeGraphReferences(entry.nativeGraph, { key: "tree:media.nativeMenu.label", params: { name: entry.name || { key: "tree:media.menu.fallback" } } });
       yield* walkEntriesMedia(entry.children ?? []);
     } else if (entry.type === 'zip') {
       yield* walkZipReferences(entry);
@@ -319,44 +283,46 @@ function* walkEntriesMedia(entries) {
 }
 
 function* walkRootReferences(project) {
-  if (project.rootAudio) yield { obj: project, key: 'rootAudio', path: project.rootAudio, label: 'Audio de couverture', scope: 'root' };
-  if (project.rootImage) yield { obj: project, key: 'rootImage', path: project.rootImage, label: 'Image de couverture', scope: 'root' };
-  if (project.thumbnailImage) yield { obj: project, key: 'thumbnailImage', path: project.thumbnailImage, label: 'Image bibliothèque', scope: 'root' };
-  if (project.nightModeAudio) yield { obj: project, key: 'nightModeAudio', path: project.nightModeAudio, label: 'Audio mode nuit', scope: 'root' };
+  if (project.rootAudio) yield { obj: project, key: 'rootAudio', path: project.rootAudio, get label() { return t("tree:media.cover.audio"); }, scope: 'root' };
+  if (project.rootImage) yield { obj: project, key: 'rootImage', path: project.rootImage, get label() { return t("tree:media.cover.image"); }, scope: 'root' };
+  if (project.thumbnailImage) yield { obj: project, key: 'thumbnailImage', path: project.thumbnailImage, get label() { return t("tree:media.library.image"); }, scope: 'root' };
+  if (project.nightModeAudio) yield { obj: project, key: 'nightModeAudio', path: project.nightModeAudio, get label() { return t("tree:media.night.audio"); }, scope: 'root' };
 }
 
 function* walkNativeGraphReferences(graph, labelPrefix) {
   for (const stage of graph?.document?.stageNodes ?? []) {
-    const stageName = stage?.name || stage?.uuid || 'stage';
-    if (stage.audio) yield { obj: stage, key: 'audio', path: stage.audio, label: `Audio ${labelPrefix}: ${stageName}`, scope: 'native-graph' };
-    if (stage.image) yield { obj: stage, key: 'image', path: stage.image, label: `Image ${labelPrefix}: ${stageName}`, scope: 'native-graph' };
+    const stageName = stage?.name || stage?.uuid || { key: 'tree:media.stage.fallback' };
+    if (stage.audio) yield { obj: stage, key: 'audio', path: stage.audio, get label() { return t("tree:media.native.audio", { group: labelPrefix, name: stageName }); }, scope: 'native-graph' };
+    if (stage.image) yield { obj: stage, key: 'image', path: stage.image, get label() { return t("tree:media.native.image", { group: labelPrefix, name: stageName }); }, scope: 'native-graph' };
   }
 }
 
 function* walkMenuReferences(menu) {
-  const name = menu.name || 'sans nom';
-  if (menu.audio) yield { obj: menu, key: 'audio', path: menu.audio, label: `Audio menu: ${name}`, scope: 'menu' };
-  if (menu.image) yield { obj: menu, key: 'image', path: menu.image, label: `Image menu: ${name}`, scope: 'menu' };
+  const name = menu.name || { key: "tree:media.name.fallback" };
+  if (menu.audio) yield { obj: menu, key: 'audio', path: menu.audio, get label() { return t("tree:media.menu.audio", { name }); }, scope: 'menu' };
+  if (menu.image) yield { obj: menu, key: 'image', path: menu.image, get label() { return t("tree:media.menu.image", { name }); }, scope: 'menu' };
 }
 
 function* walkZipReferences(zip) {
-  const name = zip.name || 'sans nom';
-  if (zip.zipPath) yield { obj: zip, key: 'zipPath', path: zip.zipPath, label: `ZIP: ${name}`, scope: 'zip' };
+  const name = zip.name || { key: "tree:media.name.fallback" };
+  if (zip.zipPath) yield { obj: zip, key: 'zipPath', path: zip.zipPath, get label() { return t("tree:media.zip.archive", { name }); }, scope: 'zip' };
+  if (zip.coverImage) yield { obj: zip, key: 'coverImage', path: zip.coverImage, get label() { return t("tree:media.cover.image"); }, scope: 'zip' };
+  if (zip.coverAudio) yield { obj: zip, key: 'coverAudio', path: zip.coverAudio, get label() { return t("tree:media.cover.audio"); }, scope: 'zip' };
 }
 
 function* walkStoryReferences(story) {
-  const name = story.name || 'sans nom';
-  if (story.audio) yield { obj: story, key: 'audio', path: story.audio, label: `Audio histoire: ${name}`, scope: 'story' };
-  if (story.itemAudio) yield { obj: story, key: 'itemAudio', path: story.itemAudio, label: `Titre audio: ${name}`, scope: 'story' };
-  if (story.itemImage) yield { obj: story, key: 'itemImage', path: story.itemImage, label: `Image histoire: ${name}`, scope: 'story' };
-  if (story.afterPlaybackPromptAudio) yield { obj: story, key: 'afterPlaybackPromptAudio', path: story.afterPlaybackPromptAudio, label: `Audio fin histoire: ${name}`, scope: 'story' };
+  const name = story.name || { key: "tree:media.name.fallback" };
+  if (story.audio) yield { obj: story, key: 'audio', path: story.audio, get label() { return t("tree:media.story.audio", { name }); }, scope: 'story' };
+  if (story.itemAudio) yield { obj: story, key: 'itemAudio', path: story.itemAudio, get label() { return t("tree:media.story.titleAudio", { name }); }, scope: 'story' };
+  if (story.itemImage) yield { obj: story, key: 'itemImage', path: story.itemImage, get label() { return t("tree:media.story.image", { name }); }, scope: 'story' };
+  if (story.afterPlaybackPromptAudio) yield { obj: story, key: 'afterPlaybackPromptAudio', path: story.afterPlaybackPromptAudio, get label() { return t("tree:media.story.endAudio", { name }); }, scope: 'story' };
   for (const [index, step] of (story.afterPlaybackSequence ?? []).entries()) {
-    if (step?.audio) yield { obj: step, key: 'audio', path: step.audio, label: `Audio fin histoire ${index + 1}: ${name}`, scope: 'story-sequence' };
-    if (step?.image) yield { obj: step, key: 'image', path: step.image, label: `Image fin histoire ${index + 1}: ${name}`, scope: 'story-sequence' };
+    if (step?.audio) yield { obj: step, key: 'audio', path: step.audio, get label() { return t("tree:media.sequence.audio", { number: index + 1, name }); }, scope: 'story-sequence' };
+    if (step?.image) yield { obj: step, key: 'image', path: step.image, get label() { return t("tree:media.sequence.image", { number: index + 1, name }); }, scope: 'story-sequence' };
   }
   const homeStep = story.afterPlaybackHomeStep;
   if (homeStep) {
-    if (homeStep.audio) yield { obj: homeStep, key: 'audio', path: homeStep.audio, label: `Audio fin histoire home: ${name}`, scope: 'story-home' };
-    if (homeStep.image) yield { obj: homeStep, key: 'image', path: homeStep.image, label: `Image fin histoire home: ${name}`, scope: 'story-home' };
+    if (homeStep.audio) yield { obj: homeStep, key: 'audio', path: homeStep.audio, get label() { return t("tree:media.home.audio", { name }); }, scope: 'story-home' };
+    if (homeStep.image) yield { obj: homeStep, key: 'image', path: homeStep.image, get label() { return t("tree:media.home.image", { name }); }, scope: 'story-home' };
   }
 }

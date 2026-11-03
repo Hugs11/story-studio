@@ -1,3 +1,6 @@
+import { Trans } from 'react-i18next';
+import { useHelpTranslation, translateHelp } from '../../i18n/helpPresentation.js';
+import { presentUserMessage } from '../../i18n/userMessage.js';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { AppModalPortal } from './AppModalPortal';
 import { Button } from './Button';
@@ -8,7 +11,8 @@ import './CreditsModal.css';
 const DOCUMENTATION_URL = 'https://hugs11.github.io/story-studio/docs/';
 
 /** Modale « À propos de Story Studio » (crédits). */
-export function CreditsModal({ appVersion, onClose }) {
+export function CreditsModal({ appVersion, onClose, onOpenReleaseNotes }) {
+  const { t } = useHelpTranslation();
   const { showErrorDialog } = useErrorDialog();
 
   async function handleDocumentationClick(event) {
@@ -19,8 +23,9 @@ export function CreditsModal({ appVersion, onClose }) {
       await openUrl(DOCUMENTATION_URL);
     } catch (error) {
       showErrorDialog({
-        title: 'Documentation inaccessible',
-        message: `Impossible d’ouvrir la documentation dans le navigateur : ${error}`,
+        get title() { return translateHelp('help:credits.documentation.errorTitle'); },
+        get message() { return translateHelp('help:credits.documentation.errorMessage', { error: presentUserMessage(error, { allowLegacyFrench: false }).message }); },
+        technicalDetail: presentUserMessage(error, { allowLegacyFrench: false }).technicalDetail,
       });
     }
   }
@@ -35,8 +40,8 @@ export function CreditsModal({ appVersion, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
-          <span id="credits-modal-title">À propos de Story Studio</span>
-          <Button variant="icon" className="modal-close" onClick={onClose} aria-label="Fermer">✕</Button>
+          <span id="credits-modal-title">{t('help:credits.modal.title', { appName: 'Story Studio' })}</span>
+          <Button variant="icon" className="modal-close" onClick={onClose} aria-label={t('common:dialog.close.label')}>✕</Button>
         </div>
         <div className="credits-body">
           <div className="credits-head">
@@ -44,28 +49,32 @@ export function CreditsModal({ appVersion, onClose }) {
             {appVersion && <span className="credits-version">v{appVersion}</span>}
           </div>
           <div className="credits-line">
-            Né d'une envie simple : créer des histoires pour Armand.
+            {t('help:credits.origin.message', { name: 'Armand' })}
           </div>
           <div className="credits-line">
-            Créé par hugs11, assisté par l'IA
+            {t('help:credits.creator.message', { creator: 'hugs11' })}
           </div>
-          <section className="credits-help" aria-labelledby="credits-help-title">
-            <span id="credits-help-title" className="credits-help-title">Aide</span>
+          <div className="credits-actions">
+            {onOpenReleaseNotes && <Button size="sm" onClick={onOpenReleaseNotes}>{t('common:releaseNotes.open.label')}</Button>}
             <a
-              className="credits-documentation-link"
+              className="btn-xs credits-documentation-link"
               href={DOCUMENTATION_URL}
               target="_blank"
               rel="noopener noreferrer"
               onClick={handleDocumentationClick}
             >
-              Documentation
+              {t('help:credits.documentation.label')}
             </a>
-          </section>
+          </div>
           <div className="credits-line credits-thanks">
-            Remerciements<br />
-            <strong>marian-m12l</strong> (créateur de STUdio), <strong>Jersou</strong>,{' '}
-            <strong>Dantsu</strong>, <strong>o.Daneel</strong> (créateur de Lunii.QT) et{' '}
-            <strong>LuckyTheCookie</strong>
+            {t('help:credits.thanks.title')}<br />
+            <Trans t={t} i18nKey="help:credits.thanks.message" values={{
+              marian: 'marian-m12l', jersou: 'Jersou', dantsu: 'Dantsu',
+              daneel: 'o.Daneel', lucky: 'LuckyTheCookie', studio: 'STUdio', luniiQt: 'Lunii.QT',
+            }} components={{
+              marian: <strong />, jersou: <strong />, dantsu: <strong />,
+              daneel: <strong />, lucky: <strong />,
+            }} />
           </div>
         </div>
       </div>

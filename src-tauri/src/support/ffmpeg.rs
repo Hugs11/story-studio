@@ -2,6 +2,10 @@ use crate::support::tool_resolver::{
     path_dirs, push_candidate, push_development_candidates, push_path_candidates,
     push_resource_candidates, resolve_regular_file, resource_dir,
 };
+#[cfg(test)]
+use crate::support::user_message::codes;
+#[cfg(test)]
+use crate::support::user_message::MessageTransportAssertions as _;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -201,7 +205,10 @@ mod tests {
         context.cwd = Some(dir.clone());
         let error =
             resolve_regular_file("FFmpeg", ffmpeg_candidates(&context)).expect_err("missing");
-        assert!(error.contains("FFmpeg introuvable"));
+        assert!(error.contains_any_code(&[codes::FILES_TOOL_CANDIDATES_EXHAUSTED]));
+        let message: crate::support::user_message::UserMessage =
+            serde_json::from_str(&error).unwrap();
+        let error = message.params["searched"].as_str().unwrap();
         assert!(error.contains(
             &dir.join("resources")
                 .join("tools")

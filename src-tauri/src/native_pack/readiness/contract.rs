@@ -8,7 +8,9 @@
 //! sa preuve et de son **traitement** — ce qui décide si elle alimente
 //! `dimensions`, un refus, ou un diagnostic de fidélité seul.
 //!
-//! La matrice compte **31 lignes de données**.
+//! La matrice compte **30 lignes de données**. Les clés inconnues d'un
+//! `story.json` importé n'y figurent plus : elles sont ignorées à l'import,
+//! comme dans l'éditeur par menus.
 //!
 //! Quatre traitements, et quatre seulement :
 //!
@@ -68,12 +70,11 @@ pub(crate) enum DimensionId {
     SourcePositionOutOfShortRange,
     EnrichedGroupFidelity,
     FactoryDisabled,
-    UnknownExtension,
     KnownRootDuplicate,
 }
 
 impl DimensionId {
-    pub(crate) const ALL: [DimensionId; 20] = [
+    pub(crate) const ALL: [DimensionId; 19] = [
         DimensionId::GraphTopology,
         DimensionId::FixedOptionSelection,
         DimensionId::RandomOptionSelection,
@@ -92,7 +93,6 @@ impl DimensionId {
         DimensionId::SourcePositionOutOfShortRange,
         DimensionId::EnrichedGroupFidelity,
         DimensionId::FactoryDisabled,
-        DimensionId::UnknownExtension,
         DimensionId::KnownRootDuplicate,
     ];
 
@@ -105,7 +105,7 @@ impl DimensionId {
     }
 }
 
-/// Les 31 lignes de données de la matrice, dans l'ordre de la table.
+/// Les 30 lignes de données de la matrice, dans l'ordre de la table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum ContractLine {
@@ -135,7 +135,6 @@ pub(crate) enum ContractLine {
     AuthoredPositionOutOfShortRange,
     EnrichedGroupFidelity,
     FactoryDisabled,
-    UnknownExtension,
     KnownRootDuplicate,
     DanglingReferenceOrSquareOneCount,
     OrphanActionWithAuthoredContent,
@@ -143,7 +142,7 @@ pub(crate) enum ContractLine {
 }
 
 impl ContractLine {
-    pub(crate) const ALL: [ContractLine; 31] = [
+    pub(crate) const ALL: [ContractLine; 30] = [
         ContractLine::GraphTopology,
         ContractLine::OrderedWheelFixedSelection,
         ContractLine::RandomSelection,
@@ -170,7 +169,6 @@ impl ContractLine {
         ContractLine::AuthoredPositionOutOfShortRange,
         ContractLine::EnrichedGroupFidelity,
         ContractLine::FactoryDisabled,
-        ContractLine::UnknownExtension,
         ContractLine::KnownRootDuplicate,
         ContractLine::DanglingReferenceOrSquareOneCount,
         ContractLine::OrphanActionWithAuthoredContent,
@@ -222,7 +220,6 @@ impl ContractLine {
             Self::AuthoredPositionOutOfShortRange => "Position créée par Story Studio hors short",
             Self::EnrichedGroupFidelity => "Groupe enrichi / Action.type fidélité",
             Self::FactoryDisabled => "factoryDisabled",
-            Self::UnknownExtension => "Extension inconnue, quel que soit le niveau",
             Self::KnownRootDuplicate => "Doublon racine connu",
             Self::DanglingReferenceOrSquareOneCount => "Référence pendante ; 0/>1 squareOne",
             Self::OrphanActionWithAuthoredContent => "Action orpheline avec contenu authored",
@@ -279,7 +276,6 @@ impl ContractLine {
             }
             Self::EnrichedGroupFidelity => "perte actuelle connue.",
             Self::FactoryDisabled => "consommateurs figés l'ignorent.",
-            Self::UnknownExtension => "Règle des extensions ; exemples réels fournis.",
             Self::KnownRootDuplicate => {
                 "comportement des deux parseurs établi, pas fixture conversion."
             }
@@ -320,7 +316,6 @@ impl ContractLine {
             }
             Self::EnrichedGroupFidelity => dimension(DimensionId::EnrichedGroupFidelity),
             Self::FactoryDisabled => dimension(DimensionId::FactoryDisabled),
-            Self::UnknownExtension => dimension(DimensionId::UnknownExtension),
             Self::KnownRootDuplicate => dimension(DimensionId::KnownRootDuplicate),
 
             // `INVALID` refusé par le dialecte, avant tout classificateur.
@@ -369,7 +364,6 @@ impl ContractLine {
             | Self::SourcePositionOutOfShortRange
             | Self::EnrichedGroupFidelity
             | Self::FactoryDisabled
-            | Self::UnknownExtension
             | Self::KnownRootDuplicate => Untested,
 
             // Refus et lignes `—` : aucune qualification d'interopérabilité.

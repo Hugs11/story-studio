@@ -1,0 +1,4360 @@
+{
+  "measure.value.unmeasured": {
+    "context": "Rapport du vérificateur (écran et export HTML) > valeur d’une mesure absente (durée, sonie, crête, fréquence, dimensions, format).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "2c1fa1cb1255",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2c1fa1cb1255",
+      "status": "ai-reviewed"
+    }
+  },
+  "measure.codec.unknown": {
+    "context": "Rapport du vérificateur (écran et export HTML) > mesure Format audio : codec inconnu, suivi de « · » et des canaux.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "3b986a55bf84",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3b986a55bf84",
+      "status": "ai-reviewed"
+    }
+  },
+  "measure.channels.unknown": {
+    "context": "Rapport du vérificateur (écran et export HTML) > mesure Format audio : nombre de canaux non lu (après le codec).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "d421e776ea3e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d421e776ea3e",
+      "status": "ai-reviewed"
+    }
+  },
+  "measure.format.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > libellé de la ligne de mesure du format (audio ou image).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "2f343666aaa8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2f343666aaa8",
+      "status": "ai-reviewed"
+    }
+  },
+  "measure.sampleRate.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > libellé de la mesure de fréquence d’échantillonnage audio (valeur en kHz).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "a3a5f398b3b0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a3a5f398b3b0",
+      "status": "ai-reviewed"
+    }
+  },
+  "measure.silenceStart.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > libellé de la mesure du silence avant la voix (secondes).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "2b36ba383b4d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2b36ba383b4d",
+      "status": "ai-reviewed"
+    }
+  },
+  "measure.silenceEnd.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > libellé de la mesure du silence après la voix (secondes).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "7d082142149f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7d082142149f",
+      "status": "ai-reviewed"
+    }
+  },
+  "measure.volume.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > libellé de la mesure de sonie intégrée (valeur en LUFS).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "b10fb966d720",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b10fb966d720",
+      "status": "ai-reviewed"
+    }
+  },
+  "measure.peak.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > libellé de la mesure de crête vraie (valeur en dBTP).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "5df3e4a406c4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5df3e4a406c4",
+      "status": "ai-reviewed"
+    }
+  },
+  "measure.dimensions.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > libellé de la mesure des dimensions d’une image (largeur×hauteur).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "914182d5e25f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "914182d5e25f",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.label.fallback": {
+    "context": "Rapport du vérificateur (écran et export HTML) > nom affiché quand un fichier du pack n’a pas de libellé ; aussi badge de rôle d’un fichier sans type.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "07ceb51d3a38",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "07ceb51d3a38",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.role.audio": {
+    "context": "Rapport du vérificateur (écran et export HTML) > badge de rôle d’un fichier audio dans une ligne de fichier (majuscules par CSS).",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.role.image": {
+    "context": "Rapport du vérificateur (écran et export HTML) > badge de rôle d’un fichier image dans une ligne de fichier (majuscules par CSS).",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "1aa4cb0bcca7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1aa4cb0bcca7",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.value.unmeasured": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé « Échantillonnage incorrect (…) » quand la fréquence n’a pas été mesurée.",
+    "en": {
+      "sourceHash": "870461998927",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "870461998927",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.sampleRate.incorrect": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé court d’un fichier audio ; value = fréquence mesurée (« 22050 Hz ») ou « non mesuré ».",
+    "en": {
+      "sourceHash": "4aa42fc767f3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4aa42fc767f3",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.channels.notMono": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé court : l’audio n’a pas un seul canal ; value = canaux mesurés ou « canaux non mesurés ».",
+    "en": {
+      "sourceHash": "29b671a146ac",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "29b671a146ac",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.channels.unmeasured": {
+    "context": "Rapport du vérificateur (écran et export HTML) > valeur du résumé « Audio non mono (…) » quand les canaux n’ont pas été mesurés.",
+    "en": {
+      "sourceHash": "fe5b448f5fd3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fe5b448f5fd3",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.audioFormat.incorrect": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé court ; value = codec mesuré ou « format non mesuré ».",
+    "en": {
+      "sourceHash": "438f3bb0f686",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "438f3bb0f686",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.format.unmeasured": {
+    "context": "Rapport du vérificateur (écran et export HTML) > valeur d’un résumé de format quand le format n’a pas été lu.",
+    "en": {
+      "sourceHash": "5b0767e735e1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5b0767e735e1",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.dimensions.unmeasured": {
+    "context": "Rapport du vérificateur (écran et export HTML) > valeur d’un résumé d’image quand les dimensions n’ont pas été lues.",
+    "en": {
+      "sourceHash": "31c749f104c4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "31c749f104c4",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.imageFormat.incorrect": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé court d’une image ; value = format lu.",
+    "en": {
+      "sourceHash": "33f1d08bed42",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "33f1d08bed42",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.dimensions.incorrect": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé court d’une image ; value = largeur×hauteur lue (attendu 320×240).",
+    "en": {
+      "sourceHash": "5338fa9a3f9e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5338fa9a3f9e",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.image.incorrect": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé court d’une image à corriger ; dimensions et format lus.",
+    "en": {
+      "sourceHash": "f6079674a7de",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f6079674a7de",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.volume.high": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé : sonie au-dessus de -10 LUFS ; value = sonie mesurée (« -8,0 LUFS »).",
+    "en": {
+      "sourceHash": "e2ad95c9a2ef",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e2ad95c9a2ef",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.volume.low": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé : sonie trop basse ; value = sonie mesurée ou « Non mesuré ».",
+    "en": {
+      "sourceHash": "08a40a493248",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "08a40a493248",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.saturated.peak": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé d’un audio saturé à la source ; value = crête vraie mesurée en dBTP.",
+    "en": {
+      "sourceHash": "974ea59930d6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "974ea59930d6",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.saturated.source": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé d’un audio saturé sans mesure de crête : le défaut vient du fichier d’origine.",
+    "en": {
+      "sourceHash": "d250d6ea92b5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d250d6ea92b5",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.silenceStart.value": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé d’un silence de début hors fenêtre ; value = durée mesurée (« 0,30 s »).",
+    "en": {
+      "sourceHash": "49823ce0cc6e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "49823ce0cc6e",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.silenceEnd.value": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé d’un silence de fin hors fenêtre ; value = durée mesurée.",
+    "en": {
+      "sourceHash": "17603122b61c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "17603122b61c",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.saturated.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de la carte des fichiers audio saturés dans leur source, non corrigeables.",
+    "en": {
+      "sourceHash": "e9a38c358fb3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e9a38c358fb3",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.saturated.explanation": {
+    "context": "Rapport du vérificateur (écran et export HTML) > texte de la carte « source saturée » à l’écran (vérifications manuelles).",
+    "en": {
+      "sourceHash": "fbe06bc5be0d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fbe06bc5be0d",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.saturated.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > action conseillée pour les fichiers saturés (non affichée pour cette carte manuelle à l’écran, gardée pour cohérence).",
+    "en": {
+      "sourceHash": "b575a14bc583",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b575a14bc583",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.saturated.exportAction": {
+    "context": "Export HTML du rapport > texte de la carte « source saturée ».",
+    "en": {
+      "sourceHash": "0cd236b45744",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0cd236b45744",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.badge.source": {
+    "context": "Rapport du vérificateur (écran et export HTML) > badge de la carte : le défaut vient du fichier source. Badge court.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "0e570ca6fabe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0e570ca6fabe",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.listen.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de la carte des fichiers à écouter ou vérifier à la main.",
+    "en": {
+      "sourceHash": "fdb279c780d6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fdb279c780d6",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.badge.manual": {
+    "context": "Rapport du vérificateur (écran et export HTML) > badge : vérification manuelle, l’outil ne corrige pas. Badge court.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "33ed3c57cf40",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "33ed3c57cf40",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.listen.explanation": {
+    "context": "Rapport du vérificateur (écran et export HTML) > texte de la carte « À écouter » à l’écran.",
+    "en": {
+      "sourceHash": "b3538fa93af9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b3538fa93af9",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.listen.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > action de la carte « À écouter » (texte de la carte dans l’export HTML).",
+    "en": {
+      "sourceHash": "5e9a37f1f388",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5e9a37f1f388",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.silence.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de la carte des silences trop courts, corrigés automatiquement.",
+    "en": {
+      "sourceHash": "b10c267ecb7b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b10c267ecb7b",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.badge.auto": {
+    "context": "Rapport du vérificateur (écran et export HTML) > badge : correction automatique. Badge court.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "0286249762f7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0286249762f7",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.silence.explanation": {
+    "context": "Rapport du vérificateur (écran et export HTML) > explication de la carte des silences.",
+    "en": {
+      "sourceHash": "958762eaeb1b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "958762eaeb1b",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.silence.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > action automatique ; duration = durée cible des silences de bord (« 1 s »).",
+    "en": {
+      "sourceHash": "2d65adb5f58a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2d65adb5f58a",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.optionalSilence.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de la carte des silences longs, à raccourcir au choix.",
+    "en": {
+      "sourceHash": "ec8b48920b7f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ec8b48920b7f",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.badge.optional": {
+    "context": "Rapport du vérificateur (écran et export HTML) > badge : suggestion facultative, le pack reste conforme. Badge court.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "447a13646629",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "447a13646629",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.optionalSilence.explanation": {
+    "context": "Rapport du vérificateur (écran et export HTML) > explication de la carte des suggestions facultatives.",
+    "en": {
+      "sourceHash": "ee520335ec36",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ee520335ec36",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.optionalSilence.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > action des suggestions ; duration = durée cible des silences de bord.",
+    "en": {
+      "sourceHash": "c4bea041bc94",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c4bea041bc94",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.optionalSilence.exportAction": {
+    "context": "Export HTML du rapport > texte de la carte des suggestions facultatives ; duration = durée cible.",
+    "en": {
+      "sourceHash": "3a4ae447483a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3a4ae447483a",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.volume.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de la carte des sonies hors norme, corrigées automatiquement.",
+    "en": {
+      "sourceHash": "af5dacf5e5f4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "af5dacf5e5f4",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.volume.explanation": {
+    "context": "Rapport du vérificateur (écran et export HTML) > explication de la carte du niveau sonore.",
+    "en": {
+      "sourceHash": "1ba9a06cc41b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1ba9a06cc41b",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.volume.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > action automatique de la carte du niveau sonore.",
+    "en": {
+      "sourceHash": "d33dce3f9bf8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d33dce3f9bf8",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.audioFormat.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de la carte des audios hors format (codec, canaux, échantillonnage).",
+    "en": {
+      "sourceHash": "880dd99796eb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "880dd99796eb",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.audioFormat.explanation": {
+    "context": "Rapport du vérificateur (écran et export HTML) > explication de la carte du format audio.",
+    "en": {
+      "sourceHash": "b136ed798eeb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b136ed798eeb",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.audioFormat.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > action automatique ; garder MP3, mono et 44,1 kHz (séparateur décimal de la langue).",
+    "en": {
+      "sourceHash": "d6b8832596a0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d6b8832596a0",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.imageCorrection.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de la carte des images à convertir ou redimensionner.",
+    "en": {
+      "sourceHash": "821f75ed0d53",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "821f75ed0d53",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.image.explanation": {
+    "context": "Rapport du vérificateur (écran et export HTML) > explication de la carte des images.",
+    "en": {
+      "sourceHash": "b9a42eea1de2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b9a42eea1de2",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.image.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > action automatique ; 320×240 = taille d’écran Lunii, ne pas modifier.",
+    "en": {
+      "sourceHash": "3fb45702172b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3fb45702172b",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.packName.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de la carte des métadonnées (nom, convention) à corriger.",
+    "en": {
+      "sourceHash": "6debbd05b7f3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6debbd05b7f3",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.badge.assisted": {
+    "context": "Rapport du vérificateur (écran et export HTML) > badge : correction guidée par la fiche des métadonnées. Badge court.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "6f0f829ed89a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6f0f829ed89a",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.packName.explanation": {
+    "context": "Rapport du vérificateur (écran et export HTML) > explication de la carte du nom du pack.",
+    "en": {
+      "sourceHash": "52bf939c9b1c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "52bf939c9b1c",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.packName.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > action de la carte du nom, à l’écran.",
+    "en": {
+      "sourceHash": "5a1a1da1169a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5a1a1da1169a",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.packName.exportAction": {
+    "context": "Export HTML du rapport > texte de la carte du nom du pack.",
+    "en": {
+      "sourceHash": "3b484edf40f6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3b484edf40f6",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.structure.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de la carte des liens, références ou champs à vérifier.",
+    "en": {
+      "sourceHash": "eab860101d67",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "eab860101d67",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.structure.explanation": {
+    "context": "Rapport du vérificateur (écran et export HTML) > explication de la carte de structure.",
+    "en": {
+      "sourceHash": "6d67fa44867e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6d67fa44867e",
+      "status": "ai-reviewed"
+    }
+  },
+  "issue.structure.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > action de la carte de structure (texte dans l’export HTML).",
+    "en": {
+      "sourceHash": "ad19c5bc3835",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ad19c5bc3835",
+      "status": "ai-reviewed"
+    }
+  },
+  "severity.error.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > gravité d’un point, en fin de ligne de fichier et dans l’export Markdown.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "46148e250e72",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "46148e250e72",
+      "status": "ai-reviewed"
+    }
+  },
+  "severity.warning.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > gravité d’un point (avertissement).",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "f3bf7f3e9c66",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f3bf7f3e9c66",
+      "status": "ai-reviewed"
+    }
+  },
+  "severity.info.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > gravité informative ; aussi repli d’une catégorie absente.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "170322a32f3c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "170322a32f3c",
+      "status": "ai-reviewed"
+    }
+  },
+  "severity.ok.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > état conforme d’un fichier (ligne de fichier).",
+    "maxLength": 8,
+    "en": {
+      "sourceHash": "565339bc4d33",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "565339bc4d33",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.conform.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre du verdict quand aucun problème n’est trouvé ; aussi verdict « valid » de l’export Markdown.",
+    "en": {
+      "sourceHash": "a2170af624d4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a2170af624d4",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.conform.subtitle": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre du verdict conforme.",
+    "en": {
+      "sourceHash": "8ced7a010fed",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8ced7a010fed",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.blocking.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre du verdict quand un point manuel est bloquant ou le pack invalide.",
+    "en": {
+      "sourceHash": "d3b0df2ddb02",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d3b0df2ddb02",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.blocking.subtitle": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre du verdict bloquant.",
+    "en": {
+      "sourceHash": "88a3791bd4f6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "88a3791bd4f6",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.saturatedFixable.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > verdict : corrections possibles, mais un audio saturé reste à reprendre.",
+    "en": {
+      "sourceHash": "1229bd25be6b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1229bd25be6b",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.saturatedFixable.subtitle": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre du verdict corrigeable avec audio saturé.",
+    "en": {
+      "sourceHash": "070a149d4015",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "070a149d4015",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.saturated.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > verdict : audio saturé sans autre correction.",
+    "en": {
+      "sourceHash": "bc8f5882800a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bc8f5882800a",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.saturated.subtitle": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre du verdict audio saturé.",
+    "en": {
+      "sourceHash": "9d75b66f1348",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9d75b66f1348",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.listen.title_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > verdict quand des fichiers restent à écouter ; count = nombre de fichiers (au moins 1).",
+    "en": {
+      "sourceHash": "6509ffe9d5d5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6509ffe9d5d5",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.listen.title_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > verdict quand des fichiers restent à écouter ; count = nombre de fichiers (au moins 1).",
+    "it": {
+      "sourceHash": "fa6f6749c5af",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.listen.title_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > verdict quand des fichiers restent à écouter ; count = nombre de fichiers (au moins 1).",
+    "en": {
+      "sourceHash": "fa6f6749c5af",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fa6f6749c5af",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.listen.subtitle": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre du verdict avec fichiers à écouter.",
+    "en": {
+      "sourceHash": "5118de7de77e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5118de7de77e",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.optional.title_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > verdict quand seules des suggestions facultatives existent ; count = nombre de suggestions.",
+    "en": {
+      "sourceHash": "6e39e325d40c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6e39e325d40c",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.optional.title_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > verdict quand seules des suggestions facultatives existent ; count = nombre de suggestions.",
+    "it": {
+      "sourceHash": "c8e70000aff6",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.optional.title_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > verdict quand seules des suggestions facultatives existent ; count = nombre de suggestions.",
+    "en": {
+      "sourceHash": "c8e70000aff6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c8e70000aff6",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.optional.subtitle": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre du verdict à suggestions facultatives.",
+    "en": {
+      "sourceHash": "f1630300e52e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f1630300e52e",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.fixable.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > verdict : uniquement des corrections automatiques.",
+    "en": {
+      "sourceHash": "e7cebcacf662",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e7cebcacf662",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.fixable.subtitle": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre du verdict corrigeable en un clic.",
+    "en": {
+      "sourceHash": "e6ae1eaf49ce",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e6ae1eaf49ce",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.tiles.aria": {
+    "context": "Rapport du vérificateur (écran et export HTML) > nom accessible (aria-label) de la rangée de tuiles de synthèse.",
+    "en": {
+      "sourceHash": "b43ed0367574",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b43ed0367574",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.audio.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de tuile de synthèse (fichiers audio). Titre court.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.images.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de tuile de synthèse (fichiers image). Titre court.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "be7e2f201293",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "be7e2f201293",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.packName.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de tuile et de carte conforme ; repli du titre de la fiche des métadonnées.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "c4eb6d2ea79b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c4eb6d2ea79b",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.structure.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de tuile et de carte « Structure » (navigation du pack). Titre court.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "7203c2b3dad3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7203c2b3dad3",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.nightMode.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de tuile, de carte et libellé du mode nuit Lunii (terme officiel, §2 du glossaire).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "5c5d6921f582",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5c5d6921f582",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.split.ok": {
+    "context": "Rapport du vérificateur (écran et export HTML) > tuile Audio/Images : nombre de fichiers conformes en gras. Garder la balise strong.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "2bfee5032574",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2bfee5032574",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.split.fix": {
+    "context": "Rapport du vérificateur (écran et export HTML) > tuile Audio/Images : nombre de fichiers à corriger en gras. Garder la balise strong.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "fe1f6fdf75f8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fe1f6fdf75f8",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.packName.valid": {
+    "context": "Rapport du vérificateur (écran et export HTML) > état de la tuile Nom du pack ; aussi métrique de la carte conforme. Mot court.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "8b8cc56f68f7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8b8cc56f68f7",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.packName.toFix": {
+    "context": "Rapport du vérificateur (écran et export HTML) > état de la tuile Nom du pack à corriger. Mot court.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "dca7f1903ab5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dca7f1903ab5",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.packName.conventionOk": {
+    "context": "Rapport du vérificateur (écran et export HTML) > précision : le nom respecte la convention communautaire. Court.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "0d006ac33a3b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0d006ac33a3b",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.packName.metadata": {
+    "context": "Rapport du vérificateur (écran et export HTML) > précision : la correction passe par les métadonnées. Court.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "32febdfc98c8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "32febdfc98c8",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.structure.correct": {
+    "context": "Rapport du vérificateur (écran et export HTML) > état de la tuile Structure (féminin en FR : la structure). Court.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "02895ef189c2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "02895ef189c2",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.structure.manual": {
+    "context": "Rapport du vérificateur (écran et export HTML) > état de la tuile Structure quand elle doit être vérifiée à la main.",
+    "maxLength": 22,
+    "en": {
+      "sourceHash": "d9863cb2a1cd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d9863cb2a1cd",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.structure.steps_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > nombre d’étapes (stages) du pack. Le FR garde « étapes » au singulier comme la source d’origine.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "38bacdd37cac",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "38bacdd37cac",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.structure.steps_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > nombre d’étapes (stages) du pack. Le FR garde « étapes » au singulier comme la source d’origine.",
+    "maxLength": 16,
+    "it": {
+      "sourceHash": "fb5a3ab1d2a9",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.structure.steps_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > nombre d’étapes (stages) du pack. Le FR garde « étapes » au singulier comme la source d’origine.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "fb5a3ab1d2a9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fb5a3ab1d2a9",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.nightMode.available": {
+    "context": "Rapport du vérificateur (écran et export HTML) > état : le pack contient une piste de mode nuit. Court.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "f4e4f699637b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f4e4f699637b",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.nightMode.absent": {
+    "context": "Rapport du vérificateur (écran et export HTML) > état : aucune piste de mode nuit (non bloquant). Court.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "84fd36f7cbff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "84fd36f7cbff",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.nightMode.detected": {
+    "context": "Rapport du vérificateur (écran et export HTML) > précision de la tuile Mode nuit quand il est présent.",
+    "maxLength": 26,
+    "en": {
+      "sourceHash": "a79d6ed6ef99",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a79d6ed6ef99",
+      "status": "ai-reviewed"
+    }
+  },
+  "summary.nightMode.notBlocking": {
+    "context": "Rapport du vérificateur (écran et export HTML) > précision : l’absence de mode nuit n’empêche rien.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "81e809b3b91a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "81e809b3b91a",
+      "status": "ai-reviewed"
+    }
+  },
+  "detail.measures.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > intertitre de la liste des mesures d’un fichier (dépliée). Majuscules par CSS.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "09c5892f8902",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "09c5892f8902",
+      "status": "ai-reviewed"
+    }
+  },
+  "detail.facts.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > intertitre des faits d’une carte conforme (nom, structure, mode nuit).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "17eaee489b09",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "17eaee489b09",
+      "status": "ai-reviewed"
+    }
+  },
+  "detail.expected.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > libellé de la mesure « dimensions attendues » d’une image (320×240).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "79ce6f3ea89a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "79ce6f3ea89a",
+      "status": "ai-reviewed"
+    }
+  },
+  "detail.category.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) > libellé de la catégorie technique d’un point sans fichier (valeur brute : structure, title…).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "68a5341fc6bd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "68a5341fc6bd",
+      "status": "ai-reviewed"
+    }
+  },
+  "detail.actions.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > intertitre, à l’écran, des corrections ou vérifications prévues pour un fichier.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "239aa6bdfb02",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "239aa6bdfb02",
+      "status": "ai-reviewed"
+    }
+  },
+  "detail.proposed.title": {
+    "context": "Export HTML du rapport > intertitre des corrections proposées pour un fichier.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "71124ba0dcaa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "71124ba0dcaa",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.count.files_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > unité sous le nombre en gras d’une carte (nombre seul affiché au-dessus).",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "a1e95e8d498e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a1e95e8d498e",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.count.files_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > unité sous le nombre en gras d’une carte (nombre seul affiché au-dessus).",
+    "maxLength": 12,
+    "it": {
+      "sourceHash": "1941f6309e3e",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.count.files_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > unité sous le nombre en gras d’une carte (nombre seul affiché au-dessus).",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "1941f6309e3e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1941f6309e3e",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.count.suggestions_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > unité sous le nombre d’une carte de suggestions facultatives.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "650ffa82126b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "650ffa82126b",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.count.suggestions_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > unité sous le nombre d’une carte de suggestions facultatives.",
+    "maxLength": 14,
+    "it": {
+      "sourceHash": "fc7f81681c5a",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.count.suggestions_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > unité sous le nombre d’une carte de suggestions facultatives.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "fc7f81681c5a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fc7f81681c5a",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.count.corrections_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > unité sous le nombre d’une carte de corrections automatiques (étape Correction).",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "34627e3242f2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "34627e3242f2",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.count.corrections_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > unité sous le nombre d’une carte de corrections automatiques (étape Correction).",
+    "maxLength": 14,
+    "it": {
+      "sourceHash": "63b3fa0c86f9",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.count.corrections_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > unité sous le nombre d’une carte de corrections automatiques (étape Correction).",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "63b3fa0c86f9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "63b3fa0c86f9",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.optional.choice": {
+    "context": "Rapport du vérificateur (écran et export HTML) > case à cocher d’une suggestion facultative sans description ; duration = durée cible.",
+    "en": {
+      "sourceHash": "27e6268b11b9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "27e6268b11b9",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.listen.help": {
+    "context": "Rapport du vérificateur (écran et export HTML) > aide sous une carte de vérification manuelle.",
+    "en": {
+      "sourceHash": "a7d87cf28e03",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a7d87cf28e03",
+      "status": "ai-reviewed"
+    }
+  },
+  "corrections.empty": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > étape Correction : aucune carte à afficher.",
+    "en": {
+      "sourceHash": "054740afe1c9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "054740afe1c9",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.listen_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > encart du verdict, 1er compte (fichiers à écouter), séparé par « · ». Garder strong.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "bb33fe579f9c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bb33fe579f9c",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.listen_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > encart du verdict, 1er compte (fichiers à écouter), séparé par « · ». Garder strong.",
+    "maxLength": 24,
+    "it": {
+      "sourceHash": "bb33fe579f9c",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.listen_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > encart du verdict, 1er compte (fichiers à écouter), séparé par « · ». Garder strong.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "bb33fe579f9c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bb33fe579f9c",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.automatic_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > encart du verdict, 2e compte (corrections automatiques). FR source invariable. Garder strong.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "ded542fd7ece",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ded542fd7ece",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.automatic_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > encart du verdict, 2e compte (corrections automatiques). FR source invariable. Garder strong.",
+    "maxLength": 24,
+    "it": {
+      "sourceHash": "e090811f33c8",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.automatic_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > encart du verdict, 2e compte (corrections automatiques). FR source invariable. Garder strong.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "e090811f33c8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e090811f33c8",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.optional_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > encart du verdict, 3e compte (suggestions facultatives). FR source invariable. Garder strong.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "f38006599ea7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f38006599ea7",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.optional_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > encart du verdict, 3e compte (suggestions facultatives). FR source invariable. Garder strong.",
+    "maxLength": 24,
+    "it": {
+      "sourceHash": "4f98412115a5",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.optional_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > encart du verdict, 3e compte (suggestions facultatives). FR source invariable. Garder strong.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "4f98412115a5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4f98412115a5",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.empty": {
+    "context": "Rapport du vérificateur (écran et export HTML) > message quand aucune carte de problème n’existe.",
+    "en": {
+      "sourceHash": "32598d3d9eee",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "32598d3d9eee",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.footer.ready_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > pied du rapport, 1er compte (corrections prêtes), suivi de « · ». FR source invariable. Garder strong.",
+    "en": {
+      "sourceHash": "d40c4284ea6a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d40c4284ea6a",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.footer.ready_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > pied du rapport, 1er compte (corrections prêtes), suivi de « · ». FR source invariable. Garder strong.",
+    "it": {
+      "sourceHash": "22a50d1a31ab",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.footer.ready_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > pied du rapport, 1er compte (corrections prêtes), suivi de « · ». FR source invariable. Garder strong.",
+    "en": {
+      "sourceHash": "22a50d1a31ab",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "22a50d1a31ab",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.footer.suggestions_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > pied du rapport, 2e compte (suggestions), fin de phrase. FR source invariable. Garder strong.",
+    "en": {
+      "sourceHash": "7df827161d1d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7df827161d1d",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.footer.suggestions_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > pied du rapport, 2e compte (suggestions), fin de phrase. FR source invariable. Garder strong.",
+    "it": {
+      "sourceHash": "dc5cbb485a99",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.footer.suggestions_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > pied du rapport, 2e compte (suggestions), fin de phrase. FR source invariable. Garder strong.",
+    "en": {
+      "sourceHash": "dc5cbb485a99",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dc5cbb485a99",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.export.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > bouton : enregistre le rapport HTML via un dialogue natif.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "586d26c1b608",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "586d26c1b608",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.pack.analyzed": {
+    "context": "Export du rapport > repli du nom du pack absent ; aussi verdict inconnu de l’export Markdown.",
+    "en": {
+      "sourceHash": "75bd1d93f0a3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "75bd1d93f0a3",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.verdict.warnings": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > verdict « validWithWarnings ».",
+    "en": {
+      "sourceHash": "692eda339905",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "692eda339905",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.verdict.needsFix": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > verdict « needsFix ».",
+    "en": {
+      "sourceHash": "80caeb2e0a51",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "80caeb2e0a51",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.verdict.invalid": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > verdict « invalid ».",
+    "en": {
+      "sourceHash": "1039836d982a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1039836d982a",
+      "status": "ai-reviewed"
+    }
+  },
+  "fix.busy.label": {
+    "context": "Rapport du vérificateur (écran et export HTML) et fiche des métadonnées > bouton principal pendant la création du ZIP corrigé (progression). Court.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "d8bbe3d3ec60",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d8bbe3d3ec60",
+      "status": "ai-reviewed"
+    }
+  },
+  "fix.start.action": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > bouton : lance la correction (ouvre la fiche puis le choix du dossier). Court.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "04a06c4afb6b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "04a06c4afb6b",
+      "status": "ai-reviewed"
+    }
+  },
+  "fix.open.failed": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > erreur à l’ouverture du ZIP corrigé ; message = cause système traduite (détail brut replié).",
+    "en": {
+      "sourceHash": "36b1b45bc5c3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "36b1b45bc5c3",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.technical.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre repliable du journal brut de l’analyse (écran, exports HTML et Markdown).",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "3f13dd6759c7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3f13dd6759c7",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.copy.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > bouton : copie le journal technique dans le presse-papiers. Court.",
+    "maxLength": 18,
+    "en": {
+      "sourceHash": "2db5e1b0b270",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2db5e1b0b270",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.export.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > bouton : enregistre le journal en .txt. Court.",
+    "maxLength": 18,
+    "en": {
+      "sourceHash": "6dc7209f0276",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6dc7209f0276",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.exportJson.action": {
+    "context": "Rapport du vérificateur (écran et export HTML) > bouton : enregistre le diagnostic structuré en .json. Court.",
+    "maxLength": 18,
+    "en": {
+      "sourceHash": "fcecdc9f3dcb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fcecdc9f3dcb",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.copy.done": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > notice après la copie du journal technique.",
+    "en": {
+      "sourceHash": "2d9ab32def81",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2d9ab32def81",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.copy.failed": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > erreur : le presse-papiers a refusé la copie du journal.",
+    "en": {
+      "sourceHash": "8237d1247a96",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8237d1247a96",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.analysis.requested": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > première ligne du journal en direct au lancement d’une analyse (progression).",
+    "en": {
+      "sourceHash": "62ac6dbc23f4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "62ac6dbc23f4",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.analysis.done": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > dernière ligne du journal en direct après une analyse réussie.",
+    "en": {
+      "sourceHash": "1c75c5d29c32",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1c75c5d29c32",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.analysis.interrupted": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > ligne du journal en direct quand l’analyse échoue ; message = cause traduite.",
+    "en": {
+      "sourceHash": "af1afcbd620f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "af1afcbd620f",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.reanalysis.requested": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > ligne de progression d’une réanalyse sans libellé fourni.",
+    "en": {
+      "sourceHash": "7145468d0e4c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7145468d0e4c",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.reanalysis.automatic": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > ligne de progression après la création du ZIP corrigé.",
+    "en": {
+      "sourceHash": "14ffc3cfbb02",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "14ffc3cfbb02",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.reanalysis.started": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > ligne de progression au début de l’analyse du ZIP corrigé.",
+    "en": {
+      "sourceHash": "be98e790232e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "be98e790232e",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.fix.requested": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > première ligne du journal en direct au lancement d’une correction (progression).",
+    "en": {
+      "sourceHash": "b331ad325862",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b331ad325862",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.fix.created": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > ligne du journal ; path = chemin du ZIP produit (donnée).",
+    "en": {
+      "sourceHash": "45ed425b9939",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "45ed425b9939",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.fix.interrupted": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > ligne du journal en direct quand la correction échoue ; message = cause traduite.",
+    "en": {
+      "sourceHash": "2f18ddbde835",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2f18ddbde835",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.fix.applied": {
+    "context": "Rapport du vérificateur (écran et export HTML) > ligne ajoutée au journal technique après correction ; automatic et optional sont deux comptes déjà accordés. Garder « [OK] ».",
+    "en": {
+      "sourceHash": "dd64bb2adc19",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd64bb2adc19",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.fix.automaticCount_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fragment de « Correction appliquée » : corrections automatiques. FR source invariable « (s) ».",
+    "en": {
+      "sourceHash": "44438003c02d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "44438003c02d",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.fix.automaticCount_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fragment de « Correction appliquée » : corrections automatiques. FR source invariable « (s) ».",
+    "it": {
+      "sourceHash": "dd8784bd33af",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.fix.automaticCount_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fragment de « Correction appliquée » : corrections automatiques. FR source invariable « (s) ».",
+    "en": {
+      "sourceHash": "dd8784bd33af",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd8784bd33af",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.fix.optionalCount_one": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fragment de « Correction appliquée » : suggestions retenues. FR source invariable « (s) ».",
+    "en": {
+      "sourceHash": "7ee11cf56072",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7ee11cf56072",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.fix.optionalCount_many": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fragment de « Correction appliquée » : suggestions retenues. FR source invariable « (s) ».",
+    "it": {
+      "sourceHash": "2c0748086c2a",
+      "status": "ai-reviewed"
+    }
+  },
+  "log.fix.optionalCount_other": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fragment de « Correction appliquée » : suggestions retenues. FR source invariable « (s) ».",
+    "en": {
+      "sourceHash": "2c0748086c2a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2c0748086c2a",
+      "status": "ai-reviewed"
+    }
+  },
+  "process.fixing.title": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > titre du journal en direct pendant une correction.",
+    "en": {
+      "sourceHash": "c77740bc9c2f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c77740bc9c2f",
+      "status": "ai-reviewed"
+    }
+  },
+  "process.analyzing.title": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > titre du journal en direct pendant une analyse.",
+    "en": {
+      "sourceHash": "ddc90158e3e7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ddc90158e3e7",
+      "status": "ai-reviewed"
+    }
+  },
+  "process.recent.title": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > titre du journal en direct au repos.",
+    "en": {
+      "sourceHash": "5a0c50d61c1b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5a0c50d61c1b",
+      "status": "ai-reviewed"
+    }
+  },
+  "export.notice.html": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > notice après l’export du rapport HTML.",
+    "en": {
+      "sourceHash": "e8c2ae152ec1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e8c2ae152ec1",
+      "status": "ai-reviewed"
+    }
+  },
+  "export.notice.markdown": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > notice après l’export du rapport Markdown.",
+    "en": {
+      "sourceHash": "e32e5d487a93",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e32e5d487a93",
+      "status": "ai-reviewed"
+    }
+  },
+  "export.notice.log": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > notice après l’export du journal (.txt).",
+    "en": {
+      "sourceHash": "21222b7ab68c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "21222b7ab68c",
+      "status": "ai-reviewed"
+    }
+  },
+  "export.notice.json": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > notice après l’export du diagnostic JSON.",
+    "en": {
+      "sourceHash": "f6109e67df80",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f6109e67df80",
+      "status": "ai-reviewed"
+    }
+  },
+  "export.error.failed": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > erreur d’écriture d’un export ; message = cause traduite.",
+    "en": {
+      "sourceHash": "466a979d98cf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "466a979d98cf",
+      "status": "ai-reviewed"
+    }
+  },
+  "export.file.fallbackName": {
+    "context": "Dialogue natif d’export > nom de fichier proposé quand le pack n’a pas de nom ; minuscules et tirets, sans espace ni accent problématique.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "f6785e3a9bdb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f6785e3a9bdb",
+      "status": "ai-reviewed"
+    }
+  },
+  "export.pack.fallback": {
+    "context": "Export HTML du rapport > repli du nom dans le titre du document (onglet du navigateur).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "80dc21673e55",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "80dc21673e55",
+      "status": "ai-reviewed"
+    }
+  },
+  "export.html.title": {
+    "context": "Export HTML du rapport > titre du document (balise title) ; name = nom du pack.",
+    "en": {
+      "sourceHash": "6a2b6b1c4a31",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6a2b6b1c4a31",
+      "status": "ai-reviewed"
+    }
+  },
+  "export.html.print": {
+    "context": "Export HTML du rapport > bouton qui ouvre l’impression du navigateur. Court.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "f9f3d88da094",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f9f3d88da094",
+      "status": "ai-reviewed"
+    }
+  },
+  "export.html.aria": {
+    "context": "Export HTML du rapport > nom accessible de la section du rapport.",
+    "en": {
+      "sourceHash": "7ef8ce83d9ae",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7ef8ce83d9ae",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.section.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > intertitre de la section verte des éléments conformes (écran et exports).",
+    "en": {
+      "sourceHash": "290d302a40cc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "290d302a40cc",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.badge": {
+    "context": "Rapport du vérificateur (écran et export HTML) > badge d’une carte conforme. Court.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "d2ffb3fce06f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d2ffb3fce06f",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.audio.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de la carte des audios conformes.",
+    "en": {
+      "sourceHash": "67aa6d8cbd9c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "67aa6d8cbd9c",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.audio.subtitle": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre de la carte des audios conformes.",
+    "en": {
+      "sourceHash": "60c4381a5bac",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "60c4381a5bac",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.audio.summary": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé d’une ligne d’audio conforme : silences début/fin et sonie.",
+    "en": {
+      "sourceHash": "4023d3bb8481",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4023d3bb8481",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.images.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > titre de la carte des images conformes.",
+    "en": {
+      "sourceHash": "296c0b161f33",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "296c0b161f33",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.images.subtitle": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre de la carte des images conformes.",
+    "en": {
+      "sourceHash": "fffe32bb914c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fffe32bb914c",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.dimensions.unknown": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé d’une image conforme sans dimensions lues.",
+    "en": {
+      "sourceHash": "80cbd109284b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "80cbd109284b",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.format.unknown": {
+    "context": "Rapport du vérificateur (écran et export HTML) > résumé d’une image conforme sans format lu.",
+    "en": {
+      "sourceHash": "d1a43b4eb472",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d1a43b4eb472",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.packName.subtitle": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre de la carte conforme du nom du pack.",
+    "en": {
+      "sourceHash": "c463b8727235",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c463b8727235",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.structure.subtitle": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre de la carte conforme de structure.",
+    "en": {
+      "sourceHash": "22bba8ea19ca",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "22bba8ea19ca",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.nightMode.detected": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre de la carte Mode nuit quand une piste existe.",
+    "en": {
+      "sourceHash": "9f54b4893b68",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9f54b4893b68",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.nightMode.absent": {
+    "context": "Rapport du vérificateur (écran et export HTML) > sous-titre de la carte Mode nuit sans piste.",
+    "en": {
+      "sourceHash": "175d8b088acd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "175d8b088acd",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.fact.name": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fait de la carte Nom du pack : nom de l’archive.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "b2c124536d21",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b2c124536d21",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.fact.title": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fait de la carte Nom du pack : titre lu dans le pack.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "78e7920010aa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "78e7920010aa",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.fact.lunii": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fait de la carte Structure (valeur Oui/Non).",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "8b5c1e043431",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8b5c1e043431",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.fact.editable": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fait de la carte Structure : modifiable dans Story Studio (Oui/Non).",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "e6272f55698c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e6272f55698c",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.fact.stories": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fait de la carte Structure : nombre d’histoires.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "28b1f69bf841",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "28b1f69bf841",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.fact.stages": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fait de la carte Structure : nombre d’étapes (stages).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "8711492b254e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8711492b254e",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.fact.actions": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fait de la carte Structure : nombre de listes de choix (glossaire).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "008c91ab2a88",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "008c91ab2a88",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.fact.refAudio": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fait de la carte Structure : nombre d’audios référencés.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "8295d64c61b3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8295d64c61b3",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.fact.refImage": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fait de la carte Structure : nombre d’images référencées.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "cf63859dbe16",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cf63859dbe16",
+      "status": "ai-reviewed"
+    }
+  },
+  "conform.fact.blocking": {
+    "context": "Rapport du vérificateur (écran et export HTML) > fait de la carte Mode nuit (valeur Non).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "d95dc518298f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d95dc518298f",
+      "status": "ai-reviewed"
+    }
+  },
+  "fact.value.yes": {
+    "context": "Rapport du vérificateur (écran et export HTML) > valeur d’un fait booléen (carte Structure).",
+    "maxLength": 8,
+    "en": {
+      "sourceHash": "0a90407639c4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0a90407639c4",
+      "status": "ai-reviewed"
+    }
+  },
+  "fact.value.no": {
+    "context": "Rapport du vérificateur (écran et export HTML) > valeur d’un fait booléen (cartes Structure, Mode nuit).",
+    "maxLength": 8,
+    "en": {
+      "sourceHash": "7f62496b0cb8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7f62496b0cb8",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.title": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > titre de niveau 1 du fichier.",
+    "en": {
+      "sourceHash": "73c41a0e4062",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "73c41a0e4062",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.pack.analyzed": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) ; name = nom de l’archive analysée (donnée).",
+    "en": {
+      "sourceHash": "0496a7bb6d6c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0496a7bb6d6c",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.verdict.line": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) ; verdict = libellé de verdict traduit.",
+    "en": {
+      "sourceHash": "494f71e5c9ae",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "494f71e5c9ae",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.count.errors": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > compte d’erreurs (forme libellé : nombre, comme la source).",
+    "en": {
+      "sourceHash": "b3cdea0175e6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b3cdea0175e6",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.count.warnings": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > compte d’avertissements.",
+    "en": {
+      "sourceHash": "2c036508fac3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2c036508fac3",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.count.infos": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > compte d’informations.",
+    "en": {
+      "sourceHash": "59de732bb036",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "59de732bb036",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.count.ok": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > compte d’éléments conformes.",
+    "en": {
+      "sourceHash": "205b98c86adc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "205b98c86adc",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.count.automatic": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > compte de corrections automatiques.",
+    "en": {
+      "sourceHash": "722cc95c2332",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "722cc95c2332",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.count.optional": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > compte de suggestions facultatives.",
+    "en": {
+      "sourceHash": "e0e2bf22caee",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e0e2bf22caee",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.summary.title": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > titre de niveau 2.",
+    "en": {
+      "sourceHash": "9d750fae7486",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9d750fae7486",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.summary.audio": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > audios conformes sur le total.",
+    "en": {
+      "sourceHash": "f952e00b24a5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f952e00b24a5",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.summary.images": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > images conformes sur le total.",
+    "en": {
+      "sourceHash": "e225fdebce37",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e225fdebce37",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.structure.valid": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > structure compatible Lunii.",
+    "en": {
+      "sourceHash": "0cdc95ffbaf6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0cdc95ffbaf6",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.structure.toFix": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > structure à corriger.",
+    "en": {
+      "sourceHash": "8afaeed1d4a1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8afaeed1d4a1",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.editing.supported": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > le pack s’ouvre en édition.",
+    "en": {
+      "sourceHash": "3cf1b1993127",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3cf1b1993127",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.editing.unsupported": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > édition non garantie.",
+    "en": {
+      "sourceHash": "16992a74339d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "16992a74339d",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.nightMode.detected": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > résumé : piste de mode nuit trouvée.",
+    "en": {
+      "sourceHash": "ce7d3f06a9e3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ce7d3f06a9e3",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.nightMode.available": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > section Mode nuit : disponible.",
+    "en": {
+      "sourceHash": "4b12d19ee347",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4b12d19ee347",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.nightMode.absent": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > résumé et section Mode nuit : aucune piste.",
+    "en": {
+      "sourceHash": "1a978b167ff0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1a978b167ff0",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.issues.title": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > titre de niveau 2.",
+    "en": {
+      "sourceHash": "d12f6a3df656",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d12f6a3df656",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.issues.none": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > liste des problèmes vide.",
+    "en": {
+      "sourceHash": "99a7eb924705",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "99a7eb924705",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.issue.line": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > un problème : gravité, libellé du fichier ou du point, message traduit.",
+    "en": {
+      "sourceHash": "919efe57e038",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "919efe57e038",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.issue.file": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > sous-ligne : chemin du fichier dans le pack.",
+    "en": {
+      "sourceHash": "53a2e0f2abf5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "53a2e0f2abf5",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.issue.detail": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > sous-ligne : détail technique du point.",
+    "en": {
+      "sourceHash": "b459ecf6a0aa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b459ecf6a0aa",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.issue.suggestion": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > sous-ligne : correction facultative proposée.",
+    "en": {
+      "sourceHash": "68b7f336d29b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "68b7f336d29b",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.issue.correction": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > sous-ligne : correction automatique proposée.",
+    "en": {
+      "sourceHash": "b862ad6179b0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b862ad6179b0",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.measure.pair": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > une mesure « libellé : valeur » dans la ligne d’un fichier conforme (ponctuation selon la langue).",
+    "en": {
+      "sourceHash": "308fc288d2f7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "308fc288d2f7",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.conform.audio": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > titre de niveau 3 ; total = nombre d’audios conformes.",
+    "en": {
+      "sourceHash": "6b764a8a3c54",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6b764a8a3c54",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.conform.images": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > titre de niveau 3 ; total = nombre d’images conformes.",
+    "en": {
+      "sourceHash": "461abc9e8a29",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "461abc9e8a29",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.fact.name": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > section Nom du pack.",
+    "en": {
+      "sourceHash": "648a6339146a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "648a6339146a",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.fact.title": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > section Nom du pack.",
+    "en": {
+      "sourceHash": "df1df5147829",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "df1df5147829",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.fact.version": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > section Nom du pack.",
+    "en": {
+      "sourceHash": "081dcf9fe172",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "081dcf9fe172",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.fact.lunii": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > section Structure ; value = oui/non.",
+    "en": {
+      "sourceHash": "878ef2d3ea7b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "878ef2d3ea7b",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.fact.editable": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > section Structure ; value = oui/non.",
+    "en": {
+      "sourceHash": "e4e87de5fc5d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e4e87de5fc5d",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.fact.stories": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > section Structure.",
+    "en": {
+      "sourceHash": "22407ab35259",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "22407ab35259",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.fact.stages": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > section Structure.",
+    "en": {
+      "sourceHash": "c8e3d5e3b5c5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c8e3d5e3b5c5",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.fact.actions": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > section Structure.",
+    "en": {
+      "sourceHash": "208a2ed4e948",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "208a2ed4e948",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.fact.refAudio": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > section Structure.",
+    "en": {
+      "sourceHash": "e0f1480a84bc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e0f1480a84bc",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.fact.refImage": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > section Structure.",
+    "en": {
+      "sourceHash": "119313ae2f8e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "119313ae2f8e",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.fact.blocking": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > section Mode nuit : son absence ne bloque pas.",
+    "en": {
+      "sourceHash": "fa53e2252b9a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fa53e2252b9a",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.value.yes": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > valeur booléenne en minuscules.",
+    "en": {
+      "sourceHash": "3a3468fa89b2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3a3468fa89b2",
+      "status": "ai-reviewed"
+    }
+  },
+  "markdown.value.no": {
+    "context": "Export Markdown du rapport du vérificateur (fichier .md, ligne de liste) > valeur booléenne en minuscules.",
+    "en": {
+      "sourceHash": "bcee72e6df5d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bcee72e6df5d",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.step.pack": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > étape 1 du stepper. Très court.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "80dc21673e55",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "80dc21673e55",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.step.report": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > étape 2 du stepper. Très court.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "f549d69c49ed",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f549d69c49ed",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.step.correction": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > étape 3 du stepper. Très court.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "ca2f55c8e850",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ca2f55c8e850",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.shell.title": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > titre de la fenêtre du parcours.",
+    "en": {
+      "sourceHash": "6799b2eb4768",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6799b2eb4768",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.shell.subtitle": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > sous-titre de la fenêtre.",
+    "en": {
+      "sourceHash": "90da7467592f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "90da7467592f",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.shell.aria": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > nom accessible de la fenêtre du parcours.",
+    "en": {
+      "sourceHash": "8c1170744187",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8c1170744187",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.primary.analyze": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > bouton principal de l’étape 1 : lance l’analyse du pack choisi. Court.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "f35592749c06",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f35592749c06",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.primary.suggestions": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > bouton principal de l’étape 2 quand seules des suggestions existent. Court.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "c328707a83b4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c328707a83b4",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.primary.finish": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > bouton qui ferme le parcours (étape 2 sans correction, ou écran final). Court.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "b4d92528f877",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b4d92528f877",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.primary.create": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > bouton principal de l’étape 3 : ouvre la fiche puis crée le ZIP corrigé. Court.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "3075a8020036",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3075a8020036",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.analyzing.title": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > titre de l’écran d’attente pendant l’analyse (progression).",
+    "en": {
+      "sourceHash": "c62432c8b19e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c62432c8b19e",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.analyzing.hint": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > aide de l’écran d’attente avant la première ligne du journal.",
+    "en": {
+      "sourceHash": "fff376f1a5f6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fff376f1a5f6",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.fixing.title": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > titre de l’écran d’attente pendant la correction (progression).",
+    "en": {
+      "sourceHash": "b302520b85b2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b302520b85b2",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.fixing.hint": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > aide de l’écran d’attente de correction.",
+    "en": {
+      "sourceHash": "8613a77ca85e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8613a77ca85e",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.done.title": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > titre de l’écran final de succès.",
+    "en": {
+      "sourceHash": "d2165d02fb2c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d2165d02fb2c",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.done.openFolder": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > bouton de l’écran final : ouvre le dossier de sortie. Court.",
+    "maxLength": 22,
+    "en": {
+      "sourceHash": "db51a60ea6da",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "db51a60ea6da",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.pack.title": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > titre de l’étape 1.",
+    "en": {
+      "sourceHash": "811f53f66115",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "811f53f66115",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.pack.description": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > description de l’étape 1.",
+    "en": {
+      "sourceHash": "600c1b71405f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "600c1b71405f",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.drop.title": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > titre de la zone de dépôt.",
+    "en": {
+      "sourceHash": "5706d243e5a0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5706d243e5a0",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.drop.hint": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > aide de la zone de dépôt.",
+    "en": {
+      "sourceHash": "fa37f496fdc7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fa37f496fdc7",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.pack.choose": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > bouton : ouvre le dialogue natif de sélection d’un pack. Court.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "b7fd63fcff05",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b7fd63fcff05",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.report.title": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > titre de l’étape 2.",
+    "en": {
+      "sourceHash": "f549d69c49ed",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f549d69c49ed",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.report.description": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > description de l’étape 2.",
+    "en": {
+      "sourceHash": "bcc88314b2c8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bcc88314b2c8",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.correction.title": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > titre de l’étape 3.",
+    "en": {
+      "sourceHash": "d7c4f5a04bbc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d7c4f5a04bbc",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.correction.description": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > description de l’étape 3.",
+    "en": {
+      "sourceHash": "a111550b47ec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a111550b47ec",
+      "status": "ai-reviewed"
+    }
+  },
+  "done.audio.count_one": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > écran final : nombre d’audios corrigés, séparé des autres comptes par « · ».",
+    "en": {
+      "sourceHash": "ff74e9aaac6c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ff74e9aaac6c",
+      "status": "ai-reviewed"
+    }
+  },
+  "done.audio.count_many": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > écran final : nombre d’audios corrigés, séparé des autres comptes par « · ».",
+    "it": {
+      "sourceHash": "ff74e9aaac6c",
+      "status": "ai-reviewed"
+    }
+  },
+  "done.audio.count_other": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > écran final : nombre d’audios corrigés, séparé des autres comptes par « · ».",
+    "en": {
+      "sourceHash": "ff74e9aaac6c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ff74e9aaac6c",
+      "status": "ai-reviewed"
+    }
+  },
+  "done.image.count_one": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > écran final : nombre d’images corrigées.",
+    "en": {
+      "sourceHash": "2987ff8a9970",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2987ff8a9970",
+      "status": "ai-reviewed"
+    }
+  },
+  "done.image.count_many": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > écran final : nombre d’images corrigées.",
+    "it": {
+      "sourceHash": "7520b3b85e97",
+      "status": "ai-reviewed"
+    }
+  },
+  "done.image.count_other": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > écran final : nombre d’images corrigées.",
+    "en": {
+      "sourceHash": "7520b3b85e97",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7520b3b85e97",
+      "status": "ai-reviewed"
+    }
+  },
+  "done.metadata.label": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > écran final : les métadonnées ont été corrigées (minuscules, élément de liste).",
+    "en": {
+      "sourceHash": "28294262d4de",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "28294262d4de",
+      "status": "ai-reviewed"
+    }
+  },
+  "done.pack.fixed": {
+    "context": "Vérificateur de pack (parcours « Vérifier / corriger un pack ») > écran final sans compte détaillé.",
+    "en": {
+      "sourceHash": "b4c3d7bf8afa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b4c3d7bf8afa",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.dialog.title": {
+    "context": "Fiche des métadonnées du vérificateur > surtitre et nom accessible du dialogue.",
+    "en": {
+      "sourceHash": "730af09f8c41",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "730af09f8c41",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.dialog.revision": {
+    "context": "Fiche des métadonnées > explication sous le nom.",
+    "en": {
+      "sourceHash": "faf67c1afaf2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "faf67c1afaf2",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.pack.fallback": {
+    "context": "Fiche des métadonnées > repli du nom du pack dans le panneau latéral (glossaire §3.0).",
+    "en": {
+      "sourceHash": "6a92da54707c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6a92da54707c",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.name.valid": {
+    "context": "Fiche des métadonnées > panneau latéral quand aucun point de nom n’est relevé.",
+    "en": {
+      "sourceHash": "c8629b41e88f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c8629b41e88f",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.age.other": {
+    "context": "Fiche des métadonnées > placeholder du champ d’âge libre, à côté des pastilles 2+…12+. Court.",
+    "maxLength": 10,
+    "en": {
+      "sourceHash": "eb72e1683b81",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "eb72e1683b81",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.author.placeholder": {
+    "context": "Fiche des métadonnées > placeholder du champ Auteur.",
+    "en": {
+      "sourceHash": "4cbe25d61c96",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4cbe25d61c96",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.producer.placeholder": {
+    "context": "Fiche des métadonnées > placeholder du champ Producteur (exemple, pas une progression).",
+    "en": {
+      "sourceHash": "557740612ef2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "557740612ef2",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.bonus.placeholder": {
+    "context": "Fiche des métadonnées > placeholder du champ Bonus.",
+    "en": {
+      "sourceHash": "ffc83cb0f7c9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ffc83cb0f7c9",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.description.placeholder": {
+    "context": "Fiche des métadonnées > placeholder du champ Description.",
+    "en": {
+      "sourceHash": "ce566a014dd6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ce566a014dd6",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.uuid.label": {
+    "context": "Fiche des métadonnées > libellé du champ identifiant du pack (terme technique invariable).",
+    "maxLength": 8,
+    "en": {
+      "sourceHash": "2a898bc98aaf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2a898bc98aaf",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.uuid.placeholder": {
+    "context": "Fiche des métadonnées > placeholder du champ UUID.",
+    "en": {
+      "sourceHash": "6da63eeb9ad3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6da63eeb9ad3",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.uuid.generate": {
+    "context": "Fiche des métadonnées > bouton : remplace l’UUID par un nouveau. Court.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "2605e1691662",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2605e1691662",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.preview.title": {
+    "context": "Fiche des métadonnées > titre de l’aperçu du nom de fichier.",
+    "en": {
+      "sourceHash": "38e1e09ccdb1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "38e1e09ccdb1",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.preview.titleRequired": {
+    "context": "Fiche des métadonnées > jeton d’aperçu quand le titre est vide.",
+    "en": {
+      "sourceHash": "15297720f42a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "15297720f42a",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.uuidPrompt.title": {
+    "context": "Fiche des métadonnées > titre du dialogue de confirmation à l’ouverture.",
+    "en": {
+      "sourceHash": "7e51a2534048",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7e51a2534048",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.uuidPrompt.message": {
+    "context": "Fiche des métadonnées > message du dialogue de confirmation.",
+    "en": {
+      "sourceHash": "0d69127be057",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0d69127be057",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.uuidPrompt.confirm": {
+    "context": "Fiche des métadonnées > bouton de confirmation du dialogue.",
+    "maxLength": 26,
+    "en": {
+      "sourceHash": "f2e9bd454796",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f2e9bd454796",
+      "status": "ai-reviewed"
+    }
+  },
+  "metadata.uuidPrompt.keep": {
+    "context": "Fiche des métadonnées > bouton d’annulation du dialogue : garde l’UUID.",
+    "maxLength": 26,
+    "en": {
+      "sourceHash": "e5ab52478640",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e5ab52478640",
+      "status": "ai-reviewed"
+    }
+  },
+  "identity.refusal.message": {
+    "context": "Fiche des métadonnées > erreur sous le champ UUID ; reason = motif traduit du refus de l’UUID.",
+    "en": {
+      "sourceHash": "ef9ae1285941",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ef9ae1285941",
+      "status": "ai-reviewed"
+    }
+  },
+  "identity.refusal.unchecked": {
+    "context": "Fiche des métadonnées > motif quand le refus ne porte aucun message.",
+    "en": {
+      "sourceHash": "33cda0056b6b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "33cda0056b6b",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.verifying.tooltip": {
+    "context": "Barre d’outils > pastille « à corriger » : infobulle et nom accessible pendant la vérification.",
+    "en": {
+      "sourceHash": "de6c29956c15",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "de6c29956c15",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.count.tooltip_one": {
+    "context": "Barre d’outils > pastille : infobulle et nom accessible ; count = éléments bloquants.",
+    "en": {
+      "sourceHash": "87df2b60ff30",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "87df2b60ff30",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.count.tooltip_many": {
+    "context": "Barre d’outils > pastille : infobulle et nom accessible ; count = éléments bloquants.",
+    "it": {
+      "sourceHash": "3593b8318cc5",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.count.tooltip_other": {
+    "context": "Barre d’outils > pastille : infobulle et nom accessible ; count = éléments bloquants.",
+    "en": {
+      "sourceHash": "3593b8318cc5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3593b8318cc5",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.count.tooltipShortcut_one": {
+    "context": "Barre d’outils > pastille : infobulle avec raccourci clavier ; shortcut = raccourci affiché.",
+    "en": {
+      "sourceHash": "c391b8eaf96e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c391b8eaf96e",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.count.tooltipShortcut_many": {
+    "context": "Barre d’outils > pastille : infobulle avec raccourci clavier ; shortcut = raccourci affiché.",
+    "it": {
+      "sourceHash": "9e78365dcefc",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.count.tooltipShortcut_other": {
+    "context": "Barre d’outils > pastille : infobulle avec raccourci clavier ; shortcut = raccourci affiché.",
+    "en": {
+      "sourceHash": "9e78365dcefc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9e78365dcefc",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.ready.subtitle": {
+    "context": "Barre d’outils > liste « À corriger » vide : sous-titre.",
+    "en": {
+      "sourceHash": "6e1758d75c8e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6e1758d75c8e",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.blocking.subtitle_one": {
+    "context": "Barre d’outils > liste « À corriger » : sous-titre ; count = éléments bloquants (au moins 1).",
+    "en": {
+      "sourceHash": "da6a2d42da10",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "da6a2d42da10",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.blocking.subtitle_many": {
+    "context": "Barre d’outils > liste « À corriger » : sous-titre ; count = éléments bloquants (au moins 1).",
+    "it": {
+      "sourceHash": "4cd97b0c647c",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.blocking.subtitle_other": {
+    "context": "Barre d’outils > liste « À corriger » : sous-titre ; count = éléments bloquants (au moins 1).",
+    "en": {
+      "sourceHash": "4cd97b0c647c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4cd97b0c647c",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.count.label": {
+    "context": "Barre d’outils > texte de la pastille après le nombre en gras. Très court.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "b0a087deefe2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b0a087deefe2",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.verifying.label": {
+    "context": "Barre d’outils > texte de la pastille pendant la vérification (progression). Très court.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "c7984dcce6f3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c7984dcce6f3",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.list.aria": {
+    "context": "Barre d’outils > nom accessible du popover de la pastille.",
+    "en": {
+      "sourceHash": "2eb4088e7d5f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2eb4088e7d5f",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.list.title": {
+    "context": "Barre d’outils > titre du popover (panneau « À corriger », glossaire §3.2).",
+    "maxLength": 18,
+    "en": {
+      "sourceHash": "dca7f1903ab5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dca7f1903ab5",
+      "status": "ai-reviewed"
+    }
+  },
+  "pill.loading.label": {
+    "context": "Barre d’outils > popover de l’éditeur graphe pendant le chargement du panneau.",
+    "en": {
+      "sourceHash": "66474911d953",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "66474911d953",
+      "status": "ai-reviewed"
+    }
+  },
+  "issues.pack.group": {
+    "context": "Liste « À corriger » > groupe des problèmes sans emplacement précis.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "80dc21673e55",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "80dc21673e55",
+      "status": "ai-reviewed"
+    }
+  },
+  "issues.empty": {
+    "context": "Liste « À corriger » > message quand aucune issue n’est bloquante (deux éditeurs).",
+    "en": {
+      "sourceHash": "c43cefb7c3f6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c43cefb7c3f6",
+      "status": "ai-reviewed"
+    }
+  },
+  "issues.panel.aria": {
+    "context": "Éditeur graphe > nom accessible de la section des diagnostics du popover.",
+    "en": {
+      "sourceHash": "901afaac3fc8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "901afaac3fc8",
+      "status": "ai-reviewed"
+    }
+  },
+  "issues.fix.action": {
+    "context": "Éditeur graphe > bouton d’un diagnostic : révèle le nœud concerné. Court.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "714372c8c609",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "714372c8c609",
+      "status": "ai-reviewed"
+    }
+  },
+  "issues.working.notice": {
+    "context": "Éditeur graphe > popover « À corriger » pendant une génération.",
+    "en": {
+      "sourceHash": "49ce2b8cd6bd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "49ce2b8cd6bd",
+      "status": "ai-reviewed"
+    }
+  },
+  "review.banner.title": {
+    "context": "Éditeur graphe > bandeau de relecture du ZIP produit : titre.",
+    "en": {
+      "sourceHash": "21f0f9268138",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "21f0f9268138",
+      "status": "ai-reviewed"
+    }
+  },
+  "review.banner.current": {
+    "context": "Éditeur graphe > bandeau de relecture : l’archive correspond au document ouvert (minuscule, suite du titre).",
+    "en": {
+      "sourceHash": "95a36a8a55b5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "95a36a8a55b5",
+      "status": "ai-reviewed"
+    }
+  },
+  "review.banner.stale": {
+    "context": "Éditeur graphe > bandeau de relecture : l’archive est périmée (minuscule, suite du titre).",
+    "en": {
+      "sourceHash": "8f4b2d39d0c6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8f4b2d39d0c6",
+      "status": "ai-reviewed"
+    }
+  },
+  "review.close.action": {
+    "context": "Éditeur graphe > bouton du bandeau : ferme le simulateur de l’archive. Court.",
+    "maxLength": 22,
+    "en": {
+      "sourceHash": "5252e72b1352",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5252e72b1352",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.title.decode": {
+    "context": "Éditeur graphe > rapport de refus d’export > titre du refus « payload-decode ».",
+    "en": {
+      "sourceHash": "0627a62aa3b1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0627a62aa3b1",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.title.preparation": {
+    "context": "Éditeur graphe > rapport de refus d’export > titre du refus de préparation, suivi de « — » et de la qualification.",
+    "en": {
+      "sourceHash": "a76f54ad0574",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a76f54ad0574",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.title.media": {
+    "context": "Éditeur graphe > rapport de refus d’export > titre du refus « media-unavailable ».",
+    "en": {
+      "sourceHash": "78e5700081e6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "78e5700081e6",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.title.collision": {
+    "context": "Éditeur graphe > rapport de refus d’export > titre du refus « archive-name-collision ».",
+    "en": {
+      "sourceHash": "228048d5e8e2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "228048d5e8e2",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.title.oracle": {
+    "context": "Éditeur graphe > rapport de refus d’export > titre du refus « media-oracle ».",
+    "en": {
+      "sourceHash": "df646a896e6a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "df646a896e6a",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.title.cancelled": {
+    "context": "Éditeur graphe > rapport de refus d’export > titre du refus « export-cancelled ».",
+    "en": {
+      "sourceHash": "f1d41561b927",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f1d41561b927",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.title.write": {
+    "context": "Éditeur graphe > rapport de refus d’export > titre du refus « output-write ».",
+    "en": {
+      "sourceHash": "db041ec68e00",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "db041ec68e00",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.title.untyped": {
+    "context": "Éditeur graphe > rapport de refus d’export > titre d’un refus non typé (transport rompu).",
+    "en": {
+      "sourceHash": "18349bc28a10",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "18349bc28a10",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.title.request": {
+    "context": "Éditeur graphe > rapport de refus d’export > titre d’un refus local, avant tout appel au moteur.",
+    "en": {
+      "sourceHash": "263481dfad92",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "263481dfad92",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.preparation.integrity": {
+    "context": "Éditeur graphe > rapport de refus d’export > qualification d’un refus de préparation.",
+    "en": {
+      "sourceHash": "7693b507b5d7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7693b507b5d7",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.preparation.author": {
+    "context": "Éditeur graphe > rapport de refus d’export > qualification d’un refus de préparation.",
+    "en": {
+      "sourceHash": "27b3e7130dce",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "27b3e7130dce",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.preparation.identity": {
+    "context": "Éditeur graphe > rapport de refus d’export > qualification d’un refus de préparation.",
+    "en": {
+      "sourceHash": "f480be8d7081",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f480be8d7081",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.preparation.readiness": {
+    "context": "Éditeur graphe > rapport de refus d’export > qualification d’un refus de préparation.",
+    "en": {
+      "sourceHash": "3f5e128f6ca8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3f5e128f6ca8",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.preparation.serialization": {
+    "context": "Éditeur graphe > rapport de refus d’export > qualification d’un refus de préparation.",
+    "en": {
+      "sourceHash": "1abe2c42588d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1abe2c42588d",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.decode.message": {
+    "context": "Éditeur graphe > rapport de refus d’export > message du refus de décodage.",
+    "en": {
+      "sourceHash": "2037b5d18a1a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2037b5d18a1a",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.decode.codec": {
+    "context": "Éditeur graphe > rapport de refus d’export > détail du décodage après le code technique ; path, found et expected sont des valeurs techniques.",
+    "en": {
+      "sourceHash": "5f616a55cf51",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5f616a55cf51",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.resolutions.action": {
+    "context": "Éditeur graphe > rapport de refus d’export > bouton : ouvre le panneau des résolutions de diagnostics. Court.",
+    "maxLength": 26,
+    "en": {
+      "sourceHash": "67fb79a87ad3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "67fb79a87ad3",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.media.message_one": {
+    "context": "Éditeur graphe > rapport de refus d’export > message du refus des médias indisponibles ; count = références manquantes.",
+    "en": {
+      "sourceHash": "11f4cf1f6ae1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "11f4cf1f6ae1",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.media.message_many": {
+    "context": "Éditeur graphe > rapport de refus d’export > message du refus des médias indisponibles ; count = références manquantes.",
+    "it": {
+      "sourceHash": "65418b057430",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.media.message_other": {
+    "context": "Éditeur graphe > rapport de refus d’export > message du refus des médias indisponibles ; count = références manquantes.",
+    "en": {
+      "sourceHash": "65418b057430",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "65418b057430",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.media.byReference": {
+    "context": "Éditeur graphe > rapport de refus d’export > média sans ancien chemin, à relier par référence.",
+    "en": {
+      "sourceHash": "fd737a7dd319",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fd737a7dd319",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.media.lastKnown": {
+    "context": "Éditeur graphe > rapport de refus d’export > ligne de chemin d’un média ; <path/> = chemin (donnée) en police technique. Garder la balise.",
+    "en": {
+      "sourceHash": "5b1e53e05719",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5b1e53e05719",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.collision.message": {
+    "context": "Éditeur graphe > rapport de refus d’export > message du refus de collision de noms.",
+    "en": {
+      "sourceHash": "18716130f00b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "18716130f00b",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.oracle.message": {
+    "context": "Éditeur graphe > rapport de refus d’export > message du refus de désaccord des médias.",
+    "en": {
+      "sourceHash": "f050b183d28c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f050b183d28c",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.oracle.stage": {
+    "context": "Éditeur graphe > rapport de refus d’export > ligne d’un désaccord : identifiant de l’Écran (<stage/>, donnée). Garder la balise.",
+    "en": {
+      "sourceHash": "d995421defe7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d995421defe7",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.oracle.comparison": {
+    "context": "Éditeur graphe > rapport de refus d’export > comparaison d’un média ; <expected/> et <observed/> sont des valeurs techniques. Garder les balises.",
+    "en": {
+      "sourceHash": "231c483613b0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "231c483613b0",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.cancelled.message": {
+    "context": "Éditeur graphe > rapport de refus d’export > message d’une annulation demandée.",
+    "en": {
+      "sourceHash": "3619175f8f92",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3619175f8f92",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.write.message": {
+    "context": "Éditeur graphe > rapport de refus d’export > message d’un échec d’écriture.",
+    "en": {
+      "sourceHash": "53961c283986",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "53961c283986",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.write.partial": {
+    "context": "Éditeur graphe > rapport de refus d’export > résidu possible après un échec d’écriture. Garder <code>.partial</code>.",
+    "en": {
+      "sourceHash": "212139761823",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "212139761823",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.request.message": {
+    "context": "Éditeur graphe > rapport de refus d’export > refus local sans message : rien n’a été demandé au moteur.",
+    "en": {
+      "sourceHash": "b7b2191d3a64",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b7b2191d3a64",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.request.withMessage": {
+    "context": "Éditeur graphe > rapport de refus d’export > refus local ; message = raison traduite du refus.",
+    "en": {
+      "sourceHash": "1dffcfb09f74",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1dffcfb09f74",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.untyped.message": {
+    "context": "Éditeur graphe > rapport de refus d’export > refus non typé ; le message brut éventuel suit en police technique.",
+    "en": {
+      "sourceHash": "687fa5228c1a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "687fa5228c1a",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cause.bindingAbsent": {
+    "context": "Éditeur graphe > rapport de refus d’export > cause d’un média indisponible (minuscule, ligne sous la référence).",
+    "en": {
+      "sourceHash": "0908dbf8225e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0908dbf8225e",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cause.pathNull": {
+    "context": "Éditeur graphe > rapport de refus d’export > cause d’un média indisponible.",
+    "en": {
+      "sourceHash": "b930e23423e6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b930e23423e6",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cause.notFound": {
+    "context": "Éditeur graphe > rapport de refus d’export > cause d’un média indisponible.",
+    "en": {
+      "sourceHash": "8698cfeccb50",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8698cfeccb50",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cause.notRegular": {
+    "context": "Éditeur graphe > rapport de refus d’export > cause d’un média indisponible.",
+    "en": {
+      "sourceHash": "d6dbfd4a2c24",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d6dbfd4a2c24",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cause.readDenied": {
+    "context": "Éditeur graphe > rapport de refus d’export > cause d’un média indisponible.",
+    "en": {
+      "sourceHash": "5c5eba2f5348",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5c5eba2f5348",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cause.empty": {
+    "context": "Éditeur graphe > rapport de refus d’export > cause d’un média indisponible.",
+    "en": {
+      "sourceHash": "adeeec09f13a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "adeeec09f13a",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cause.undecodable": {
+    "context": "Éditeur graphe > rapport de refus d’export > cause d’un média indisponible.",
+    "en": {
+      "sourceHash": "6676947ff683",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6676947ff683",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cause.validationFailed": {
+    "context": "Éditeur graphe > rapport de refus d’export > cause d’un média indisponible.",
+    "en": {
+      "sourceHash": "38d866b61a9b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "38d866b61a9b",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cause.toolUnavailable": {
+    "context": "Éditeur graphe > rapport de refus d’export > cause d’un média indisponible.",
+    "en": {
+      "sourceHash": "cda8d59d0059",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cda8d59d0059",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cause.toolInterrupted": {
+    "context": "Éditeur graphe > rapport de refus d’export > cause d’un média indisponible.",
+    "en": {
+      "sourceHash": "48faad4326d2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "48faad4326d2",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cause.processingFailed": {
+    "context": "Éditeur graphe > rapport de refus d’export > cause d’un média indisponible.",
+    "en": {
+      "sourceHash": "8538f4ce6628",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8538f4ce6628",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cause.unknown": {
+    "context": "Éditeur graphe > rapport de refus d’export > cause absente d’un média indisponible.",
+    "en": {
+      "sourceHash": "a1491424d033",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a1491424d033",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.transformation.verbatim": {
+    "context": "Éditeur graphe > résumé d’un export réussi : transformation d’un média (minuscule).",
+    "en": {
+      "sourceHash": "35e001d58365",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "35e001d58365",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.transformation.renamed": {
+    "context": "Éditeur graphe > résumé d’un export réussi : transformation d’un média.",
+    "en": {
+      "sourceHash": "a6ab5c06dfbe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a6ab5c06dfbe",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.transformation.reencoded": {
+    "context": "Éditeur graphe > résumé d’un export réussi : transformation d’un média.",
+    "en": {
+      "sourceHash": "8935395e4a41",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8935395e4a41",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.transformation.resized": {
+    "context": "Éditeur graphe > résumé d’un export réussi : transformation d’un média.",
+    "en": {
+      "sourceHash": "2a3ab03eab2b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2a3ab03eab2b",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.field.image": {
+    "context": "Éditeur graphe > rapport de refus d’export > champ d’un média indisponible ou en désaccord (minuscule).",
+    "en": {
+      "sourceHash": "6105d6cc76af",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6105d6cc76af",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.field.audio": {
+    "context": "Éditeur graphe > rapport de refus d’export > champ d’un média indisponible ou en désaccord (minuscule).",
+    "en": {
+      "sourceHash": "6ed8919ce204",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6ed8919ce204",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.field.fallback": {
+    "context": "Éditeur graphe > rapport de refus d’export > champ inconnu d’un média (minuscule).",
+    "en": {
+      "sourceHash": "4a45b48a139b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4a45b48a139b",
+      "status": "ai-reviewed"
+    }
+  },
+  "readiness.qualification.untested": {
+    "context": "Éditeur graphe > qualification d’export : dimension non observée (minuscule).",
+    "en": {
+      "sourceHash": "9f18e5941660",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9f18e5941660",
+      "status": "ai-reviewed"
+    }
+  },
+  "readiness.qualification.prepared": {
+    "context": "Éditeur graphe > qualification d’export : dimension préparée.",
+    "en": {
+      "sourceHash": "e05ed8dddc62",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e05ed8dddc62",
+      "status": "ai-reviewed"
+    }
+  },
+  "readiness.qualification.supported": {
+    "context": "Éditeur graphe > qualification d’export : dimension supportée.",
+    "en": {
+      "sourceHash": "e3dbf70d9ce9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e3dbf70d9ce9",
+      "status": "ai-reviewed"
+    }
+  },
+  "readiness.source.decode": {
+    "context": "Éditeur graphe > source d’un diagnostic de qualification (minuscule).",
+    "en": {
+      "sourceHash": "ac26848592f3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ac26848592f3",
+      "status": "ai-reviewed"
+    }
+  },
+  "readiness.source.integrity": {
+    "context": "Éditeur graphe > source d’un diagnostic de qualification.",
+    "en": {
+      "sourceHash": "2796dbeafd56",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2796dbeafd56",
+      "status": "ai-reviewed"
+    }
+  },
+  "readiness.source.authoring": {
+    "context": "Éditeur graphe > source d’un diagnostic de qualification.",
+    "en": {
+      "sourceHash": "d9c350e0f384",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d9c350e0f384",
+      "status": "ai-reviewed"
+    }
+  },
+  "readiness.source.readiness": {
+    "context": "Éditeur graphe > source d’un diagnostic de qualification.",
+    "en": {
+      "sourceHash": "1dbf39600b57",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1dbf39600b57",
+      "status": "ai-reviewed"
+    }
+  },
+  "readiness.source.fallback": {
+    "context": "Éditeur graphe > source inconnue d’un diagnostic de qualification.",
+    "en": {
+      "sourceHash": "5a695eea5b00",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5a695eea5b00",
+      "status": "ai-reviewed"
+    }
+  },
+  "readiness.level.info": {
+    "context": "Éditeur graphe > niveau d’un diagnostic de qualification (minuscule), en tête des lignes de blocage.",
+    "en": {
+      "sourceHash": "dea7111a8406",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dea7111a8406",
+      "status": "ai-reviewed"
+    }
+  },
+  "readiness.level.warning": {
+    "context": "Éditeur graphe > niveau d’un diagnostic de qualification.",
+    "en": {
+      "sourceHash": "a50dc11c40fa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a50dc11c40fa",
+      "status": "ai-reviewed"
+    }
+  },
+  "readiness.level.action": {
+    "context": "Éditeur graphe > niveau d’un diagnostic de qualification.",
+    "en": {
+      "sourceHash": "1a739f7456eb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1a739f7456eb",
+      "status": "ai-reviewed"
+    }
+  },
+  "readiness.level.error": {
+    "context": "Éditeur graphe > niveau d’un diagnostic de qualification.",
+    "en": {
+      "sourceHash": "7d2988c9e76f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7d2988c9e76f",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.folder.choose": {
+    "context": "checker > funnel.folder.choose ; Vérificateur de pack > bouton : ouvre le dialogue natif de sélection d’un dossier de pack décompressé. Court.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "8b3e35234cda",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8b3e35234cda",
+      "status": "ai-reviewed"
+    }
+  }
+}

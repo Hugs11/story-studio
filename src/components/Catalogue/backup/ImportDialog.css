@@ -1,0 +1,5 @@
+.catalogue-backup-import { display: grid; gap: var(--space-3); min-width: 0; }
+.catalogue-backup-import label { display: grid; gap: var(--space-2); }
+.catalogue-backup-import pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; }
+.catalogue-backup-import nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.catalogue-import-conflict { min-width: 0; border: 1px solid var(--border); }

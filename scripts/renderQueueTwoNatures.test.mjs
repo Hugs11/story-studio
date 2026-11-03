@@ -477,6 +477,7 @@ test('Libre : une panne de nettoyage pendant l’abandon reste visible', async (
   });
   assert.equal(job.status, JOB_STATUS.ERROR);
   assert.equal(job.errorMessage, cleanupFailure);
+  assert.ok(job.logs.includes(cleanupFailure));
   assert.equal(job.resultPath ?? null, null);
   assert.equal(job.cancelRequested, false);
 });
@@ -485,7 +486,7 @@ test('Libre (témoin) : l’abandon rapporté par le moteur reste une annulation
   const { job } = await cancelThenAnswer({
     command: 'generate_pack',
     job: freeJob(),
-    answer: (running) => running.reject('Génération annulée.'),
+    answer: (running) => running.reject({ code: 'GENERATION_CANCELLED', params: {}, detail: 'Text changed' }),
   });
   assert.equal(job.status, JOB_STATUS.CANCELED);
   assert.equal(job.resultPath, null);

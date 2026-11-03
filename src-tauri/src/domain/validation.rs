@@ -4,29 +4,36 @@ use crate::native_pack::{
     canonicalize_project, end_home_step_is_active, end_prompt_is_active, end_sequence_is_active,
     global_end_message_is_reached,
 };
-use crate::services::project_files::{validate_existing_file_path, validate_existing_pack_path};
+use crate::services::project_files::{
+    validate_existing_file_path_with_label, validate_existing_pack_path,
+};
+use crate::support::user_message::{codes, MessageLabel, UserMessage};
 use std::collections::{HashMap, HashSet};
 
 fn required_file_path<'a>(
     value: Option<&'a str>,
-    label: &str,
+    label: &MessageLabel,
     errors: &mut Vec<String>,
 ) -> Option<&'a str> {
     match value.map(str::trim).filter(|value| !value.is_empty()) {
         Some(path) => Some(path),
         None => {
-            errors.push(format!("{} manquant.", label));
+            errors.push(
+                UserMessage::new(codes::VALIDATION_FIELD_MISSING_MASCULINE)
+                    .param("label", label.value())
+                    .into_transport(),
+            );
             None
         }
     }
 }
 
-fn display_label(value: &str, fallback: &str) -> String {
+fn display_label(value: &str, fallback: &MessageLabel) -> MessageLabel {
     let trimmed = value.trim();
     if trimmed.is_empty() {
-        fallback.to_string()
+        fallback.clone()
     } else {
-        trimmed.to_string()
+        MessageLabel::data(trimmed)
     }
 }
 
@@ -44,14 +51,17 @@ impl FileValidation {
 
 fn validate_story_entry_for_generation(
     entry: &ProjectEntry,
-    context: &str,
+    context: &MessageLabel,
     file_validation: FileValidation,
     errors: &mut Vec<String>,
 ) {
     let explicit_title_stage = entry.silent_title_stage;
     match entry.entry_type.as_str() {
         "zip" => {
-            let zip_label = format!("{} : ZIP", context);
+            let zip_label = MessageLabel::new(
+                format!("{} : ZIP", context),
+                UserMessage::new(codes::LABEL_PROJECT_ZIP).param("context", context.value()),
+            );
             if let Some(zip_path) =
                 required_file_path(entry.zip_path.as_deref(), &zip_label, errors)
             {
@@ -63,17 +73,26 @@ fn validate_story_entry_for_generation(
             }
         }
         _ => {
-            let story_audio_label = format!("{} : audio", context);
+            let story_audio_label = MessageLabel::new(
+                format!("{} : audio", context),
+                UserMessage::new(codes::LABEL_PROJECT_AUDIO).param("context", context.value()),
+            );
             if let Some(audio_path) =
                 required_file_path(entry.audio.as_deref(), &story_audio_label, errors)
             {
                 if file_validation.checks_disk() {
-                    if let Err(err) = validate_existing_file_path(audio_path, &story_audio_label) {
+                    if let Err(err) =
+                        validate_existing_file_path_with_label(audio_path, &story_audio_label)
+                    {
                         errors.push(err);
                     }
                 }
             }
-            let item_audio_label = format!("{} : audio titre", context);
+            let item_audio_label = MessageLabel::new(
+                format!("{} : audio titre", context),
+                UserMessage::new(codes::LABEL_PROJECT_TITLE_AUDIO)
+                    .param("context", context.value()),
+            );
             if let Some(item_audio) = entry
                 .item_audio
                 .as_deref()
@@ -81,15 +100,24 @@ fn validate_story_entry_for_generation(
                 .filter(|value| !value.is_empty())
             {
                 if file_validation.checks_disk() {
-                    if let Err(err) = validate_existing_file_path(item_audio, &item_audio_label) {
+                    if let Err(err) =
+                        validate_existing_file_path_with_label(item_audio, &item_audio_label)
+                    {
                         errors.push(err);
                     }
                 }
             } else if !explicit_title_stage {
-                errors.push(format!("{} manquant.", item_audio_label));
+                errors.push(
+                    UserMessage::new(codes::VALIDATION_PROJECT_MISSING_TITLE_AUDIO)
+                        .param("item_audio_label", item_audio_label.value())
+                        .into_transport(),
+                );
             }
 
-            let item_image_label = format!("{} : image", context);
+            let item_image_label = MessageLabel::new(
+                format!("{} : image", context),
+                UserMessage::new(codes::LABEL_PROJECT_IMAGE).param("context", context.value()),
+            );
             if let Some(item_image) = entry
                 .item_image
                 .as_deref()
@@ -97,12 +125,18 @@ fn validate_story_entry_for_generation(
                 .filter(|value| !value.is_empty())
             {
                 if file_validation.checks_disk() {
-                    if let Err(err) = validate_existing_file_path(item_image, &item_image_label) {
+                    if let Err(err) =
+                        validate_existing_file_path_with_label(item_image, &item_image_label)
+                    {
                         errors.push(err);
                     }
                 }
             } else {
-                errors.push(format!("{} manquant.", item_image_label));
+                errors.push(
+                    UserMessage::new(codes::VALIDATION_PROJECT_IMAGE_MISSING)
+                        .param("item_image_label", item_image_label.value())
+                        .into_transport(),
+                );
             }
         }
     }
@@ -161,8 +195,8 @@ fn decode_navigation_target(target: &str) -> Option<NavigationTarget<'_>> {
 
 fn validate_navigation_target(
     target: Option<&str>,
-    entry_name: &str,
-    target_label: &str,
+    entry_name: &MessageLabel,
+    target_label: &MessageLabel,
     graph: &NavigationValidationContext<'_>,
     errors: &mut Vec<String>,
 ) {
@@ -173,7 +207,12 @@ fn validate_navigation_target(
         NavigationTarget::Root | NavigationTarget::CurrentMenu | NavigationTarget::NextStory => {}
         NavigationTarget::Menu(target_id) => {
             if !graph.menu_ids.contains(target_id) {
-                errors.push(format!("{entry_name} : {target_label} est introuvable."));
+                errors.push(
+                    UserMessage::new(codes::VALIDATION_PROJECT_TARGET_MISSING)
+                        .param("entry_name", entry_name.value())
+                        .param("target_label", target_label.value())
+                        .into_transport(),
+                );
             } else if graph
                 .menu_playable_counts
                 .get(target_id)
@@ -181,21 +220,38 @@ fn validate_navigation_target(
                 .unwrap_or(0)
                 == 0
             {
-                errors.push(format!(
-                    "{entry_name} : {target_label} est vide ou non jouable."
-                ));
+                errors.push(
+                    UserMessage::new(codes::VALIDATION_PROJECT_TARGET_UNPLAYABLE)
+                        .param("entry_name", entry_name.value())
+                        .param("target_label", target_label.value())
+                        .into_transport(),
+                );
             }
         }
         NavigationTarget::Story(target_id) | NavigationTarget::StoryPlay(target_id) => {
             if !graph.story_ids.contains(target_id) {
-                errors.push(format!("{entry_name} : {target_label} est introuvable."));
+                errors.push(
+                    UserMessage::new(codes::VALIDATION_PROJECT_TARGET_MISSING)
+                        .param("entry_name", entry_name.value())
+                        .param("target_label", target_label.value())
+                        .into_transport(),
+                );
             }
         }
         NavigationTarget::StoryHomeStep(target_id) => {
             if !graph.story_ids.contains(target_id) {
-                errors.push(format!("{entry_name} : {target_label} est introuvable."));
+                errors.push(
+                    UserMessage::new(codes::VALIDATION_PROJECT_TARGET_MISSING)
+                        .param("entry_name", entry_name.value())
+                        .param("target_label", target_label.value())
+                        .into_transport(),
+                );
             } else if !graph.story_home_step_ids.contains(target_id) {
-                errors.push(format!("{entry_name} : retour de fin introuvable."));
+                errors.push(
+                    UserMessage::new(codes::VALIDATION_ENDING_RETURN_MISSING)
+                        .param("entry_name", entry_name.value())
+                        .into_transport(),
+                );
             }
         }
     }
@@ -224,12 +280,13 @@ fn is_preserved_native_helper_shared_entry(entry: &ProjectEntry) -> bool {
         && controls.home == Some(true)
         && controls.pause == Some(false)
         && controls.autoplay == Some(true)
-        && entry.children.len() == 1
-        && entry.children[0].entry_type == "ref"
+        // Sa sortie unique vise un nœud déjà placé : l'import la consigne hors
+        // arbre, sans enfant.
+        && entry.children.is_empty()
 }
 
-/// Id d'entrée ciblé par une `ref` (menu:/story:/story_play:/story_home_step:), ou None.
-fn decode_ref_target_entry_id(target: &str) -> Option<&str> {
+/// Id d'entrée ciblé par une cible typée (menu:/story:/story_play:/story_home_step:), ou None.
+fn decode_target_entry_id(target: &str) -> Option<&str> {
     match decode_navigation_target(target)? {
         NavigationTarget::Menu(id)
         | NavigationTarget::Story(id)
@@ -378,8 +435,7 @@ fn count_content_entries(entries: &[ProjectEntry]) -> usize {
 
 fn count_playable_descendants(entry: &ProjectEntry) -> usize {
     match entry.entry_type.as_str() {
-        // Une `ref` est un choix navigable (vers un nœud existant) → elle compte.
-        "story" | "zip" | "ref" => 1,
+        "story" | "zip" => 1,
         "menu" => entry.children.iter().map(count_playable_descendants).sum(),
         _ => 0,
     }
@@ -387,7 +443,7 @@ fn count_playable_descendants(entry: &ProjectEntry) -> usize {
 
 fn has_playable_descendants(entry: &ProjectEntry) -> bool {
     match entry.entry_type.as_str() {
-        "story" | "zip" | "ref" => true,
+        "story" | "zip" => true,
         "menu" => entry.children.iter().any(has_playable_descendants),
         _ => false,
     }
@@ -454,18 +510,12 @@ fn collect_entry_ids<'a>(entries: &'a [ProjectEntry], ids: &mut HashSet<&'a str>
 }
 
 fn push_navigation_target_id<'a>(target: Option<&'a String>, ids: &mut Vec<&'a str>) {
-    if let Some(target_id) = target
-        .map(String::as_str)
-        .and_then(decode_ref_target_entry_id)
-    {
+    if let Some(target_id) = target.map(String::as_str).and_then(decode_target_entry_id) {
         ids.push(target_id);
     }
 }
 
 fn collect_navigation_target_ids<'a>(entry: &'a ProjectEntry, ids: &mut Vec<&'a str>) {
-    if entry.entry_type == "ref" {
-        push_navigation_target_id(entry.target.as_ref(), ids);
-    }
     push_navigation_target_id(entry.return_after_play.as_ref(), ids);
     push_navigation_target_id(entry.return_on_home.as_ref(), ids);
     if !entry.title_return_on_home_none {
@@ -478,7 +528,7 @@ fn collect_navigation_target_ids<'a>(entry: &'a ProjectEntry, ids: &mut Vec<&'a 
     for step in &entry.after_playback_sequence {
         push_navigation_target_id(step.ok_target.as_ref(), ids);
         for target in &step.ok_choice_targets {
-            if let Some(target_id) = decode_ref_target_entry_id(target) {
+            if let Some(target_id) = decode_target_entry_id(target) {
                 ids.push(target_id);
             }
         }
@@ -489,7 +539,7 @@ fn collect_navigation_target_ids<'a>(entry: &'a ProjectEntry, ids: &mut Vec<&'a 
     if let Some(step) = &entry.after_playback_home_step {
         push_navigation_target_id(step.ok_target.as_ref(), ids);
         for target in &step.ok_choice_targets {
-            if let Some(target_id) = decode_ref_target_entry_id(target) {
+            if let Some(target_id) = decode_target_entry_id(target) {
                 ids.push(target_id);
             }
         }
@@ -571,24 +621,33 @@ fn reachable_shared_entry_ids(
 fn validate_shared_entries_reachable(
     entries: &[ProjectEntry],
     reachable_ids: &HashSet<String>,
-    context: &str,
+    context: &MessageLabel,
     errors: &mut Vec<String>,
 ) {
     for entry in entries {
         let entry_name = display_label(
             &entry.name,
-            if entry.entry_type == "menu" {
-                "Collection"
+            &if entry.entry_type == "menu" {
+                MessageLabel::literal("Collection", codes::LABEL_PROJECT_COLLECTION)
             } else {
-                "Element"
+                MessageLabel::literal("Element", codes::LABEL_PROJECT_ELEMENT)
             },
         );
-        let entry_context = format!("{} / {}", context, entry_name);
+        let entry_context = MessageLabel::new(
+            format!("{} / {}", context, entry_name),
+            UserMessage::new(codes::LABEL_PROJECT_PATH)
+                .param("context", context.value())
+                .param("name", entry_name.value()),
+        );
         if !entry.id.trim().is_empty() && !reachable_ids.contains(entry.id.trim()) {
             if is_preserved_native_helper_shared_entry(entry) {
                 continue;
             }
-            errors.push(format!("{} : élément partagé non utilisé.", entry_context));
+            errors.push(
+                UserMessage::new(codes::VALIDATION_SHARED_ELEMENT_UNUSED)
+                    .param("entry_context", entry_context.value())
+                    .into_transport(),
+            );
         }
         if entry.entry_type == "menu" {
             validate_shared_entries_reachable(
@@ -604,28 +663,23 @@ fn validate_shared_entries_reachable(
 fn validate_navigation_targets(
     entries: &[ProjectEntry],
     graph: &NavigationValidationContext<'_>,
-    context: &str,
+    context: &MessageLabel,
     auto_next: bool,
     errors: &mut Vec<String>,
 ) {
     for entry in entries {
         let fallback_name = if entry.entry_type == "menu" {
-            "Collection"
+            MessageLabel::literal("Collection", codes::LABEL_PROJECT_COLLECTION)
         } else {
-            "Histoire"
+            MessageLabel::literal("Histoire", codes::LABEL_PROJECT_STORY)
         };
-        let entry_name = display_label(&entry.name, fallback_name);
-        let entry_context = format!("{} / {}", context, entry_name);
-
-        if entry.entry_type == "ref" {
-            validate_navigation_target(
-                entry.target.as_deref(),
-                &entry_context,
-                "la cible de la référence",
-                graph,
-                errors,
-            );
-        }
+        let entry_name = display_label(&entry.name, &fallback_name);
+        let entry_context = MessageLabel::new(
+            format!("{} / {}", context, entry_name),
+            UserMessage::new(codes::LABEL_PROJECT_PATH)
+                .param("context", context.value())
+                .param("name", entry_name.value()),
+        );
 
         // Auto-next enchaîne l'histoire suivante : le constructeur ne lit ni
         // `returnAfterPlay` ni les fins locales.
@@ -633,7 +687,10 @@ fn validate_navigation_targets(
             validate_navigation_target(
                 entry.return_after_play.as_deref(),
                 &entry_name,
-                "la destination de navigation après lecture",
+                &MessageLabel::literal(
+                    "la destination de navigation après lecture",
+                    codes::LABEL_PROJECT_AFTER_PLAY_TARGET,
+                ),
                 graph,
                 errors,
             );
@@ -642,7 +699,10 @@ fn validate_navigation_targets(
             validate_navigation_target(
                 entry.return_on_home.as_deref(),
                 &entry_name,
-                "la destination du bouton Accueil",
+                &MessageLabel::literal(
+                    "la destination du bouton Accueil",
+                    codes::LABEL_PROJECT_HOME_TARGET,
+                ),
                 graph,
                 errors,
             );
@@ -651,7 +711,10 @@ fn validate_navigation_targets(
             validate_navigation_target(
                 entry.title_return_on_home.as_deref(),
                 &entry_name,
-                "la destination du bouton Accueil du titre",
+                &MessageLabel::literal(
+                    "la destination du bouton Accueil du titre",
+                    codes::LABEL_PROJECT_TITLE_HOME_TARGET,
+                ),
                 graph,
                 errors,
             );
@@ -665,7 +728,10 @@ fn validate_navigation_targets(
             validate_navigation_target(
                 entry.after_playback_prompt_ok_target.as_deref(),
                 &entry_name,
-                "la destination OK du prompt final",
+                &MessageLabel::literal(
+                    "la destination OK du prompt final",
+                    codes::LABEL_PROJECT_PROMPT_OK_TARGET,
+                ),
                 graph,
                 errors,
             );
@@ -673,7 +739,10 @@ fn validate_navigation_targets(
                 validate_navigation_target(
                     entry.after_playback_prompt_home_target.as_deref(),
                     &entry_name,
-                    "la destination Accueil du prompt final",
+                    &MessageLabel::literal(
+                        "la destination Accueil du prompt final",
+                        codes::LABEL_PROJECT_PROMPT_HOME_TARGET,
+                    ),
                     graph,
                     errors,
                 );
@@ -685,7 +754,10 @@ fn validate_navigation_targets(
             &[]
         };
         for (index, step) in active_sequence.iter().enumerate() {
-            let step_label = format!("la destination OK fin {}", index + 1);
+            let step_label = MessageLabel::new(
+                format!("la destination OK fin {}", index + 1),
+                UserMessage::new(codes::LABEL_PROJECT_STEP_OK).param("index", index + 1),
+            );
             validate_navigation_target(
                 step.ok_target.as_deref(),
                 &entry_name,
@@ -703,7 +775,10 @@ fn validate_navigation_targets(
                 );
             }
             if !step.home_follows_ok && !step.home_none {
-                let step_label = format!("la destination Accueil fin {}", index + 1);
+                let step_label = MessageLabel::new(
+                    format!("la destination Accueil fin {}", index + 1),
+                    UserMessage::new(codes::LABEL_PROJECT_STEP_HOME).param("index", index + 1),
+                );
                 validate_navigation_target(
                     step.home_target.as_deref(),
                     &entry_name,
@@ -727,7 +802,10 @@ fn validate_navigation_targets(
             validate_navigation_target(
                 step.ok_target.as_deref(),
                 &entry_name,
-                "la destination OK du retour Home de fin",
+                &MessageLabel::literal(
+                    "la destination OK du retour Home de fin",
+                    codes::LABEL_ENDING_HOME_OK_TARGET,
+                ),
                 graph,
                 errors,
             );
@@ -735,7 +813,10 @@ fn validate_navigation_targets(
                 validate_navigation_target(
                     Some(target.as_str()),
                     &entry_name,
-                    "la destination OK du retour Home de fin",
+                    &MessageLabel::literal(
+                        "la destination OK du retour Home de fin",
+                        codes::LABEL_ENDING_HOME_OK_TARGET,
+                    ),
                     graph,
                     errors,
                 );
@@ -744,7 +825,10 @@ fn validate_navigation_targets(
                 validate_navigation_target(
                     step.home_target.as_deref(),
                     &entry_name,
-                    "la destination Accueil du retour Home de fin",
+                    &MessageLabel::literal(
+                        "la destination Accueil du retour Home de fin",
+                        codes::LABEL_ENDING_HOME_HOME_TARGET,
+                    ),
                     graph,
                     errors,
                 );
@@ -760,7 +844,7 @@ fn validate_navigation_targets(
 /// Vérifie sur disque un média facultatif : absent, rien à vérifier.
 fn validate_optional_file(
     path: Option<&str>,
-    label: &str,
+    label: &MessageLabel,
     file_validation: FileValidation,
     errors: &mut Vec<String>,
 ) {
@@ -768,7 +852,7 @@ fn validate_optional_file(
         return;
     };
     if file_validation.checks_disk() {
-        if let Err(err) = validate_existing_file_path(path, label) {
+        if let Err(err) = validate_existing_file_path_with_label(path, label) {
             errors.push(err);
         }
     }
@@ -776,25 +860,34 @@ fn validate_optional_file(
 
 fn validate_project_entry_for_generation(
     entry: &ProjectEntry,
-    context: &str,
+    context: &MessageLabel,
     file_validation: FileValidation,
     auto_next: bool,
     errors: &mut Vec<String>,
 ) {
     let trimmed_id = entry.id.trim();
     if trimmed_id.is_empty() {
-        errors.push(format!("{} : identifiant interne manquant.", context));
+        errors.push(
+            UserMessage::new(codes::VALIDATION_ELEMENT_ID_MISSING)
+                .param("context", context.value())
+                .into_transport(),
+        );
     } else if trimmed_id == "root" {
-        errors.push(format!(
-            "{} : l'identifiant reserve `root` ne peut pas etre utilise.",
-            context
-        ));
+        errors.push(
+            UserMessage::new(codes::VALIDATION_ROOT_ID_RESERVED)
+                .param("context", context.value())
+                .into_transport(),
+        );
     }
 
     match entry.entry_type.as_str() {
         "menu" => {
             if !has_playable_descendants(entry) {
-                errors.push(format!("{} : collection vide.", context));
+                errors.push(
+                    UserMessage::new(codes::VALIDATION_PROJECT_COLLECTION_EMPTY)
+                        .param("context", context.value())
+                        .into_transport(),
+                );
             }
 
             if (is_silent_imported_continuation(entry)
@@ -805,18 +898,27 @@ fn validate_project_entry_for_generation(
             } else {
                 if let Some(menu_audio) = required_file_path(
                     entry.audio.as_deref(),
-                    &format!("{} : audio menu", context),
+                    &MessageLabel::new(
+                        format!("{} : audio menu", context),
+                        UserMessage::new(codes::LABEL_PROJECT_MENU_AUDIO)
+                            .param("context", context.value()),
+                    ),
                     errors,
                 ) {
                     if file_validation.checks_disk() {
-                        if let Err(err) = validate_existing_file_path(menu_audio, context) {
+                        if let Err(err) =
+                            validate_existing_file_path_with_label(menu_audio, context)
+                        {
                             errors.push(err);
                         }
                     }
                 }
             }
 
-            let menu_image_label = format!("{} : image menu", context);
+            let menu_image_label = MessageLabel::new(
+                format!("{} : image menu", context),
+                UserMessage::new(codes::LABEL_PROJECT_MENU_IMAGE).param("context", context.value()),
+            );
             if entry.auto_black_image {
                 // autoBlackImage : le générateur produit un écran noir et n'écrit pas
                 // l'image éventuellement conservée ; elle n'est ni requise ni vérifiée.
@@ -827,19 +929,33 @@ fn validate_project_entry_for_generation(
                 .filter(|value| !value.is_empty())
             {
                 if file_validation.checks_disk() {
-                    if let Err(err) = validate_existing_file_path(menu_image, &menu_image_label) {
+                    if let Err(err) =
+                        validate_existing_file_path_with_label(menu_image, &menu_image_label)
+                    {
                         errors.push(err);
                     }
                 }
             } else {
-                errors.push(format!("{} manquante.", menu_image_label));
+                errors.push(
+                    UserMessage::new(codes::VALIDATION_FIELD_MISSING_FEMININE)
+                        .param("menu_image_label", menu_image_label.value())
+                        .into_transport(),
+                );
             }
 
             for child in &entry.children {
-                let child_name = display_label(&child.name, "Element");
+                let child_name = display_label(
+                    &child.name,
+                    &MessageLabel::literal("Element", codes::LABEL_PROJECT_ELEMENT),
+                );
                 validate_project_entry_for_generation(
                     child,
-                    &format!("{} / {}", context, child_name),
+                    &MessageLabel::new(
+                        format!("{} / {}", context, child_name),
+                        UserMessage::new(codes::LABEL_PROJECT_PATH)
+                            .param("context", context.value())
+                            .param("name", child_name.value()),
+                    ),
                     file_validation,
                     auto_next,
                     errors,
@@ -847,36 +963,34 @@ fn validate_project_entry_for_generation(
             }
         }
         "zip" => {
-            let zip_label = format!("{} : ZIP", context);
+            let zip_label = MessageLabel::new(
+                format!("{} : ZIP", context),
+                UserMessage::new(codes::LABEL_PROJECT_ZIP).param("context", context.value()),
+            );
             if let Some(zip_path) =
                 required_file_path(entry.zip_path.as_deref(), &zip_label, errors)
             {
                 if file_validation.checks_disk() {
                     if let Err(err) = validate_existing_pack_path(zip_path) {
-                        errors.push(format!("{} : {}", zip_label, err));
+                        errors.push(
+                            UserMessage::new(codes::VALIDATION_IMPORTED_ARCHIVE_INVALID)
+                                .param("zip_label", zip_label.value())
+                                .param("reason", (err).to_string())
+                                .with_detail((err).to_string())
+                                .into_transport(),
+                        );
                     }
                 }
             }
         }
-        "ref" => {
-            // La résolution de la cible est validée globalement avec les autres navigations ;
-            // ici on exige seulement une cible non vide.
-            if entry
-                .target
-                .as_deref()
-                .map(str::trim)
-                .unwrap_or("")
-                .is_empty()
-            {
-                errors.push(format!("{} : référence sans cible.", context));
-            }
-        }
         _ => {
             if entry.entry_type != "story" {
-                errors.push(format!(
-                    "{} : type d'element non pris en charge ({}).",
-                    context, entry.entry_type
-                ));
+                errors.push(
+                    UserMessage::new(codes::VALIDATION_ELEMENT_TYPE_UNSUPPORTED)
+                        .param("context", context.value())
+                        .param("entry_entry_type", (entry.entry_type).to_string())
+                        .into_transport(),
+                );
             } else {
                 validate_story_entry_for_generation(entry, context, file_validation, errors);
                 // Médias de fin : seuls ceux que le constructeur écrit sont vérifiés.
@@ -885,7 +999,11 @@ fn validate_project_entry_for_generation(
                 if end_prompt_is_active(auto_next, sequence_len) {
                     validate_optional_file(
                         entry.after_playback_prompt_audio.as_deref(),
-                        &format!("{} : audio fin histoire", context),
+                        &MessageLabel::new(
+                            format!("{} : audio fin histoire", context),
+                            UserMessage::new(codes::LABEL_PROJECT_ENDING_AUDIO)
+                                .param("context", context.value()),
+                        ),
                         file_validation,
                         errors,
                     );
@@ -894,13 +1012,23 @@ fn validate_project_entry_for_generation(
                     for (index, step) in entry.after_playback_sequence.iter().enumerate() {
                         validate_optional_file(
                             step.audio.as_deref(),
-                            &format!("{} : audio de fin {}", context, index + 1),
+                            &MessageLabel::new(
+                                format!("{} : audio de fin {}", context, index + 1),
+                                UserMessage::new(codes::LABEL_PROJECT_STEP_AUDIO)
+                                    .param("context", context.value())
+                                    .param("index", index + 1),
+                            ),
                             file_validation,
                             errors,
                         );
                         validate_optional_file(
                             step.image.as_deref(),
-                            &format!("{} : image de fin {}", context, index + 1),
+                            &MessageLabel::new(
+                                format!("{} : image de fin {}", context, index + 1),
+                                UserMessage::new(codes::LABEL_PROJECT_STEP_IMAGE)
+                                    .param("context", context.value())
+                                    .param("index", index + 1),
+                            ),
                             file_validation,
                             errors,
                         );
@@ -919,13 +1047,21 @@ fn validate_project_entry_for_generation(
                 }) {
                     validate_optional_file(
                         step.audio.as_deref(),
-                        &format!("{} : audio de la réaction Accueil", context),
+                        &MessageLabel::new(
+                            format!("{} : audio de la réaction Accueil", context),
+                            UserMessage::new(codes::LABEL_PROJECT_HOME_AUDIO)
+                                .param("context", context.value()),
+                        ),
                         file_validation,
                         errors,
                     );
                     validate_optional_file(
                         step.image.as_deref(),
-                        &format!("{} : image de la réaction Accueil", context),
+                        &MessageLabel::new(
+                            format!("{} : image de la réaction Accueil", context),
+                            UserMessage::new(codes::LABEL_PROJECT_HOME_IMAGE)
+                                .param("context", context.value()),
+                        ),
                         file_validation,
                         errors,
                     );
@@ -948,20 +1084,24 @@ fn validate_project_for_generation_with_mode(
 
     if !project.shared_entries.is_empty() {
         errors.push(
-            "Les éléments partagés ne sont plus pris en charge en authoring Story Studio."
-                .to_string(),
+            UserMessage::new(codes::VALIDATION_AUTHORING_SHARED_UNSUPPORTED).into_transport(),
         );
     }
 
     if project.project_type.is_none() {
-        errors.push("Aucun type de projet selectionne.".to_string());
+        errors.push(UserMessage::new(codes::VALIDATION_PROJECT_TYPE_UNSELECTED).into_transport());
     }
 
-    if let Some(root_audio) =
-        required_file_path(project.root_audio.as_deref(), "Audio racine", &mut errors)
-    {
+    if let Some(root_audio) = required_file_path(
+        project.root_audio.as_deref(),
+        &MessageLabel::literal("Audio racine", codes::LABEL_PROJECT_ROOT_AUDIO),
+        &mut errors,
+    ) {
         if file_validation.checks_disk() {
-            if let Err(err) = validate_existing_file_path(root_audio, "Audio racine") {
+            if let Err(err) = validate_existing_file_path_with_label(
+                root_audio,
+                &MessageLabel::literal("Audio racine", codes::LABEL_PROJECT_ROOT_AUDIO),
+            ) {
                 errors.push(err);
             }
         }
@@ -969,11 +1109,14 @@ fn validate_project_for_generation_with_mode(
 
     if let Some(root_image) = required_file_path(
         project.root_image.as_deref(),
-        "Image de couverture",
+        &MessageLabel::literal("Image de couverture", codes::LABEL_PROJECT_COVER_IMAGE),
         &mut errors,
     ) {
         if file_validation.checks_disk() {
-            if let Err(err) = validate_existing_file_path(root_image, "Image de couverture") {
+            if let Err(err) = validate_existing_file_path_with_label(
+                root_image,
+                &MessageLabel::literal("Image de couverture", codes::LABEL_PROJECT_COVER_IMAGE),
+            ) {
                 errors.push(err);
             }
         }
@@ -982,11 +1125,20 @@ fn validate_project_for_generation_with_mode(
     if !is_simple {
         if let Some(thumbnail) = required_file_path(
             project.thumbnail_image.as_deref(),
-            "Image bibliotheque (STUdio/LuniiQt)",
+            &MessageLabel::literal(
+                "Image bibliotheque (STUdio/LuniiQt)",
+                codes::LABEL_PROJECT_LIBRARY_IMAGE,
+            ),
             &mut errors,
         ) {
             if file_validation.checks_disk() {
-                if let Err(err) = validate_existing_file_path(thumbnail, "Image bibliotheque") {
+                if let Err(err) = validate_existing_file_path_with_label(
+                    thumbnail,
+                    &MessageLabel::literal(
+                        "Image bibliotheque",
+                        codes::LABEL_PROJECT_LIBRARY_IMAGE_FILE,
+                    ),
+                ) {
                     errors.push(err);
                 }
             }
@@ -998,7 +1150,10 @@ fn validate_project_for_generation_with_mode(
         .filter(|v| !v.is_empty())
     {
         if file_validation.checks_disk() {
-            if let Err(err) = validate_existing_file_path(thumbnail, "Thumbnail") {
+            if let Err(err) = validate_existing_file_path_with_label(
+                thumbnail,
+                &MessageLabel::literal("Thumbnail", codes::LABEL_PROJECT_THUMBNAIL),
+            ) {
                 errors.push(err);
             }
         }
@@ -1017,7 +1172,7 @@ fn validate_project_for_generation_with_mode(
         let night_audio = if project.global_options.night_mode {
             required_file_path(
                 project.night_mode_audio.as_deref(),
-                "Audio mode nuit",
+                &MessageLabel::literal("Audio mode nuit", codes::LABEL_PROJECT_NIGHT_AUDIO),
                 &mut errors,
             )
         } else {
@@ -1025,7 +1180,10 @@ fn validate_project_for_generation_with_mode(
         };
         if let Some(night_audio) = night_audio {
             if file_validation.checks_disk() {
-                if let Err(err) = validate_existing_file_path(night_audio, "Audio mode nuit") {
+                if let Err(err) = validate_existing_file_path_with_label(
+                    night_audio,
+                    &MessageLabel::literal("Audio mode nuit", codes::LABEL_PROJECT_NIGHT_AUDIO),
+                ) {
                     errors.push(err);
                 }
             }
@@ -1041,22 +1199,27 @@ fn validate_project_for_generation_with_mode(
             // sont l'audio et l'image racine, vérifiés plus haut
             // (`build_simple_story` ne lit rien d'autre sur l'histoire).
             Some(story) => {
-                let label = "Histoire principale : audio";
+                let label = &MessageLabel::literal(
+                    "Histoire principale : audio",
+                    codes::LABEL_PROJECT_MAIN_AUDIO,
+                );
                 if let Some(audio) = required_file_path(story.audio.as_deref(), label, &mut errors)
                 {
                     if file_validation.checks_disk() {
-                        if let Err(err) = validate_existing_file_path(audio, label) {
+                        if let Err(err) = validate_existing_file_path_with_label(audio, label) {
                             errors.push(err);
                         }
                     }
                 }
             }
-            None => errors.push("Histoire principale manquante.".to_string()),
+            None => {
+                errors.push(UserMessage::new(codes::VALIDATION_MAIN_STORY_MISSING).into_transport())
+            }
         }
     } else {
         let total_items = count_content_entries(&root_entries);
         if total_items == 0 {
-            errors.push("Le pack ne contient aucune histoire.".to_string());
+            errors.push(UserMessage::new(codes::VALIDATION_PACK_STORIES_MISSING).into_transport());
         }
 
         let mut menu_ids = HashSet::new();
@@ -1084,15 +1247,17 @@ fn validate_project_for_generation_with_mode(
         );
         for (entry_id, count) in id_counts.iter() {
             if *count > 1 {
-                errors.push(format!(
-                    "Identifiant duplique : {} elements partagent l'id {}.",
-                    count, entry_id
-                ));
+                errors.push(
+                    UserMessage::new(codes::VALIDATION_ELEMENT_ID_DUPLICATED)
+                        .param("count", (count).to_string())
+                        .param("entry_id", (entry_id).to_string())
+                        .into_transport(),
+                );
             }
         }
         if id_counts.contains_key("root") {
             errors.push(
-                "Identifiant reserve utilise : aucun element ne doit porter l'id root.".to_string(),
+                UserMessage::new(codes::VALIDATION_ELEMENT_ROOT_ID_RESERVED).into_transport(),
             );
         }
         let navigation_graph = NavigationValidationContext {
@@ -1104,14 +1269,14 @@ fn validate_project_for_generation_with_mode(
         validate_navigation_targets(
             &root_entries,
             &navigation_graph,
-            "Racine",
+            &MessageLabel::literal("Racine", codes::LABEL_PROJECT_ROOT),
             auto_next,
             &mut errors,
         );
         validate_navigation_targets(
             &shared_entries,
             &navigation_graph,
-            "Éléments partagés",
+            &MessageLabel::literal("Éléments partagés", codes::LABEL_PROJECT_SHARED),
             auto_next,
             &mut errors,
         );
@@ -1121,15 +1286,21 @@ fn validate_project_for_generation_with_mode(
         if global_end_active {
             validate_navigation_target(
                 project.night_mode_return.as_deref(),
-                "Message de fin",
-                "la destination après le message",
+                &MessageLabel::literal("Message de fin", codes::LABEL_PROJECT_END_MESSAGE),
+                &MessageLabel::literal(
+                    "la destination après le message",
+                    codes::LABEL_PROJECT_END_MESSAGE_TARGET,
+                ),
                 &navigation_graph,
                 &mut errors,
             );
             validate_navigation_target(
                 project.night_mode_home_return.as_deref(),
-                "Message de fin",
-                "la destination du bouton Accueil",
+                &MessageLabel::literal("Message de fin", codes::LABEL_PROJECT_END_MESSAGE),
+                &MessageLabel::literal(
+                    "la destination du bouton Accueil",
+                    codes::LABEL_PROJECT_HOME_TARGET,
+                ),
                 &navigation_graph,
                 &mut errors,
             );
@@ -1138,12 +1309,15 @@ fn validate_project_for_generation_with_mode(
         validate_shared_entries_reachable(
             &shared_entries,
             &reachable_shared_ids,
-            "Éléments partagés",
+            &MessageLabel::literal("Éléments partagés", codes::LABEL_PROJECT_SHARED),
             &mut errors,
         );
 
         for entry in &root_entries {
-            let entry_name = display_label(&entry.name, "Element racine");
+            let entry_name = display_label(
+                &entry.name,
+                &MessageLabel::literal("Element racine", codes::LABEL_PROJECT_ROOT_ELEMENT),
+            );
             validate_project_entry_for_generation(
                 entry,
                 &entry_name,
@@ -1153,7 +1327,10 @@ fn validate_project_for_generation_with_mode(
             );
         }
         for entry in &shared_entries {
-            let entry_name = display_label(&entry.name, "Element partage");
+            let entry_name = display_label(
+                &entry.name,
+                &MessageLabel::literal("Element partage", codes::LABEL_PROJECT_SHARED_ELEMENT),
+            );
             validate_project_entry_for_generation(
                 entry,
                 &entry_name,
@@ -1167,7 +1344,12 @@ fn validate_project_for_generation_with_mode(
     if errors.is_empty() {
         Ok(())
     } else {
-        Err(errors.join("\n"))
+        Err(UserMessage::new(codes::VALIDATION_PROJECT_ERRORS)
+            .param(
+                "errors",
+                crate::support::user_message::message_list(&errors, "\n"),
+            )
+            .into_transport())
     }
 }
 
@@ -1211,6 +1393,9 @@ mod tests {
             native_graph: None,
             pack_version: 1,
             pack_description: String::new(),
+            official_provenance: Default::default(),
+            official_origin_uuid: None,
+            contains_official_content: false,
             pack_uuid: String::new(),
             root_entries: Vec::new(),
             shared_entries: Vec::new(),
@@ -1238,18 +1423,15 @@ mod tests {
         let root_entries_errors = validate_project_for_generation(&root_entries_project)
             .expect_err("rootEntries simple should report missing files");
 
-        assert!(root_entries_errors.contains("Audio racine manquant."));
+        assert!(crate::support::user_message::contains_code(
+            &root_entries_errors,
+            "VALIDATION_FIELD_MISSING_MASCULINE"
+        ));
+        assert!(crate::support::user_message::contains_code(
+            &root_entries_errors,
+            "LABEL_PROJECT_ROOT_AUDIO"
+        ));
         assert!(root_entries_errors.contains("Histoire principale : audio"));
-    }
-
-    fn ref_entry(id: &str, target: &str) -> ProjectEntry {
-        ProjectEntry {
-            id: id.to_string(),
-            entry_type: "ref".to_string(),
-            name: "Lien".to_string(),
-            target: Some(target.to_string()),
-            ..ProjectEntry::default()
-        }
     }
 
     fn menu_with(id: &str, name: &str, children: Vec<ProjectEntry>) -> ProjectEntry {
@@ -1285,7 +1467,10 @@ mod tests {
             validate_project_structure_for_generation(&project_with_nested_menus(limit))
                 .err()
                 .unwrap_or_default();
-        assert!(!accepted_errors.contains("Dossiers imbriqués"));
+        assert!(!crate::support::user_message::contains_code(
+            &accepted_errors,
+            "VALIDATION_MENU_DEPTH_LIMIT"
+        ));
 
         let observed = limit + 1;
         let rejected =
@@ -1297,8 +1482,11 @@ mod tests {
         );
     }
 
+    /// L'ancien nœud Lien (`type: "ref"`, essai jamais publié) n'existe plus : un
+    /// projet qui en porterait encore un est refusé à la génération comme tout type
+    /// inconnu, au lieu d'être compté comme un choix jouable.
     #[test]
-    fn ref_entry_with_valid_target_is_not_rejected() {
+    fn a_legacy_link_entry_is_an_unsupported_element_type() {
         let mut project = base_project("pack");
         project.root_audio = Some("valid/root.mp3".to_string());
         project.root_image = Some("valid/root.png".to_string());
@@ -1307,74 +1495,44 @@ mod tests {
             "Choix",
             vec![
                 story_entry_with_paths("story-a", "Histoire A"),
-                ref_entry("ref-1", "story:story-a"),
+                ProjectEntry {
+                    id: "lien".to_string(),
+                    entry_type: "ref".to_string(),
+                    name: "Lien".to_string(),
+                    ..ProjectEntry::default()
+                },
             ],
         )];
-        let errors = validate_project_for_generation(&project)
-            .err()
-            .unwrap_or_default();
-        assert!(
-            !errors.contains("non pris en charge"),
-            "une ref ne doit plus etre rejetee : {errors}"
-        );
-        assert!(
-            !errors.contains("cible de la r\u{e9}f\u{e9}rence est introuvable"),
-            "la cible existe : {errors}"
-        );
-    }
-
-    #[test]
-    fn ref_entry_with_dangling_target_is_flagged() {
-        let mut project = base_project("pack");
-        project.root_audio = Some("valid/root.mp3".to_string());
-        project.root_image = Some("valid/root.png".to_string());
-        project.root_entries = vec![
-            story_entry_with_paths("story-a", "Histoire A"),
-            ref_entry("ref-1", "story:does-not-exist"),
-        ];
         let errors =
-            validate_project_for_generation(&project).expect_err("une ref pendante doit bloquer");
+            validate_project_for_generation(&project).expect_err("un ancien lien doit bloquer");
         assert!(
-            errors.contains("cible de la r\u{e9}f\u{e9}rence est introuvable"),
+            crate::support::user_message::contains_code(
+                &errors,
+                "VALIDATION_ELEMENT_TYPE_UNSUPPORTED"
+            ),
             "{errors}"
         );
     }
 
     #[test]
-    fn menu_containing_only_refs_is_not_considered_empty() {
-        let mut project = base_project("pack");
-        project.root_audio = Some("valid/root.mp3".to_string());
-        project.root_image = Some("valid/root.png".to_string());
-        project.root_entries = vec![
-            story_entry_with_paths("story-a", "Histoire A"),
-            menu_with(
-                "menu-links",
-                "Liens",
-                vec![ref_entry("ref-1", "story:story-a")],
-            ),
-        ];
-        let errors = validate_project_for_generation(&project)
-            .err()
-            .unwrap_or_default();
-        assert!(
-            !errors.contains("collection vide"),
-            "un dossier de liens valides n'est pas vide : {errors}"
-        );
-    }
-
-    #[test]
-    fn shared_story_targeted_by_root_ref_blocks_generation() {
+    fn shared_story_targeted_from_root_blocks_generation() {
         let mut project = base_project("pack");
         project.root_audio = Some("valid/root.mp3".to_string());
         project.root_image = Some("valid/root.png".to_string());
         project.thumbnail_image = Some("valid/thumb.png".to_string());
-        project.root_entries = vec![ref_entry("ref-1", "story:shared-story")];
+        project.root_entries = vec![ProjectEntry {
+            return_after_play: Some("story:shared-story".to_string()),
+            ..story_entry_with_paths("story-a", "Histoire A")
+        }];
         project.shared_entries = vec![story_entry_with_paths("shared-story", "Scene commune")];
 
         let errors = validate_project_for_generation(&project)
             .expect_err("les elements partages ne sont plus authoring");
         assert!(
-            errors.contains("éléments partagés ne sont plus pris en charge"),
+            crate::support::user_message::contains_code(
+                &errors,
+                "VALIDATION_AUTHORING_SHARED_UNSUPPORTED"
+            ),
             "{errors}"
         );
     }
@@ -1391,7 +1549,10 @@ mod tests {
         let errors = validate_project_for_generation(&project)
             .expect_err("les elements partages ne sont plus authoring");
         assert!(
-            errors.contains("éléments partagés ne sont plus pris en charge"),
+            crate::support::user_message::contains_code(
+                &errors,
+                "VALIDATION_AUTHORING_SHARED_UNSUPPORTED"
+            ),
             "{errors}"
         );
     }
@@ -1451,8 +1612,20 @@ mod tests {
         let errors = validate_project_structure_for_generation(&project)
             .expect_err("nativeStageId ne doit pas masquer les medias manquants");
 
-        assert!(errors.contains("audio titre"), "{errors}");
-        assert!(errors.contains("image"), "{errors}");
+        assert!(
+            crate::support::user_message::contains_code(
+                &errors,
+                "VALIDATION_PROJECT_MISSING_TITLE_AUDIO"
+            ),
+            "{errors}"
+        );
+        assert!(
+            crate::support::user_message::contains_code(
+                &errors,
+                "VALIDATION_PROJECT_IMAGE_MISSING"
+            ),
+            "{errors}"
+        );
     }
 
     #[test]
@@ -1465,7 +1638,10 @@ mod tests {
             .expect_err("story_play:missing doit bloquer");
 
         assert!(
-            errors.contains("destination de navigation après lecture est introuvable"),
+            crate::support::user_message::contains_code(
+                &errors,
+                "VALIDATION_PROJECT_TARGET_MISSING"
+            ),
             "{errors}"
         );
     }
@@ -1480,7 +1656,10 @@ mod tests {
             .expect_err("story:missing doit bloquer");
 
         assert!(
-            errors.contains("destination du bouton Accueil est introuvable"),
+            crate::support::user_message::contains_code(
+                &errors,
+                "VALIDATION_PROJECT_TARGET_MISSING"
+            ),
             "{errors}"
         );
     }
@@ -1495,7 +1674,13 @@ mod tests {
         let errors = validate_project_structure_for_generation(&project)
             .expect_err("story_home_step vers une histoire sans home step doit bloquer");
 
-        assert!(errors.contains("retour de fin introuvable"), "{errors}");
+        assert!(
+            crate::support::user_message::contains_code(
+                &errors,
+                "VALIDATION_ENDING_RETURN_MISSING"
+            ),
+            "{errors}"
+        );
     }
 
     #[test]
@@ -1514,7 +1699,6 @@ mod tests {
                 pause: Some(false),
                 autoplay: Some(true),
             }),
-            children: vec![ref_entry("helper-ref", "story:story-a")],
             ..ProjectEntry::default()
         }];
 
@@ -1522,7 +1706,10 @@ mod tests {
             .expect_err("les helpers partages natifs ne sont plus authoring");
 
         assert!(
-            errors.contains("éléments partagés ne sont plus pris en charge"),
+            crate::support::user_message::contains_code(
+                &errors,
+                "VALIDATION_AUTHORING_SHARED_UNSUPPORTED"
+            ),
             "{errors}"
         );
     }
@@ -1530,7 +1717,7 @@ mod tests {
     #[test]
     fn parity_pack_valid_minimal_passes_validation() {
         // Equivalent JSON : pack_valid_minimal. JS = ok, Rust = Ok.
-        // Note : les paths n'existent pas sur disque, donc validate_existing_file_path va echouer.
+        // Note : les paths n'existent pas sur disque, donc validate_existing_file_path_with_label va echouer.
         // Cote JS, fileAudit force ces paths a true ; cote Rust, on ne peut pas mocker le FS sans
         // toucher au code de prod. On verifie donc que les erreurs Rust portent UNIQUEMENT sur
         // l'inaccessibilite disque, jamais sur la structure du projet.
@@ -1545,7 +1732,13 @@ mod tests {
             Ok(()) => {}
             Err(errors) => {
                 assert!(
-                    !errors.contains("manquant"),
+                    !crate::support::user_message::contains_code(
+                        &errors,
+                        "VALIDATION_FIELD_MISSING_MASCULINE"
+                    ) && !crate::support::user_message::contains_code(
+                        &errors,
+                        "VALIDATION_FIELD_MISSING_FEMININE"
+                    ),
                     "structure invalide alors qu'elle devrait passer : {}",
                     errors,
                 );
@@ -1573,7 +1766,10 @@ mod tests {
         let errors = validate_project_for_generation(&project)
             .expect_err("projet sans audio histoire doit bloquer");
         assert!(
-            errors.contains("audio"),
+            crate::support::user_message::contains_code(
+                &errors,
+                "VALIDATION_FIELD_MISSING_MASCULINE"
+            ) && crate::support::user_message::contains_code(&errors, "LABEL_PROJECT_AUDIO"),
             "Rust doit signaler l'audio manquant ; recu : {}",
             errors,
         );
@@ -1591,9 +1787,7 @@ mod tests {
 
         let errors = validate_project_for_generation(&project).expect_err("pack vide doit bloquer");
         assert!(
-            errors.to_lowercase().contains("aucune histoire")
-                || errors.to_lowercase().contains("aucun")
-                || errors.to_lowercase().contains("vide"),
+            crate::support::user_message::contains_code(&errors, "VALIDATION_PACK_STORIES_MISSING"),
             "Rust doit signaler le pack vide ; recu : {}",
             errors,
         );
@@ -1636,7 +1830,10 @@ mod tests {
         let errors = validate_project_for_generation(&project)
             .expect_err("simple sans audio racine doit bloquer");
         assert!(
-            errors.contains("Audio racine") || errors.contains("audio"),
+            crate::support::user_message::contains_code(
+                &errors,
+                "VALIDATION_FIELD_MISSING_MASCULINE"
+            ) && crate::support::user_message::contains_code(&errors, "LABEL_PROJECT_ROOT_AUDIO"),
             "Rust doit signaler l'audio racine manquant ; recu : {}",
             errors,
         );
@@ -1741,7 +1938,17 @@ mod tests {
             Some(("importedContinuation", serde_json::Value::Null)),
         );
         let errors = continuation_verdict(menu).expect_err("audio menu exigé comme en JS");
-        assert!(errors.contains("audio menu manquant"), "{errors}");
+        assert!(crate::support::user_message::contains_code(
+            &errors,
+            "LABEL_PROJECT_MENU_AUDIO"
+        ));
+        assert!(
+            crate::support::user_message::contains_code(
+                &errors,
+                "VALIDATION_FIELD_MISSING_MASCULINE"
+            ),
+            "{errors}"
+        );
     }
 
     #[test]

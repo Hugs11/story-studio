@@ -494,7 +494,11 @@ fn inherited_out_of_range_position_stays_silent_and_preserves_all_three_choices(
 }
 
 #[test]
-fn opaque_extensions_at_four_scopes_survive_and_require_current_dispositions() {
+fn studio_unknown_keys_are_ignored_in_the_graph_editor_like_in_the_menu_editor() {
+    // Un story.json STUdio ordinaire : chaque Stage porte `duration`, que ni
+    // STUdio, ni Lunii.QT, ni l'appareil, ni le moteur ne lisent. Ouvert dans
+    // le graphe, il ne doit produire aucun diagnostic d'extension et
+    // l'export ne le réémet pas.
     let raw = json!({
         "format":"v1","version":1,"storyStudioMetadata":{"owner":"third-party"},
         "stageNodes":[{
@@ -504,78 +508,104 @@ fn opaque_extensions_at_four_scopes_survive_and_require_current_dispositions() {
             "okTransition":{"actionNode":"main","optionIndex":0,"vendorTransition":{"nested":[0.1]}},
             "homeTransition":null
         },{
-            "uuid":"suite","squareOne":false,
+            "uuid":"suite","squareOne":false,"duration":56789,
             "controlSettings":{"wheel":false,"ok":false,"home":true,"pause":false,"autoplay":false},
             "okTransition":null,"homeTransition":null
         }],
         "actionNodes":[{"id":"main","options":["suite"]}]
     });
-    let mut payload = decode(&raw);
-    let keys = [
+    let payload = decode(&raw);
+    for key in [
         "storyStudioMetadata",
         "duration",
         "vendorTransition",
         "vendorNested",
-    ];
-    for key in keys {
-        assert!(payload
-            .context
-            .opaque_members
-            .iter()
-            .any(|member| member.key == key));
+    ] {
+        assert!(
+            !payload
+                .context
+                .opaque_members
+                .iter()
+                .any(|member| member.key == key),
+            "{key} capturée"
+        );
     }
-    assert_eq!(
-        assess_authoring_export_guards(&payload)
-            .diagnostics
-            .iter()
-            .filter(|diagnostic| diagnostic.code == "OPAQUE_EXTENSION_DISPOSITION_REQUIRED")
-            .count(),
-        4
-    );
+    assert!(!assess_authoring_export_guards(&payload)
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code.starts_with("OPAQUE_EXTENSION_")));
 
-    let identities = payload
+    // Le parcours réel de l'éditeur graphe : acquisition, vue, readiness,
+    // préparation de l'export.
+    let mut draws = 0_u128;
+    let stored =
+        crate::native_pack::persistence::initialize_advanced_document(payload, &mut || {
+            draws += 1;
+            uuid::Uuid::from_u128(0x5a5a_0000_0000_4000_8000_0000_0000_0000 | draws)
+        })
+        .expect("acquisition");
+    let view = crate::native_pack::graph_view::read_advanced_graph_view(&stored).expect("vue");
+    assert!(view.opaque_members.is_empty());
+    assert!(!view
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code.starts_with("OPAQUE_EXTENSION_")));
+    let reopened =
+        crate::native_pack::persistence::decode_authoring_payload(&stored).expect("réouverture");
+    let readiness =
+        crate::native_pack::readiness::assess_graph_document_export_readiness(Ok(&reopened));
+    assert!(!readiness.blocked, "{:?}", readiness.diagnostics);
+    let prepared = crate::native_pack::preparation::prepare_graph_document_for_export(&reopened)
+        .expect("export préparé");
+    let standard = prepared.standard_value();
+    assert!(standard.get("storyStudioMetadata").is_none());
+    for stage in standard["stageNodes"].as_array().expect("Stages") {
+        assert!(stage.get("duration").is_none(), "duration réémise");
+        assert!(stage["controlSettings"].get("vendorNested").is_none());
+        if let Some(transition) = stage["okTransition"].as_object() {
+            assert!(!transition.contains_key("vendorTransition"));
+        }
+    }
+}
+
+#[test]
+fn a_divergent_alias_still_requires_a_current_disposition() {
+    let mut raw = base_document();
+    raw["actionNodes"][0]["uuid"] = json!("alias-divergent");
+    let mut payload = decode(&raw);
+    assert!(has_diagnostic(
+        &payload,
+        "OPAQUE_EXTENSION_DISPOSITION_REQUIRED",
+        AuthoringDiagnosticLevel::ActionRequired
+    ));
+    let member = payload
         .context
         .opaque_members
         .iter()
-        .filter(|member| keys.contains(&member.key.as_str()))
-        .map(|member| {
-            (
-                member.path.clone(),
-                member.key.clone(),
-                member.source_occurrence,
-            )
-        })
-        .collect::<Vec<_>>();
-    for (path, key, occurrence) in identities {
-        set_opaque_export_disposition(
-            &mut payload,
-            &path,
-            &key,
-            occurrence,
-            OpaqueExportDisposition::PreserveUntested,
-        )
-        .expect("disposition opaque");
-    }
+        .find(|member| member.key == "uuid")
+        .expect("alias")
+        .clone();
+    set_opaque_export_disposition(
+        &mut payload,
+        &member.path,
+        &member.key,
+        member.source_occurrence,
+        OpaqueExportDisposition::PreserveUntested,
+    )
+    .expect("disposition opaque");
     assert!(!assess_authoring_export_guards(&payload).blocked);
 
     let saved = serde_json::to_value(&payload).expect("payload sérialisable");
     let mut reopened: DecodedStoryDocument =
         serde_json::from_value(saved).expect("payload réouvrable");
     assert_eq!(reopened.context, payload.context);
-    let standard = serde_json::to_value(&reopened.document).expect("document sérialisable");
-    assert!(standard.get("storyStudioMetadata").is_none());
-    assert!(standard["stageNodes"][0].get("duration").is_none());
-    assert!(standard["stageNodes"][0]["okTransition"]
-        .get("vendorTransition")
-        .is_none());
-
     reopened
         .context
         .opaque_members
         .iter_mut()
-        .find(|member| member.key == "duration")
-        .expect("duration")
-        .value = json!(2000);
+        .find(|member| member.key == "uuid")
+        .expect("alias")
+        .value = json!("autre-alias");
     assert!(has_diagnostic(
         &reopened,
         "OPAQUE_EXTENSION_DISPOSITION_STALE",

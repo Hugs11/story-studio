@@ -10,7 +10,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { normalizeProjectData, removeEntryCascadingRefs } from '../src/store/projectModel.js';
+import { normalizeProjectData, removeEntry } from '../src/store/projectModel.js';
 import { getGenerateErrors, getProjectValidationIssues } from '../src/store/projectValidation.js';
 
 const FILES = [
@@ -156,7 +156,7 @@ for (const field of ['nightModeReturn', 'nightModeHomeReturn']) {
     });
     assert.deepEqual(getGenerateErrors(before, audit()), [], 'témoin : la destination existe');
 
-    const after = removeEntryCascadingRefs(before, 'b');
+    const after = removeEntry(before, 'b');
     assert.equal(after[field], 'story:b', 'la destination supprimée reste visible, pas vidée en silence');
     const issues = getProjectValidationIssues(after, audit());
     const issue = issues.find((candidate) => candidate.id === 'end-node');
@@ -236,7 +236,7 @@ test('une réaction Accueil que le constructeur n\'écrit pas (séquence d\'une 
 function deletedTargetProject(storyA) {
   const before = project({ rootEntries: [story('a', storyA), story('b'), story('c')] });
   assert.deepEqual(getGenerateErrors(before, audit()), [], 'témoin : la destination existe');
-  return removeEntryCascadingRefs(before, 'c');
+  return removeEntry(before, 'c');
 }
 
 function errorsOfA(p) {
@@ -305,33 +305,28 @@ test('témoin : sous Auto-next, les choix OK d’une étape de fin ne sont pas v
     globalOptions: { autoNext: true },
     rootEntries: [story('a', { afterPlaybackSequence: [step('s1', { okChoiceTargets: ['story:c'] })] }), story('b'), story('c')],
   });
-  assert.deepEqual(getGenerateErrors(removeEntryCascadingRefs(before, 'c'), audit()), []);
+  assert.deepEqual(getGenerateErrors(removeEntry(before, 'c'), audit()), []);
 });
 
 // --- Une cible « Retour de fin – X » suit l'activité de la réaction de X ---
 //
 // Le constructeur ne construit la réaction Accueil de X que si elle est active
-// (`end_home_step_is_active`) : un Lien ou une destination de fin vers une
-// réaction non construite est « à corriger », comme une histoire supprimée.
+// (`end_home_step_is_active`) : une destination de fin vers une réaction non
+// construite est « à corriger », comme une histoire supprimée.
 
-function homeStepTargetProject({ xHome = true, xSteps = 2, autoNext = false, via }) {
+function homeStepTargetProject({ xHome = true, xSteps = 2, autoNext = false }) {
   const x = story('a', {
     controlSettings: { home: xHome },
     afterPlaybackSequence: Array.from({ length: xSteps }, (_, index) => step(`s${index + 1}`)),
     afterPlaybackHomeStep: step('home'),
   });
-  const rootEntries = via === 'lien'
-    ? [x, story('b'), { id: 'lien', type: 'ref', target: 'story_home_step:a' }]
-    : [x, story('b', { afterPlaybackSequence: [step('b1', { okTarget: 'story_home_step:a' })] })];
+  const rootEntries = [x, story('b', { afterPlaybackSequence: [step('b1', { okTarget: 'story_home_step:a' })] })];
   return project({ globalOptions: { autoNext }, rootEntries });
 }
 
 const unbuiltHomeReactions = {
-  'Accueil de X désactivé, par un Lien': { xHome: false, via: 'lien' },
-  'séquence d’une étape, par un Lien': { xSteps: 1, via: 'lien' },
-  'Enchaîner les histoires actif, par un Lien': { autoNext: true, via: 'lien' },
-  'Accueil de X désactivé, par une destination de fin': { xHome: false, via: 'fin' },
-  'séquence d’une étape, par une destination de fin': { xSteps: 1, via: 'fin' },
+  'Accueil de X désactivé, par une destination de fin': { xHome: false },
+  'séquence d’une étape, par une destination de fin': { xSteps: 1 },
 };
 
 for (const [label, options] of Object.entries(unbuiltHomeReactions)) {
@@ -344,8 +339,6 @@ for (const [label, options] of Object.entries(unbuiltHomeReactions)) {
   });
 }
 
-for (const via of ['lien', 'fin']) {
-  test(`témoin : « Retour de fin – X » vers une réaction construite reste valide (${via})`, () => {
-    assert.deepEqual(getGenerateErrors(homeStepTargetProject({ via }), audit()), []);
-  });
-}
+test('témoin : « Retour de fin – X » vers une réaction construite reste valide', () => {
+  assert.deepEqual(getGenerateErrors(homeStepTargetProject({}), audit()), []);
+});

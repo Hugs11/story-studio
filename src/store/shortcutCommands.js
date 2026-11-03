@@ -17,7 +17,6 @@ const SHORTCUT_COMMANDS = {
   openPack: { allow: (actions) => actions.canOpenPack, run: (actions) => actions.openPack?.() },
   addFolder: { allow: (actions) => actions.canAddFolder, run: (actions) => actions.addFolder?.() },
   importStories: { allow: (actions) => actions.canImportStories, run: (actions) => actions.importStories?.() },
-  storySettings: { allow: (actions) => actions.canOpenPackOptions, run: (actions) => actions.openPackOptions?.() },
   toggleTree: { allow: (actions) => actions.canToggleTree, run: (actions) => actions.toggleTree?.() },
   toggleSettings: { allow: (actions) => actions.canToggleSettings, run: (actions) => actions.toggleSettings?.() },
   toggleDiagram: { allow: (actions) => actions.canToggleDiagram, run: (actions) => actions.toggleDiagram?.() },

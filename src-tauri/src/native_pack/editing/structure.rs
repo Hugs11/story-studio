@@ -16,6 +16,7 @@
 //! entrante **survit** : c'est un état intermédiaire légitime, que le
 //! diagnostic d'authoring signale sans que rien ne soit perdu.
 
+use crate::support::user_message::{codes, UserMessage};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -133,6 +134,21 @@ fn unique_index<'a>(
             "UNKNOWN_NODE",
             path,
             format!("Aucun {kind} « {wanted} » dans le document."),
+        )
+        .with_user_message(
+            UserMessage::new(codes::UNKNOWN_NODE)
+                .param(
+                    "kind",
+                    serde_json::json!({
+                        "code": if kind == "Stage" {
+                            codes::LABEL_NODE_STAGE
+                        } else {
+                            codes::LABEL_NODE_ACTION
+                        },
+                        "params": {}
+                    }),
+                )
+                .param("wanted", (wanted).to_string()),
         )),
         several => Err(GestureError::new(
             "AMBIGUOUS_NODE",
@@ -141,6 +157,22 @@ fn unique_index<'a>(
                 "{} {kind}s portent l'identifiant « {wanted} » : lever le doublon avant d'éditer.",
                 several.len()
             ),
+        )
+        .with_user_message(
+            UserMessage::new(codes::AMBIGUOUS_NODE)
+                .param("count", (several.len()).to_string())
+                .param(
+                    "kind",
+                    serde_json::json!({
+                        "code": if kind == "Stage" {
+                            codes::LABEL_NODE_STAGE
+                        } else {
+                            codes::LABEL_NODE_ACTION
+                        },
+                        "params": {}
+                    }),
+                )
+                .param("wanted", (wanted).to_string()),
         )),
     }
 }
@@ -167,7 +199,8 @@ fn draw_unique_uuid(
         "IDENTIFIER_COLLISION",
         path,
         "Aucun identifiant libre obtenu : la source d'identifiants ne varie pas.".to_string(),
-    ))
+    )
+    .with_user_message(UserMessage::new(codes::IDENTIFIER_COLLISION)))
 }
 
 /// Crée le Stage, son ActionNode facultatif et leurs liaisons médias.
@@ -256,7 +289,8 @@ fn build_action(
                 "INVALID_ACTION_ID",
                 "/actionNodes",
                 "Un identifiant d'ActionNode ne peut pas être vide.".to_string(),
-            ))
+            )
+            .with_user_message(UserMessage::new(codes::INVALID_ACTION_ID)))
         }
         // Verbatim : `action-1` est référentiellement valide et ne doit pas être
         // remplacé par un UUID au seul motif de sa graphie.
@@ -266,6 +300,11 @@ fn build_action(
                     "IDENTIFIER_COLLISION",
                     &format!("/actionNodes/@id={id}#0"),
                     format!("L'identifiant d'ActionNode « {id} » est déjà pris."),
+                )
+                .with_user_message(
+                    UserMessage::new(codes::IDENTIFIER_COLLISION)
+                        .param("id", (id).to_string())
+                        .param("context", codes::IDENTIFIER_COLLISION_ACTION),
                 ));
             }
             id.clone()
@@ -428,7 +467,8 @@ pub(crate) fn delete_stage(
             &path,
             "Le Stage d'entrée ne se retire pas : un pack a exactement un Écran d'entrée, et le transfert de l'entrée est un geste distinct."
                 .to_string(),
-        ));
+        )
+.with_user_message(UserMessage::new(codes::SQUARE_ONE_REMOVAL)));
     }
     let referencing = incoming_option_ids(&payload.document, stage_uuid);
     let Some(plan) = plan else {
@@ -444,6 +484,8 @@ pub(crate) fn delete_stage(
                 referencing.len()
             ),
         )
+.with_user_message(UserMessage::new(codes::STAGE_STILL_TARGETED)
+.param("count", (referencing.len()).to_string()))
         .with_references(referencing));
     };
 
@@ -459,6 +501,10 @@ pub(crate) fn delete_stage(
                 option,
                 "Cette occurrence désigne le Stage retiré et n'a reçu aucune décision.".to_string(),
             )
+            .with_user_message(
+                UserMessage::new(codes::OPTION_DECISION_REQUIRED)
+                    .param("context", codes::OPTION_DECISION_REQUIRED_REMOVED_STAGE),
+            )
             .with_references(referencing.clone()));
         }
     }
@@ -470,6 +516,10 @@ pub(crate) fn delete_stage(
                 &target,
                 "Cette occurrence ne désigne pas le Stage retiré : le geste n'y touche pas."
                     .to_string(),
+            )
+            .with_user_message(
+                UserMessage::new(codes::UNEXPECTED_OPTION_DECISION)
+                    .param("context", codes::UNEXPECTED_OPTION_DECISION_UNTOUCHED),
             ));
         }
         if let OptionResolution::Retarget { uuid } = &decision.resolution {
@@ -478,6 +528,10 @@ pub(crate) fn delete_stage(
                     "UNKNOWN_STAGE",
                     &target,
                     "Le retargeting désigne le Stage que le geste retire.".to_string(),
+                )
+                .with_user_message(
+                    UserMessage::new(codes::UNKNOWN_STAGE)
+                        .param("context", codes::UNKNOWN_STAGE_RETARGET_REMOVED_SINGLE),
                 ));
             }
         }
@@ -539,6 +593,10 @@ pub(crate) fn delete_stage(
             &path,
             "Le plan laisse des occurrences désignant le Stage retiré.".to_string(),
         )
+        .with_user_message(
+            UserMessage::new(codes::STAGE_STILL_TARGETED)
+                .param("context", codes::STAGE_STILL_TARGETED_REMOVAL_PLAN),
+        )
         .with_references(remaining));
     }
     remove_node(payload, NodeKind::Stage, index, anchors);
@@ -568,6 +626,8 @@ pub(crate) fn delete_action(
                 referencing.len()
             ),
         )
+.with_user_message(UserMessage::new(codes::ACTION_STILL_TARGETED)
+.param("count", (referencing.len()).to_string()))
         .with_references(referencing));
     };
 
@@ -582,6 +642,10 @@ pub(crate) fn delete_action(
                 transition,
                 "Cette transition vise l'Action retirée et n'a reçu aucune décision.".to_string(),
             )
+            .with_user_message(
+                UserMessage::new(codes::TRANSITION_DECISION_REQUIRED)
+                    .param("context", codes::TRANSITION_DECISION_REQUIRED_REMOVAL),
+            )
             .with_references(referencing.clone()));
         }
     }
@@ -593,6 +657,10 @@ pub(crate) fn delete_action(
                 &target,
                 "Cette transition ne vise pas l'Action retirée : le geste n'y touche pas."
                     .to_string(),
+            )
+            .with_user_message(
+                UserMessage::new(codes::UNEXPECTED_TRANSITION_DECISION)
+                    .param("context", codes::UNEXPECTED_TRANSITION_DECISION_UNTOUCHED),
             ));
         }
         if let TransitionUpdate::Set { action_node, .. } = &decision.update {
@@ -601,6 +669,10 @@ pub(crate) fn delete_action(
                     "UNKNOWN_ACTION",
                     &target,
                     "Le retargeting désigne l'Action que le geste retire.".to_string(),
+                )
+                .with_user_message(
+                    UserMessage::new(codes::UNKNOWN_ACTION)
+                        .param("context", codes::UNKNOWN_ACTION_RETARGET_REMOVED),
                 ));
             }
         }
@@ -641,6 +713,10 @@ pub(crate) fn delete_action(
             "ACTION_STILL_TARGETED",
             &path,
             "Le plan laisse des transitions visant l'Action retirée.".to_string(),
+        )
+        .with_user_message(
+            UserMessage::new(codes::ACTION_STILL_TARGETED)
+                .param("context", codes::ACTION_STILL_TARGETED_REMOVAL_PLAN),
         )
         .with_references(remaining));
     }

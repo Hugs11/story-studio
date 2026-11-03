@@ -1,3 +1,5 @@
+// Les titres de dialogue sont des éléments React vivants ; leur création ne consomme aucun hook.
+export { default, Fragment, createContext, Children, cloneElement, isValidElement, createElement, forwardRef, memo } from '../node_modules/react/index.js';
 // Ordonnanceur React de test : le seul double des tests de hooks.
 //
 // Il remplace `useState`/`useRef`/`useCallback`/`useEffect` par des variables et
@@ -78,10 +80,26 @@ export function useState(initial) {
   ];
 }
 
+// The production reducer itself runs unchanged; this only supplies React's slot.
+export function useReducer(reducer, initialArg, init) {
+  const [value, setValue] = useState(() => init ? init(initialArg) : initialArg);
+  const dispatch = useCallback(action => setValue(current => reducer(current, action)), [reducer]);
+  return [value, dispatch];
+}
+
 export function useRef(initial) {
   const state = active;
   const slot = state.cursor++;
   state.slots[slot] ??= { current: initial };
+  return state.slots[slot];
+}
+
+// Identifiant stable par emplacement, comme `useId` : seul le motif compte ici.
+let nextId = 0;
+export function useId() {
+  const state = active;
+  const slot = state.cursor++;
+  state.slots[slot] ??= `:r${(nextId++).toString(36)}:`;
   return state.slots[slot];
 }
 
@@ -116,3 +134,9 @@ export function useEffect(fn, deps) {
   }
   state.slots[slot] = deps;
 }
+
+// Dans ce pilote synchrone, les effets de disposition suivent le même flush.
+export const useLayoutEffect = useEffect;
+
+// Standalone component runners read the default context; mounted provider trees use React DOM.
+export function useContext(context) { return context._currentValue; }

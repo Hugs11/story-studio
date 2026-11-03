@@ -103,12 +103,11 @@ impl<'a> StoryBuilder<'a> {
         }
     }
 
-    /// Résolveur unifié cible typée → stage natif, partagé par les nœuds `ref` et la
-    /// convergence de fin (`okChoiceTargets`) — c'est le « sucre au-dessus de `ref` » de
-    /// fin de séquence. D'abord le stage préalloué (résout les cibles « en avant »), sinon la
+    /// Résolveur unifié cible typée → stage natif de la convergence de fin
+    /// (`okChoiceTargets`). D'abord le stage préalloué (résout les cibles « en avant »), sinon la
     /// résolution via transition (cibles déjà construites). Le `fallback` paramètre la
     /// sémantique : `Some(transition)` pour une convergence indulgente, `None` pour
-    /// exiger une cible réelle (refs).
+    /// exiger une cible réelle.
     ///
     /// `None` remplace l'ancienne sentinelle `option_index: -1` : depuis que la
     /// sélection est typée, `-1` désigne `Random` et ne peut plus servir de

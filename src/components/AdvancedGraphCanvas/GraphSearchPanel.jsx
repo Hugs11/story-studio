@@ -1,3 +1,5 @@
+import { useTranslation, Trans } from 'react-i18next';
+import { translateGraph as t, graphTranslationEngine } from '../../i18n/graphPresentation.js';
 // La liste de recherche — chemin **principal** d'accès au graphe, pas un
 // complément du canvas.
 //
@@ -52,17 +54,16 @@ function pinRootFirst(found, rootPath) {
 function occurrenceLabel(entry) {
   if (entry.node.uniqueId !== false) return '';
   const occurrence = entry.path.match(/#(\d+)$/)?.[1];
-  return occurrence === undefined ? '' : ` · occurrence ${Number(occurrence) + 1}`;
+  return occurrence === undefined ? '' : t('graph:search.identifier.occurrence', { occurrence: Number(occurrence) + 1 });
 }
 
-// `summary` — le décompte de la liste — occupe la place libre à gauche de la
-// barre, au lieu d'une ligne à part sous elle.
 export function GraphNodeListActions({
   onSearch,
   onClose,
-  summary = null,
+  surfaceTools = null,
   dragHandleProps = {},
 }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   return (
     <header
       className="structure-panel-header structure-panel-header--actions"
@@ -70,19 +71,27 @@ export function GraphNodeListActions({
     >
       <StructureActionsBar
         variant="panel"
-        ariaLabel="Outils de la liste des nœuds"
-        leading={summary}
+        workspaceMode={WORKSPACE_MODE_ADVANCED}
+        ariaLabel={t("graph:search.nodeListTools.label")}
+        onImportMedia={surfaceTools?.onImportMedia}
+        onImportPodcast={surfaceTools?.onImportPodcast}
+        onImportYoutube={surfaceTools?.onImportYoutube}
+        onRecord={surfaceTools?.onRecord}
+        onGenerateStoryTts={surfaceTools?.onGenerateStoryTts}
+        canRecord={surfaceTools?.canRecord}
+        canGenerateStoryTts={surfaceTools?.canGenerateStoryTts}
+        onLaunchSimulator={surfaceTools?.onSimulate}
         trailing={(
           <>
             <StructureSearchButton
-              label="Rechercher dans la liste des nœuds"
+              label={t("graph:search.searchTheNodeList.label")}
               onClick={onSearch}
             />
-            <Tooltip text="Masquer la liste des nœuds" placement="below">
+            <Tooltip text={t("graph:search.hideTheNodeList.label")} placement="below">
               <button
                 type="button"
                 className="structure-actions-btn"
-                aria-label="Masquer la liste des nœuds"
+                aria-label={t("graph:search.hideTheNodeList.label")}
                 onClick={onClose}
               >
                 <X className="structure-actions-icon" aria-hidden="true" />
@@ -117,10 +126,10 @@ export default function GraphSearchPanel({
   searchActive = false,
   onSearchActiveChange = NOOP,
   searchFocusTrigger = 0,
-  // Barre d'outils montée par l'hôte au-dessus de la liste. Elle reçoit le
-  // décompte ; sans elle, la liste le rend elle-même sur sa propre ligne.
+  // Barre d'outils montée par l'hôte au-dessus de la ligne de compteurs.
   renderHeader = null,
 }) {
+  const { i18n } = useTranslation('graph', { i18n: graphTranslationEngine() });
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState(SEARCH_SCOPES.ALL);
   const [selectedColors, setSelectedColors] = useState(() => new Set());
@@ -133,7 +142,7 @@ export default function GraphSearchPanel({
   // seul, qui est fenêtré. Le clavier parcourt donc la liste entière.
   const baseFound = useMemo(
     () => search({ query, scope, limit: Number.MAX_SAFE_INTEGER }),
-    [search, query, scope],
+    [search, query, scope, i18n.resolvedLanguage],
   );
   const allColors = useMemo(
     () => buildUsedNodeColors(
@@ -198,9 +207,9 @@ export default function GraphSearchPanel({
   }, [focus, effectiveWindow]);
 
   const scopeLabels = [
-    [SEARCH_SCOPES.ALL, 'Tout', false],
-    [SEARCH_SCOPES.STAGES, 'Écrans', false],
-    [SEARCH_SCOPES.ACTIONS, 'Listes de choix', false],
+    [SEARCH_SCOPES.ALL, t("graph:search.tout.label"), false],
+    [SEARCH_SCOPES.STAGES, t("graph:search.ecrans.label"), false],
+    [SEARCH_SCOPES.ACTIONS, t('graph:search.scope.actions'), false],
   ];
 
   // Le descendant actif ne peut désigner qu'une ligne **présente** dans le
@@ -264,23 +273,28 @@ export default function GraphSearchPanel({
     }
   };
 
+  const summaryText = [
+    counts
+      ? t('graph:search.summary.counts', { stages: (counts.stages === 0 ? t('graph:search.summary.stageCountAtZero', { count: counts.stages }) : t('graph:search.summary.stageCount', { count: counts.stages })), actions: (counts.actions === 0 ? t('graph:search.summary.actionCountAtZero', { count: counts.actions }) : t('graph:search.summary.actionCount', { count: counts.actions })), edges: (counts.edges === 0 ? t('graph:search.summary.edgeCountAtZero', { count: counts.edges }) : t('graph:search.summary.edgeCount', { count: counts.edges })) })
+      : (found.total === 0 ? t('graph:search.summary.resultCountAtZero', { count: found.total }) : t('graph:search.summary.resultCount', { count: found.total })),
+    (query || scope !== SEARCH_SCOPES.ALL || selectedColors.size > 0)
+      ? (found.total === 0 ? t('graph:search.summary.foundCountAtZero', { count: found.total }) : t('graph:search.summary.foundCount', { count: found.total }))
+      : null,
+  ].filter(Boolean).join(' · ');
   const summary = (
-    <p className="advanced-search__count" aria-live="polite">
+    <p className="advanced-search__count" aria-live="polite" title={summaryText}>
       {/* Les comptes sont ceux du document entier, et une recherche dit
           combien de nœuds elle trouve. Ce qui reste à afficher est dit par
           le bouton de fin de liste, pas répété ici. */}
-      {counts
-        ? `${counts.stages} Écran${counts.stages === 1 ? '' : 's'} · ${counts.actions} liste${counts.actions === 1 ? '' : 's'} de choix · ${counts.edges} lien${counts.edges === 1 ? '' : 's'}`
-        : `${found.total} résultat${found.total === 1 ? '' : 's'}`}
-      {(query || scope !== SEARCH_SCOPES.ALL || selectedColors.size > 0)
-        && ` · ${found.total} trouvé${found.total === 1 ? '' : 's'}`}
+      {summaryText}
     </p>
   );
 
   return (
     <>
-      {renderHeader?.(summary)}
-      <section className="advanced-search" aria-label="Liste des nœuds du graphe">
+      {renderHeader?.()}
+      {renderHeader && summary}
+      <section className="advanced-search" aria-label={t("graph:search.graphNodeList.label")}>
         {searchActive && (
           <>
             <TreeSearchBar
@@ -298,7 +312,7 @@ export default function GraphSearchPanel({
               ))}
               onClearSearch={clearSearch}
             >
-              <div className="advanced-search__scopes" role="group" aria-label="Filtrer">
+              <div className="advanced-search__scopes" role="group" aria-label={t("graph:search.filtrer.label")}>
                 {scopeLabels.map(([value, label, warning]) => (
                   <button
                     key={value}
@@ -324,14 +338,12 @@ export default function GraphSearchPanel({
           className="advanced-search__list"
           role="listbox"
           tabIndex={0}
-          aria-label="Nœuds du graphe"
+          aria-label={t("graph:search.nUdsDuGraphe.label")}
           aria-activedescendant={activeDescendant}
           onKeyDown={onKeyDown}
         >
           {visible.length === 0 && (
-            <li className="advanced-search__empty" role="presentation">
-              Aucun nœud ne correspond à cette recherche.
-            </li>
+            <li className="advanced-search__empty" role="presentation">{t("graph:search.noNodesMatchThisSearch.label")}</li>
           )}
           {visible.map((result) => (
             <li
@@ -378,16 +390,16 @@ export default function GraphSearchPanel({
               <span className="advanced-search__identity">
                 <span className="advanced-search__name">
                   {result.label.label}
-                  {result.label.isFallback && <em className="advanced-search__fallback"> (sans nom)</em>}
+                  {result.label.isFallback && <em className="advanced-search__fallback">{t("graph:search.sansNom.label")}</em>}
                 </span>
                 <span className="advanced-search__identifier">
-                  {result.kind === 'stage' ? 'Écran' : 'Liste de choix'} · {nodeIdentifier(result)}
+                  {result.kind === 'stage' ? t("graph:search.ecran.label") : t('graph:inspector.node.actionLabel')} · {nodeIdentifier(result)}
                   {occurrenceLabel(result)}
                 </span>
               </span>
               {result.path === rootPath && (
-                <Tooltip text="Écran d’entrée : le pack commence ici" asChild>
-                  <span className="advanced-search__root-badge">racine</span>
+                <Tooltip text={t("graph:search.entryStageThePackStartsHere.label")} asChild>
+                  <span className="advanced-search__root-badge">{t("graph:search.entree.label")}</span>
                 </Tooltip>
               )}
             </li>
@@ -402,8 +414,7 @@ export default function GraphSearchPanel({
             className="advanced-search__more"
             onClick={() => setWindowSize((size) => size + PAGE_SIZE)}
           >
-            Afficher {Math.min(PAGE_SIZE, found.total - visible.length)} nœuds de plus
-            <span> · {found.total - visible.length} restants</span>
+            <Trans i18n={graphTranslationEngine()} ns="graph" i18nKey="search.more.label" count={Math.min(PAGE_SIZE, found.total - visible.length)} values={{ remaining: found.total - visible.length }} components={{ span: <span /> }} />
           </button>
         )}
       </section>

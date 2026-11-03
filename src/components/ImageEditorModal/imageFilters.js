@@ -203,6 +203,7 @@ export function applyPortableImageFilters(imageData, filters = {}, width, height
   if (!Number.isInteger(resolvedWidth) || !Number.isInteger(resolvedHeight)
     || resolvedWidth <= 0 || resolvedHeight <= 0
     || imageData.data.length !== resolvedWidth * resolvedHeight * 4) {
+    // eslint-disable-next-line i18next/no-literal-string -- garde interne de programmation ; l'éditeur affiche media:imageEditor.render.failed.
     throw new Error('Dimensions de filtre image invalides.');
   }
 

@@ -17,6 +17,7 @@
 //! HOME laisse l'arête en place ; la retirer est `set-stage-transition`, et
 //! elle seule.
 
+use crate::support::user_message::{codes, UserMessage};
 use serde::Deserialize;
 
 use super::structure::unique_stage_index;
@@ -130,7 +131,8 @@ pub(crate) fn set_stage_controls(
                     &path,
                     "Aucun contrôle n'est nommé : le geste ne devine pas lequel modifier."
                         .to_string(),
-                ));
+                )
+                .with_user_message(UserMessage::new(codes::EMPTY_CONTROLS_UPDATE)));
             }
             let Some(controls) = stage.control_settings.value_mut() else {
                 return Err(GestureError::new(
@@ -138,7 +140,7 @@ pub(crate) fn set_stage_controls(
                     &path,
                     "Ce Stage ne porte pas d'objet de contrôles : le compléter est un choix explicite des cinq valeurs, pas la pose d'un membre isolé."
                         .to_string(),
-                ));
+                ).with_user_message(UserMessage::new(codes::CONTROL_SETTINGS_ABSENT)));
             };
             members.apply(controls);
         }
@@ -163,7 +165,8 @@ pub(crate) fn set_stages_controls(
             "EMPTY_STAGE_SELECTION",
             "/stageNodes",
             "Aucun Écran n'est désigné : le geste ne règle rien.".to_string(),
-        ));
+        )
+        .with_user_message(UserMessage::new(codes::EMPTY_STAGE_SELECTION)));
     }
     for (position, stage_uuid) in stage_uuids.iter().enumerate() {
         if stage_uuids[..position].contains(stage_uuid) {
@@ -171,7 +174,8 @@ pub(crate) fn set_stages_controls(
                 "DUPLICATE_STAGE",
                 &format!("/stageNodes/@uuid={stage_uuid}#0/controlSettings"),
                 "Cet Écran est désigné deux fois dans la même demande.".to_string(),
-            ));
+            )
+            .with_user_message(UserMessage::new(codes::DUPLICATE_STAGE)));
         }
     }
     for stage_uuid in stage_uuids {

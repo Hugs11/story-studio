@@ -44,7 +44,7 @@ const graphProject = createAdvancedProject({ payload: graphPayload, projectName:
 
 test('la copie s’appelle « nom - graphe.mbah », à côté de l’original', async () => {
   assert.equal(graphCopyFileName('C:\\projets\\Toudou.mbah'), 'Toudou - graphe.mbah');
-  assert.equal(graphCopyFileName('/home/hugs/Toudou.mbah', 3), 'Toudou - graphe (3).mbah');
+  assert.equal(graphCopyFileName('/home/example/Toudou.mbah', 3), 'Toudou - graphe (3).mbah');
   const path = await nextGraphCopyPath('C:\\projets\\Toudou.mbah', async () => false);
   assert.equal(path, 'C:\\projets\\Toudou - graphe.mbah');
 });
@@ -75,7 +75,29 @@ test('la copie garde le nommage d’archive, la vignette et les réglages audio'
   assert.equal(copy.packMetadata.namingMode, 'convention');
   assert.equal(copy.packMetadata.minAge, '3');
   assert.equal(copy.packMetadata.author, 'Hugs');
-  assert.deepEqual(copy.globalOptions, { silenceMode: 'add', harmonizeLoudness: false });
+  assert.deepEqual(copy.globalOptions, {
+    silenceMode: 'add',
+    harmonizeLoudness: false,
+  });
+});
+
+test('la copie graphe reprend les dérogations de durée du pack', () => {
+  const original = freeProject({
+    globalOptions: {
+      silenceMode: 'add',
+      harmonizeLoudness: true,
+      leadingSilenceSec: 0,
+      trailingSilenceSec: 1.3,
+    },
+  });
+  const copy = graphCopyProject(original, { payload: graphPayload, mediaBindings: [] });
+
+  assert.equal(copy.globalOptions.leadingSilenceSec, 0);
+  assert.equal(copy.globalOptions.trailingSilenceSec, 1.3);
+  assert.deepEqual(graphCopyRustExport(original, EDGE).globalOptions.addSilenceDurationSec, {
+    start: 0,
+    end: 1.3,
+  });
 });
 
 test('« même image » côté arbre devient l’absence de vignette propre côté graphe', () => {

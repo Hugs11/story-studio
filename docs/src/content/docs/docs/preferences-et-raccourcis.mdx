@@ -5,7 +5,7 @@ description: Régler le comportement général de Story Studio et retrouver les 
 
 Les **Préférences** concernent Story Studio dans son ensemble : enregistrement automatique, apparence, gestion des projets, génération IA ou options avancées.
 
-Elles sont différentes des **Options du pack**, qui modifient le pack actuellement ouvert.
+Les réglages propres au pack se trouvent dans la **Fiche du pack** (traitement audio) et dans les **Réglages de l’histoire** du Menu Racine (enchaînement automatique).
 
 :::tip
 Pour un usage classique, tu peux conserver presque tous les réglages par défaut. Les sections **Projets et médias**, **Voix locale**, **Images IA** et **Avancé** deviennent surtout utiles lorsque tu veux adapter Story Studio à ta façon de travailler.
@@ -51,9 +51,7 @@ Voir [ComfyUI](/story-studio/docs/comfyui/).
 
 **Silences audio**
 
-**Silence au début** et **Silence à la fin** définissent la durée de référence des silences
-de début et de fin utilisée lors du traitement audio. Il vaut mieux les laisser par défaut sauf
-besoin précis.
+**Silence au début** et **Silence à la fin** définissent les durées générales utilisées lors du traitement audio. Un pack peut avoir ses propres durées dans **Fiche du pack → Traitement audio** ; dans ce cas, elles sont enregistrées avec ce pack. L'action **Reprendre les valeurs par défaut** dans sa fiche le fait à nouveau suivre les Préférences.
 
 Pour comprendre l’harmonisation du volume et le réglage des silences, voir [Traitement audio du pack](/story-studio/docs/traitement-audio-du-pack/).
 
@@ -105,9 +103,8 @@ Ces raccourcis fonctionnent dans l’**Éditeur par menus** comme dans l’**Éd
 | Ouvrir un projet | `Ctrl+O` |
 | Enregistrer | `Ctrl+S` |
 | Enregistrer sous | `Ctrl+Maj+S` |
-| Options du pack | `Ctrl+,` |
 | Rechercher dans la structure | `Ctrl+F` |
-| Ouvrir les Préférences | `Ctrl+Maj+O` |
+| Ouvrir les Préférences | `Ctrl+,` (`Ctrl+Maj+O` reste un alias) |
 | Ouvrir les éléments à corriger | `Ctrl+Maj+E` |
 | Générer le pack | `Ctrl+G` |
 | Annuler / Rétablir | `Ctrl+Z` / `Ctrl+Maj+Z` |

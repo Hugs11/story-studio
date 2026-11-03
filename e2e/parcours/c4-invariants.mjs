@@ -295,29 +295,36 @@ async function runSuite(ctx, variantId, opener, { archiveName = null } = {}) {
       check('média sur Écran 1 : sélection préalable de l’Écran 1 en échec', false);
     }
 
-    // Fiche du pack (Ctrl+, → « Options du pack ») : bascule Harmoniser le
-    // volume. Ce réglage vit dans `project.globalOptions`, hors du payload
-    // d’auteur du graphe (`read_advanced_graph_view` ne le porte pas) : vérifié
-    // directement sur le `.mbah`, pas via la vue IPC.
+    // La Fiche du pack porte le traitement audio. Annuler doit
+    // abandonner le brouillon ; Appliquer enregistre la nouvelle valeur.
     const beforeToggleProject = (await readGraphView(page, projectPath)).project;
-    // Champ absent = harmonisation active (`config/audioProcessing.js` : `!== false`).
     const beforeHarmonize = beforeToggleProject?.globalOptions?.harmonizeLoudness !== false;
-    await page.keyboard.press('Control+,');
-    await page.waitForTimeout(400);
-    const popoverVisible = await page.locator('.pack-options-popover').first().isVisible().catch(() => false);
-    if (popoverVisible) {
-      await page.getByText('Harmoniser le volume').first().hover().catch(() => {});
-      const toggleBtn = page.locator('.pack-options-popover .pack-options-control-row').filter({ hasText: 'Harmoniser le volume' }).locator('button').first();
-      await toggleBtn.click().catch(() => {});
+    await page.locator('.chrome-titlebar-pack-recap').click();
+    const metadataVisible = await page.locator('.pack-meta-modal').first().isVisible().catch(() => false);
+    const toggleBtn = page.locator('.pack-meta-audio').getByRole('button', {
+      name: 'Harmoniser le volume des audios vers -14 LUFS à la génération.',
+    });
+    const audioVisible = metadataVisible && await toggleBtn.isVisible().catch(() => false);
+    if (audioVisible) {
+      await toggleBtn.click();
+      await page.getByRole('button', { name: 'Annuler', exact: true }).click();
+      await page.locator('.chrome-titlebar-pack-recap').click();
+      const canceledState = await page.locator('.pack-meta-audio').getByRole('button', {
+        name: 'Harmoniser le volume des audios vers -14 LUFS à la génération.',
+      }).getAttribute('aria-pressed');
+      check('fiche du pack : Annuler abandonne le traitement audio', canceledState === String(beforeHarmonize), {
+        canceledState, beforeHarmonize,
+      });
+      await toggleBtn.click();
+      await page.getByRole('button', { name: 'Appliquer', exact: true }).click();
     }
-    await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
     await page.keyboard.press('Control+s');
     await page.waitForTimeout(1200);
     const afterToggleProject = existsSync(projectPath) ? JSON.parse(readFileSync(projectPath, 'utf8')) : null;
     const afterHarmonize = afterToggleProject?.globalOptions?.harmonizeLoudness !== false;
-    check('fiche du pack (Ctrl+, « Options du pack ») : bascule Harmoniser le volume visible et écrite au disque', popoverVisible && afterHarmonize !== beforeHarmonize, {
-      popoverVisible, beforeHarmonize, afterHarmonize,
+    check('fiche du pack : traitement audio visible et appliqué au disque', audioVisible && afterHarmonize !== beforeHarmonize, {
+      metadataVisible, audioVisible, beforeHarmonize, afterHarmonize,
     });
 
     // ================= Document final (V1) =================
@@ -392,7 +399,7 @@ async function runSuite(ctx, variantId, opener, { archiveName = null } = {}) {
     // ================= Enregistrer → fermeture propre → rouvrir =================
     // Comparé à l'état effectivement restauré par le rétablissement complet.
     events.setStep(`${variantId}-fermeture-reouverture`);
-    // L'export (« Appliquer & générer ») a appliqué les options du pack au
+    // L'export (« Appliquer & générer ») a appliqué la Fiche du pack au
     // projet après le dernier enregistrement : le projet est donc modifié, et la
     // garde de fermeture demanderait « Projet non enregistré ». On enregistre
     // avant de fermer, comme le dit le titre de cette étape.

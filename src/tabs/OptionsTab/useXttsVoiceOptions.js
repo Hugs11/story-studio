@@ -1,11 +1,15 @@
+import { useTranslation } from 'react-i18next';
+import { useMessageLanguage } from '../../i18n/useMessageLanguage.js';
+import { rustMessageEnvelope, presentUserMessage, presentTechnicalMessage, presentStoredError } from '../../i18n/userMessage.js';
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
-import { formatFrenchCount } from '../../utils/frenchText.js';
 import { releaseTauriListener } from '../../utils/tauriListener';
 
 export function useXttsVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
+  useTranslation('settings');
+  useMessageLanguage();
   const [xttsProbe, setXttsProbe] = useState({ state: 'idle', message: '' });
   const [xttsVoices, setXttsVoices] = useState([]);
   const [xttsVoicesLoaded, setXttsVoicesLoaded] = useState(false);
@@ -20,7 +24,7 @@ export function useXttsVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
     let unlisten = null;
     listen('xtts-log', (event) => {
       if (cancelled) return;
-      setXttsLogs((prev) => [...prev, String(event.payload)].slice(-60));
+      setXttsLogs((prev) => [...prev, event.payload].slice(-60));
     }).then((fn) => {
       if (cancelled) releaseTauriListener(fn);
       else unlisten = fn;
@@ -32,27 +36,26 @@ export function useXttsVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
   }, []);
 
   async function testXtts() {
-    setXttsProbe({ state: 'loading', message: 'Connexion à XTTS en cours…' });
-    setXttsLogs([`Test XTTS depuis ${xttsSettings.serverUrl}`]);
+    setXttsProbe({ state: 'loading', message: { key: 'settings:xtts.connect.progress' } });
+    setXttsLogs([{ key: 'settings:xtts.test.log', params: { url: xttsSettings.serverUrl } }]);
     try {
       const status = await invoke('xtts_get_status', { settings: xttsSettings });
       const voices = status.voices || [];
       setXttsVoices(voices);
       setXttsVoicesLoaded(true);
-      const voicesLabel = formatFrenchCount(
-        voices.length,
-        'voix détectée',
-        'voix détectées',
-      );
-      const deviceLabel = status.device === 'cuda' ? 'GPU CUDA' : status.device === 'cpu' ? 'CPU' : 'device inconnu';
-      const modelLabel = status.model || 'modèle inconnu';
-      const voiceNames = voices.length > 0 ? ` • ${voices.join(', ')}` : '';
       setXttsProbe({
         state: 'ok',
-        message: `Serveur prêt • ${modelLabel} • ${deviceLabel} • ${voicesLabel}${voiceNames}`,
+        message: { key: 'settings:xtts.ready.message', params: {
+          model: status.model || { key: 'settings:xtts.model.fallback' },
+          device: status.device === 'cuda' ? 'GPU CUDA' : status.device === 'cpu' ? 'CPU' : { key: 'settings:xtts.device.fallback' },
+          voices: voices.length === 0
+            ? { key: 'settings:xtts.voices.noneDetected' }
+            : { key: 'settings:xtts.voices.count', params: { count: voices.length } },
+          names: voices.length > 0 ? ` • ${voices.join(', ')}` : '',
+        } },
       });
     } catch (e) {
-      setXttsProbe({ state: 'error', message: String(e) });
+      setXttsProbe({ state: 'error', message: { userMessage: e, codedOnly: true } });
     }
   }
 
@@ -88,10 +91,13 @@ export function useXttsVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
   }
 
   return {
-    xttsProbe,
+    xttsProbe: { ...xttsProbe, message: presentStoredError(xttsProbe.message), technicalDetail: xttsProbe.state === 'error' ? presentUserMessage(xttsProbe.message?.userMessage).technicalDetail : '' },
     xttsVoices,
     xttsVoicesLoaded,
-    xttsLogs,
+    xttsLogs: xttsLogs.map((line) => ({
+      message: line?.key || rustMessageEnvelope(line)?.code ? presentTechnicalMessage(line) : '',
+      technicalDetail: line?.key ? '' : presentUserMessage(line, { allowLegacyFrench: false }).technicalDetail,
+    })),
     favoriteVoices,
     testXtts,
     toggleXttsFavorite,

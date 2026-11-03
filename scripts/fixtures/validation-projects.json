@@ -577,8 +577,8 @@
       ]
     },
     {
-      "name": "pack_link_to_unbuilt_home_reaction_home_disabled",
-      "comment": "Lien vers le retour de fin d'une histoire dont Accueil est desactive : la reaction n'est pas construite, la cible est a corriger. Refuse JS ET Rust.",
+      "name": "pack_end_target_to_unbuilt_home_reaction_home_disabled",
+      "comment": "Destination de fin vers le retour de fin d'une histoire dont Accueil est desactive : la reaction n'est pas construite, la cible est a corriger. Refuse JS ET Rust.",
       "expect": "fail",
       "jsKeywords": ["retour de fin introuvable"],
       "project": {
@@ -610,9 +610,11 @@
             "name": "Histoire 2",
             "audio": "valid/story2.mp3",
             "itemAudio": "valid/story2-title.mp3",
-            "itemImage": "valid/story2-title.png"
-          },
-          { "id": "lien", "type": "ref", "target": "story_home_step:story-1" }
+            "itemImage": "valid/story2-title.png",
+            "afterPlaybackSequence": [
+              { "id": "fin-b", "name": "Fin B", "audio": "valid/end.mp3", "okTarget": "story_home_step:story-1" }
+            ]
+          }
         ]
       },
       "fileAuditTrue": [

@@ -3,7 +3,6 @@ import { RootEditor } from './RootEditor';
 import { MenuEditor } from './MenuEditor';
 import { StoryEditor } from './StoryEditor';
 import { ZipEditor } from './ZipEditor';
-import { RefEditor } from './RefEditor';
 import { MultiEditor } from './MultiEditor';
 import { collectAllStories, findEntryById, findParentMenuId } from '../../store/projectModel';
 
@@ -17,6 +16,7 @@ export const NodeEditorContent = memo(function NodeEditorContent({
   onUpdateRoot,
   onUpdateMedia,
   onUpdateStoryAudio,
+  onUpdateOption,
   onUpdateMenu,
   onDeleteMenu,
   onUpdateItem,
@@ -25,6 +25,8 @@ export const NodeEditorContent = memo(function NodeEditorContent({
   onBulkDeleteItems,
   afterPlayFocus = null,
   onAfterPlayFocusConsumed,
+  autoNextFocus = null,
+  onAutoNextFocusConsumed,
 }) {
   const isMultiSelect = selectedIds && selectedIds.size > 1;
   const parentMenuId = !isMultiSelect && (node?.type === 'story' || node?.type === 'menu') ? findParentMenuId(project, node.id, projectIndex) : null;
@@ -58,6 +60,9 @@ export const NodeEditorContent = memo(function NodeEditorContent({
         onUpdateRoot={onUpdateRoot}
         onUpdateMedia={onUpdateMedia}
         onUpdateStoryAudio={onUpdateStoryAudio}
+        onUpdateOption={onUpdateOption}
+        autoNextFocus={autoNextFocus}
+        onAutoNextFocusConsumed={onAutoNextFocusConsumed}
       />
     );
   }
@@ -94,18 +99,6 @@ export const NodeEditorContent = memo(function NodeEditorContent({
     return (
       <ZipEditor
         node={node}
-        onUpdate={onUpdateItem}
-        onDelete={onDeleteItem}
-      />
-    );
-  }
-
-  if (node.type === 'ref') {
-    return (
-      <RefEditor
-        node={node}
-        allMenus={allMenus}
-        allStories={allStories}
         onUpdate={onUpdateItem}
         onDelete={onDeleteItem}
       />

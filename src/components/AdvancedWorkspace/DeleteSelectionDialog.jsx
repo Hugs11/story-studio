@@ -1,3 +1,5 @@
+import { useTranslation, Trans } from 'react-i18next';
+import { graphTranslationEngine, translateGraph as t } from '../../i18n/graphPresentation.js';
 // Retirer plusieurs nœuds d'un coup : la confirmation de Suppr sur une
 // sélection, et de « Retirer… » au clic droit dans une sélection.
 //
@@ -13,9 +15,10 @@ import { selectionRemovalImpact } from '../../store/advancedAuthoring/authoringP
 import { STAGE_KIND } from '../../store/advancedGraphView/graphViewModel.js';
 import { useShortcutLabels } from '../../store/ShortcutLabelsContext.js';
 
-const ENTRY_NOT_REMOVABLE = 'L’Écran racine ne se retire pas : désignez d’abord un autre Écran racine.';
+const ENTRY_NOT_REMOVABLE = 'graph:remove.selection.entry';
 
 export function DeleteSelectionDialog({ index, paths, busy, onCancel, onConfirm }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const labels = useShortcutLabels();
   const {
     entries, entryIncluded, loose, counted, gesture,
@@ -27,13 +30,11 @@ export function DeleteSelectionDialog({ index, paths, busy, onCancel, onConfirm 
 
   return (
     <AdvancedDialog
-      title={`Retirer ${entries.length} éléments`}
-      description={`${counted} seront retirés ensemble. ${labels.undo
-        ? `${labels.undo} les rétablit en une fois.`
-        : 'Annuler les rétablit en une fois.'}`}
+      title={t('graph:remove.selection.title', { count: entries.length })}
+      description={t('graph:remove.selection.description', { selection: counted, undo: labels.undo || t('common:dialog.cancel.label') })}
       onCancel={onCancel}
       onConfirm={confirm}
-      confirmLabel="Retirer"
+      confirmLabel={t('graph:remove.confirm.label')}
       confirmKind="danger"
       confirmDisabled={!gesture}
       busy={busy}
@@ -42,19 +43,17 @@ export function DeleteSelectionDialog({ index, paths, busy, onCancel, onConfirm 
         {entries.map((entry) => (
           <li key={entry.path} className="advanced-decision-list__row">
             <span className="advanced-decision-list__what">
-              <strong>{entry.label.label}</strong> — {entry.kind === STAGE_KIND ? 'Écran' : 'Liste de choix'}
+              <Trans i18n={graphTranslationEngine()} t={t} i18nKey="graph:remove.selection.row" values={{ name: entry.label.label, kind: entry.kind === STAGE_KIND ? t('graph:type.stage.label') : t('graph:type.action.label') }} components={{ strong: <strong /> }} />
             </span>
           </li>
         ))}
       </ul>
       {entryIncluded && (
-        <p className="advanced-field__warning" role="alert">{ENTRY_NOT_REMOVABLE}</p>
+        <p className="advanced-field__warning" role="alert">{t(ENTRY_NOT_REMOVABLE)}</p>
       )}
       {!entryIncluded && loose > 0 && (
         <p className="advanced-field__note">
-          {loose === 1
-            ? 'Un raccord venu du reste du graphe visait cette sélection : il restera à raccorder, dans « À corriger ».'
-            : `${loose} raccords venus du reste du graphe visaient cette sélection : ils resteront à raccorder, dans « À corriger ».`}
+          {t('graph:remove.selection.loose', { count: loose })}
         </p>
       )}
     </AdvancedDialog>

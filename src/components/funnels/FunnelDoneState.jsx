@@ -1,3 +1,4 @@
+import { useHomeTranslation } from '../../i18n/useHomeTranslation.js';
 import { Check } from '../icons/LucideLocal';
 
 /**
@@ -18,13 +19,14 @@ import { Check } from '../icons/LucideLocal';
  * @param {React.ReactNode} [props.notice]  Avertissement non bloquant éventuel.
  * @param {React.ReactNode} props.children  Boutons d'action.
  */
-export function FunnelDoneState({ icon, tone = 'success', title = 'Terminé', fileName, meta, notice, children }) {
+export function FunnelDoneState({ icon, tone = 'success', title, fileName, meta, notice, children }) {
+  const { t } = useHomeTranslation();
   return (
     <div className="funnel-done">
       <div className={`funnel-done-badge${tone === 'error' ? ' funnel-done-badge--error' : ''}`} aria-hidden="true">
         {icon ?? <Check strokeWidth={2.6} />}
       </div>
-      <div className="funnel-done-title">{title}</div>
+      <div className="funnel-done-title">{title ?? t('home:funnel.done.title')}</div>
       {fileName ? <div className="funnel-done-file" title={fileName}>{fileName}</div> : null}
       {meta ? <div className="funnel-done-meta">{meta}</div> : null}
       {notice ? <div className="funnel-done-notice" role="status">{notice}</div> : null}

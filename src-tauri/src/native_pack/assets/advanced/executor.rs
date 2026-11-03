@@ -18,6 +18,7 @@
 //! corrompt — n'est détectée par aucune de ces égalités. Le filet
 //! complémentaire est la garantie 2, bornée aux fixtures distinguables.
 
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -155,10 +156,12 @@ impl<'a> TaskExecutor<'a> {
         pending: &Path,
     ) -> Result<(), ExecutionFailure> {
         if output.exists() {
-            return Err(ExecutionFailure::Oracle(format!(
-                "l'adresse de sortie {} est occupée par un contenu que cette préparation n'a pas produit",
-                output.display()
-            )));
+            return Err(ExecutionFailure::Oracle(
+                UserMessage::new(codes::GENERATION_OUTPUT_ADDRESS_FOREIGN)
+                    .param("output", (output.display()).to_string())
+                    .with_detail(output.display().to_string())
+                    .into_transport(),
+            ));
         }
 
         // Le répertoire de destination est créé et vérifié **avant** l'appel :
@@ -170,7 +173,7 @@ impl<'a> TaskExecutor<'a> {
         if !outputs_dir.is_dir() {
             return Err(ExecutionFailure::Write(WorkspaceError {
                 path: outputs_dir.to_string_lossy().to_string(),
-                message: "répertoire de sortie indisponible".to_string(),
+                message: UserMessage::new(codes::EXPORT_OUTPUT_FOLDER_UNAVAILABLE).into_transport(),
             }));
         }
         let _ = fs::remove_file(pending);
@@ -196,6 +199,16 @@ impl<'a> TaskExecutor<'a> {
                     }));
                 }
             }
+            ConversionPlan::ImageBmpRle4 => {
+                let bytes = fs::read(input).map_err(|error| write_error(input, &error))?;
+                let bmp = super::bmp_rle4::encode_320x240(&bytes).map_err(|detail| {
+                    ExecutionFailure::Media(PlanFailure {
+                        cause: super::MediaCause::ProcessingFailed,
+                        detail,
+                    })
+                })?;
+                fs::write(pending, bmp).map_err(|error| write_error(pending, &error))?;
+            }
             ConversionPlan::ImageResizePng => {
                 let bytes = fs::read(input).map_err(|error| write_error(input, &error))?;
                 let png = encode_png_320x240(&bytes).map_err(|message| {
@@ -211,9 +224,11 @@ impl<'a> TaskExecutor<'a> {
         // La fin de tâche est constatée avant la publication de sa sortie : le
         // renommage n'a lieu que sur un travail achevé.
         if !pending.is_file() {
-            return Err(ExecutionFailure::Oracle(format!(
-                "la tâche {task_key} n'a pas produit de sortie"
-            )));
+            return Err(ExecutionFailure::Oracle(
+                UserMessage::new(codes::GENERATION_TASK_OUTPUT_MISSING)
+                    .param("task_key", (task_key).to_string())
+                    .into_transport(),
+            ));
         }
         fs::rename(pending, output).map_err(|error| write_error(output, &error))?;
         Ok(())
@@ -245,9 +260,11 @@ pub(crate) fn read_registry(
         let task_key = task.task_key();
         let output_path = workspace.output_path(&task_key);
         if !output_path.is_file() {
-            return Err(ExecutionFailure::Oracle(format!(
-                "la tâche {task_key} n'a laissé aucune sortie à son adresse"
-            )));
+            return Err(ExecutionFailure::Oracle(
+                UserMessage::new(codes::GENERATION_TASK_OUTPUT_ADDRESS_EMPTY)
+                    .param("task_key", (task_key).to_string())
+                    .into_transport(),
+            ));
         }
         let (output_sha256, output_bytes) =
             sha256_file(&output_path).map_err(|error| write_error(&output_path, &error))?;

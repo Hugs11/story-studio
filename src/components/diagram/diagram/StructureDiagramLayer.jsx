@@ -1,3 +1,5 @@
+import { useTreeTranslation } from '../../../i18n/useTreeTranslation.jsx';
+import { translateTree as t } from '../../../i18n/treePresentation.js';
 export function StructureDiagramLayer({
   layout,
   structureEdgePaths,
@@ -7,6 +9,7 @@ export function StructureDiagramLayer({
   onEdgeLeave,
   onEdgeClick,
 }) {
+  useTreeTranslation();
   return (
     <>
       {(layout.bands ?? []).map((band) => (
@@ -47,7 +50,7 @@ export function StructureDiagramLayer({
                 <rect className="fd-complete-sibling-group-header" x={headerX} y={group.y - 9} width={headerWidth} height="18" rx="9" />
                 <circle className="fd-complete-sibling-group-port" cx={group.x + (group.width / 2)} cy={group.y - 9} r="4" />
                 <text className="fd-complete-sibling-group-label" x={group.x + (group.width / 2)} y={group.y + 3} textAnchor="middle">
-                  {`${group.storyCount} histoires`}
+                  {t('tree:diagram.stories.groupCount', { count: group.storyCount })}
                 </text>
               </>
             ) : null}

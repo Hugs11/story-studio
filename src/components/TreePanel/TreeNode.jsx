@@ -1,3 +1,5 @@
+import { useTreeTranslation } from '../../i18n/useTreeTranslation.jsx';
+import { translateTree as t } from '../../i18n/treePresentation.js';
 import { memo, useEffect, useRef } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
@@ -8,7 +10,7 @@ import { NodeIcon } from '../icons/NodeIcon.jsx';
 import { hierarchicalNatureOf } from '../../store/nodeIconVocabulary.js';
 import { WORKSPACE_MODE_HIERARCHICAL } from '../../store/projectWorkState.js';
 import {
-  ArrowRight, CornerUpLeft, Diamond, House, ListTree, Moon, Square, UnfoldVertical,
+  ArrowRight, ChevronRight, CornerUpLeft, Diamond, House, ListTree, Moon, Square, UnfoldVertical,
 } from '../icons/LucideLocal';
 import { getTreeGuideStyleVars, getTreeIndent, resolveHoverGuide } from './treeGuides';
 import './TreePanel.css';
@@ -30,12 +32,14 @@ const BADGE_ICON_BY_KIND = {
   'end-node-home': <House />,
   'end-night-home': <House />,
   graph: <Diamond />,
+  'auto-next': <span className="tree-auto-next-icon"><ChevronRight /><ChevronRight /></span>,
   continuation: <ArrowRight />,
 };
 
 const MAX_NAVIGATION_BADGE_SLOTS = 2;
 
 function TreeInlineNameInput({ value, onChange, onCommit, onCancel }) {
+  useTreeTranslation();
   const inputRef = useRef(null);
   const cancelledRef = useRef(false);
 
@@ -49,7 +53,7 @@ function TreeInlineNameInput({ value, onChange, onCommit, onCancel }) {
       ref={inputRef}
       className="tree-inline-name-input"
       value={value}
-      aria-label="Renommer"
+      aria-label={t("tree:node.rename.action")}
       onChange={(event) => onChange(event.target.value)}
       onBlur={() => {
         if (!cancelledRef.current) onCommit();
@@ -101,6 +105,7 @@ function TreeNodeInner({
   onRenameCommit,
   onRenameCancel,
   onSelect,
+  onNavigationBadgeActivate,
   onContextMenu,
   onNodeHoverChange,
   hoverGuideScopeIds,
@@ -111,6 +116,7 @@ function TreeNodeInner({
   dropTarget,
   suppressSortAnimation,
 }) {
+  useTreeTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id, disabled: !sortable || renaming });
   const { setNodeRef: setDropRef } = useDroppable({
@@ -202,7 +208,7 @@ function TreeNodeInner({
         showForbiddenDepth ? 'drop-forbidden-depth' : '',
         showForbiddenCycle ? 'drop-forbidden-cycle' : '',
       ].filter(Boolean).join(' ')}
-      aria-label={type === 'menu' ? `${label}, Dossier niveau ${level}` : undefined}
+      aria-label={type === 'menu' ? t("tree:node.folder.aria", { label, level }) : undefined}
       title={showForbiddenDepth
         ? MENU_DEPTH_LIMIT_REACHED_MESSAGE
         : showForbiddenCycle
@@ -244,12 +250,28 @@ function TreeNodeInner({
         <div className={`ti-badges${showNavigationBadgeColumn ? ' has-column' : ''}${navigationBadges.length === 0 ? ' is-empty' : ''}${hasHiddenNavigationBadges ? ' is-compact' : ''}`}>
           {visibleNavigationBadges.map((badge) => (
             <Tooltip key={badge.key} text={badge.title}>
-              <span
-                className={`badge-nav badge-nav--${badge.kind}${badge.status ? ` badge-nav--${badge.status}` : ''}`}
-                onPointerDown={(e) => e.stopPropagation()}
-              >
-                {BADGE_ICON_BY_KIND[badge.kind] ?? badge.label}
-              </span>
+              {badge.action ? (
+                <button
+                  type="button"
+                  className={`badge-nav badge-nav--${badge.kind}${badge.status ? ` badge-nav--${badge.status}` : ''}`}
+                  aria-label={badge.title}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onNavigationBadgeActivate?.(badge.action);
+                  }}
+                >
+                  {BADGE_ICON_BY_KIND[badge.kind] ?? badge.label}
+                </button>
+              ) : (
+                <span
+                  className={`badge-nav badge-nav--${badge.kind}${badge.status ? ` badge-nav--${badge.status}` : ''}`}
+                  onPointerDown={(event) => event.stopPropagation()}
+                >
+                  {BADGE_ICON_BY_KIND[badge.kind] ?? badge.label}
+                </span>
+              )}
             </Tooltip>
           ))}
           {hasHiddenNavigationBadges ? (
@@ -274,9 +296,9 @@ function TreeNodeInner({
         ) : (
           <span className="ti-label">{label}</span>
         )}
-        {type === 'zip' && <span className="badge-zip">ZIP</span>}
+        {type === 'zip' && <span className="badge-zip">{t('tree:nodeType.zip')}</span>}
         {type === 'menu' && level > 6 ? (
-          <span className="badge-depth" title={`Dossier niveau ${level}`}>N{level}</span>
+          <span className="badge-depth" title={t("tree:node.folder.level", { level })}>{t('tree:node.folder.depthBadge', { level })}</span>
         ) : null}
         {hasToggle && !expanded && childCount > 0 && (
           <span className="badge-count">{childCount}</span>
@@ -314,6 +336,7 @@ export const TreeNode = memo(TreeNodeInner, (prev, next) => (
   && prev.onRenameCommit === next.onRenameCommit
   && prev.onRenameCancel === next.onRenameCancel
   && prev.onSelect === next.onSelect
+  && prev.onNavigationBadgeActivate === next.onNavigationBadgeActivate
   && prev.onContextMenu === next.onContextMenu
   && prev.onNodeHoverChange === next.onNodeHoverChange
   && prev.hoverGuideScopeIds === next.hoverGuideScopeIds

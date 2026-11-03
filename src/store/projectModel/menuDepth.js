@@ -1,31 +1,57 @@
+import i18next from 'i18next';
+import { translateTree as t } from '../../i18n/treePresentation.js';
+import { presentUserMessage } from '../../i18n/userMessage.js';
 import projectLimits from '../../shared/projectLimits.json' with { type: 'json' };
 
 const configuredMaxMenuDepth = Number(projectLimits?.maxMenuDepth);
 
 if (!Number.isInteger(configuredMaxMenuDepth) || configuredMaxMenuDepth < 1) {
+  // eslint-disable-next-line i18next/no-literal-string -- erreur de configuration développeur, non rendue dans l’interface
   throw new Error('La limite de profondeur des Dossiers est absente ou invalide.');
 }
 
 export const MAX_MENU_DEPTH = configuredMaxMenuDepth;
-export const MENU_DEPTH_LIMIT_CODE = 'menu_depth_limit';
+export const MENU_DEPTH_LIMIT_CODE = 'VALIDATION_MENU_DEPTH_LIMIT';
 
-export const MENU_DEPTH_LIMIT_REACHED_MESSAGE =
-  `Limite de ${MAX_MENU_DEPTH} Dossiers imbriqués atteinte.`;
-export const MENU_DEPTH_LIMIT_TITLE = 'Limite d’imbrication';
+// Références stables pour les refus conservés dans l’état et les dialogues.
+// Les chaînes historiques ci-dessous restent compatibles avec les usages techniques.
+export const MENU_DEPTH_LIMIT_TITLE_REF = { key: 'tree:depth.limit.title' };
+export const MENU_DEPTH_LIMIT_REACHED_REF = { key: 'tree:depth.limit.reached', params: { maxDepth: MAX_MENU_DEPTH } };
+export const MENU_CYCLE_PASTE_TITLE_REF = { key: 'tree:depth.paste.title' };
+export const MENU_CYCLE_PASTE_MESSAGE_REF = { key: 'tree:depth.paste.message' };
+
+// Adaptateur de présentation partagé par l’hôte et le test du vrai dialogue.
+// Une demande conserve ses références, même après clearMutationError.
+export function getMenuMutationDialog(rejection) {
+  return {
+    title: rejection.titleRef ?? rejection.title ?? MENU_DEPTH_LIMIT_TITLE_REF,
+    message: rejection.messageRef ?? rejection.message,
+  };
+}
+
+export let MENU_DEPTH_LIMIT_REACHED_MESSAGE;
+export let MENU_DEPTH_LIMIT_TITLE;
+export let MENU_CYCLE_MESSAGE;
+export let MENU_CYCLE_PASTE_TITLE;
+export let MENU_CYCLE_PASTE_MESSAGE;
+function refreshMenuPresentation() {
+  MENU_DEPTH_LIMIT_REACHED_MESSAGE = t('tree:depth.limit.reached', { maxDepth: MAX_MENU_DEPTH });
+  MENU_DEPTH_LIMIT_TITLE = t('tree:depth.limit.title');
+  MENU_CYCLE_MESSAGE = t('tree:depth.cycle.message');
+  MENU_CYCLE_PASTE_TITLE = t('tree:depth.paste.title');
+  MENU_CYCLE_PASTE_MESSAGE = t('tree:depth.paste.message');
+}
+refreshMenuPresentation();
+i18next.on('languageChanged', refreshMenuPresentation);
 
 // L'autre contrainte de structure des Dossiers : aucun ne se range dans son
 // propre sous-arbre. Le glisser la montre au survol, le couper-coller la dit
 // au collage ; les deux emploient la même phrase.
 export const MENU_CYCLE_CODE = 'menu_cycle';
-export const MENU_CYCLE_MESSAGE =
-  'Un Dossier ne peut pas être déplacé dans lui-même ni dans l’un de ses sous-dossiers.';
-export const MENU_CYCLE_PASTE_TITLE = 'Collage impossible';
-export const MENU_CYCLE_PASTE_MESSAGE =
-  'Un Dossier ne peut pas être collé dans lui-même ni dans l’un de ses sous-dossiers. '
-  + 'Il est toujours coupé : choisissez un autre emplacement.';
+
 
 function formatProjectMenuDepthError(observedDepth) {
-  return `Ce projet contient ${observedDepth} Dossiers imbriqués. Story Studio en prend en charge au maximum ${MAX_MENU_DEPTH}.`;
+  return presentUserMessage({ code: MENU_DEPTH_LIMIT_CODE, params: { observedDepth, maxDepth: MAX_MENU_DEPTH } }).message;
 }
 
 function entryChildren(entry) {
@@ -53,7 +79,7 @@ function entryPathPart(entry) {
     id: typeof entry?.id === 'string' ? entry.id : null,
     name: typeof entry?.name === 'string' && entry.name.trim()
       ? entry.name.trim()
-      : 'Dossier sans nom',
+      : t('tree:depth.folder.fallback'),
   };
 }
 
@@ -228,6 +254,7 @@ export class ProjectMenuDepthError extends Error {
     super(formatProjectMenuDepthError(diagnostic.observedDepth));
     this.name = 'ProjectMenuDepthError';
     this.code = MENU_DEPTH_LIMIT_CODE;
+    this.params = { observedDepth: diagnostic.observedDepth, maxDepth: MAX_MENU_DEPTH };
     this.maxDepth = MAX_MENU_DEPTH;
     this.attemptedDepth = diagnostic.observedDepth;
     this.path = diagnostic.path;

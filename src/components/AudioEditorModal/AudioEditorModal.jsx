@@ -1,3 +1,6 @@
+import { presentStoredError } from '../../i18n/userMessage.js';
+import { useMediaTranslation } from '../../i18n/useMediaTranslation.js';
+import { useProjectContext } from '../../store/ProjectContext';
 import { useRef, useState, useEffect } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/plugins/regions';
@@ -30,6 +33,7 @@ import { AudioEditorFadeOverlays } from './AudioEditorFadeOverlays';
 import './AudioEditorModal.css';
 
 export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, onCancel }) {
+  const { t } = useMediaTranslation();
   const containerRef = useRef(null);
   const wsRef = useRef(null);
   const regionRef = useRef(null);
@@ -39,6 +43,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   const trimEndRef = useRef(0);
   const auditionEndRef = useRef(null);
 
+  const { mediaStorage } = useProjectContext();
   const [duration, setDuration] = useState(0);
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(0);
@@ -111,6 +116,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     filePath,
     savePath,
     workspaceDir,
+    mediaStorage,
     onConfirm,
     wsRef,
     durationRef,
@@ -490,7 +496,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     <div className="modal-overlay" onClick={isBlockingAction ? undefined : onCancel}>
       <div className="modal-box audio-editor-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span>Éditer l'audio — {filename}</span>
+          <span>{t('media:audioEditor.title', { name: filename })}</span>
           <Button variant="icon" className="modal-close" onClick={onCancel} disabled={isBlockingAction}>×</Button>
         </div>
 
@@ -509,7 +515,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
           >
             {isLoading && (
               <div className="audio-editor-loading">
-                {audioUrl ? "Analyse de la forme d'onde…" : 'Chargement du fichier…'}
+                {audioUrl ? t('media:audioEditor.waveform.analyzing') : t('media:audioEditor.file.loading')}
               </div>
             )}
             <div ref={containerRef} className="audio-editor-waveform" />
@@ -539,7 +545,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
 
           {/* Zoom */}
           <div className="audio-editor-row audio-editor-zoom-row">
-            <span className="audio-editor-label">Zoom</span>
+            <span className="audio-editor-label">{t('media:audioEditor.zoom.label')}</span>
             <input
               type="range"
               min={ZOOM_MIN}
@@ -551,59 +557,59 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
               disabled={isLoading}
             />
             <span className="audio-editor-zoom-val">×{(zoom / 20).toFixed(1)}</span>
-            <span className="audio-editor-hint">Ctrl+molette / +/- · ← → 50ms · Début/Fin</span>
+            <span className="audio-editor-hint">{t('media:audioEditor.zoom.hint')}</span>
           </div>
 
           <section className="audio-editor-selection">
             <div className="audio-editor-selection-stats">
-              <span>Entrée <strong>{formatTime(trimStart)}</strong></span>
-              <span>Sortie <strong>{formatTime(trimEnd)}</strong></span>
-              <span>Durée <strong>{formatTime(trimDuration)}</strong></span>
+              <span>{t('media:audioEditor.selection.in')} <strong>{formatTime(trimStart)}</strong></span>
+              <span>{t('media:audioEditor.selection.out')} <strong>{formatTime(trimEnd)}</strong></span>
+              <span>{t('media:explorer.column.duration')} <strong>{formatTime(trimDuration)}</strong></span>
             </div>
             <Button
               className="audio-editor-preview-btn"
               onClick={previewCurrentSelection}
               disabled={!canOperate || applyMode === 'preview'}
             >
-              Prévisualiser l'extrait
+              {t('media:audioEditor.selection.preview')}
             </Button>
           </section>
 
           {editInfo?.original_available && (
             <div className="audio-editor-restore-row">
-              <Tooltip text="Restaurer le fichier avant édition">
+              <Tooltip text={t('media:audioEditor.restore.tooltip')}>
                 <Button size="sm" className="audio-editor-restore-btn" onClick={handleRestoreOriginal} disabled={isBlockingAction}>
                   <RotateCcw />
-                  Restaurer l'original
+                  {t('media:audioEditor.restore.action')}
                 </Button>
               </Tooltip>
             </div>
           )}
 
           {isPreviewPending && (
-            <div className="audio-editor-preview-status">Génération de l'aperçu audio…</div>
+            <div className="audio-editor-preview-status">{t('media:audioEditor.preview.audioProgress')}</div>
           )}
-          {error && <div className="audio-editor-error">{error}</div>}
+          {error && <div className="audio-editor-error">{presentStoredError(error)}</div>}
         </div>
 
         <div className="audio-editor-footer">
-          <Button onClick={onCancel} disabled={isBlockingAction}>Annuler</Button>
+          <Button onClick={onCancel} disabled={isBlockingAction}>{t('common:dialog.cancel.label')}</Button>
           <Tooltip
             text={isPreviewPending
-              ? "L'aperçu du dernier réglage est en cours"
+              ? t('media:audioEditor.preview.pending')
               : canValidate
-                ? 'Valider les modifications'
-                : 'Aucune modification à valider'}
+                ? t('media:audioEditor.apply.action')
+                : t('media:audioEditor.apply.nothingTooltip')}
             placement="above"
           >
             <Button variant="primary" onClick={handleApply} disabled={!canValidate}>
               {isPreviewPending
-                ? "Génération de l'aperçu…"
+                ? t('media:audioEditor.preview.progress')
                 : applyMode === 'trim' || applyMode === 'cut'
-                ? 'Application…'
+                ? t('media:audioEditor.apply.progress')
                 : canValidate
-                  ? 'Valider les modifications'
-                  : 'Aucune modification'}
+                  ? t('media:audioEditor.apply.action')
+                  : t('media:audioEditor.apply.nothing')}
             </Button>
           </Tooltip>
         </div>

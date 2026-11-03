@@ -114,12 +114,12 @@ export async function openProjectDialog(page, path, { timeout = 60_000 } = {}) {
   return projectMenuButton(page).waitFor({ timeout }).then(() => true, () => false);
 }
 
-// Bascule « Utiliser un workspace pour les nouveaux projets » (même écran de
+// Bascule « Utiliser l’emplacement de travail pour les nouveaux projets » (même écran de
 // Préférences). Contrairement à la préférence de copie, elle n'a pas non plus
 // de nom accessible dédié : ciblée par la ligne qui porte son texte visible.
 export async function setUseWorkspaceForNewProjectsPreference(page, desiredOn) {
   await page.keyboard.press('Control+Shift+O');
-  const row = page.locator('.opts-row').filter({ hasText: 'Utiliser un workspace pour les nouveaux projets' }).first();
+  const row = page.locator('.opts-row').filter({ hasText: 'Utiliser l’emplacement de travail pour les nouveaux projets' }).first();
   await row.waitFor({ timeout: 15_000 });
   const toggle = row.locator('button.tog').first();
   const isOn = (await toggle.getAttribute('aria-pressed')) === 'true';
@@ -141,8 +141,9 @@ export async function setUseWorkspaceForNewProjectsPreference(page, desiredOn) {
 // (`RootEditor`, simplifié). La carte racine a sa propre classe :
 // `.root-identity-card`.
 export function editorCard(page, title) {
+  const pattern = [...title].map(char => char === "'" || char === '’' ? "['’]" : /[a-zA-Z0-9 à-ÿ]/.test(char) ? char : '\\' + char).join('');
   return page.locator('.card:visible')
-    .filter({ has: page.locator('.card-title', { hasText: new RegExp(`^${title}$`) }) })
+    .filter({ has: page.locator('.card-title', { hasText: new RegExp(`^${pattern}$`) }) })
     .first();
 }
 
@@ -298,6 +299,15 @@ export function managedDirsBeside(projectDir) {
 export function findManagedCopy(rootDir, sourceName, category = 'fichiers-importes') {
   const dir = join(rootDir, category);
   if (!existsSync(dir)) return null;
-  const found = readdirSync(dir).find((name) => name.endsWith(`__${sourceName}`) || name === sourceName);
-  return found ? join(dir, found) : null;
+  const matches = [];
+  const walk = current => {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const path = join(current, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (entry.isFile() && (entry.name.endsWith('__' + sourceName) || entry.name === sourceName)) matches.push(path);
+    }
+  };
+  walk(dir);
+  if (matches.length > 1) throw new Error('Copies gérées ambiguës pour ' + sourceName);
+  return matches[0] ?? null;
 }

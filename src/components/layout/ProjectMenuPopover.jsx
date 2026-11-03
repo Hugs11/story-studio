@@ -1,33 +1,26 @@
-import { useEffect, useRef } from 'react';
+import { useCatalogueTranslation } from '../../i18n/useCatalogueTranslation.js';
+import { presentCommon, useCommonTranslation } from '../../i18n/commonPresentation.js';
 import { FilePen, FolderOpen, House, Package, Save, Waypoints } from '../icons/LucideLocal';
-import './ProjectMenuPopover.css';
-
-function ToolbarIcon({ Icon, className = 'chrome-icon' }) {
-  return <Icon className={className} aria-hidden="true" strokeWidth={2} absoluteStrokeWidth />;
-}
+import { MenuItem, MenuPopover } from './MenuPopover';
 
 // Une entrée du menu, pilotée par l'inventaire de la barre : libellé,
 // raccourci et disponibilité viennent de la même source que le clavier. Une
 // commande tenue par un export reste **listée** et dit pourquoi, au lieu de
 // disparaître du menu.
 function ProjectMenuItem({ entry, fallbackLabel, fallbackShortcut, Icon, onClick }) {
+  useCommonTranslation();
   const label = entry?.label ?? fallbackLabel;
   const available = entry ? entry.available : true;
   return (
-    <button
-      data-toolbar-id={entry?.id}
-      className="project-menu-item"
-      role="menuitem"
-      onClick={available ? onClick : undefined}
+    <MenuItem
+      toolbarId={entry?.id}
+      Icon={Icon}
+      label={label}
+      detail={available ? (entry?.shortcut ?? fallbackShortcut) : presentCommon(entry.unavailableReason)}
       disabled={!available}
-      title={available ? undefined : entry.unavailableReason}
-    >
-      <ToolbarIcon Icon={Icon} />
-      <span>
-        <strong>{label}</strong>
-        <small>{available ? (entry?.shortcut ?? fallbackShortcut) : entry.unavailableReason}</small>
-      </span>
-    </button>
+      title={available ? undefined : presentCommon(entry.unavailableReason)}
+      onClick={onClick}
+    />
   );
 }
 
@@ -39,125 +32,75 @@ export function ProjectMenuPopover({
   // Les entrées du groupe « fichier » de l'inventaire, dans son ordre.
   commands = [],
   onNewProject,
+  onReturnToCatalogue,
   onOpenProject,
   onOpenPack,
   onSaveProject,
   onSaveProjectAs,
   onContinueInGraph,
 }) {
+  const { t } = useCommonTranslation();
+  const { t: catalogueT } = useCatalogueTranslation();
   const find = (id) => commands.find((entry) => entry.id === id) ?? null;
-  const wrapRef = useRef(null);
-  const closeTimerRef = useRef(null);
-
-  useEffect(() => () => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return undefined;
-
-    function onPointerDown(event) {
-      if (!wrapRef.current?.contains(event.target)) onOpenChange?.(false);
-    }
-
-    function onKeyDown(event) {
-      if (event.key === 'Escape') onOpenChange?.(false);
-    }
-
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [open, onOpenChange]);
-
-  function openPopover() {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    onOpenChange?.(true);
-  }
-
-  function scheduleClose() {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = setTimeout(() => onOpenChange?.(false), 140);
-  }
-
   function handleAction(action) {
     onOpenChange?.(false);
     action?.();
   }
 
   return (
-    <div
-      className={`project-menu-wrap ${open ? 'is-open' : ''}`}
-      ref={wrapRef}
-      onPointerEnter={openPopover}
-      onPointerLeave={scheduleClose}
-      onMouseEnter={openPopover}
-      onMouseLeave={scheduleClose}
-      onFocus={openPopover}
+    <MenuPopover
+      open={open}
+      onOpenChange={onOpenChange}
+      trigger={trigger}
+      label={t('common:project.menu.title')}
     >
-      {trigger({ openPopover })}
-
-      {open ? (
+      <ProjectMenuItem entry={find('returnToCatalogue')} fallbackLabel={catalogueT('catalogue:open.return.label')} fallbackShortcut={shortcutLabels.returnToCatalogue} Icon={Package} onClick={() => handleAction(onReturnToCatalogue)} />
+      <ProjectMenuItem
+        entry={find('newProject')}
+        fallbackLabel={t('common:project.home.label')}
+        fallbackShortcut={shortcutLabels.newProject}
+        Icon={House}
+        onClick={() => handleAction(onNewProject)}
+      />
+      <ProjectMenuItem
+        entry={find('openProject')}
+        fallbackLabel={t('common:project.open.label')}
+        fallbackShortcut={shortcutLabels.openProject}
+        Icon={FolderOpen}
+        onClick={() => handleAction(onOpenProject)}
+      />
+      <ProjectMenuItem
+        entry={find('openPack')}
+        fallbackLabel={t('common:project.openPack.label')}
+        Icon={Package}
+        onClick={() => handleAction(onOpenPack)}
+      />
+      <span className="project-menu-sep" />
+      <ProjectMenuItem
+        entry={find('saveProject')}
+        fallbackLabel={t('common:project.save.label')}
+        fallbackShortcut={shortcutLabels.saveProject}
+        Icon={Save}
+        onClick={() => handleAction(onSaveProject)}
+      />
+      <ProjectMenuItem
+        entry={find('saveProjectAs')}
+        fallbackLabel={t('common:project.saveAs.fallbackLabel')}
+        fallbackShortcut={shortcutLabels.saveAs}
+        Icon={FilePen}
+        onClick={() => handleAction(onSaveProjectAs)}
+      />
+      {find('continueInGraph') ? (
         <>
-          <div className="project-menu-bridge" aria-hidden="true" />
-          <div className="project-menu" role="menu">
-            <div className="project-menu-head">
-              {/* L'état d'enregistrement n'est plus dit ici : il est affiché à
-                  un seul endroit, la barre de titre, commune aux deux éditeurs. */}
-              <strong>Projet</strong>
-              <span>Fichier et enregistrement</span>
-            </div>
-            <ProjectMenuItem
-              entry={find('newProject')}
-              fallbackLabel="Retour à l’accueil"
-              fallbackShortcut={shortcutLabels.newProject}
-              Icon={House}
-              onClick={() => handleAction(onNewProject)}
-            />
-            <ProjectMenuItem
-              entry={find('openProject')}
-              fallbackLabel="Ouvrir un projet"
-              fallbackShortcut={shortcutLabels.openProject}
-              Icon={FolderOpen}
-              onClick={() => handleAction(onOpenProject)}
-            />
-            <ProjectMenuItem
-              entry={find('openPack')}
-              fallbackLabel="Ouvrir un pack"
-              Icon={Package}
-              onClick={() => handleAction(onOpenPack)}
-            />
-            <span className="project-menu-sep" />
-            <ProjectMenuItem
-              entry={find('saveProject')}
-              fallbackLabel="Enregistrer"
-              fallbackShortcut={shortcutLabels.saveProject}
-              Icon={Save}
-              onClick={() => handleAction(onSaveProject)}
-            />
-            <ProjectMenuItem
-              entry={find('saveProjectAs')}
-              fallbackLabel="Enregistrer sous..."
-              fallbackShortcut={shortcutLabels.saveAs}
-              Icon={FilePen}
-              onClick={() => handleAction(onSaveProjectAs)}
-            />
-            {find('continueInGraph') ? (
-              <>
-                <span className="project-menu-sep" />
-                <ProjectMenuItem
-                  entry={find('continueInGraph')}
-                  fallbackLabel="Continuer dans l’éditeur graphe…"
-                  Icon={Waypoints}
-                  onClick={() => handleAction(onContinueInGraph)}
-                />
-              </>
-            ) : null}
-          </div>
+          <span className="project-menu-sep" />
+          <ProjectMenuItem
+            entry={find('continueInGraph')}
+            fallbackLabel={t('common:project.continueInGraph.label')}
+            Icon={Waypoints}
+            onClick={() => handleAction(onContinueInGraph)}
+          />
         </>
       ) : null}
-    </div>
+    </MenuPopover>
   );
 }

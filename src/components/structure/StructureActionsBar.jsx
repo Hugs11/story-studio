@@ -1,3 +1,4 @@
+import { useCommonTranslation } from '../../i18n/commonPresentation.js';
 import { useLayoutEffect, useRef, useState } from 'react';
 import {
   FilePlus,
@@ -46,9 +47,12 @@ function StructureActionButton({ action }) {
 // libellé de raccourci, sans recopier le bouton dans chaque panneau.
 export function StructureSearchButton({
   onClick,
-  label = 'Rechercher dans la structure',
-  tooltip = `${label} (Ctrl+F)`,
+  label,
+  tooltip,
 }) {
+  const { t } = useCommonTranslation();
+  label ??= t('common:structure.search.label');
+  tooltip ??= t('common:structure.search.tooltip', { label });
   return (
     <Tooltip text={tooltip} placement="below">
       <button
@@ -90,15 +94,15 @@ export function StructureActionsBar({
   canRecord = true,
   canGenerateStoryTts = true,
   canLaunchSimulator = true,
-  label = 'Ajouter',
-  ariaLabel = 'Ajouter à la structure',
+  label,
+  ariaLabel,
   showLabel = false,
-  // Texte d'état à gauche de la barre (le décompte de la liste du graphe).
-  // Il prend la place libre et ne pousse jamais les boutons hors de la barre.
-  leading = null,
   trailing = null,
   availableInlineSize = null,
 }) {
+  const { t } = useCommonTranslation();
+  label ??= t('common:structure.add.label');
+  ariaLabel ??= t('common:structure.add.ariaLabel');
   const barRef = useRef(null);
   const [measuredInlineSize, setMeasuredInlineSize] = useState(null);
   const hasAvailableInlineSize = Number.isFinite(availableInlineSize);
@@ -125,63 +129,63 @@ export function StructureActionsBar({
   // synthèse et le simulateur s'effacent quand l'hôte ne les tend pas.
   const catalog = {
     [MEDIA_TOOL_ACTIONS.IMPORT_STORY]: onAddStory && {
-      title: 'Importer audio, ZIP ou 7z',
+      title: t('common:structure.importStory.tooltip'),
       priority: 'primary',
       disabled: !canAddStory,
       onClick: () => onAddStory?.(targetMenuId),
       icon: <ActionIcon Icon={FilePlus} />,
     },
     [MEDIA_TOOL_ACTIONS.ADD_FOLDER]: onAddFolder && {
-      title: 'Créer un dossier',
+      title: t('common:structure.folder.create'),
       priority: 'primary',
       disabled: !canAddFolder,
       onClick: () => onAddFolder?.(targetMenuId),
       icon: <ActionIcon Icon={FolderPlus} />,
     },
     [MEDIA_TOOL_ACTIONS.IMPORT_FOLDER]: onImportFolder && {
-      title: 'Importer un dossier',
+      title: t('common:structure.folder.import'),
       priority: 'secondary',
       disabled: !canImportFolder,
       onClick: () => onImportFolder?.(targetMenuId),
       icon: <ActionIcon Icon={FolderInput} />,
     },
     [MEDIA_TOOL_ACTIONS.IMPORT_MEDIA]: onImportMedia && {
-      title: 'Importer des médias dans la bibliothèque',
+      title: t('common:structure.media.import'),
       priority: 'primary',
       disabled: !canImportMedia,
       onClick: onImportMedia,
       icon: <ActionIcon Icon={FilePlus} />,
     },
     [MEDIA_TOOL_ACTIONS.IMPORT_PODCAST]: onImportPodcast && {
-      title: 'Ajouter un podcast',
+      title: t('common:structure.podcast.add'),
       priority: 'secondary',
       disabled: !canImportPodcast,
       onClick: onImportPodcast,
       icon: <ActionIcon Icon={Rss} />,
     },
     [MEDIA_TOOL_ACTIONS.IMPORT_YOUTUBE]: onImportYoutube && {
-      title: 'Importer depuis YouTube',
+      title: t('common:structure.youtube.import'),
       priority: 'secondary',
       disabled: !canImportYoutube,
       onClick: onImportYoutube,
       icon: <ActionIcon Icon={Youtube} />,
     },
     [MEDIA_TOOL_ACTIONS.RECORD]: onRecord && {
-      title: 'Enregistrer une histoire avec le micro',
+      title: t('common:structure.record.tooltip'),
       priority: 'secondary',
       disabled: !canRecord,
       onClick: onRecord,
       icon: <ActionIcon Icon={Mic} />,
     },
     [MEDIA_TOOL_ACTIONS.GENERATE_TTS]: onGenerateStoryTts && {
-      title: 'Créer une histoire avec TTS',
+      title: t('common:structure.tts.create'),
       priority: 'secondary',
       disabled: !canGenerateStoryTts,
       onClick: onGenerateStoryTts,
       icon: <ActionIcon Icon={Speech} />,
     },
     [MEDIA_TOOL_ACTIONS.SIMULATOR]: onLaunchSimulator && {
-      title: 'Lancer le simulateur',
+      title: t('common:structure.simulator.launch'),
       priority: 'secondary',
       disabled: !canLaunchSimulator,
       onClick: onLaunchSimulator,
@@ -208,7 +212,6 @@ export function StructureActionsBar({
       aria-label={ariaLabel}
     >
       {showLabel ? <span className="structure-actions-label">{label}</span> : null}
-      {leading ? <span className="structure-actions-leading">{leading}</span> : null}
       {directActions.map((action) => <StructureActionButton key={action.id} action={action} />)}
       <StructureActionsOverflow actions={overflowActions} />
       {trailing ? <span className="structure-actions-trailing">{trailing}</span> : null}

@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -9,8 +10,13 @@ use crate::services::project_files::validate_existing_file_path;
 use crate::support::ffmpeg::file_ext;
 
 pub(crate) fn ensure_image_320x240(bytes: &[u8], role: &str) -> Result<Option<Vec<u8>>, String> {
-    let img = image::load_from_memory(bytes)
-        .map_err(|e| format!("Image illisible pour '{}' : {}", role, e))?;
+    let img = image::load_from_memory(bytes).map_err(|e| {
+        UserMessage::new(codes::GENERATION_IMAGE_ROLE_UNREADABLE)
+            .param("role", (role).to_string())
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })?;
     if img.width() == 320 && img.height() == 240 {
         return Ok(None);
     }
@@ -18,7 +24,13 @@ pub(crate) fn ensure_image_320x240(bytes: &[u8], role: &str) -> Result<Option<Ve
     let mut out = Vec::new();
     resized
         .write_to(&mut std::io::Cursor::new(&mut out), image::ImageFormat::Png)
-        .map_err(|e| format!("Encodage 320x240 pour '{}' : {}", role, e))?;
+        .map_err(|e| {
+            UserMessage::new(codes::GENERATION_IMAGE_RESIZE_FAILED)
+                .param("role", (role).to_string())
+                .param("reason", (e).to_string())
+                .with_detail((e).to_string())
+                .into_transport()
+        })?;
     Ok(Some(out))
 }
 
@@ -47,8 +59,13 @@ pub(crate) enum ImagePlan {
 /// l'extension du fichier source. Cette fonction porte la décision commune, et
 /// les deux l'empruntent.
 pub(crate) fn plan_image_from_bytes(bytes: &[u8], role: &str) -> Result<ImagePlan, String> {
-    let format = image::guess_format(bytes)
-        .map_err(|error| format!("Format d'image indéterminé pour '{}' : {}", role, error))?;
+    let format = image::guess_format(bytes).map_err(|error| {
+        UserMessage::new(codes::GENERATION_IMAGE_FORMAT_UNKNOWN)
+            .param("role", (role).to_string())
+            .param("reason", (error).to_string())
+            .with_detail((error).to_string())
+            .into_transport()
+    })?;
     match studio_image_extension(format) {
         Some(extension) => Ok(ImagePlan::Verbatim { extension }),
         // Hors liste fermée : le réencodage est la seule sortie qui ne perde
@@ -63,8 +80,13 @@ pub(crate) fn plan_image_from_bytes(bytes: &[u8], role: &str) -> Result<ImagePla
 /// c'est ce qui laissait passer un format hors liste. Ici le réencodage est
 /// inconditionnel, parce que c'est précisément ce qu'on veut de ce cas.
 pub(crate) fn reencode_png_320x240(bytes: &[u8], role: &str) -> Result<Vec<u8>, String> {
-    let img = image::load_from_memory(bytes)
-        .map_err(|e| format!("Image illisible pour '{}' : {}", role, e))?;
+    let img = image::load_from_memory(bytes).map_err(|e| {
+        UserMessage::new(codes::GENERATION_IMAGE_ROLE_UNREADABLE)
+            .param("role", (role).to_string())
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })?;
     let sized = if img.width() == 320 && img.height() == 240 {
         img
     } else {
@@ -73,7 +95,13 @@ pub(crate) fn reencode_png_320x240(bytes: &[u8], role: &str) -> Result<Vec<u8>, 
     let mut out = Vec::new();
     sized
         .write_to(&mut std::io::Cursor::new(&mut out), image::ImageFormat::Png)
-        .map_err(|e| format!("Encodage 320x240 pour '{}' : {}", role, e))?;
+        .map_err(|e| {
+            UserMessage::new(codes::GENERATION_IMAGE_RESIZE_FAILED)
+                .param("role", (role).to_string())
+                .param("reason", (e).to_string())
+                .with_detail((e).to_string())
+                .into_transport()
+        })?;
     Ok(out)
 }
 
@@ -114,18 +142,23 @@ pub(crate) fn stage_binary_asset_as(
     transformed: bool,
 ) -> Result<PreparedAsset, String> {
     let source = validate_existing_file_path(source_path, role)?;
-    let bytes =
-        fs::read(&source).map_err(|e| format!("Lecture impossible pour {} : {}", role, e))?;
+    let bytes = fs::read(&source).map_err(|e| {
+        UserMessage::new(codes::FILES_NAMED_FILE_READ_FAILED)
+            .param("role", (role).to_string())
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })?;
     let asset_name = hashed_asset_name(&bytes, extension);
     let staged_path = assets_dir.join(&asset_name);
     let deduplicated = seen_assets.contains_key(&asset_name);
     if !deduplicated {
         fs::write(&staged_path, &bytes).map_err(|e| {
-            format!(
-                "Impossible d'ecrire l'asset prepare {} : {}",
-                staged_path.display(),
-                e
-            )
+            UserMessage::new(codes::GENERATION_PREPARED_ASSET_WRITE_FAILED)
+                .param("staged_path", (staged_path.display()).to_string())
+                .param("reason", (e).to_string())
+                .with_detail((e).to_string())
+                .into_transport()
         })?;
         seen_assets.insert(asset_name.clone(), staged_path.clone());
     }
@@ -150,21 +183,20 @@ pub(crate) fn stage_binary_asset_bytes(
 ) -> Result<PreparedAsset, String> {
     let extension = file_ext(original_name).to_ascii_lowercase();
     if extension.is_empty() {
-        return Err(format!(
-            "Extension introuvable pour l'asset importe {}",
-            original_name
-        ));
+        return Err(UserMessage::new(codes::IMPORT_ASSET_EXTENSION_MISSING)
+            .param("original_name", (original_name).to_string())
+            .into_transport());
     }
     let asset_name = hashed_asset_name(bytes, &extension);
     let staged_path = assets_dir.join(&asset_name);
     let deduplicated = seen_assets.contains_key(&asset_name);
     if !deduplicated {
         fs::write(&staged_path, bytes).map_err(|e| {
-            format!(
-                "Impossible d'ecrire l'asset importe {} : {}",
-                staged_path.display(),
-                e
-            )
+            UserMessage::new(codes::IMPORT_ASSET_FILE_WRITE_FAILED)
+                .param("staged_path", (staged_path.display()).to_string())
+                .param("reason", (e).to_string())
+                .with_detail((e).to_string())
+                .into_transport()
         })?;
         seen_assets.insert(asset_name.clone(), staged_path.clone());
     }

@@ -31,7 +31,6 @@ export const ICON_FOLDER = 'folder';
 export const ICON_FOLDER_OPEN = 'folder-open';
 export const ICON_MUSIC = 'music';
 export const ICON_FILE_ARCHIVE = 'file-archive';
-export const ICON_ARROW_RIGHT = 'arrow-right';
 export const ICON_SQUARE = 'square';
 export const ICON_FULLSCREEN = 'fullscreen';
 export const ICON_MOON = 'moon';
@@ -45,7 +44,6 @@ export const HIERARCHICAL_NATURES = Object.freeze({
   MENU: 'menu',
   STORY: 'story',
   ZIP: 'zip',
-  REF: 'ref',
   END_NODE: 'end-node',
   END_NIGHT: 'end-night',
 });
@@ -63,7 +61,6 @@ const HIERARCHICAL_VOCABULARY = Object.freeze({
   [HIERARCHICAL_NATURES.MENU]: ICON_FOLDER_OPEN,
   [HIERARCHICAL_NATURES.STORY]: ICON_MUSIC,
   [HIERARCHICAL_NATURES.ZIP]: ICON_FILE_ARCHIVE,
-  [HIERARCHICAL_NATURES.REF]: ICON_ARROW_RIGHT,
   [HIERARCHICAL_NATURES.END_NODE]: ICON_SQUARE,
   [HIERARCHICAL_NATURES.END_NIGHT]: ICON_MOON,
 });

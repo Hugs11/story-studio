@@ -41,16 +41,16 @@ function elements(node) {
   return [node, ...elements(node.props.children)];
 }
 
-function pressM() {
+function pressPreferencesAlias() {
   return {
-    key: 'm', code: 'KeyM', ctrlKey: true,
+    key: 'o', code: 'KeyO', ctrlKey: true, shiftKey: true,
     preventDefault() { this.defaultPrevented = true; },
     stopPropagation() {},
     stopImmediatePropagation() { this.immediateStopped = true; },
   };
 }
 
-test('la modale garde la capture ouverte et annonce Options du pack pour Ctrl+M', (t) => {
+test('la modale garde la capture ouverte et annonce Préférences pour Ctrl+Maj+O', (t) => {
   let shortcuts = DEFAULT_SHORTCUTS;
   const changes = [];
   const modal = runner(() => KeyboardShortcutsModal({
@@ -59,18 +59,18 @@ test('la modale garde la capture ouverte et annonce Options du pack pour Ctrl+M'
   t.after(() => modal.unmount());
   const capture = () => elements(modal.render()).find((element) => element.key === 'selectionCopy').props.children[1];
   capture().props.onClick();
-  const event = pressM();
+  const event = pressPreferencesAlias();
   capture().props.onKeyDown(event);
   assert.equal(event.defaultPrevented, true);
   assert.deepEqual(changes, []);
   assert.match(capture().props.className, /is-capturing/);
   const message = elements(modal.render()).find((element) => element.props.className === 'keyboard-shortcuts-message');
-  assert.match(message.props.children, /Options du pack.*Général/);
+  assert.match(message.props.children, /Préférences.*Général/);
 
-  shortcuts = { ...shortcuts, storySettings: { ctrl: true, shift: true, key: 'k', code: 'KeyK' } };
-  capture().props.onKeyDown(pressM());
+  shortcuts = { ...shortcuts, tabOptions: { ctrl: true, shift: true, key: 'k', code: 'KeyK' } };
+  capture().props.onKeyDown(pressPreferencesAlias());
   assert.equal(changes.length, 1);
-  assert.equal(changes[0].selectionCopy.key, 'm');
+  assert.equal(changes[0].selectionCopy.key, 'o');
   assert.doesNotMatch(capture().props.className, /is-capturing/);
 });
 
@@ -84,10 +84,10 @@ test('dispatch global puis sélection : un alias actif prend la frappe, un alias
   };
   globalThis.document = { querySelector: () => null };
   const calls = [];
-  const shortcuts = { current: { ...DEFAULT_SHORTCUTS, selectionCopy: { ctrl: true, key: 'm', code: 'KeyM' } } };
+  const shortcuts = { current: { ...DEFAULT_SHORTCUTS, selectionCopy: { ctrl: true, shift: true, key: 'o', code: 'KeyO' } } };
   const hook = runner(() => useAppShortcuts({
     keyboardShortcutsRef: shortcuts,
-    actionsRef: { current: { canOpenPackOptions: true, openPackOptions: () => calls.push('pack') } },
+    actionsRef: { current: { canOpenPreferences: true, openPreferences: () => calls.push('prefs') } },
     saveHandlerRef: { current: null }, saveAsHandlerRef: { current: null },
   }));
   t.after(() => {
@@ -96,17 +96,17 @@ test('dispatch global puis sélection : un alias actif prend la frappe, un alias
   hook.render();
   hook.flush();
   function dispatch() {
-    const event = pressM();
+    const event = pressPreferencesAlias();
     listener(event);
     if (!event.immediateStopped && findShortcutAction(event, shortcuts.current, 'selection') === 'selectionCopy') {
       calls.push('copy');
     }
   }
   dispatch();
-  assert.deepEqual(calls, ['pack']);
+  assert.deepEqual(calls, ['prefs']);
   shortcuts.current = {
-    ...shortcuts.current, storySettings: { ctrl: true, shift: true, key: 'k', code: 'KeyK' },
+    ...shortcuts.current, tabOptions: { ctrl: true, shift: true, key: 'k', code: 'KeyK' },
   };
   dispatch();
-  assert.deepEqual(calls, ['pack', 'copy']);
+  assert.deepEqual(calls, ['prefs', 'copy']);
 });

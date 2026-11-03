@@ -16,6 +16,7 @@ import { RANDOM_OPTION_INDEX, advancedGestures } from '../src/store/projectModel
 const { mountSurface } = await import('./chromeBench.mjs');
 const { StageEditor } = await import('../src/components/AdvancedWorkspace/StageEditor.jsx');
 const { StageDestinations } = await import('../src/components/AdvancedWorkspace/StageDestinations.jsx');
+const { Select } = await import('../src/components/common/Select.jsx');
 
 const stagePath = (uuid) => `/stageNodes/@uuid=${uuid}#0`;
 const actionPath = (id) => `/actionNodes/@id=${id}#0`;
@@ -168,12 +169,15 @@ test('le panneau d’Écran : ses deux sorties, puis les listes par lesquelles o
   assert.match(html, /Bouton Accueil <em class="advanced-editor__term">homeTransition<\/em>/);
   assert.match(
     html,
-    /Suite du parcours.*Quand on appuie sur OK.*À la fin du son.*Mène à.*connection-icon--action.*>Menu<.*2 choix.*aria-label="La liste garde l’ordre[^"]*">\?<\/button><label[^>]*>commence sur<\/label><\/span><select[^>]*>.*<option value="1" selected="">2\/2 · Écran b<\/option>/s,
+    /Suite du parcours.*Quand on appuie sur OK.*À la fin du son.*Mène à.*connection-icon--action.*>Menu<.*2 choix.*aria-label="La liste garde l’ordre[^"]*">\?<\/button><label[^>]*>commence sur<\/label><\/span><button[^>]*role="combobox"[^>]*><span class="select-value">2\/2 · Écran b<\/span>/s,
     'les déclencheurs, puis la liste ouverte et le choix sur lequel on y commence',
   );
   const suite = html.slice(html.indexOf('Suite du parcours'), html.indexOf('Bouton Accueil <em'));
-  assert.match(suite, /<option value="0">1\/2 · Écran a<\/option>.*<option value="random">Au hasard, à chaque fois<\/option>/s,
-    'le point de départ se choisit sur place, parmi tous les choix de la liste et le hasard');
+  // Les options d'une liste de l'app n'existent qu'ouverte : on lit celles que le panneau lui donne.
+  const landing = mount().elements.find((element) => element.type === Select && element.props.id === 'advanced-landing-ok');
+  assert.deepEqual(landing.props.options.map((option) => [option.value, option.label]), [
+    ['0', '1/2 · Écran a'], ['1', '2/2 · Écran b'], ['random', 'Au hasard, à chaque fois'],
+  ], 'le point de départ se choisit sur place, parmi tous les choix de la liste et le hasard');
   assert.match(suite, /aria-label="Changer de liste"/);
   assert.doesNotMatch(suite, />Modifier</, '« Modifier » laissait croire qu’il changeait le choix de départ');
   assert.match(html, /Comment on arrive sur cet Écran/);
@@ -231,9 +235,9 @@ test('la molette dit quels Écrans elle fait défiler', () => {
 test('le point de départ dans la liste se change sur place, par un seul geste', () => {
   const gestures = [];
   const { elements } = mount('depart', (gesture) => gestures.push(gesture));
-  const select = elements.find((element) => element.type === 'select' && element.props.id === 'advanced-landing-ok');
-  select.props.onChange({ target: { value: '0' } });
-  select.props.onChange({ target: { value: 'random' } });
+  const select = elements.find((element) => element.type === Select && element.props.id === 'advanced-landing-ok');
+  select.props.onChange('0');
+  select.props.onChange('random');
   assert.deepEqual(gestures, [
     advancedGestures.setStageTransition('depart', 'ok', advancedGestures.transitionTo('menu', 0)),
     advancedGestures.setStageTransition('depart', 'ok', advancedGestures.transitionTo('menu', RANDOM_OPTION_INDEX)),

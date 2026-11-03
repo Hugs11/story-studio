@@ -22,6 +22,7 @@
 //!   par la comparaison structurelle du juge. Un écart refuse la copie : il
 //!   n'y a pas de conversion dégradée.
 
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
@@ -40,14 +41,6 @@ use super::{
     canonicalize_project, classify_stage_id, DecodedStoryDocument, PackIdentity, Presence,
     StoryDocumentContext,
 };
-
-/// Refus lisible par l'auteur ; le détail technique suit, séparé.
-pub(crate) const INCLUDED_PACK_REFUSAL: &str =
-    "Ton projet contient un pack inclus. L'éditeur graphe ne sait pas encore le reprendre.";
-pub(crate) const UNFAITHFUL_REFUSAL: &str =
-    "La copie graphe ne produirait pas exactement le même pack que ton projet. Rien n'a été créé.";
-pub(crate) const IDENTITY_REFUSAL: &str =
-    "L'identité du pack de ton projet est illisible : la copie graphe ne pourrait pas la garder.";
 
 /// Ce que l'interface reçoit : la chaîne de payload et ses liaisons, dérivées
 /// ensemble du même document, comme pour toute acquisition.
@@ -119,6 +112,49 @@ pub(crate) fn graph_copy_of_project(project: &Project) -> Result<GraphCopy, Stri
     }
 
     let mut context = StoryDocumentContext::created();
+    context.official_provenance = project.official_provenance;
+    context.official_origin_uuid = project.official_origin_uuid.clone();
+    // Keep both identities: a stored origin must not hide a later-recognized pack UUID.
+    fn collect(
+        entries: &[crate::domain::project::ProjectEntry],
+        identity: &str,
+        context: &mut StoryDocumentContext,
+    ) {
+        use crate::domain::official_provenance::OfficialProvenance;
+        for entry in entries {
+            let official = entry.official_provenance == OfficialProvenance::Official;
+            context.contains_official_content |= official
+                && !super::output_identity::same(
+                    entry
+                        .official_origin_uuid
+                        .as_deref()
+                        .unwrap_or(&entry.pack_uuid)
+                        .trim(),
+                    identity.trim(),
+                );
+            if official || entry.official_provenance == OfficialProvenance::Unknown {
+                for uuid in [
+                    entry.official_origin_uuid.as_deref(),
+                    Some(entry.pack_uuid.as_str()),
+                ]
+                .into_iter()
+                .flatten()
+                {
+                    let uuid = uuid.trim();
+                    if !uuid.is_empty() && !super::output_identity::same(uuid, identity.trim()) {
+                        context.foreign_pack_uuids.push(uuid.to_owned());
+                    }
+                }
+            }
+            collect(&entry.children, identity, context);
+        }
+    }
+    collect(&project.root_entries, &identity, &mut context);
+    collect(&project.shared_entries, &identity, &mut context);
+    context.contains_official_content &=
+        crate::domain::official_provenance::contains_official_content(project);
+    context.foreign_pack_uuids.sort();
+    context.foreign_pack_uuids.dedup();
     context.pack_identity = PackIdentity::chosen(&identity, &context.pack_identity);
     let payload = encode_authoring_payload(&DecodedStoryDocument {
         document,
@@ -142,15 +178,26 @@ pub(crate) fn graph_copy_of_project(project: &Project) -> Result<GraphCopy, Stri
 /// passe par la préparation d'export du graphe, sans médias.
 pub(crate) fn verify_graph_copy(project: &Project, payload: &str) -> Result<(), String> {
     let original = project_story_for_simulation(project)?.story;
-    let decoded = decode_authoring_payload(payload)
-        .map_err(|error| format!("{UNFAITHFUL_REFUSAL}\n{error}"))?;
-    let prepared = prepare_graph_document_for_export(&decoded)
-        .map_err(|error| format!("{UNFAITHFUL_REFUSAL}\n{error:?}"))?;
+    let decoded = decode_authoring_payload(payload).map_err(|error| {
+        UserMessage::new(codes::GRAPH_COPY_UNFAITHFUL_DETAIL)
+            .param("reason", error.to_string())
+            .with_detail(error.to_string())
+            .into_transport()
+    })?;
+    let prepared = prepare_graph_document_for_export(&decoded).map_err(|error| {
+        UserMessage::new(codes::GRAPH_COPY_UNFAITHFUL_DETAIL)
+            .param("reason", format!("{error:?}"))
+            .with_detail(format!("{error:?}"))
+            .into_transport()
+    })?;
     let report = compare_documents_structural(&prepared.document, &original);
     if report.faithful {
         return Ok(());
     }
-    Err(format!("{UNFAITHFUL_REFUSAL}\n{}", report.gaps.join("\n")))
+    Err(UserMessage::new(codes::GRAPH_COPY_UNFAITHFUL_DETAIL)
+        .param("reason", report.gaps.join("\n"))
+        .with_detail(report.gaps.join("\n"))
+        .into_transport())
 }
 
 fn refuse_included_packs(project: &Project) -> Result<(), String> {
@@ -159,7 +206,7 @@ fn refuse_included_packs(project: &Project) -> Result<(), String> {
         .iter()
         .any(|request| matches!(request.source_kind, AssetSourceKind::Zip));
     if includes_pack {
-        return Err(INCLUDED_PACK_REFUSAL.to_string());
+        return Err(UserMessage::new(codes::GRAPH_COPY_INCLUDED_PACK).into_transport());
     }
     Ok(())
 }
@@ -170,7 +217,7 @@ fn refuse_included_packs(project: &Project) -> Result<(), String> {
 fn pack_identity_of(project: &Project) -> Result<String, String> {
     let identity = project.pack_uuid.trim();
     if identity.is_empty() || !classify_stage_id(identity).bridge_compatible {
-        return Err(IDENTITY_REFUSAL.to_string());
+        return Err(UserMessage::new(codes::GRAPH_COPY_INVALID_IDENTITY).into_transport());
     }
     Ok(identity.to_string())
 }

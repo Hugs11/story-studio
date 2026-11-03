@@ -1,0 +1,13 @@
+.lunii-status-pill { display: inline-flex; align-items: center; gap: 6px; height: var(--catalogue-control-height, 32px); max-width: 220px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--control-border); background: var(--control-bg); color: var(--control-text-muted); font: inherit; font-size: 13px; cursor: pointer; }
+.lunii-status-pill:hover:not(:disabled) { background: var(--control-bg-hover); }
+:root[data-keyboard-navigation] .lunii-status-pill:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--focus-ring); }
+.lunii-status-pill:disabled { cursor: default; }
+.lunii-status-pill[aria-expanded='true'] { border-color: var(--control-border-hover); }
+.lunii-status-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lunii-status-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--control-text-muted); }
+.lunii-status-pill--ready { color: var(--success-text); border-color: var(--success-border); background: var(--success-bg); }
+.lunii-status-pill--ready:hover:not(:disabled) { background: var(--success-bg-hover); border-color: var(--success-border-hover); }
+.lunii-status-pill--ready .lunii-status-dot { background: var(--success-text); }
+.lunii-status-pill--check { color: var(--warning-text); border-color: var(--warning-border); background: var(--warning-bg); }
+.lunii-status-pill--check:hover:not(:disabled) { background: var(--warning-bg-hover); border-color: var(--warning-border-hover); }
+.lunii-status-pill--check .lunii-status-dot { background: var(--warning-text); }

@@ -1,3 +1,5 @@
+import { sourceImportValue } from '../../i18n/importPresentation.js';
+import { translateGraph as t } from '../../i18n/graphPresentation.js';
 // Liaison entre une référence d'asset du dialecte avancé et un fichier disque.
 //
 // `assetRef` (« a1b2c3.mp3 ») appartient au payload d'auteur, que JavaScript
@@ -16,6 +18,7 @@ const BINDING_KEYS = new Set(['assetRef', 'path', 'status']);
 const BINDING_STATUSES = new Set([MEDIA_BINDING_RESOLVED, MEDIA_BINDING_MISSING]);
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const technicalFoundValue = value => value !== null && typeof value === 'object' ? JSON.stringify(value) : String(value);
 const hasPath = (value) => typeof value === 'string' && value.trim().length > 0;
 
 // Liste déclarée du projet. Un projet Libre n'en a pas : le tableau vide laisse
@@ -26,8 +29,8 @@ export function readMediaBindings(project) {
 }
 
 export function mediaBindingLabel(binding) {
-  const reference = hasPath(binding?.assetRef) ? binding.assetRef : 'référence inconnue';
-  return `Média avancé: ${reference}`;
+  const reference = hasPath(binding?.assetRef) ? binding.assetRef : t('graph:mediaBinding.reference.unknown');
+  return t('graph:mediaBinding.usage.label', { reference });
 }
 
 // Index par `assetRef`, l'unique identité d'une liaison. La comparaison est
@@ -51,7 +54,7 @@ export function* walkMediaBindingReferences(project) {
       obj: binding,
       key: 'path',
       path: binding.path,
-      label: mediaBindingLabel(binding),
+      get label() { return mediaBindingLabel(binding); },
       scope: MEDIA_BINDING_SCOPE,
     };
   }
@@ -77,7 +80,7 @@ export function resolveMediaBindingStatuses(project, statusByPath = {}) {
       continue;
     }
     const exists = existenceForPath(binding.path, statusByPath);
-    if (exists === undefined) continue;
+    if (typeof exists !== 'boolean') continue;
     binding.status = exists ? MEDIA_BINDING_RESOLVED : MEDIA_BINDING_MISSING;
   }
   return next;
@@ -89,33 +92,36 @@ export function resolveMediaBindingStatuses(project, statusByPath = {}) {
 export function mediaBindingViolations(bindings) {
   const violations = [];
   const at = (index, field) => `/authoring/mediaBindings/${index}${field ? `/${field}` : ''}`;
-  const push = (code, path, found, expected) => violations.push({ code, path, found, expected });
+  const push = (code, path, found, expected) => violations.push({ code, path,
+    found: sourceImportValue(found), expected: sourceImportValue(expected),
+    ...(found?.key ? { foundRef: found } : {}), ...(expected?.key ? { expectedRef: expected } : {}),
+  });
   const seenAssetRefs = new Map();
 
   bindings.forEach((binding, index) => {
     if (!isObject(binding)) {
-      push('INVALID_MEDIA_BINDING', at(index), Array.isArray(binding) ? 'tableau' : String(binding), 'objet de liaison');
+      push('INVALID_MEDIA_BINDING', at(index), Array.isArray(binding) ? { key: 'import:format.value.array' } : technicalFoundValue(binding), { key: 'import:format.value.bindingObject' });
       return;
     }
     for (const key of Object.keys(binding)) {
-      if (!BINDING_KEYS.has(key)) push('INVALID_MEDIA_BINDING', at(index, key), 'champ inconnu', 'assetRef, path ou status');
+      if (!BINDING_KEYS.has(key)) push('INVALID_MEDIA_BINDING', at(index, key), { key: 'import:format.value.unknownField' }, { key: 'import:format.value.bindingFields' });
     }
     if (!hasPath(binding.assetRef)) {
-      push('INVALID_MEDIA_BINDING', at(index, 'assetRef'), String(binding.assetRef), 'référence de dialecte non vide');
+      push('INVALID_MEDIA_BINDING', at(index, 'assetRef'), technicalFoundValue(binding.assetRef), { key: 'import:format.value.nonemptyRef' });
     } else if (seenAssetRefs.has(binding.assetRef)) {
-      push('DUPLICATE_MEDIA_BINDING', at(index, 'assetRef'), `déjà lié en ${at(seenAssetRefs.get(binding.assetRef))}`, 'une liaison par référence');
+      push('DUPLICATE_MEDIA_BINDING', at(index, 'assetRef'), { key: 'import:format.value.boundAt', params: { path: at(seenAssetRefs.get(binding.assetRef)) } }, { key: 'import:format.value.singleBinding' });
     } else {
       seenAssetRefs.set(binding.assetRef, index);
     }
     if (!Object.hasOwn(binding, 'path')) {
-      push('INVALID_MEDIA_BINDING', at(index, 'path'), 'absent', 'chemin disque ou null explicite');
+      push('INVALID_MEDIA_BINDING', at(index, 'path'), { key: 'import:format.value.absent' }, { key: 'import:format.value.optionalPath' });
     } else if (binding.path !== null && !hasPath(binding.path)) {
-      push('INVALID_MEDIA_BINDING', at(index, 'path'), typeof binding.path, 'chemin non vide ou null');
+      push('INVALID_MEDIA_BINDING', at(index, 'path'), typeof binding.path, { key: 'import:format.value.nonemptyPath' });
     }
     if (!BINDING_STATUSES.has(binding.status)) {
-      push('INVALID_MEDIA_BINDING', at(index, 'status'), String(binding.status), 'resolved ou missing');
+      push('INVALID_MEDIA_BINDING', at(index, 'status'), technicalFoundValue(binding.status), { key: 'import:format.value.bindingStatus' });
     } else if (binding.status === MEDIA_BINDING_RESOLVED && !hasPath(binding.path)) {
-      push('INVALID_MEDIA_BINDING', at(index, 'status'), 'resolved sans chemin', 'missing tant que le fichier est inconnu');
+      push('INVALID_MEDIA_BINDING', at(index, 'status'), { key: 'import:format.value.resolvedWithoutPath' }, { key: 'import:format.value.missingUntilKnown' });
     }
   });
 

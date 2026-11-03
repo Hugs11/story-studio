@@ -10,6 +10,7 @@
 //! le rapporte. Un espace de travail resté sur le disque est une fuite, qu'il ne faut
 //! pas masquer.
 
+use crate::support::user_message::{codes, UserMessage};
 use std::fs;
 use std::path::PathBuf;
 
@@ -50,10 +51,11 @@ impl ExportWorkspace {
             Ok(()) => Ok(()),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
             Err(error) => {
-                let message = format!(
-                    "L'espace de travail temporaire '{}' n'a pas pu être supprimé : {error}",
-                    self.root.display()
-                );
+                let message = UserMessage::new(codes::EXPORT_TEMP_WORKSPACE_DELETE_FAILED)
+                    .param("self_root", (self.root.display()).to_string())
+                    .param("reason", (error).to_string())
+                    .with_detail((error).to_string())
+                    .into_transport();
                 log::warn!(target: "advanced_export", "{message}");
                 Err(message)
             }

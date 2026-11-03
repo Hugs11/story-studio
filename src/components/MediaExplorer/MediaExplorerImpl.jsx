@@ -1,4 +1,8 @@
 import { lazy, Suspense, useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { getIntlLocale } from '../../i18n/language.js';
+import { mediaRef, presentMedia, translateMedia } from '../../i18n/mediaPresentation.js';
+import { useMediaTranslation } from '../../i18n/useMediaTranslation.js';
+import { presentStoredError } from '../../i18n/userMessage.js';
 import { collectMediaLibrary } from '../../store/mediaLibrary';
 import { createMediaTagLookup } from '../../store/mediaTags';
 import { audioClipboard } from '../../store/fieldClipboard';
@@ -8,10 +12,9 @@ import { Button } from '../common/Button';
 import { useErrorDialog } from '../common/Dialog';
 import { FilePlus, FolderPlus, SlidersHorizontal, Copy, Scissors, FolderInput, Trash2, Link2, Download, Search } from '../icons/LucideLocal';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
-import { normalizeFrenchSearchText } from '../../utils/frenchText';
+import { normalizeSearchText } from '../../utils/frenchText';
 import { isModalSurfaceOpen } from '../../utils/modalSurfaces';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
-import { KEYS, write } from '../../store/persistentSettings';
 import { basename } from '../../utils/fileUtils';
 import { isDeletableWorkspaceMediaPath } from '../../store/workspaceDirs';
 import {
@@ -36,15 +39,16 @@ const AudioSplitterModal = lazy(() => import('../AudioSplitterModal/AudioSplitte
 const ImageEditorModal = lazy(() => import('../ImageEditorModal/ImageEditorModal')
   .then((m) => ({ default: m.ImageEditorModal })));
 
+// Clés résolues à l'affichage, pour suivre la langue active.
 const FILTERS = [
-  { id: 'all', label: 'Tout' },
-  { id: 'image', label: 'Images' },
-  { id: 'audio', label: 'Audio' },
-  { id: 'zip', label: 'ZIP' },
-  { id: 'ai', label: 'IA' },
-  { id: 'imported', label: 'Importés' },
-  { id: 'recorded', label: 'Enreg.' },
-  { id: 'unused', label: 'Non utilisés' },
+  { id: 'all', labelKey: 'media:explorer.filter.all' },
+  { id: 'image', labelKey: 'media:explorer.filter.images' },
+  { id: 'audio', labelKey: 'media:explorer.filter.audio' },
+  { id: 'zip', labelKey: 'media:explorer.filter.zip' },
+  { id: 'ai', labelKey: 'media:explorer.filter.ai' },
+  { id: 'imported', labelKey: 'media:explorer.filter.imported' },
+  { id: 'recorded', labelKey: 'media:explorer.filter.recorded' },
+  { id: 'unused', labelKey: 'media:explorer.filter.unused' },
 ];
 
 
@@ -77,6 +81,7 @@ export function MediaExplorer({
   pendingMediaReveal = null,
   onMediaRevealConsumed,
 }) {
+  const { t, language } = useMediaTranslation();
   const { showErrorDialog } = useErrorDialog();
   const { activeDropZone, dropOnNode, graphMediaTarget } = useMediaTransfer();
   const [activeFilters, setActiveFilters] = useState(() => new Set());
@@ -115,7 +120,7 @@ export function MediaExplorer({
     showErrorDialog,
   });
 
-  const { colWidths, colWidthsRef, visibleCols, setColWidths, toggleCol } = useColumnWidths({
+  const { colWidths, visibleCols, toggleCol, startResize } = useColumnWidths({
     sortCol,
     onSortColReset: () => setSortCol(null),
   });
@@ -152,29 +157,6 @@ export function MediaExplorer({
     });
   }
 
-  function startResize(e, colId) {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = colWidthsRef.current[colId];
-    document.body.style.cursor = 'col-resize';
-
-    function onMove(ev) {
-      const delta = ev.clientX - startX;
-      const newWidth = Math.max(40, startWidth + delta);
-      setColWidths({ ...colWidthsRef.current, [colId]: newWidth });
-    }
-
-    function onUp() {
-      document.body.style.cursor = '';
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      write(KEYS.MEDIA_EXPLORER_COL_WIDTHS, colWidthsRef.current, { serialize: JSON.stringify });
-    }
-
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
-  }
-
   const gridCols = colsToGrid(colWidths, visibleCols);
 
   const items = useMemo(
@@ -182,7 +164,8 @@ export function MediaExplorer({
       project, statusByPath, sdJobs, xttsJobs, extraPaths,
       advancedUsages: advancedMediaUsages,
     }),
-    [project, statusByPath, sdJobs, xttsJobs, extraPaths, advancedMediaUsages],
+    // La langue recalcule les libellés de repli des usages, sans toucher au projet.
+    [project, statusByPath, sdJobs, xttsJobs, extraPaths, advancedMediaUsages, language],
   );
 
   useEffect(() => {
@@ -260,7 +243,7 @@ export function MediaExplorer({
     unused:   items.filter((i) => !i.inProject).length,
   }), [items]);
 
-  const normalizedQuery = normalizeFrenchSearchText(query).trim();
+  const normalizedQuery = normalizeSearchText(query).trim();
   const visible = items.filter((item) => {
     const kindFilters = [
       activeFilters.has('image') ? 'image' : null,
@@ -286,7 +269,7 @@ export function MediaExplorer({
     }
     if (!normalizedQuery) return true;
     const haystack = `${item.name} ${item.path} ${item.usages.map((u) => u.label).join(' ')}`;
-    return normalizeFrenchSearchText(haystack).includes(normalizedQuery);
+    return normalizeSearchText(haystack).includes(normalizedQuery);
   });
 
   function handleSortClick(i) {
@@ -301,7 +284,7 @@ export function MediaExplorer({
   const sortedVisible = sortCol === null ? visible : [...visible].sort((a, b) => {
     const dir = sortDir === 'asc' ? 1 : -1;
     switch (sortCol) {
-      case 'name':  return dir * a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      case 'name':  return dir * a.name.localeCompare(b.name, getIntlLocale(), { sensitivity: 'base' });
       case 'usage': return dir * (a.usedCount - b.usedCount);
       case 'size':  { const sa = getMeta(a.path)?.size_bytes ?? -1; const sb = getMeta(b.path)?.size_bytes ?? -1; return dir * (sa - sb); }
       case 'dim': {
@@ -313,7 +296,7 @@ export function MediaExplorer({
       case 'fmt':   return dir * (a.ext ?? '').localeCompare(b.ext ?? '', undefined, { sensitivity: 'base' });
       case 'date':  { const da = getMeta(a.path)?.modified_at ?? 0; const db = getMeta(b.path)?.modified_at ?? 0; return dir * (da - db); }
       case 'path':  return dir * a.path.localeCompare(b.path, undefined, { sensitivity: 'base' });
-      case 'tags':  { const ta = tagsOf(a.path).join(','); const tb = tagsOf(b.path).join(','); return dir * ta.localeCompare(tb, undefined, { sensitivity: 'base' }); }
+      case 'tags':  { const ta = tagsOf(a.path).join(','); const tb = tagsOf(b.path).join(','); return dir * ta.localeCompare(tb, getIntlLocale(), { sensitivity: 'base' }); }
       default:      return 0;
     }
   });
@@ -332,8 +315,8 @@ export function MediaExplorer({
       await graphMediaTarget.assign({ kind: selectedGraphMedia.kind, path: selectedGraphMedia.path });
     } catch (error) {
       showErrorDialog({
-        title: 'Affectation du média impossible',
-        message: String(error?.message ?? error),
+        get title() { return translateMedia('media:explorer.assign.error'); },
+        message: error,
       });
     }
   }
@@ -470,23 +453,28 @@ export function MediaExplorer({
         blockedItems.push(item.name || item.path);
       }
       if (deleteDisk && result?.diskError) {
-        diskErrors.push(`• ${item.name || item.path}\n  ${result.diskError}`);
+        diskErrors.push({ name: item.name || item.path, error: result.diskError });
       }
     }
     if (diskErrors.length > 0 || blockedItems.length > 0) {
-      const sections = [];
-      if (blockedItems.length > 0) {
-        sections.push(`Médias encore utilisés :\n${blockedItems.map((name) => `• ${name}`).join('\n')}`);
-      }
-      if (diskErrors.length > 0) {
-        const header = diskErrors.length === 1
-          ? 'Suppression disque refusée pour ce fichier :'
-          : `Suppression disque refusée pour ${diskErrors.length} fichiers :`;
-        sections.push(`${header}\n${diskErrors.join('\n\n')}`);
-      }
+      // Message composé à la lecture : le dialogue ouvert suit la langue active.
+      const incompleteMessage = () => {
+        const sections = [];
+        if (blockedItems.length > 0) {
+          sections.push(`${translateMedia('media:explorer.removal.usedHeader')}\n${blockedItems.map((name) => `• ${name}`).join('\n')}`);
+        }
+        if (diskErrors.length > 0) {
+          const header = diskErrors.length === 1
+            ? translateMedia('media:explorer.removal.diskSingle')
+            : translateMedia('media:explorer.removal.diskCount', { count: diskErrors.length });
+          const details = diskErrors.map(({ name, error }) => `• ${name}\n  ${error}`);
+          sections.push(`${header}\n${details.join('\n\n')}`);
+        }
+        return `${sections.join('\n\n')}\n\n${translateMedia('media:explorer.removal.untouched')}`;
+      };
       showErrorDialog({
-        title: 'Retrait incomplet',
-        message: `${sections.join('\n\n')}\n\nLes fichiers concernés sont restés intacts dans la médiathèque et sur le disque.`,
+        get title() { return translateMedia('media:explorer.removal.title'); },
+        get message() { return incompleteMessage(); },
         variant: 'warning',
       });
     }
@@ -610,7 +598,7 @@ export function MediaExplorer({
       inputPaths: metadata.inputPaths ?? [],
       logicalName: metadata.logicalName ?? '',
       failures: [],
-      message: `Audio assemblé créé : ${basename(cleanPath(path))}`,
+      message: mediaRef('media:toolResult.assembled.created', { name: basename(cleanPath(path)) }),
     };
     if (request && metadata.projectAction) {
       const outcome = onApplyMediaToolProjectAction?.({
@@ -624,7 +612,7 @@ export function MediaExplorer({
           ...result,
           request: null,
           projectApplied: true,
-          message: 'Les histoires ont été remplacées par le fichier audio assemblé.',
+          message: mediaRef('media:toolResult.assembled.replaced'),
         });
         return;
       }
@@ -632,7 +620,7 @@ export function MediaExplorer({
       setToolResult({
         ...result,
         request: null,
-        unavailableReason: outcome?.reason || 'Le remplacement du projet a été refusé.',
+        unavailableReason: outcome?.reasonRef || mediaRef('media:toolResult.replacement.refused'),
       });
       return;
     }
@@ -641,7 +629,10 @@ export function MediaExplorer({
     setToolResult({
       ...result,
       request: null,
-      unavailableReason: metadata.projectActionUnavailableReason || '',
+      // Raison retenue comme descripteur : la bannière la résout à l'affichage.
+      unavailableReason: metadata.projectActionUnavailableReason
+        ? (automaticAssemblyUnavailableRef ?? metadata.projectActionUnavailableReason)
+        : '',
     });
   }
 
@@ -662,7 +653,8 @@ export function MediaExplorer({
     const request = splitterRequest;
     const sourcePath = splitterItem?.path;
     const sourceTags = tagsOf(sourcePath);
-    const tagsToCopy = new Set([...sourceTags, 'découpe']);
+    // Étiquette écrite dans le projet : langue active au moment de la découpe.
+    const tagsToCopy = new Set([...sourceTags, translateMedia('media:explorer.split.tag')]);
     for (const path of createdPaths) {
       onMediaCreated?.(path);
       if (onAddMediaTag) {
@@ -679,25 +671,30 @@ export function MediaExplorer({
       createdPaths,
       failures,
       message: createdPaths.length === 1
-        ? `Extrait audio créé : ${basename(cleanPath(createdPaths[0]))}`
-        : `${createdPaths.length} extraits audio créés`,
+        ? mediaRef('media:toolResult.split.single', { name: basename(cleanPath(createdPaths[0])) })
+        : mediaRef('media:toolResult.split.count', { count: createdPaths.length }),
     });
 
     if (failures.length > 0) {
-      const details = failures
-        .map((failure) => `• ${failure.outputFileName || 'Extrait'}\n  ${failure.error || 'Erreur inconnue'}`)
-        .join('\n\n');
+      const createdCount = createdPaths.length;
+      const failureMessage = () => translateMedia('media:explorer.split.failedSummary', {
+        created: translateMedia('media:explorer.split.created', { count: createdCount }),
+        failed: translateMedia('media:explorer.split.failed', { count: failures.length }),
+        details: failures
+          .map((failure) => `• ${failure.outputFileName || translateMedia('media:explorer.split.fallbackName')}\n  ${presentStoredError(failure.error) || translateMedia('media:explorer.split.unknownError')}`)
+          .join('\n\n'),
+      });
       showErrorDialog({
-        title: 'Certaines découpes ont échoué',
-        message: `${createdPaths.length} extrait${createdPaths.length > 1 ? 's ont été créés' : ' a été créé'}, mais ${failures.length} découpe${failures.length > 1 ? 's ont échoué' : ' a échoué'} :\n\n${details}`,
+        get title() { return translateMedia('media:explorer.split.failedTitle'); },
+        get message() { return failureMessage(); },
         variant: 'warning',
       });
     }
   }
 
   const assemblyContextValidation = assemblyRequest
-    ? onValidateMediaToolRequest?.(assemblyRequest) ?? { valid: false, reason: 'Le contexte projet n’est plus disponible.' }
-    : { valid: false, reason: '' };
+    ? onValidateMediaToolRequest?.(assemblyRequest) ?? { valid: false, reasonRef: mediaRef('media:toolResult.context.unavailable') }
+    : { valid: false, reasonRef: null };
   const liveAssemblyEligibility = assemblyRequest
     ? getAssemblyReplacementEligibility(project, assemblyRequest.entryIds)
     : null;
@@ -706,9 +703,10 @@ export function MediaExplorer({
     contextValidation: assemblyContextValidation,
     replacementEligibility: liveAssemblyEligibility,
   });
-  const automaticAssemblyUnavailableReason = assemblyRequest && !automaticAssemblyProjectAction
-    ? (assemblyContextValidation.reason || liveAssemblyEligibility?.reason || 'Le remplacement du projet n’est pas sûr.')
-    : '';
+  const automaticAssemblyUnavailableRef = assemblyRequest && !automaticAssemblyProjectAction
+    ? (assemblyContextValidation.reasonRef || liveAssemblyEligibility?.reasonRef || mediaRef('media:toolResult.replacement.unsafe'))
+    : null;
+  const automaticAssemblyUnavailableReason = automaticAssemblyUnavailableRef ? presentMedia(automaticAssemblyUnavailableRef) : '';
 
   function finishMediaToolResult() {
     if (toolResult?.request) onInvalidateMediaToolRequest?.(toolResult.request.requestId);
@@ -718,12 +716,12 @@ export function MediaExplorer({
   const viewSwitch = (
     <div className="media-view-switch-row">
       <div className="media-view-switch">
-        <Tooltip text="Vue grille"><button className={view === 'grid' ? 'is-active' : ''} type="button" onClick={() => setView('grid')}>⊞</button></Tooltip>
-        <Tooltip text="Vue liste"><button className={view === 'list' ? 'is-active' : ''} type="button" onClick={() => setView('list')}>≡</button></Tooltip>
+        <Tooltip text={t('media:explorer.view.grid')}><button className={view === 'grid' ? 'is-active' : ''} type="button" onClick={() => setView('grid')}>⊞</button></Tooltip>
+        <Tooltip text={t('media:explorer.view.list')}><button className={view === 'list' ? 'is-active' : ''} type="button" onClick={() => setView('list')}>≡</button></Tooltip>
       </div>
       {view === 'list' && (
         <div className="me-col-picker-wrap" ref={colPickerRef}>
-          <Tooltip text="Colonnes visibles">
+          <Tooltip text={t('media:explorer.columns.tooltip')}>
           <Button
             className={`me-col-picker-btn${colPickerOpen ? ' is-active' : ''}`}
             onClick={() => setColPickerOpen((v) => !v)}
@@ -740,7 +738,7 @@ export function MediaExplorer({
                     checked={visibleCols.has(col.id)}
                     onChange={() => toggleCol(col.id)}
                   />
-                  <span>{col.label}</span>
+                  <span>{t(col.labelKey)}</span>
                 </label>
               ))}
             </div>
@@ -757,7 +755,7 @@ export function MediaExplorer({
       className={`media-filter${(f.id === 'all' ? activeFilters.size === 0 : activeFilters.has(f.id)) ? ' is-active' : ''}`}
       onClick={() => toggleFilter(f.id)}
     >
-      {f.label}
+      {t(f.labelKey)}
       <span>{counts[f.id] ?? 0}</span>
     </button>
   ));
@@ -786,13 +784,13 @@ export function MediaExplorer({
 
   const actionButtons = (
     <>
-      <Tooltip text="Importer audio, images, ZIP ou 7z">
+      <Tooltip text={t('media:explorer.import.tooltip')}>
         <Button className="media-import-btn" onClick={onImportMedia || onImportStories}>
           <FilePlus className="media-btn-icon" strokeWidth={2} absoluteStrokeWidth />
         </Button>
       </Tooltip>
       {onImportMediaFolder && (
-        <Tooltip text="Importer un dossier (récursif)">
+        <Tooltip text={t('media:explorer.importFolder.tooltip')}>
           <Button className="media-import-btn" onClick={onImportMediaFolder}>
             <FolderPlus className="media-btn-icon" strokeWidth={2} absoluteStrokeWidth />
           </Button>
@@ -814,10 +812,10 @@ export function MediaExplorer({
             className="media-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher…"
+            placeholder={t('media:explorer.search.placeholder')}
           />
           {query ? (
-            <button className="media-search-clear" type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche">×</button>
+            <button className="media-search-clear" type="button" onClick={() => setQuery('')} aria-label={t('media:explorer.search.clear')}>×</button>
           ) : null}
         </div>
         <div className="me-toolbar-right">{viewSwitch}{actionButtons}</div>
@@ -949,8 +947,8 @@ export function MediaExplorer({
             outputNameSourcePath={imageEdit.editSession.item.path}
             initialTransform={imageEdit.editSession.initialTransform}
             initialFilters={imageEdit.editSession.initialFilters}
-            title="Modifier une image"
-            confirmLabel="Enregistrer comme nouveau média"
+            title={t('media:explorer.imageEditor.title')}
+            confirmLabel={t('media:explorer.imageEditor.confirm')}
             workspaceDir={imageEdit.editSession.workspaceDir}
             requireManagedOutput
             forceExport
@@ -970,18 +968,18 @@ export function MediaExplorer({
           y={bgCtxMenu.y}
           onClose={() => setBgCtxMenu(null)}
           actions={[
-            { icon: <Download />, label: 'Importer des médias', fn: () => { setBgCtxMenu(null); (onImportMedia || onImportStories)?.(); } },
-            ...(onImportMediaFolder ? [{ icon: <FolderInput />, label: 'Importer un dossier', fn: () => { setBgCtxMenu(null); onImportMediaFolder(); } }] : []),
+            { icon: <Download />, label: t('media:explorer.context.importMedia'), fn: () => { setBgCtxMenu(null); (onImportMedia || onImportStories)?.(); } },
+            ...(onImportMediaFolder ? [{ icon: <FolderInput />, label: t('media:explorer.context.importFolder'), fn: () => { setBgCtxMenu(null); onImportMediaFolder(); } }] : []),
             ...(selectedCount > 0 ? [
               'sep',
               ...(selectedAudioItems.length > 0 ? [
-                { icon: <Copy />, label: `Copier ${selectedAudioItems.length} son${selectedAudioItems.length > 1 ? 's' : ''}`, fn: () => { setBgCtxMenu(null); copySelectedAudio('copy'); } },
-                { icon: <Scissors />, label: `Couper ${selectedAudioItems.length} son${selectedAudioItems.length > 1 ? 's' : ''}`, fn: () => { setBgCtxMenu(null); copySelectedAudio('cut'); } },
+                { icon: <Copy />, label: t('media:selection.audio.copy', { count: selectedAudioItems.length }), fn: () => { setBgCtxMenu(null); copySelectedAudio('copy'); } },
+                { icon: <Scissors />, label: t('media:selection.audio.cut', { count: selectedAudioItems.length }), fn: () => { setBgCtxMenu(null); copySelectedAudio('cut'); } },
               ] : []),
               ...(selectedAudioItems.length >= 2 ? [
-                { icon: <Link2 />, label: `Assembler ${selectedAudioItems.length} sons`, fn: () => { setBgCtxMenu(null); openAudioAssembly(); } },
+                { icon: <Link2 />, label: t('media:tile.audio.assemble', { count: selectedAudioItems.length }), fn: () => { setBgCtxMenu(null); openAudioAssembly(); } },
               ] : []),
-              ...(onDeleteMedia ? [{ icon: <Trash2 />, label: `Retirer ${selectedCount} fichier${selectedCount > 1 ? 's' : ''} de la médiathèque`, fn: () => { setBgCtxMenu(null); handleDeleteRequest(visibleSelectedItems); }, danger: true }] : []),
+              ...(onDeleteMedia ? [{ icon: <Trash2 />, label: t('media:tile.files.remove', { count: selectedCount }), fn: () => { setBgCtxMenu(null); handleDeleteRequest(visibleSelectedItems); }, danger: true }] : []),
             ] : []),
           ]}
         />
@@ -998,12 +996,12 @@ export function MediaExplorer({
       />
       {imageEdit.notice && (
         <div className="media-success-toast" role="status" aria-live="polite">
-          {imageEdit.notice}
+          {presentMedia(imageEdit.notice)}
         </div>
       )}
       {osDropHover && (
         <div className="media-os-drop-overlay">
-          Déposer pour importer dans les médias
+          {t('media:explorer.drop.overlay')}
         </div>
       )}
     </div>

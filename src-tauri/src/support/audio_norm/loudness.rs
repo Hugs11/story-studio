@@ -1,3 +1,5 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
@@ -42,17 +44,36 @@ pub(crate) fn measure_loudness_ebur128(
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
     apply_no_window(&mut cmd);
-    let out = cmd
-        .output()
-        .map_err(|e| format!("Impossible de lancer FFmpeg : {}", e))?;
+    let out = cmd.output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_ASSEMBLY_FFMPEG_START_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer FFmpeg : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if !out.status.success() {
-        return Err(format!(
-            "Mesure audio ebur128 échouée : {}",
-            compact_ffmpeg_error(&out.stderr)
-        ));
+        return Err({
+            let ffmpeg_error_message = (compact_ffmpeg_error(&out.stderr)).to_string();
+            user_message::UserMessage::new(codes::FILES_EBUR128_AUDIO_MEASUREMENT_FAILED)
+                .param(
+                    "toolError",
+                    user_message::transport_param(ffmpeg_error_message.clone()),
+                )
+                .with_detail(format!(
+                    "Mesure audio ebur128 échouée : {ffmpeg_error_message}",
+                    ffmpeg_error_message = user_message::transport_detail(&ffmpeg_error_message)
+                ))
+                .into_transport()
+        });
     }
-    parse_ebur128_summary(&String::from_utf8_lossy(&out.stderr))
-        .ok_or_else(|| "Mesure audio ebur128 incomplète.".to_string())
+    parse_ebur128_summary(&String::from_utf8_lossy(&out.stderr)).ok_or_else(|| {
+        user_message::UserMessage::new(codes::AUDIO_EBUR128_MEASURE_INCOMPLETE)
+            .with_detail("Mesure audio ebur128 incomplète.".to_string())
+            .into_transport()
+    })
 }
 
 pub(crate) fn parse_ebur128_summary(stderr: &str) -> Option<LoudnessMeasure> {
@@ -89,7 +110,9 @@ pub(crate) fn parse_ebur128_summary(stderr: &str) -> Option<LoudnessMeasure> {
 pub(crate) fn plan_loudness_fix(integrated_lufs: f64, true_peak_db: f64) -> LoudnessAction {
     if !integrated_lufs.is_finite() || !true_peak_db.is_finite() {
         return LoudnessAction::Uncorrectable {
-            reason: "mesure de niveau invalide".to_string(),
+            reason: user_message::UserMessage::new(codes::FILES_INVALID_LEVEL_MEASUREMENT)
+                .with_detail("mesure de niveau invalide")
+                .into_transport(),
         };
     }
     // 1) Gain (niveau) — découplé du contrôle de crête. Dans la bande morte on ne
@@ -215,7 +238,9 @@ fn compact_ffmpeg_error(stderr: &[u8]) -> String {
         .filter(|line| !line.is_empty())
         .collect();
     if lines.is_empty() {
-        return "erreur inconnue".to_string();
+        return user_message::UserMessage::new(codes::FILES_UNKNOWN_ERROR)
+            .with_detail("erreur inconnue".to_string())
+            .into_transport();
     }
     let start = lines.len().saturating_sub(5);
     lines[start..].join("\n")

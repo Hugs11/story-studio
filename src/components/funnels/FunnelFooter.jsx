@@ -1,3 +1,4 @@
+import { useHomeTranslation } from '../../i18n/useHomeTranslation.js';
 import { ChevronLeft, ChevronRight } from '../icons/LucideLocal';
 
 /**
@@ -23,10 +24,11 @@ export function FunnelFooter({
   backDisabled = false,
   stepLabel,
   onPrimary,
-  primaryLabel = 'Continuer',
+  primaryLabel,
   primaryIcon,
   primaryDisabled = false,
 }) {
+  const { t } = useHomeTranslation();
   return (
     <footer className="funnel-foot">
       <button
@@ -35,9 +37,7 @@ export function FunnelFooter({
         onClick={onBack}
         disabled={backDisabled}
       >
-        <ChevronLeft strokeWidth={2.2} />
-        Précédent
-      </button>
+        <ChevronLeft strokeWidth={2.2} />{t('home:funnel.footer.back')}</button>
 
       <span className="funnel-foot-label">{stepLabel}</span>
 
@@ -47,7 +47,7 @@ export function FunnelFooter({
         onClick={onPrimary}
         disabled={primaryDisabled}
       >
-        <span>{primaryLabel}</span>
+        <span>{primaryLabel ?? t('home:funnel.footer.continue')}</span>
         {primaryIcon ?? <ChevronRight strokeWidth={2.2} />}
       </button>
     </footer>

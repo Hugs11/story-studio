@@ -26,15 +26,15 @@ export function fadeLimit(target, { outputFadeMax, cutFadeMax }) {
   return outputFadeMax;
 }
 
-// Config UI (label, value clampe, max) pour le popover.
+// Config UI (clé de libellé résolue à l'affichage, value clampe, max) pour le popover.
 export function fadeConfig(target, { fadeInSec, fadeOutSec, cutFadeSec, outputFadeMax, cutFadeMax }) {
   if (target === 'in') {
-    return { label: 'Fondu entrée', value: Math.min(fadeInSec, outputFadeMax), max: outputFadeMax };
+    return { labelKey: 'media:audioEditor.fade.in', value: Math.min(fadeInSec, outputFadeMax), max: outputFadeMax };
   }
   if (target === 'out') {
-    return { label: 'Fondu sortie', value: Math.min(fadeOutSec, outputFadeMax), max: outputFadeMax };
+    return { labelKey: 'media:audioEditor.fade.out', value: Math.min(fadeOutSec, outputFadeMax), max: outputFadeMax };
   }
-  return { label: 'Fondu de coupe', value: Math.min(cutFadeSec, cutFadeMax), max: cutFadeMax };
+  return { labelKey: 'media:audioEditor.fade.cut', value: Math.min(cutFadeSec, cutFadeMax), max: cutFadeMax };
 }
 
 // Determine le target ('in' / 'out' / 'cut') le plus proche du pointeur dans

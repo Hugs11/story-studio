@@ -1,3 +1,5 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -116,14 +118,31 @@ pub(crate) fn resolve_regular_file(
         .map(|path| format!("  - {}", path.display()))
         .collect::<Vec<_>>()
         .join("\n");
-    Err(format!(
-        "{display_name} introuvable. Candidats recherches :\n{searched}"
-    ))
+    Err({
+        let _msg_display_name = (display_name).to_string();
+        let _msg_searched = (searched).to_string();
+        user_message::UserMessage::new(codes::FILES_TOOL_CANDIDATES_EXHAUSTED)
+            .param(
+                "displayName",
+                user_message::transport_param(_msg_display_name.clone()),
+            )
+            .param(
+                "searched",
+                user_message::transport_param(_msg_searched.clone()),
+            )
+            .with_detail(format!(
+                "{_msg_display_name} introuvable. Candidats recherches :\n{_msg_searched}",
+                _msg_display_name = user_message::transport_detail(&_msg_display_name),
+                _msg_searched = user_message::transport_detail(&_msg_searched)
+            ))
+            .into_transport()
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::support::user_message::MessageTransportAssertions as _;
 
     #[test]
     fn resource_candidates_precede_development_candidates() {
@@ -158,7 +177,9 @@ mod tests {
         ));
         let error =
             resolve_regular_file("outil test", vec![missing.clone()]).expect_err("missing tool");
-        assert!(error.contains("outil test introuvable"));
+        assert!(error.contains_any_code(&[codes::FILES_TOOL_CANDIDATES_EXHAUSTED]));
+        let message: user_message::UserMessage = serde_json::from_str(&error).unwrap();
+        let error = message.params["searched"].as_str().unwrap();
         assert!(error.contains(&missing.display().to_string()));
     }
 

@@ -1,3 +1,4 @@
+import { presentStoredError } from '../src/i18n/userMessage.js';
 // Éditeur simplifié : un son déposé sur le panneau de gauche, ou sur le nœud
 // racine (arbre ou diagramme), devient l'« Audio du récit » de l'unique
 // histoire s'il est vide ; sinon le dépôt est refusé avec un message clair.
@@ -98,7 +99,8 @@ for (const [where, drop] of Object.entries(drops)) {
     await drop(c, 'C:/m/mon-histoire.mp3');
     c.render();
     assert.deepEqual(stories(c), [{ id: 'unique', audio: 'C:/m/deja.mp3' }]);
-    assert.match(c.store.mutationError?.message ?? '', /Audio du récit/);
+    assert.deepEqual(c.store.mutationError.message, { key: 'home:project.audio.alreadySet', params: {} });
+    assert.match(presentStoredError(c.store.mutationError?.message ?? ''), /Audio du récit/);
   });
 }
 
@@ -127,7 +129,8 @@ test('C2b : un .zip déposé dans un projet simple est refusé avec un message c
   await c.session.dispatchFiles(null, ['C:/m/pack.zip']);
   c.render();
   assert.deepEqual(stories(c), [{ id: 'unique', audio: 'C:/m/deja.mp3' }]);
-  assert.match(c.store.mutationError?.message ?? '', /projet simple/);
+  assert.deepEqual(c.store.mutationError.message, { key: 'home:project.simple.zipRefused', params: {} });
+  assert.match(presentStoredError(c.store.mutationError?.message ?? ''), /projet simple/);
 });
 
 test('témoin : un projet par menus garde l’ajout d’un .zip déposé', async (t) => {

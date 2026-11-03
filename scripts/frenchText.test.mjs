@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   formatFrenchCount,
-  normalizeFrenchSearchText,
+  normalizeSearchText,
 } from '../src/utils/frenchText.js';
 import { buildProjectIndex } from '../src/store/projectModel/index.js';
 import {
@@ -27,22 +27,22 @@ const SEARCH_CASES = [
 for (const [query, value, expected] of SEARCH_CASES) {
   test(`French search: ${query} ${expected ? 'matches' : 'does not match'} ${value}`, () => {
     assert.equal(
-      normalizeFrenchSearchText(value).includes(normalizeFrenchSearchText(query)),
+      normalizeSearchText(value).includes(normalizeSearchText(query)),
       expected,
     );
   });
 }
 
-test('normalizeFrenchSearchText accepts empty, null, numeric, and spaced values', () => {
-  assert.equal(normalizeFrenchSearchText(null), '');
-  assert.equal(normalizeFrenchSearchText(''), '');
-  assert.equal(normalizeFrenchSearchText(42), '42');
-  assert.equal(normalizeFrenchSearchText('  École  '), '  ecole  ');
+test('normalizeSearchText accepts empty, null, numeric, and spaced values', () => {
+  assert.equal(normalizeSearchText(null), '');
+  assert.equal(normalizeSearchText(''), '');
+  assert.equal(normalizeSearchText(42), '42');
+  assert.equal(normalizeSearchText('  École  '), '  ecole  ');
 });
 
-test('normalizeFrenchSearchText does not mutate the source value', () => {
+test('normalizeSearchText does not mutate the source value', () => {
   const source = 'Œuvre à l’École';
-  normalizeFrenchSearchText(source);
+  normalizeSearchText(source);
   assert.equal(source, 'Œuvre à l’École');
 });
 

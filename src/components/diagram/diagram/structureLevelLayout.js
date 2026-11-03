@@ -1,3 +1,4 @@
+import { translateTree as t } from '../../../i18n/treePresentation.js';
 import { buildStructureProjection, getStructureEdgeId } from './structurePresentation.js';
 
 const END_NODE_ID = 'end-node';
@@ -75,7 +76,7 @@ export function getStructureLevelLayout(project, metrics, options = {}) {
   let height = padY + ((depthCount - 1) * rowPitch) + metrics.nodeHeight + metrics.padY + 28;
   const bands = Array.from({ length: depthCount }, (_, depth) => ({
     depth,
-    label: `N${depth}`,
+    label: t('tree:node.folder.depthBadge', { level: depth }),
     y: padY + (depth * rowPitch) - 20,
     height: metrics.nodeHeight + 40,
   }));
@@ -109,7 +110,7 @@ export function getStructureLevelLayout(project, metrics, options = {}) {
       entry: {
         id: END_NODE_ID,
         type: 'end-node',
-        name: project.endNodeName || 'Message de fin',
+        name: project.endNodeName || t("common:status.end.fallback"),
         icon: project.globalOptions?.nightMode ? 'moon' : 'stop',
       },
       x: endNodeX,

@@ -8,7 +8,7 @@ import {
   reconcileMediaLibraryPaths,
 } from '../src/store/mediaLibrary.js';
 import {
-  removeEntryCascadingRefs,
+  removeEntry,
   updateEntry,
 } from '../src/store/projectModel/operations.js';
 import {
@@ -125,7 +125,7 @@ test('a deleted imported story leaves its audio visible as unused', () => {
   const audio = 'C:/workspace/fichiers-importes/test__histoire.mp3';
   const project = projectWith([{ id: 'story-a', type: 'story', name: 'A', audio }]);
   const catalog = reconcileMediaLibraryPaths(project, []);
-  const deleted = removeEntryCascadingRefs(project, 'story-a');
+  const deleted = removeEntry(project, 'story-a');
 
   const items = collectMediaLibrary({ project: deleted, extraPaths: catalog });
 
@@ -148,7 +148,7 @@ test('deleting a menu keeps every descendant media in the catalog', () => {
     children: [{ id: 'story-a', type: 'story', name: 'A', audio: storyAudio, itemImage: storyImage }],
   }]);
   const catalog = reconcileMediaLibraryPaths(project, []);
-  const deleted = removeEntryCascadingRefs(project, 'menu-a');
+  const deleted = removeEntry(project, 'menu-a');
 
   const items = collectMediaLibrary({ project: deleted, extraPaths: catalog });
 
@@ -163,7 +163,7 @@ test('removing one of several shared usages keeps the remaining usage intact', (
     { id: 'story-b', type: 'story', name: 'B', audio: sharedAudio },
   ]);
   const catalog = reconcileMediaLibraryPaths(project, []);
-  const updated = removeEntryCascadingRefs(project, 'story-a');
+  const updated = removeEntry(project, 'story-a');
 
   const [item] = collectMediaLibrary({ project: updated, extraPaths: catalog });
 

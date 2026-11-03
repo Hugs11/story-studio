@@ -1,0 +1,1124 @@
+{
+  "queue.status.pending": {
+    "context": "Production > queue ; pending (« En attente »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "2f6c8477e92b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2f6c8477e92b",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "queue.status.running": {
+    "context": "Production > queue ; running (« Génération… »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "1dfc6d677f67",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1dfc6d677f67",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "queue.status.done": {
+    "context": "Production > queue ; done (« Terminé »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "f28acc85bfcb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f28acc85bfcb",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "queue.status.error": {
+    "context": "Production > queue ; error (« Erreur »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "46148e250e72",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "46148e250e72",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "queue.status.canceled": {
+    "context": "Production > queue ; canceled (« Annulé »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "58524ce81f34",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "58524ce81f34",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "queue.cancel.progress": {
+    "context": "Production > queue ; progress (« Annulation… »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "9508e20147cb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9508e20147cb",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "queue.cancel.pending": {
+    "context": "File de génération > carte d’un travail en attente > bouton d’annulation. Commande, sans modifier le projet.",
+    "en": {
+      "sourceHash": "394929bccfd6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "394929bccfd6",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.cancel.running": {
+    "context": "Production > queue ; running (« Annuler la génération en cours »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "6cb72efe3849",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6cb72efe3849",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.logs.copied": {
+    "context": "Production > queue ; copied (« Copié ✓ »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "901943a0cad1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "901943a0cad1",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "queue.logs.copy": {
+    "context": "File de rendu > carte d'un travail déplié > bouton « Copier le journal ». Copie dans le presse-papiers tout le journal du travail : lignes de progression, avertissements puis message d'erreur, dans la langue active au moment du clic. Ne modifie ni le travail ni le projet. Bouton court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "2db5e1b0b270",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2db5e1b0b270",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "queue.folder.open": {
+    "context": "File de génération > carte d’un travail terminé > bouton qui ouvre le dossier du résultat dans l’explorateur de fichiers du système. Texte court.",
+    "en": {
+      "sourceHash": "db51a60ea6da",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "db51a60ea6da",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "queue.start.waiting": {
+    "context": "Production > queue ; waiting (« En attente de démarrage… »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "bbfd84ba74cc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bbfd84ba74cc",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.resize.label": {
+    "context": "Production > queue ; label (« Redimensionner la file de génération »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "d946e5526780",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d946e5526780",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.resize.title": {
+    "context": "File de génération > poignée de redimensionnement du panneau ; infobulle (title) d’un contrôle glissable, verbe à l’impératif, texte court.",
+    "en": {
+      "sourceHash": "38a5b39a8d77",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "38a5b39a8d77",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.panel.title": {
+    "context": "Production > queue ; title (« File de génération »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "ccfbe1ad5a5f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ccfbe1ad5a5f",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "queue.completed.clear": {
+    "context": "File de génération > en-tête > bouton qui retire de la liste toutes les tâches terminées (sans supprimer leurs fichiers). Texte court.",
+    "en": {
+      "sourceHash": "235dcb739aa8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "235dcb739aa8",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 28
+  },
+  "queue.panel.empty": {
+    "context": "Production > queue ; empty (« Aucune génération en file d’attente. »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "4062b1f658ca",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4062b1f658ca",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.preview.action": {
+    "context": "Production > report ; action (« Simuler le pack généré »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "0e5eabf03f01",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0e5eabf03f01",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 38
+  },
+  "report.archiveChecks.title": {
+    "context": "Production > report ; title (« Contrôles d'archive »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "05634ef14dfb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "05634ef14dfb",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.archiveChecks.observing": {
+    "context": "Production > report ; observing («  — en observation »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "d7cee64b807c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d7cee64b807c",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.measurement.initial": {
+    "context": "Rapport de production > avertissement audio > mesure de départ. {{value}} est la sonie intégrée du son AVANT traitement (normalisation, limitation), en LUFS, nombre à une décimale déjà formaté (ex. -15.0). Fragment suivi des mesures « sortie », « gain » et « limitation », séparées par « · » ; garder l'unité LUFS.",
+    "en": {
+      "sourceHash": "215fe4c34e7d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "215fe4c34e7d",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.measurement.final": {
+    "context": "Rapport de génération > avertissement audio > mesure de sortie : fragment inséré après la mesure de départ. {{value}} est la sonie intégrée APRÈS traitement, en LUFS. Fragment en minuscules, pas une phrase complète.",
+    "en": {
+      "sourceHash": "2b3b0345078d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2b3b0345078d",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.measurement.gain": {
+    "context": "Production > report ; gain (« gain {{value}} dB »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "4ad1fab6ecc1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4ad1fab6ecc1",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.measurement.limiting": {
+    "context": "Production > report ; limiting (« limitation {{value}} dB »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "0791ce0e56d7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0791ce0e56d7",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.warnings.advice": {
+    "context": "Production > report ; advice (« Le pack est utilisable ; ces points restent à vérifier. »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "a186a70f8367",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a186a70f8367",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.section.label": {
+    "context": "Production > report ; label (« Rapport de génération »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "84b5ce9ddb36",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "84b5ce9ddb36",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.cancel.requested": {
+    "context": "Production > report ; requested (« Annulation demandée… »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "fc5dfd88649f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fc5dfd88649f",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.log.label": {
+    "context": "Production > report ; label (« Journal de la génération »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "65687e5744a8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "65687e5744a8",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.cancel.action": {
+    "context": "Production > report ; action (« Annuler la génération »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "ddfbc2c3045b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ddfbc2c3045b",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "report.idle.note": {
+    "context": "Production > report ; note (« Aucune génération lancée. »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "c348de47508d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c348de47508d",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.status.idle": {
+    "context": "Production > report ; idle (« Aucune génération »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "20eb96a9d7f6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "20eb96a9d7f6",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "report.status.pending": {
+    "context": "Production > report ; pending (« En attente »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "2f6c8477e92b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2f6c8477e92b",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "report.status.running": {
+    "context": "Production > report ; running (« Génération en cours »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "2d9d9bcdd728",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2d9d9bcdd728",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "report.status.succeeded": {
+    "context": "Production > report ; succeeded (« Pack généré »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "9eb81a2b1806",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9eb81a2b1806",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 28
+  },
+  "report.status.cancelled": {
+    "context": "Production > report ; cancelled (« Génération annulée »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "4b8a92ab96db",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4b8a92ab96db",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "report.status.failed": {
+    "context": "Production > report ; failed (« Génération interrompue »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "0ecb1908baf8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0ecb1908baf8",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "report.progress.note": {
+    "context": "Production > report ; note (« Le pack apparaîtra ici dès qu'il sera prêt. »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "d41c79034bab",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d41c79034bab",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.gates.absent": {
+    "context": "Production > report ; absent (« Contrôles d’archive : cette génération n’en rapporte aucun. »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "dc3507dd8fc2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dc3507dd8fc2",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.gates.observation": {
+    "context": "Production > report ; observation (« Ces contrôles sont en observation : aucun n’empêche la génération. »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "8701226bbf2d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8701226bbf2d",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.gate.passed": {
+    "context": "Rapport de production > contrôles d'archive > verdict d'une porte BLOQUANTE (chaîne graphe) dont le contrôle a réussi : l'archive a franchi cette porte. Distinct de « Rien à signaler », employé pour la même issue quand la porte est seulement en observation et n'empêche rien. Badge court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "7474d2ff221a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7474d2ff221a",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "report.gate.clear": {
+    "context": "Production > report ; clear (« Rien à signaler »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "0e72f83ae67d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0e72f83ae67d",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "report.gate.refused": {
+    "context": "Production > report ; refused (« Refusée »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "b3573f3374d6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b3573f3374d6",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "report.gate.wouldRefuse": {
+    "context": "Production > report ; wouldRefuse (« Aurait refusé »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "c1e0a98ba605",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c1e0a98ba605",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 28
+  },
+  "report.gate.notEvaluated": {
+    "context": "Production > report ; notEvaluated (« Non évaluée »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "4c3ff5b76f4a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4c3ff5b76f4a",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "report.gate.notObserved": {
+    "context": "Production > report ; notObserved (« Non observée »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "f880ca78f258",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f880ca78f258",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 24
+  },
+  "generation.checking.title": {
+    "context": "Production > generation ; title (« Vérification en cours »). Départ de génération ; explique la garde avant la mise en file. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "18086cc52c05",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "18086cc52c05",
+      "status": "ai-reviewed"
+    }
+  },
+  "generation.checking.message": {
+    "context": "Production > generation ; message (« Vérification des fichiers du projet en cours. Attends une seconde puis réessaie. »). Départ de génération ; explique la garde avant la mise en file. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "cc52c07642bc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cc52c07642bc",
+      "status": "ai-reviewed"
+    }
+  },
+  "generation.blocked.title": {
+    "context": "Production > generation ; title (« Impossible de générer »). Départ de génération ; explique la garde avant la mise en file. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "7012123a0362",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7012123a0362",
+      "status": "ai-reviewed"
+    }
+  },
+  "generation.blocked.message": {
+    "context": "Production > generation ; message (« Impossible de générer le pack :\n\n• {{errors}} »). Départ de génération ; explique la garde avant la mise en file. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "593003a61fa0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "593003a61fa0",
+      "status": "ai-reviewed"
+    }
+  },
+  "generation.folder.title": {
+    "context": "Production > generation ; title (« Dossier de sortie du pack »). Départ de génération ; explique la garde avant la mise en file. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "0915f862e9e8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0915f862e9e8",
+      "status": "ai-reviewed"
+    }
+  },
+  "save.media.deferred": {
+    "context": "Production > save ; deferred (« Le rangement des médias sera fait au prochain enregistrement : une génération est encore en cours. »). Enregistrement du projet sur disque (pas enregistrement au microphone). Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "a7ae6ced115f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a7ae6ced115f",
+      "status": "ai-reviewed"
+    }
+  },
+  "save.error.title": {
+    "context": "Production > save ; title (« Enregistrement impossible »). Enregistrement du projet sur disque (pas enregistrement au microphone). Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "8427c0b5a4a1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8427c0b5a4a1",
+      "status": "ai-reviewed"
+    }
+  },
+  "save.error.message": {
+    "context": "Production > save ; message (« Le projet n'a pas pu être enregistré : {{reason}} »). Enregistrement du projet sur disque (pas enregistrement au microphone). Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "cddf91799c8c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cddf91799c8c",
+      "status": "ai-reviewed"
+    }
+  },
+  "save.rollback.message": {
+    "context": "Production > save ; message (« {{reason}}; retour arrière impossible : {{rollback}} »). Enregistrement du projet sur disque (pas enregistrement au microphone). Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "c9c0ea0f1956",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c9c0ea0f1956",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.readiness.title": {
+    "context": "Production > refusal ; title (« Génération impossible — des points restent à corriger »). Refus avant appel natif ; explique pourquoi aucun pack ne peut être produit. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "dcc9c0cdcb4b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dcc9c0cdcb4b",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.empty.title": {
+    "context": "Production > refusal ; title (« Génération impossible — pack sans média »). Refus avant appel natif ; explique pourquoi aucun pack ne peut être produit. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "dc1f6a07cfee",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dc1f6a07cfee",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.empty.message": {
+    "context": "Production > refusal ; message (« Le pack ne contient aucun son ni aucune image : ajoute au moins un média à un Écran avant de générer. »). Refus avant appel natif ; explique pourquoi aucun pack ne peut être produit. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "7db8af03812d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7db8af03812d",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.media.title": {
+    "context": "Production > refusal ; title (« Génération impossible — médias indisponibles »). Refus avant appel natif ; explique pourquoi aucun pack ne peut être produit. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "e513539f0a97",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e513539f0a97",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.media.message": {
+    "context": "Production > refusal ; message (« Rien n’a été généré et aucun dossier n’a été demandé : les médias utilisés par le pack ci-dessous sont indisponibles. »). Refus avant appel natif ; explique pourquoi aucun pack ne peut être produit. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "5f6b1fd77468",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5f6b1fd77468",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.failure.title": {
+    "context": "Production > refusal ; title (« Génération impossible »). Refus avant appel natif ; explique pourquoi aucun pack ne peut être produit. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "5e1622247ed5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5e1622247ed5",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.assessment.message": {
+    "context": "Production > refusal ; message (« Story Studio n’a pas pu vérifier si le projet est prêt, et rien n’a été généré : {{reason}} »). Refus avant appel natif ; explique pourquoi aucun pack ne peut être produit. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "bb66db9fe7e3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bb66db9fe7e3",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.mediaCheck.message": {
+    "context": "Production > refusal ; message (« Les médias du projet n’ont pas pu être vérifiés, et rien n’a été généré : {{reason}} »). Refus avant appel natif ; explique pourquoi aucun pack ne peut être produit. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "e034b3cafcb8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e034b3cafcb8",
+      "status": "ai-reviewed"
+    }
+  },
+  "work.export.title": {
+    "context": "Production > work ; title (« Export impossible »). Préparation ou exécution du travail graphe ; explique la panne sans modifier son issue. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "263481dfad92",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "263481dfad92",
+      "status": "ai-reviewed"
+    }
+  },
+  "work.prepare.message": {
+    "context": "Production > work ; message (« La préparation du projet a échoué : {{reason}} »). Préparation ou exécution du travail graphe ; explique la panne sans modifier son issue. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "d2ad10e534c9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d2ad10e534c9",
+      "status": "ai-reviewed"
+    }
+  },
+  "work.lock.message": {
+    "context": "Production > work ; message (« Une autre opération utilise déjà le moteur de génération : rien n’a été lancé. Réessaie dans un instant. »). Préparation ou exécution du travail graphe ; explique la panne sans modifier son issue. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "c6eadd139887",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c6eadd139887",
+      "status": "ai-reviewed"
+    }
+  },
+  "work.result.missing": {
+    "context": "Production > work ; missing (« Le moteur n’a renvoyé aucun chemin de ZIP. »). Préparation ou exécution du travail graphe ; explique la panne sans modifier son issue. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "197815c2e360",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "197815c2e360",
+      "status": "ai-reviewed"
+    }
+  },
+  "work.media.unknown": {
+    "context": "Production > work ; unknown (« Les médias du projet doivent être vérifiés avant la génération. »). Préparation ou exécution du travail graphe ; explique la panne sans modifier son issue. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "43a2fec4af00",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "43a2fec4af00",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.warnings.count_one": {
+    "context": "Production > queue ; count_one (« Terminé · {{count}} avertissement »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "0fa7c153e9af",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0fa7c153e9af",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "queue.warnings.count_many": {
+    "context": "Production > queue ; count_many (« Terminé · {{count}} avertissements »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "it": {
+      "sourceHash": "59411f31c2ff",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "queue.warnings.count_other": {
+    "context": "Production > queue ; count_other (« Terminé · {{count}} avertissements »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "59411f31c2ff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "59411f31c2ff",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "report.warnings.count_one": {
+    "context": "Production > report ; count_one (« Pack généré avec {{count}} avertissement »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "e7ab5dd3923b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e7ab5dd3923b",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.warnings.count_many": {
+    "context": "Production > report ; count_many (« Pack généré avec {{count}} avertissements »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "it": {
+      "sourceHash": "67694030c3f1",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.warnings.count_other": {
+    "context": "Production > report ; count_other (« Pack généré avec {{count}} avertissements »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "67694030c3f1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "67694030c3f1",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.progress.count_one": {
+    "context": "Production > report ; count_one (« {{count}} étape journalisée »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "b37941203846",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b37941203846",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.progress.count_many": {
+    "context": "Production > report ; count_many (« {{count}} étapes journalisées »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "it": {
+      "sourceHash": "2edc3d1e6247",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.progress.count_other": {
+    "context": "Production > report ; count_other (« {{count}} étapes journalisées »). Rapport du travail ; informe du résultat, de la progression ou des contrôles sans changer leur verdict. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "2edc3d1e6247",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2edc3d1e6247",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.active.count_one": {
+    "context": "Production > queue ; count_one (« {{count}} en cours »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "3580b7234243",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3580b7234243",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "queue.active.count_many": {
+    "context": "Production > queue ; count_many (« {{count}} en cours »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "it": {
+      "sourceHash": "3580b7234243",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "queue.active.count_other": {
+    "context": "Production > queue ; count_other (« {{count}} en cours »). File commune des deux éditeurs ; commande ou état du travail, sans modifier le projet. Texte court, limite de longueur indiquée.",
+    "en": {
+      "sourceHash": "3580b7234243",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3580b7234243",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "refusal.readiness.message_one": {
+    "context": "Production > refusal ; message_one (« Rien n’a été généré et aucun dossier n’a été demandé : le projet a {{count}} point à corriger avant de générer le pack. »). Refus avant appel natif ; explique pourquoi aucun pack ne peut être produit. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "e2d5d375b575",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e2d5d375b575",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.readiness.message_many": {
+    "context": "Production > refusal ; message_many (« Rien n’a été généré et aucun dossier n’a été demandé : le projet a {{count}} points à corriger avant de générer le pack. »). Refus avant appel natif ; explique pourquoi aucun pack ne peut être produit. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "it": {
+      "sourceHash": "455c1de1cef1",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.readiness.message_other": {
+    "context": "Production > refusal ; message_other (« Rien n’a été généré et aucun dossier n’a été demandé : le projet a {{count}} points à corriger avant de générer le pack. »). Refus avant appel natif ; explique pourquoi aucun pack ne peut être produit. Phrase complète, largeur souple ; paramètres auteur ou techniques conservés.",
+    "en": {
+      "sourceHash": "455c1de1cef1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "455c1de1cef1",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.job.remove": {
+    "context": "Production > File de rendu > croix de la carte d’un travail terminé, annulé ou en erreur ; titre accessible. Retire ce travail de la file sans supprimer le ZIP produit.",
+    "en": {
+      "status": "ai-reviewed",
+      "sourceHash": "41e22ed93372"
+    },
+    "it": {
+      "status": "ai-reviewed",
+      "sourceHash": "41e22ed93372"
+    }
+  },
+  "native.title.decode": {
+    "context": "Production > File > rapport du travail graphe ; titre du refus natif associé au type stable decode, indique pourquoi aucun ZIP n’a été publié. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "0627a62aa3b1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0627a62aa3b1",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.title.preparation": {
+    "context": "Production > File > rapport du travail graphe ; titre du refus natif associé au type stable preparation, indique pourquoi aucun ZIP n’a été publié. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "a76f54ad0574",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a76f54ad0574",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.title.media": {
+    "context": "Production > File > rapport du travail graphe ; titre du refus natif associé au type stable media, indique pourquoi aucun ZIP n’a été publié. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "78e5700081e6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "78e5700081e6",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.title.collision": {
+    "context": "Production > File > rapport du travail graphe ; titre du refus natif associé au type stable collision, indique pourquoi aucun ZIP n’a été publié. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "228048d5e8e2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "228048d5e8e2",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.title.oracle": {
+    "context": "Production > File > rapport du travail graphe ; titre du refus natif associé au type stable oracle, indique pourquoi aucun ZIP n’a été publié. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "df646a896e6a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "df646a896e6a",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.title.cancelled": {
+    "context": "Production > File > rapport du travail graphe ; titre du refus natif associé au type stable cancelled, indique pourquoi aucun ZIP n’a été publié. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "f1d41561b927",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f1d41561b927",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.title.write": {
+    "context": "Production > File > rapport du travail graphe ; titre du refus natif associé au type stable write, indique pourquoi aucun ZIP n’a été publié. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "db041ec68e00",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "db041ec68e00",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.title.interrupted": {
+    "context": "Production > File > rapport du travail graphe ; titre du refus natif associé au type stable interrupted, indique pourquoi aucun ZIP n’a été publié. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "18349bc28a10",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "18349bc28a10",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.qualification.integrity": {
+    "context": "Production > File > rapport du travail graphe ; qualification du refus ou garde de requête integrity, portée par un code stable, jamais par recherche dans la prose. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "7693b507b5d7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7693b507b5d7",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.qualification.author": {
+    "context": "Production > File > rapport du travail graphe ; qualification du refus ou garde de requête author, portée par un code stable, jamais par recherche dans la prose. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "27b3e7130dce",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "27b3e7130dce",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.qualification.identity": {
+    "context": "Production > File > rapport du travail graphe ; qualification du refus ou garde de requête identity, portée par un code stable, jamais par recherche dans la prose. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "f480be8d7081",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f480be8d7081",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.qualification.readiness": {
+    "context": "Production > File > rapport du travail graphe ; qualification du refus ou garde de requête readiness, portée par un code stable, jamais par recherche dans la prose. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "3f5e128f6ca8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3f5e128f6ca8",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.qualification.serialization": {
+    "context": "Production > File > rapport du travail graphe ; qualification du refus ou garde de requête serialization, portée par un code stable, jamais par recherche dans la prose. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "1abe2c42588d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1abe2c42588d",
+      "status": "ai-reviewed"
+    }
+  },
+  "native.title.qualified": {
+    "context": "Production > File > rapport du travail graphe ; titre du refus natif associé au type stable qualified, indique pourquoi aucun ZIP n’a été publié. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "22d40846199e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "22d40846199e",
+      "status": "ai-reviewed"
+    }
+  },
+  "work.request.payload": {
+    "context": "Production > File > rapport du travail graphe ; qualification du refus ou garde de requête payload, portée par un code stable, jamais par recherche dans la prose. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "848dec6671d2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "848dec6671d2",
+      "status": "ai-reviewed"
+    }
+  },
+  "work.request.folder": {
+    "context": "Production > File > rapport du travail graphe ; qualification du refus ou garde de requête folder, portée par un code stable, jamais par recherche dans la prose. Largeur souple ; conserver les paramètres techniques et noms auteur.",
+    "en": {
+      "sourceHash": "e1adfa2e23e4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e1adfa2e23e4",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.verification.title": {
+    "context": "Production > garde médias des deux éditeurs ; vérification disque indéterminée après délai ou erreur de transport. Invite à réessayer, sans déclarer le fichier introuvable.",
+    "en": {
+      "sourceHash": "f173549d7aae",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f173549d7aae",
+      "status": "ai-reviewed"
+    }
+  },
+  "refusal.verification.message": {
+    "context": "Production > garde médias des deux éditeurs ; vérification disque indéterminée après délai ou erreur de transport. Invite à réessayer, sans déclarer le fichier introuvable.",
+    "en": {
+      "sourceHash": "0f9aa1c4ed61",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0f9aa1c4ed61",
+      "status": "ai-reviewed"
+    }
+  }
+}

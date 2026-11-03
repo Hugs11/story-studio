@@ -1,3 +1,4 @@
+import { presentStoredError } from '../src/i18n/userMessage.js';
 // Extraction d'un pack inclus (ZIP) dans un projet par menus.
 //
 // Le hook `useImportSession` et le vrai store sont exécutés intacts ; seuls
@@ -35,7 +36,6 @@ function unpackResult() {
         children: [
           { id: 'story-1', type: 'story', name: 'Un', audio: 'C:/ws/zips-extraits/Inclus/un.wav', returnAfterPlay: 'story:story-2' },
           { id: 'story-2', type: 'story', name: 'Deux', audio: 'C:/ws/zips-extraits/Inclus/deux.wav', returnOnHome: 'menu:menu-pack' },
-          { id: 'ref-1', type: 'ref', target: 'story:story-1', refKind: 'continue' },
         ],
       },
     ],
@@ -114,7 +114,7 @@ for (const autoNext of [false, true]) {
       c.render();
       assert.deepEqual(c.errors, []);
       assert.deepEqual(c.store.project.globalOptions, before.globalOptions);
-      assert.deepEqual(c.notices, ["Ce pack enchaînait ses histoires ; ce réglage n'a pas été repris."]);
+      assert.deepEqual(c.notices.map(notice => presentStoredError(notice)), ['Ce pack enchaînait ses histoires ; ce réglage n’a pas été repris.']);
     } finally {
       c.restore();
     }
@@ -130,9 +130,9 @@ test('N-02 : la note d’enchaînement conserve aussi l’avertissement de trans
     await c.session.handleUnpackZip('zip-1');
     assert.deepEqual(c.errors, []);
     assert.equal(c.notices.length, 1);
-    assert.match(c.notices[0], /Certaines transitions/);
-    assert.match(c.notices[0], /Retour à vérifier/);
-    assert.ok(c.notices[0].includes("Ce pack enchaînait ses histoires ; ce réglage n'a pas été repris."));
+    assert.match(presentStoredError(c.notices[0]), /Certaines transitions/);
+    assert.match(presentStoredError(c.notices[0]), /Retour à vérifier/);
+    assert.ok(presentStoredError(c.notices[0]).includes('Ce pack enchaînait ses histoires ; ce réglage n’a pas été repris.'));
   } finally {
     c.restore();
   }
@@ -150,7 +150,7 @@ test('N-02 : la promotion vierge et Modifier un pack reprennent l’enchaînemen
     assert.deepEqual(c.errors, []);
     assert.equal(c.store.project.globalOptions.autoNext, true);
     assert.equal(c.store.project.globalOptions.nightMode, false);
-    assert.deepEqual(c.notices, []);
+    assert.deepEqual(c.notices.map(notice => presentStoredError(notice)), []);
     const transformed = await c.session.unpackZipIntoBlankProject({
       zipPath: 'C:/medias/inclus.zip', zipName: 'Inclus', workspaceDir: 'C:/ws',
       baseProject: normalizeProjectData({ projectType: 'pack', rootEntries: [] }),
@@ -223,10 +223,8 @@ test('deux extractions du même pack, identifiants uniques et cibles internes co
     for (const menu of copies) {
       const un = findIn(menu.children, (e) => e.name === 'Un');
       const deux = findIn(menu.children, (e) => e.name === 'Deux');
-      const ref = findIn(menu.children, (e) => e.type === 'ref');
       assert.equal(un.returnAfterPlay, `story:${deux.id}`, 'la fin de « Un » vise « Deux » de la même copie');
       assert.equal(deux.returnOnHome, `menu:${menu.id}`, 'l’Accueil de « Deux » vise son propre menu');
-      assert.equal(ref.target, `story:${un.id}`, 'le ref vise « Un » de la même copie');
     }
 
     // Une modification ne touche qu'une copie.

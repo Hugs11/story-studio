@@ -1,0 +1,2930 @@
+{
+  "error.open.fallback": {
+    "context": "Import de pack > refus open ; constat public sans cause codée reconnue ; détail technique présenté séparément. Surface : src/components/EditPack/importErrorPresentation.js.",
+    "en": {
+      "sourceHash": "87d8ec8e7129",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "87d8ec8e7129",
+      "status": "ai-reviewed"
+    }
+  },
+  "error.simulate.fallback": {
+    "context": "Import de pack > refus simulate ; constat public sans cause codée reconnue ; détail technique présenté séparément. Surface : src/components/EditPack/importErrorPresentation.js.",
+    "en": {
+      "sourceHash": "a6155238ec9e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a6155238ec9e",
+      "status": "ai-reviewed"
+    }
+  },
+  "error.graph.fallback": {
+    "context": "Import de pack > refus graph ; constat public sans cause codée reconnue ; détail technique présenté séparément. Surface : src/components/EditPack/importErrorPresentation.js.",
+    "en": {
+      "sourceHash": "0493a6fc370d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0493a6fc370d",
+      "status": "ai-reviewed"
+    }
+  },
+  "error.readOnly.fallback": {
+    "context": "Import de pack > refus readOnly ; constat public sans cause codée reconnue ; détail technique présenté séparément. Surface : src/components/EditPack/importErrorPresentation.js.",
+    "en": {
+      "sourceHash": "a80842c7e912",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a80842c7e912",
+      "status": "ai-reviewed"
+    }
+  },
+  "error.unsupported.fallback": {
+    "context": "Import de pack > refus unsupported ; constat public sans cause codée reconnue ; détail technique présenté séparément. Surface : src/components/EditPack/importErrorPresentation.js.",
+    "en": {
+      "sourceHash": "3c48553d6f60",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3c48553d6f60",
+      "status": "ai-reviewed"
+    }
+  },
+  "landing.graphOnly.notice": {
+    "context": "Atterrissage après ouverture depuis l’accueil ou les menus ; notice expliquant le choix automatique du graphe. Surface : src/components/EditPack/EditPackFunnel.jsx, src/components/EditPack/graphOnlyNotice.js.",
+    "en": {
+      "sourceHash": "cb6ff0f763d2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cb6ff0f763d2",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.verdict.editable": {
+    "context": "Choix du pack enfant dans une archive enveloppe ; badge du verdict editable établi par le backend, sans nouveau classement. Surface : src/components/EditPack/bundleChildren.js.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "0e730fdab267",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0e730fdab267",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.verdict.readOnly": {
+    "context": "Choix du pack enfant dans une archive enveloppe ; badge du verdict readOnly établi par le backend, sans nouveau classement. Surface : src/components/EditPack/bundleChildren.js.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "2af697456ab2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2af697456ab2",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.verdict.unsupported": {
+    "context": "Choix du pack enfant dans une archive enveloppe ; badge du verdict unsupported établi par le backend, sans nouveau classement. Surface : src/components/EditPack/bundleChildren.js.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "0ba8944f66f5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0ba8944f66f5",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.verdict.error": {
+    "context": "Choix du pack enfant dans une archive enveloppe ; badge du verdict error établi par le backend, sans nouveau classement. Surface : src/components/EditPack/bundleChildren.js.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "cca718ee32a2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cca718ee32a2",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.size.bytes": {
+    "context": "Choix du pack enfant > taille approximative en bytes, size est le nombre déjà formaté ; ne pas modifier le calcul. Surface : src/components/EditPack/bundleChildren.js.",
+    "en": {
+      "sourceHash": "41f17225cf73",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "41f17225cf73",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.size.kilobytes": {
+    "context": "Choix du pack enfant > taille approximative en kilobytes, size est le nombre déjà formaté ; ne pas modifier le calcul. Surface : src/components/EditPack/bundleChildren.js, src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "888840c87134",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "888840c87134",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.size.megabytes": {
+    "context": "Choix du pack enfant > taille approximative en megabytes, size est le nombre déjà formaté ; ne pas modifier le calcul. Surface : src/components/EditPack/bundleChildren.js, src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "f6ee9a6613b4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f6ee9a6613b4",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.size.gigabytes": {
+    "context": "Choix du pack enfant > taille approximative en gigabytes, size est le nombre déjà formaté ; ne pas modifier le calcul. Surface : src/components/EditPack/bundleChildren.js.",
+    "en": {
+      "sourceHash": "c56a64562bbc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c56a64562bbc",
+      "status": "ai-reviewed"
+    }
+  },
+  "names.collection.fallback": {
+    "context": "Import > proposition de nom pour une entrée collection sans nom après nettoyage ; écrit comme donnée auteur uniquement à cet import. Surface : src/store/importedNames.js.",
+    "en": {
+      "sourceHash": "c7519c97dd99",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c7519c97dd99",
+      "status": "ai-reviewed"
+    }
+  },
+  "names.zip.fallback": {
+    "context": "Import > proposition de nom pour une entrée zip sans nom après nettoyage ; écrit comme donnée auteur uniquement à cet import. Surface : src/hooks/useProjectLoading.js, src/store/importedNames.js.",
+    "en": {
+      "sourceHash": "1587ca29bb99",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1587ca29bb99",
+      "status": "ai-reviewed"
+    }
+  },
+  "names.story.fallback": {
+    "context": "Import > proposition de nom pour une entrée story sans nom après nettoyage ; écrit comme donnée auteur uniquement à cet import. Surface : src/store/importedNames.js.",
+    "en": {
+      "sourceHash": "605bbd08dbc5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "605bbd08dbc5",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.archive.title": {
+    "context": "Import > bundle > archive ; title affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/BundleChildStep.jsx.",
+    "en": {
+      "sourceHash": "da7ca0596dc4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "da7ca0596dc4",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.archive.aria": {
+    "context": "Import > bundle > archive ; aria affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/BundleChildStep.jsx.",
+    "en": {
+      "sourceHash": "ac81bd09f067",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ac81bd09f067",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.continue.action": {
+    "context": "Import > bundle > continue ; action affiché pendant ce parcours ; déclenche l’action indiquée, libellé court. Surface : src/components/EditPack/BundleChildStep.jsx.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "3bc3807f225b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3bc3807f225b",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.otherArchive.action": {
+    "context": "Import > bundle > otherArchive ; action affiché pendant ce parcours ; déclenche l’action indiquée, libellé court. Surface : src/components/EditPack/BundleChildStep.jsx.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "ed76d48aca57",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ed76d48aca57",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.verification.progress": {
+    "context": "Import > edit > verification ; progress affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "d29b3657ef99",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d29b3657ef99",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.wait.hint": {
+    "context": "Import > edit > wait ; hint affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "5945593af06f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5945593af06f",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.inspection.progress": {
+    "context": "Import > edit > inspection ; progress affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "7306e30bbdb9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7306e30bbdb9",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.inspection.hint": {
+    "context": "Import > edit > inspection ; hint affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "d259f250834f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d259f250834f",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.graphOpening.progress": {
+    "context": "Import > edit > graphOpening ; progress affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "5a6604aceed4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5a6604aceed4",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.unpacking.progress": {
+    "context": "Import > edit > unpacking ; progress affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "d565b363054a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d565b363054a",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.keepWindow.hint": {
+    "context": "Import > edit > keepWindow ; hint affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "5c9f514bf54e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5c9f514bf54e",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.childPreparation.progress": {
+    "context": "Import > edit > childPreparation ; progress affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "ed422fd4e611",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ed422fd4e611",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.editorChoice.title": {
+    "context": "Import > edit > editorChoice ; title affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "e6885be74155",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e6885be74155",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.editorChoice.message": {
+    "context": "Import > edit > editorChoice ; message affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "7f97e5e0e6dc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7f97e5e0e6dc",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.menuEditor.action": {
+    "context": "Import > edit > menuEditor ; action affiché pendant ce parcours ; déclenche l’action indiquée, libellé court. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "5e8465716136",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5e8465716136",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.graphEditor.action": {
+    "context": "Import > edit > graphEditor ; action affiché pendant ce parcours ; déclenche l’action indiquée, libellé court. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "ba1f144e22f9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ba1f144e22f9",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.simulator.progress": {
+    "context": "Import > edit > simulator ; progress affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "0d72479dd949",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0d72479dd949",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.funnel.title": {
+    "context": "Import > edit > funnel ; title affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "0f2e0655ae4f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0f2e0655ae4f",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.select.title": {
+    "context": "Import > edit > select ; title affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "dfc1a8ade25f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dfc1a8ade25f",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.select.description": {
+    "context": "Import > edit > select ; description affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "52419cb81a11",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "52419cb81a11",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.drop.title": {
+    "context": "Import > edit > drop ; title affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "5d25c601d7c9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5d25c601d7c9",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.drop.hint": {
+    "context": "Import > edit > drop ; hint affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "b78bfd895bbe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b78bfd895bbe",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.archive.action": {
+    "context": "Import > edit > archive ; action affiché pendant ce parcours ; déclenche l’action indiquée, libellé court. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "842ef8fc2b5f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "842ef8fc2b5f",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.folder.action": {
+    "context": "Import > edit > folder ; action affiché pendant ce parcours ; déclenche l’action indiquée, libellé court. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "b19967c54c7e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b19967c54c7e",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.readOnly.title": {
+    "context": "Import > edit > readOnly ; title affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "98766ae9778e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "98766ae9778e",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.readOnly.bothFailed": {
+    "context": "Import > edit > readOnly ; bothFailed affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "62db76898d83",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "62db76898d83",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.readOnly.description": {
+    "context": "Import > edit > readOnly ; description affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "7eec85260355",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7eec85260355",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.simulate.action": {
+    "context": "Import > edit > simulate ; action affiché pendant ce parcours ; déclenche l’action indiquée, libellé court. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "ee02c9d5d9c5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ee02c9d5d9c5",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.otherPack.action": {
+    "context": "Import > edit > otherPack ; action affiché pendant ce parcours ; déclenche l’action indiquée, libellé court. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "ee145d58a525",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ee145d58a525",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.unsupported.title": {
+    "context": "Import > edit > unsupported ; title affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "2daec2d5384e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2daec2d5384e",
+      "status": "ai-reviewed"
+    }
+  },
+  "edit.unsupported.description": {
+    "context": "Import > edit > unsupported ; description affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "en": {
+      "sourceHash": "d765504a74b4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d765504a74b4",
+      "status": "ai-reviewed"
+    }
+  },
+  "revision.dialog.title": {
+    "context": "Import > revision > dialog ; title affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/hooks/importedUuidRevision.js.",
+    "en": {
+      "sourceHash": "3df81dcf88f3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3df81dcf88f3",
+      "status": "ai-reviewed"
+    }
+  },
+  "revision.dialog.message": {
+    "context": "Import > revision > dialog ; message affiché pendant ce parcours ; explique l’état ou la prochaine étape sans modifier le pack. Surface : src/hooks/importedUuidRevision.js.",
+    "en": {
+      "sourceHash": "adf715e05064",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "adf715e05064",
+      "status": "ai-reviewed"
+    }
+  },
+  "revision.keep.action": {
+    "context": "Import > revision > keep ; action affiché pendant ce parcours ; déclenche l’action indiquée, libellé court. Surface : src/hooks/importedUuidRevision.js.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "c6c9a104a6f7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c6c9a104a6f7",
+      "status": "ai-reviewed"
+    }
+  },
+  "revision.renew.action": {
+    "context": "Import > revision > renew ; action affiché pendant ce parcours ; déclenche l’action indiquée, libellé court. Surface : src/hooks/importedUuidRevision.js.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "f2e9bd454796",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f2e9bd454796",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.archive.description_one": {
+    "context": "Archive enveloppe > description du choix ; name est le nom auteur de l’archive, count le nombre de packs. Pluriel CLDR complet. Surface : src/components/EditPack/BundleChildStep.jsx.",
+    "en": {
+      "sourceHash": "83fb2bd92552",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "83fb2bd92552",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.archive.description_many": {
+    "context": "Archive enveloppe > description du choix ; name est le nom auteur de l’archive, count le nombre de packs. Pluriel CLDR complet. Surface : src/components/EditPack/BundleChildStep.jsx.",
+    "it": {
+      "sourceHash": "61997980054d",
+      "status": "ai-reviewed"
+    }
+  },
+  "bundle.archive.description_other": {
+    "context": "Archive enveloppe > description du choix ; name est le nom auteur de l’archive, count le nombre de packs. Pluriel CLDR complet. Surface : src/components/EditPack/BundleChildStep.jsx.",
+    "en": {
+      "sourceHash": "61997980054d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "61997980054d",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.feed.step": {
+    "context": "Import podcast > feed ; step du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "79e5cf20de0b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "79e5cf20de0b",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.episodes.step": {
+    "context": "Import podcast > episodes ; step du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "4ae4d35cba6c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4ae4d35cba6c",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.preparation.progress": {
+    "context": "Import media > preparation ; progress du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/hooks/useOsFileDrop.js, src/hooks/useImportSession.js, src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "cb19fdd23dc0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cb19fdd23dc0",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.followSave.progress": {
+    "context": "Import media > followSave ; progress du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "a9ef13a218ca",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a9ef13a218ca",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.followEnable.progress": {
+    "context": "Import media > followEnable ; progress du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "97c6c855844a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "97c6c855844a",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.loading.progress": {
+    "context": "Import podcast > loading ; progress du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "66474911d953",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "66474911d953",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.load.action": {
+    "context": "Import podcast > load ; action du parcours de sélection et téléchargement ; déclenche uniquement l’action indiquée. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "e43f00a0213b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e43f00a0213b",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.funnel.title": {
+    "context": "Import podcast > funnel ; title du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "8f4f344d30ca",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8f4f344d30ca",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.funnel.subtitle": {
+    "context": "Import podcast > funnel ; subtitle du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "37c220df9ce1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "37c220df9ce1",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.funnel.aria": {
+    "context": "Import podcast > funnel ; aria du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "35d5fa305663",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "35d5fa305663",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.import.progress": {
+    "context": "Import podcast > import ; progress du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "cc1092174466",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cc1092174466",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.import.hint": {
+    "context": "Import media > import ; hint du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "bd23dff1b7ee",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bd23dff1b7ee",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.import.failure": {
+    "context": "Import media > import ; failure du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "029168c111b6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "029168c111b6",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.home.action": {
+    "context": "Import podcast > home ; action du parcours de sélection et téléchargement ; déclenche uniquement l’action indiquée. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "61d8da049493",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "61d8da049493",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.address.title": {
+    "context": "Import podcast > address ; title du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "6be8b55e6398",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6be8b55e6398",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.address.description": {
+    "context": "Import podcast > address ; description du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "02122db0e807",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "02122db0e807",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.selection.hint": {
+    "context": "Import podcast > selection ; hint du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "fa68e5cdb58f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fa68e5cdb58f",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.follow.label": {
+    "context": "Import podcast > follow ; label du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "44d90fc177d5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "44d90fc177d5",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.follow.hint": {
+    "context": "Import podcast > follow ; hint du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "330e98b4b7c4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "330e98b4b7c4",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.selection.description": {
+    "context": "Import podcast > selection ; description du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "07c6b35588e6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "07c6b35588e6",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.filter.placeholder": {
+    "context": "Import podcast > filter ; placeholder du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "5dd509eb83a6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5dd509eb83a6",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.selectAll.action": {
+    "context": "Import media > selectAll ; action du parcours de sélection et téléchargement ; déclenche uniquement l’action indiquée. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "5b6fef95fb92",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5b6fef95fb92",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.clearSelection.action": {
+    "context": "Import media > clearSelection ; action du parcours de sélection et téléchargement ; déclenche uniquement l’action indiquée. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx, src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "dfbf8a80272c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dfbf8a80272c",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.filter.empty": {
+    "context": "Import podcast > filter ; empty du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "ce9922376749",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ce9922376749",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.new.badge": {
+    "context": "Import media > new ; badge du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx, src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "c3634f2edeef",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c3634f2edeef",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.modal.title": {
+    "context": "Import podcast > modal ; title du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "85c1ac37d3cd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "85c1ac37d3cd",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.feedAddress.label": {
+    "context": "Import podcast > feedAddress ; label du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "e6128656e766",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e6128656e766",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.url.placeholder": {
+    "context": "Import podcast > url ; placeholder du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "dd8a6c580f76",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd8a6c580f76",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.back.action": {
+    "context": "Import media > back ; action du parcours de sélection et téléchargement ; déclenche uniquement l’action indiquée. Surface : src/components/PodcastImport/PodcastImportModal.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "ef23a5940244",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ef23a5940244",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.import.action": {
+    "context": "Import media > import ; action du parcours de sélection et téléchargement ; déclenche uniquement l’action indiquée. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx, src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "ed2c9cb3830e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ed2c9cb3830e",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.default.title": {
+    "context": "Import podcast > default ; title du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "27a723d62938",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "27a723d62938",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.address.step": {
+    "context": "Import youtube > address ; step du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "79e5cf20de0b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "79e5cf20de0b",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.videos.step": {
+    "context": "Import youtube > videos ; step du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "b7c5258e03c5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b7c5258e03c5",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.audio.step": {
+    "context": "Import youtube > audio ; step du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.load.action": {
+    "context": "Import youtube > load ; action du parcours de sélection et téléchargement ; déclenche uniquement l’action indiquée. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "b2a8d1dc344b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b2a8d1dc344b",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.editorMedia.subtitle": {
+    "context": "Import youtube > editorMedia ; subtitle du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "abee7a1bf417",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "abee7a1bf417",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.editorStories.subtitle": {
+    "context": "Import youtube > editorStories ; subtitle du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "51f5fc69df1e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "51f5fc69df1e",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.funnel.subtitle": {
+    "context": "Import youtube > funnel ; subtitle du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "9a2521171784",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9a2521171784",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.funnel.title": {
+    "context": "Import youtube > funnel ; title du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "1363688692c3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1363688692c3",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.funnel.aria": {
+    "context": "Import youtube > funnel ; aria du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "85095bbd5b20",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "85095bbd5b20",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.terms.title": {
+    "context": "Import youtube > terms ; title du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "11a1dd1ac7fc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "11a1dd1ac7fc",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.terms.description": {
+    "context": "Import youtube > terms ; description du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "c602b76218fa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c602b76218fa",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.tool.hint": {
+    "context": "Import youtube > tool ; hint du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "5bbd1a748521",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5bbd1a748521",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.accept.action": {
+    "context": "Import youtube > accept ; action du parcours de sélection et téléchargement ; déclenche uniquement l’action indiquée. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "c0f21f24ff4c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c0f21f24ff4c",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.preparation.progress": {
+    "context": "Import youtube > preparation ; progress du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "d038e2acfee3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d038e2acfee3",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.reading.hint": {
+    "context": "Import youtube > reading ; hint du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "8a389769407d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8a389769407d",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.audioAnalysis.progress": {
+    "context": "Import youtube > audioAnalysis ; progress du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "30f6422d8cfa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "30f6422d8cfa",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.audioAnalysis.hint": {
+    "context": "Import youtube > audioAnalysis ; hint du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "ace27f50a830",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ace27f50a830",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.import.progress": {
+    "context": "Import youtube > import ; progress du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "50df0a92604a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "50df0a92604a",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.address.title": {
+    "context": "Import youtube > address ; title du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "4750f811b143",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4750f811b143",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.address.description": {
+    "context": "Import youtube > address ; description du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "93d4ac05d6d9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "93d4ac05d6d9",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.url.placeholder": {
+    "context": "Import youtube > url ; placeholder du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "855d176ae2c7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "855d176ae2c7",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.follow.label": {
+    "context": "Import youtube > follow ; label du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "a0a1c5fa0334",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a0a1c5fa0334",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.follow.hint": {
+    "context": "Import youtube > follow ; hint du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "82e369d0ec80",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "82e369d0ec80",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.follow.unavailable": {
+    "context": "Import youtube > follow ; unavailable du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "67df4a77caf6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "67df4a77caf6",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.selection.media": {
+    "context": "Import youtube > selection ; media du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "a515905c8c76",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a515905c8c76",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.selection.stories": {
+    "context": "Import youtube > selection ; stories du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "60c43648d9bd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "60c43648d9bd",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.videos.empty": {
+    "context": "Import youtube > videos ; empty du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "bd424cb01583",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bd424cb01583",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.filter.placeholder": {
+    "context": "Import youtube > filter ; placeholder du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "f3b16f896e71",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f3b16f896e71",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.selectAll.action": {
+    "context": "Import youtube > selectAll ; action du parcours de sélection et téléchargement ; déclenche uniquement l’action indiquée. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "5b6fef95fb92",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5b6fef95fb92",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.filter.empty": {
+    "context": "Import youtube > filter ; empty du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "b4e502107701",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b4e502107701",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.new.heading": {
+    "context": "Import youtube > new ; heading du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "789201f14f14",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "789201f14f14",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.pagination.aria": {
+    "context": "Import youtube > pagination ; aria du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "ec56d76af50f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ec56d76af50f",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.previous.action": {
+    "context": "Import youtube > previous ; action du parcours de sélection et téléchargement ; déclenche uniquement l’action indiquée. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "9aff6c5679b2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9aff6c5679b2",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.next.action": {
+    "context": "Import youtube > next ; action du parcours de sélection et téléchargement ; déclenche uniquement l’action indiquée. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "faf9a798db90",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "faf9a798db90",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.audio.title": {
+    "context": "Import youtube > audio ; title du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "da01ccc01c8c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "da01ccc01c8c",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.audio.description": {
+    "context": "Import youtube > audio ; description du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "9ee50c9cf34f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9ee50c9cf34f",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.audio.aria": {
+    "context": "Import youtube > audio ; aria du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "cc064ebaa8a5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cc064ebaa8a5",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.audioDefault.label": {
+    "context": "Import youtube > audioDefault ; label du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "4f34c078b6c7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4f34c078b6c7",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.audioDefault.hint": {
+    "context": "Import youtube > audioDefault ; hint du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "505cc3b4b4b4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "505cc3b4b4b4",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.audio.hint": {
+    "context": "Import youtube > audio ; hint du parcours de sélection et téléchargement ; présente cette étape sans modifier les titres auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "714ff1fa1533",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "714ff1fa1533",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.step.caption": {
+    "context": "Import > media.step.caption ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "4d4fe3f1eaca",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4d4fe3f1eaca",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.modal.libraryHint": {
+    "context": "Import > podcast.modal.libraryHint ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "fdb65a8deb3d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fdb65a8deb3d",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.modal.storyHint": {
+    "context": "Import > podcast.modal.storyHint ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "87ddeaaed1b5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "87ddeaaed1b5",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.selection.libraryHint": {
+    "context": "Import > youtube.selection.libraryHint ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "b09075309356",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b09075309356",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.selection.treeHint": {
+    "context": "Import > youtube.selection.treeHint ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "a3b77a0ee550",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a3b77a0ee550",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.terms.message": {
+    "context": "Import > youtube.terms.message ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "e89fdc750c60",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e89fdc750c60",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.page.heading": {
+    "context": "Import > youtube.page.heading ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "b35b720a0c5b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b35b720a0c5b",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.page.label": {
+    "context": "Import > youtube.page.label ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "aaf89a2e8dd2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "aaf89a2e8dd2",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.search.progress": {
+    "context": "Import > youtube.search.progress ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "aeb944a2e0e2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "aeb944a2e0e2",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.language.description": {
+    "context": "Import > youtube.language.description ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "71a9420da3f7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "71a9420da3f7",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.episodes.count_one": {
+    "context": "Import > podcast.episodes.count_one ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "56bb0729b281",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "56bb0729b281",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "podcast.episodes.count_many": {
+    "context": "Import > podcast.episodes.count_many ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "it": {
+      "sourceHash": "9b0c5dcab443",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "podcast.episodes.count_other": {
+    "context": "Import > podcast.episodes.count_other ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "9b0c5dcab443",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9b0c5dcab443",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 32
+  },
+  "podcast.import.action_one": {
+    "context": "Import > podcast.import.action_one ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "a34b7367876a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a34b7367876a",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.import.action_many": {
+    "context": "Import > podcast.import.action_many ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "maxLength": 40,
+    "it": {
+      "sourceHash": "5aeffdc61878",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.import.action_other": {
+    "context": "Import > podcast.import.action_other ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "5aeffdc61878",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5aeffdc61878",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.import.action_one": {
+    "context": "Import > youtube.import.action_one ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "b9e035643c58",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b9e035643c58",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.import.action_many": {
+    "context": "Import > youtube.import.action_many ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "it": {
+      "sourceHash": "d5f8a69d6931",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.import.action_other": {
+    "context": "Import > youtube.import.action_other ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "d5f8a69d6931",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d5f8a69d6931",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.selected.count_one": {
+    "context": "Import > media.selected.count_one ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "f4364bb047e0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f4364bb047e0",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.selected.count_many": {
+    "context": "Import > media.selected.count_many ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/PodcastImport/PodcastImportModal.jsx.",
+    "it": {
+      "sourceHash": "d19c18b6a8fc",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.selected.count_other": {
+    "context": "Import > media.selected.count_other ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/PodcastImport/PodcastImportModal.jsx.",
+    "en": {
+      "sourceHash": "d19c18b6a8fc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d19c18b6a8fc",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.selection.notice_one": {
+    "context": "Import > youtube.selection.notice_one ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "5d8c79a07918",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5d8c79a07918",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.selection.notice_many": {
+    "context": "Import > youtube.selection.notice_many ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "it": {
+      "sourceHash": "acd5cca15d2e",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.selection.notice_other": {
+    "context": "Import > youtube.selection.notice_other ; phrase complète rendue dans le parcours correspondant ; count est le compteur CLDR, page le numéro affiché, language le nom Intl ; strong conserve l’emphase du rendu auteur. Surface : src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "en": {
+      "sourceHash": "acd5cca15d2e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "acd5cca15d2e",
+      "status": "ai-reviewed"
+    }
+  },
+  "pack.analysis.progress": {
+    "context": "Import > pack.analysis.progress ; étape de progression du hook pendant le traitement du fichier, texte recalculé dans la langue active ; garder l’ellipse. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "0011d4e8a9c4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0011d4e8a9c4",
+      "status": "ai-reviewed"
+    }
+  },
+  "audio.import.progress": {
+    "context": "Import > audio.import.progress ; étape de progression du hook pendant le traitement du fichier, texte recalculé dans la langue active ; garder l’ellipse. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "2e5476faaac1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2e5476faaac1",
+      "status": "ai-reviewed"
+    }
+  },
+  "pack.metadata.progress": {
+    "context": "Import > pack.metadata.progress ; étape de progression du hook pendant le traitement du fichier, texte recalculé dans la langue active ; garder l’ellipse. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "961b01961e5d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "961b01961e5d",
+      "status": "ai-reviewed"
+    }
+  },
+  "pack.invalid.title": {
+    "context": "Import > pack.invalid.title ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "74cbc17af7e6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "74cbc17af7e6",
+      "status": "ai-reviewed"
+    }
+  },
+  "audio.analysis.progress": {
+    "context": "Import > audio.analysis.progress ; étape de progression du hook pendant le traitement du fichier, texte recalculé dans la langue active ; garder l’ellipse. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "07955c175631",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "07955c175631",
+      "status": "ai-reviewed"
+    }
+  },
+  "archive.import.progress": {
+    "context": "Import > archive.import.progress ; étape de progression du hook pendant le traitement du fichier, texte recalculé dans la langue active ; garder l’ellipse. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "2060be3b9537",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2060be3b9537",
+      "status": "ai-reviewed"
+    }
+  },
+  "folder.import.title": {
+    "context": "Import > folder.import.title ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "d08693533373",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d08693533373",
+      "status": "ai-reviewed"
+    }
+  },
+  "folder.import.empty": {
+    "context": "Import > folder.import.empty ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "e117e11c437a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e117e11c437a",
+      "status": "ai-reviewed"
+    }
+  },
+  "folder.analysis.progress": {
+    "context": "Import > folder.analysis.progress ; étape de progression du hook pendant le traitement du fichier, texte recalculé dans la langue active ; garder l’ellipse. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "1795a4cf46f2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1795a4cf46f2",
+      "status": "ai-reviewed"
+    }
+  },
+  "pack.extraction.title": {
+    "context": "Import > pack.extraction.title ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "8572172853c7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8572172853c7",
+      "status": "ai-reviewed"
+    }
+  },
+  "pack.workspace.missing": {
+    "context": "Import > pack.workspace.missing ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "c0bb525bc113",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c0bb525bc113",
+      "status": "ai-reviewed"
+    }
+  },
+  "pack.zip.default": {
+    "context": "Import > pack.zip.default ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "6cf97c2f542a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6cf97c2f542a",
+      "status": "ai-reviewed"
+    }
+  },
+  "pack.entries.empty": {
+    "context": "Import > pack.entries.empty ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "0ec65bf83bbe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0ec65bf83bbe",
+      "status": "ai-reviewed"
+    }
+  },
+  "pack.autoNext.notice": {
+    "context": "Import > pack.autoNext.notice ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "6a0b72f2aaa1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6a0b72f2aaa1",
+      "status": "ai-reviewed"
+    }
+  },
+  "folder.scan.progress": {
+    "context": "Import > folder.scan.progress ; étape de progression du hook pendant le traitement du fichier, texte recalculé dans la langue active ; garder l’ellipse. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "57a74530483e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "57a74530483e",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.thumbnail.progress": {
+    "context": "Import > media.thumbnail.progress ; étape de progression du hook pendant le traitement du fichier, texte recalculé dans la langue active ; garder l’ellipse. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "f1e851c71ed8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f1e851c71ed8",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.import.title": {
+    "context": "Import > youtube.import.title ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "c2df638c1326",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c2df638c1326",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.import.title": {
+    "context": "Import > podcast.import.title ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "b02fe995d593",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b02fe995d593",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.current.label": {
+    "context": "Import > media.current.label ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useMediaImport.js.",
+    "en": {
+      "sourceHash": "98b9d6033985",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "98b9d6033985",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.import.failure": {
+    "context": "Import > podcast.import.failure ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useMediaImport.js.",
+    "en": {
+      "sourceHash": "5d369e6832fa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5d369e6832fa",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.import.failure": {
+    "context": "Import > youtube.import.failure ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useMediaImport.js.",
+    "en": {
+      "sourceHash": "f30c752a41bd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f30c752a41bd",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.session.progress": {
+    "context": "Import > media.session.progress ; étape de progression du hook pendant le traitement du fichier, texte recalculé dans la langue active ; garder l’ellipse. Surface : src/hooks/useMediaImport.js.",
+    "en": {
+      "sourceHash": "4ebd94cf3f03",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4ebd94cf3f03",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.projectChanged": {
+    "context": "Import > media.follow.projectChanged ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useMediaImport.js.",
+    "en": {
+      "sourceHash": "7941023e58c3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7941023e58c3",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.depth.title": {
+    "context": "Import > project.depth.title ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useProjectLoading.js.",
+    "en": {
+      "sourceHash": "8ba4af69e81d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8ba4af69e81d",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.open.title": {
+    "context": "Import > project.open.title ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useProjectLoading.js.",
+    "en": {
+      "sourceHash": "ee11ace89940",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ee11ace89940",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.recent.title": {
+    "context": "Import > project.recent.title ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/hooks/useProjectLoading.js.",
+    "en": {
+      "sourceHash": "e6083370def6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e6083370def6",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.copy.progress": {
+    "context": "Import > media.copy.progress ; étape de progression du hook pendant le traitement du fichier, texte recalculé dans la langue active ; garder l’ellipse. Surface : src/hooks/mediaLibraryImport.js.",
+    "en": {
+      "sourceHash": "b4ce857a0ce5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b4ce857a0ce5",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.cover.progress": {
+    "context": "Import > media.cover.progress ; étape de progression du hook pendant le traitement du fichier, texte recalculé dans la langue active ; garder l’ellipse. Surface : src/hooks/mediaLibraryImport.js.",
+    "en": {
+      "sourceHash": "d8516cce8a03",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d8516cce8a03",
+      "status": "ai-reviewed"
+    }
+  },
+  "names.pack.fallback": {
+    "context": "Import > names.pack.fallback ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/store/unpackProject.js.",
+    "en": {
+      "sourceHash": "991992cec92c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "991992cec92c",
+      "status": "ai-reviewed"
+    }
+  },
+  "pack.invalid.message": {
+    "context": "Import > pack.invalid.message ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "9f03cbbe6233",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9f03cbbe6233",
+      "status": "ai-reviewed"
+    }
+  },
+  "folder.read.prefix": {
+    "context": "Import > folder.read.prefix ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "4daaeba6bc98",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4daaeba6bc98",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.recent.prefix": {
+    "context": "Import > project.recent.prefix ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useProjectLoading.js.",
+    "en": {
+      "sourceHash": "5cbdb481bd98",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5cbdb481bd98",
+      "status": "ai-reviewed"
+    }
+  },
+  "pack.extraction.message": {
+    "context": "Import > pack.extraction.message ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "8a85a0c16b6d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8a85a0c16b6d",
+      "status": "ai-reviewed"
+    }
+  },
+  "pack.transitions.notice": {
+    "context": "Import > pack.transitions.notice ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "f56386d0d38c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f56386d0d38c",
+      "status": "ai-reviewed"
+    }
+  },
+  "pack.transitions.example": {
+    "context": "Import > pack.transitions.example ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "2cc08334999b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2cc08334999b",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.download.progress": {
+    "context": "Import > podcast.download.progress ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "b4218b38dd48",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b4218b38dd48",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.download.progress": {
+    "context": "Import > youtube.download.progress ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "76dd4a110a19",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "76dd4a110a19",
+      "status": "ai-reviewed"
+    }
+  },
+  "names.video.numbered": {
+    "context": "Import > names.video.numbered ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "a4cfc6b7cc07",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a4cfc6b7cc07",
+      "status": "ai-reviewed"
+    }
+  },
+  "names.episode.numbered": {
+    "context": "Import > names.episode.numbered ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "01536c8835d9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "01536c8835d9",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.batch.failure": {
+    "context": "Import > podcast.batch.failure ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "1626550cd61d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1626550cd61d",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.batch.failure": {
+    "context": "Import > youtube.batch.failure ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "b0f6ac821a97",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b0f6ac821a97",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.batch.partial_one": {
+    "context": "Import > podcast.batch.partial_one ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useMediaImport.js, src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "d6d192e79ec8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d6d192e79ec8",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.batch.partial_many": {
+    "context": "Import > podcast.batch.partial_many ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useMediaImport.js, src/hooks/useImportSession.js.",
+    "it": {
+      "sourceHash": "f7d8d1fdeff2",
+      "status": "ai-reviewed"
+    }
+  },
+  "podcast.batch.partial_other": {
+    "context": "Import > podcast.batch.partial_other ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useMediaImport.js, src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "f7d8d1fdeff2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f7d8d1fdeff2",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.batch.partial_one": {
+    "context": "Import > youtube.batch.partial_one ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useMediaImport.js, src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "4c083b488c08",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4c083b488c08",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.batch.partial_many": {
+    "context": "Import > youtube.batch.partial_many ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useMediaImport.js, src/hooks/useImportSession.js.",
+    "it": {
+      "sourceHash": "4ac5712c9842",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.batch.partial_other": {
+    "context": "Import > youtube.batch.partial_other ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useMediaImport.js, src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "4ac5712c9842",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4ac5712c9842",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.unnamed.label": {
+    "context": "Import > project.unnamed.label ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/store/projectIO.js.",
+    "en": {
+      "sourceHash": "20465173aa40",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "20465173aa40",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.autosave.empty": {
+    "context": "Import > project.autosave.empty ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/store/projectIO.js.",
+    "en": {
+      "sourceHash": "38a60903b859",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "38a60903b859",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.save.progress": {
+    "context": "Import > project.save.progress ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/store/projectIO.js.",
+    "en": {
+      "sourceHash": "7d1fa792db46",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7d1fa792db46",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.save.done": {
+    "context": "Import > project.save.done ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/store/projectIO.js.",
+    "en": {
+      "sourceHash": "4af29982d4cd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4af29982d4cd",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.save.takeoff": {
+    "context": "Import > project.save.takeoff ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/store/projectIO.js.",
+    "en": {
+      "sourceHash": "6c2732d623d1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6c2732d623d1",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.name.uniqueFailure": {
+    "context": "Import > project.name.uniqueFailure ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/store/projectIO.js.",
+    "en": {
+      "sourceHash": "7bacbee7ad6b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7bacbee7ad6b",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.file.exists": {
+    "context": "Import > project.file.exists ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/store/projectIO.js.",
+    "en": {
+      "sourceHash": "591e05922455",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "591e05922455",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.media.copy": {
+    "context": "Import > project.media.copy ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/store/projectIO.js.",
+    "en": {
+      "sourceHash": "9b6bc1adc7f3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9b6bc1adc7f3",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.failure.cause": {
+    "context": "Import > youtube.failure.cause ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/utils/youtubeErrors.js.",
+    "en": {
+      "sourceHash": "1166b8e17e76",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1166b8e17e76",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.failure.known": {
+    "context": "Import > youtube.failure.known ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/utils/youtubeErrors.js.",
+    "en": {
+      "sourceHash": "ecccadc96a22",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ecccadc96a22",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.blocked.imported_one": {
+    "context": "Import > youtube.blocked.imported_one ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/utils/youtubeErrors.js.",
+    "en": {
+      "sourceHash": "a16f3203d627",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a16f3203d627",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.blocked.skipped_one": {
+    "context": "Import > youtube.blocked.skipped_one ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/utils/youtubeErrors.js.",
+    "en": {
+      "sourceHash": "33f3d6b6e920",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "33f3d6b6e920",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.blocked.imported_many": {
+    "context": "Import > youtube.blocked.imported_many ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/utils/youtubeErrors.js.",
+    "it": {
+      "sourceHash": "d431b7385729",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.blocked.skipped_many": {
+    "context": "Import > youtube.blocked.skipped_many ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/utils/youtubeErrors.js.",
+    "it": {
+      "sourceHash": "3c2097a3edd1",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.blocked.imported_other": {
+    "context": "Import > youtube.blocked.imported_other ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/utils/youtubeErrors.js.",
+    "en": {
+      "sourceHash": "d431b7385729",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d431b7385729",
+      "status": "ai-reviewed"
+    }
+  },
+  "youtube.blocked.skipped_other": {
+    "context": "Import > youtube.blocked.skipped_other ; message de la sauvegarde ou du résultat d’import YouTube ; count est un véritable pluriel, name une donnée utilisateur ; détail outil séparé. Surface : src/utils/youtubeErrors.js.",
+    "en": {
+      "sourceHash": "3c2097a3edd1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3c2097a3edd1",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.pending": {
+    "context": "Import podcast/YouTube > suivi de la source > état pending ; décrit quand le suivi sera appliqué, sans téléchargement automatique. Enregistrer signifie sauvegarder le projet sur disque.",
+    "en": {
+      "sourceHash": "944d0c7f49e5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "944d0c7f49e5",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.active": {
+    "context": "Import podcast/YouTube > suivi de la source > état active ; décrit quand le suivi sera appliqué, sans téléchargement automatique. Enregistrer signifie sauvegarder le projet sur disque.",
+    "en": {
+      "sourceHash": "fd48c9562580",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fd48c9562580",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.pauseOnSave": {
+    "context": "Import podcast/YouTube > suivi de la source > état pauseOnSave ; décrit quand le suivi sera appliqué, sans téléchargement automatique. Enregistrer signifie sauvegarder le projet sur disque.",
+    "en": {
+      "sourceHash": "9d520aa43a94",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9d520aa43a94",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.resumeOnSave": {
+    "context": "Import podcast/YouTube > suivi de la source > état resumeOnSave ; décrit quand le suivi sera appliqué, sans téléchargement automatique. Enregistrer signifie sauvegarder le projet sur disque.",
+    "en": {
+      "sourceHash": "eb840307c641",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "eb840307c641",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.paused": {
+    "context": "Import podcast/YouTube > suivi de la source > état paused ; décrit quand le suivi sera appliqué, sans téléchargement automatique. Enregistrer signifie sauvegarder le projet sur disque.",
+    "en": {
+      "sourceHash": "d6003f042492",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d6003f042492",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.initial": {
+    "context": "Import podcast/YouTube > suivi de la source > état initial ; décrit quand le suivi sera appliqué, sans téléchargement automatique. Enregistrer signifie sauvegarder le projet sur disque.",
+    "en": {
+      "sourceHash": "83d906c220df",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "83d906c220df",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.save": {
+    "context": "Import podcast/YouTube > suivi de la source > état save ; décrit quand le suivi sera appliqué, sans téléchargement automatique. Enregistrer signifie sauvegarder le projet sur disque. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx, src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "157ffb2f73d5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "157ffb2f73d5",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.enable": {
+    "context": "Import podcast/YouTube > suivi de la source > état enable ; décrit quand le suivi sera appliqué, sans téléchargement automatique. Enregistrer signifie sauvegarder le projet sur disque. Surface : src/components/PodcastImport/PodcastImportFunnel.jsx, src/components/PodcastImport/PodcastImportModal.jsx, src/components/YoutubeImport/YoutubeImportFunnel.jsx.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "b8b04bcc69a6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b8b04bcc69a6",
+      "status": "ai-reviewed"
+    }
+  },
+  "names.folder.fallback": {
+    "context": "Import de dossier > nom proposé à la création lorsque le chemin racine n’a pas de nom lisible ; envoyé à Rust, sans locale.",
+    "en": {
+      "sourceHash": "986bbd2e84f2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "986bbd2e84f2",
+      "status": "ai-reviewed"
+    }
+  },
+  "names.video.fallback": {
+    "context": "Import YouTube > nom proposé uniquement à une vidéo sans titre ; titre auteur présent toujours conservé.",
+    "en": {
+      "sourceHash": "ffda1e938e47",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ffda1e938e47",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.error.message": {
+    "context": "Ouverture .mbah > refus de format ; code/path/fileName techniques, found/expected données ou références localisées ; détails bruts repliés.",
+    "en": {
+      "sourceHash": "b981f5dc16c1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b981f5dc16c1",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.file.fallback": {
+    "context": "Refus de format > nom affiché quand aucun nom de fichier n’a été fourni ; jamais écrit dans le projet.",
+    "en": {
+      "sourceHash": "244394021597",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "244394021597",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.completeJson": {
+    "context": "Ouverture .mbah > diagnostic found/expected > completeJson ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "39696aa1cdae",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "39696aa1cdae",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.validProject": {
+    "context": "Ouverture .mbah > diagnostic found/expected > validProject ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "c6d0041bdc41",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c6d0041bdc41",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.jsonObject": {
+    "context": "Ouverture .mbah > diagnostic found/expected > jsonObject ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "78735c6a6f28",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "78735c6a6f28",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.safeInteger": {
+    "context": "Ouverture .mbah > diagnostic found/expected > safeInteger ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "b38b27cbe5e2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b38b27cbe5e2",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.supportedVersion": {
+    "context": "Ouverture .mbah > diagnostic found/expected > supportedVersion ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "3d9b397bfdf0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3d9b397bfdf0",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.authoringMode": {
+    "context": "Ouverture .mbah > diagnostic found/expected > authoringMode ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "13467eb77de7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "13467eb77de7",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.object": {
+    "context": "Ouverture .mbah > diagnostic found/expected > object ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "846a3e8ded8e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "846a3e8ded8e",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.explicitMode": {
+    "context": "Ouverture .mbah > diagnostic found/expected > explicitMode ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "14f719d09f9f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "14f719d09f9f",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.advancedInFree": {
+    "context": "Ouverture .mbah > diagnostic found/expected > advancedInFree ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "672b9bf3974c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "672b9bf3974c",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.absentBlock": {
+    "context": "Ouverture .mbah > diagnostic found/expected > absentBlock ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "1cd23a78ef36",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1cd23a78ef36",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.freeSchema": {
+    "context": "Ouverture .mbah > diagnostic found/expected > freeSchema ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "354f5b76738e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "354f5b76738e",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.advancedSchema": {
+    "context": "Ouverture .mbah > diagnostic found/expected > advancedSchema ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "0c554f4d2bd5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0c554f4d2bd5",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.incompatibleTree": {
+    "context": "Ouverture .mbah > diagnostic found/expected > incompatibleTree ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "a0476690f75a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a0476690f75a",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.emptyTree": {
+    "context": "Ouverture .mbah > diagnostic found/expected > emptyTree ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "dddef7649799",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dddef7649799",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.concurrentProjection": {
+    "context": "Ouverture .mbah > diagnostic found/expected > concurrentProjection ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "82e033ccaf3a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "82e033ccaf3a",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.noParallelGraph": {
+    "context": "Ouverture .mbah > diagnostic found/expected > noParallelGraph ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "38122a658e38",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "38122a658e38",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.opaqueJson": {
+    "context": "Ouverture .mbah > diagnostic found/expected > opaqueJson ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "f625e65be163",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f625e65be163",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.optionalObject": {
+    "context": "Ouverture .mbah > diagnostic found/expected > optionalObject ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "97ed5223dd98",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "97ed5223dd98",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.array": {
+    "context": "Ouverture .mbah > diagnostic found/expected > array ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "5f0974ee455c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5f0974ee455c",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.derivedView": {
+    "context": "Ouverture .mbah > diagnostic found/expected > derivedView ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "74fd5676ada2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "74fd5676ada2",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.payloadOnly": {
+    "context": "Ouverture .mbah > diagnostic found/expected > payloadOnly ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "dd32051e2a75",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd32051e2a75",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.advancedCodec": {
+    "context": "Ouverture .mbah > diagnostic found/expected > advancedCodec ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "3c31fbfbb837",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3c31fbfbb837",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.bindingObject": {
+    "context": "Ouverture .mbah > diagnostic found/expected > bindingObject ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "5a66576ae03d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5a66576ae03d",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.unknownField": {
+    "context": "Ouverture .mbah > diagnostic found/expected > unknownField ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "3b2e75303c20",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3b2e75303c20",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.bindingFields": {
+    "context": "Ouverture .mbah > diagnostic found/expected > bindingFields ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "868cd24a3578",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "868cd24a3578",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.nonemptyRef": {
+    "context": "Ouverture .mbah > diagnostic found/expected > nonemptyRef ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "8cbe686b20c2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8cbe686b20c2",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.boundAt": {
+    "context": "Ouverture .mbah > diagnostic found/expected > boundAt ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "78852605b740",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "78852605b740",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.singleBinding": {
+    "context": "Ouverture .mbah > diagnostic found/expected > singleBinding ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "7d1a5ff49270",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7d1a5ff49270",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.optionalPath": {
+    "context": "Ouverture .mbah > diagnostic found/expected > optionalPath ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "37ff59178982",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "37ff59178982",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.nonemptyPath": {
+    "context": "Ouverture .mbah > diagnostic found/expected > nonemptyPath ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "5d7f7b7037c1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5d7f7b7037c1",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.bindingStatus": {
+    "context": "Ouverture .mbah > diagnostic found/expected > bindingStatus ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "fbd4ddfcb491",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fbd4ddfcb491",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.resolvedWithoutPath": {
+    "context": "Ouverture .mbah > diagnostic found/expected > resolvedWithoutPath ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "b273534c161b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b273534c161b",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.missingUntilKnown": {
+    "context": "Ouverture .mbah > diagnostic found/expected > missingUntilKnown ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "8079a5b9df10",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8079a5b9df10",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.value.absent": {
+    "context": "Ouverture .mbah > diagnostic found/expected > absent ; valeur applicative traduite, code et chemins gardés techniques, contexte de schéma sans écriture.",
+    "en": {
+      "sourceHash": "5ad38304b535",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5ad38304b535",
+      "status": "ai-reviewed"
+    }
+  },
+  "folder.pack.invalid.message": {
+    "context": "import > folder.pack.invalid.message ; Import > message d’erreur quand un dossier déposé n’est pas un pack ; path est le chemin du dossier, reason la cause présentée par code. Surface : src/hooks/useImportSession.js.",
+    "en": {
+      "sourceHash": "8820f3002538",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8820f3002538",
+      "status": "ai-reviewed"
+    }
+  },
+  "folder.drop.mediaLibrary": {
+    "context": "import > folder.drop.mediaLibrary ; Import > message d’information quand un dossier est déposé sur la médiathèque. Surface : src/hooks/useOsFileDrop.js.",
+    "en": {
+      "sourceHash": "67b3f1c2d9e5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "67b3f1c2d9e5",
+      "status": "ai-reviewed"
+    }
+  },
+  "folder.pack.copy.failed": {
+    "context": "import > folder.pack.copy.failed ; erreur affichée quand la copie de l’archive d’un dossier dans le projet échoue. Surface : src/utils/packFolder.js.",
+    "en": {
+      "sourceHash": "4335876f93b5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4335876f93b5",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.legacyLink.unsupported": {
+    "context": "Ouverture .mbah > refus d'un projet qui contient encore un ancien nœud Lien (type ref, retiré du modèle) ; message principal de la boîte d'erreur, le chemin et le code restent dans le détail technique. Surface : src/store/projectModel/envelope.js.",
+    "en": {
+      "sourceHash": "0d833ea78022",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0d833ea78022",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.legacyLink.found": {
+    "context": "Ouverture .mbah > diagnostic found/expected > ancien nœud Lien trouvé ; détail technique replié.",
+    "en": {
+      "sourceHash": "1269ea6a144c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1269ea6a144c",
+      "status": "ai-reviewed"
+    }
+  },
+  "format.legacyLink.expected": {
+    "context": "Ouverture .mbah > diagnostic found/expected > types d'entrée admis ; détail technique replié.",
+    "en": {
+      "sourceHash": "c348a1555086",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c348a1555086",
+      "status": "ai-reviewed"
+    }
+  }
+}

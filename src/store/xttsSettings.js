@@ -1,3 +1,4 @@
+import { translateAi } from '../i18n/aiPresentation.js';
 import { KEYS, read as readSetting, write as writeSetting } from './persistentSettings.js';
 
 // Voix Piper par défaut — doit correspondre au catalogue Rust
@@ -6,11 +7,17 @@ export const PIPER_DEFAULT_VOICE = 'fr_FR-siwis-medium';
 export const PIPER_DEFAULT_LANGUAGE = 'fr_FR';
 
 export const PIPER_LANGUAGE_OPTIONS = [
-  { value: 'fr_FR', label: 'Français', defaultVoice: PIPER_DEFAULT_VOICE },
-  { value: 'en_GB', label: 'English UK', defaultVoice: 'en_GB-jenny_dioco-medium' },
-  { value: 'en_US', label: 'English US', defaultVoice: 'en_US-kristin-medium' },
-  { value: 'it_IT', label: 'Italiano', defaultVoice: 'it_IT-serena-medium' },
+  { value: 'fr_FR', labelKey: 'ai:voice.language.fr', defaultVoice: PIPER_DEFAULT_VOICE },
+  { value: 'en_GB', labelKey: 'ai:voice.language.enGB', defaultVoice: 'en_GB-jenny_dioco-medium' },
+  { value: 'en_US', labelKey: 'ai:voice.language.enUS', defaultVoice: 'en_US-kristin-medium' },
+  { value: 'it_IT', labelKey: 'ai:voice.language.it', defaultVoice: 'it_IT-serena-medium' },
 ];
+
+// Compatibilité avec les consommateurs historiques de label : résolution à la lecture,
+// jamais au chargement de la table ni dans une préférence persistée.
+for (const option of PIPER_LANGUAGE_OPTIONS) {
+  Object.defineProperty(option, 'label', { get: () => translateAi(option.labelKey) });
+}
 
 export function piperDefaultVoiceForLanguage(voices, language) {
   const catalogDefault = voices.find((voice) => voice.language === language && voice.isDefault);

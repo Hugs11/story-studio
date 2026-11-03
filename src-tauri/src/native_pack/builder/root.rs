@@ -1,5 +1,6 @@
 use super::core::StoryBuilder;
 use super::story::EndNavContext;
+use crate::support::user_message::{codes, UserMessage};
 
 use super::super::*;
 use super::transitions::*;
@@ -10,12 +11,13 @@ impl<'a> StoryBuilder<'a> {
         project: &CanonicalProject,
         _root_action_id: &str,
     ) -> Result<String, String> {
-        let CanonicalEntry::Story(story) = project
-            .entries
-            .first()
-            .ok_or_else(|| "Histoire simple introuvable dans le modele canonique.".to_string())?
+        let CanonicalEntry::Story(story) = project.entries.first().ok_or_else(|| {
+            UserMessage::new(codes::GENERATION_SIMPLE_STORY_MISSING).into_transport()
+        })?
         else {
-            return Err("Le mode simple natif v1 n'accepte qu'une histoire audio.".to_string());
+            return Err(
+                UserMessage::new(codes::GENERATION_SIMPLE_STORY_COUNT_INVALID).into_transport(),
+            );
         };
 
         let role_prefix = scoped_label_id("root", &story.id, &story.name);
@@ -159,12 +161,6 @@ impl<'a> StoryBuilder<'a> {
                 None,
                 root_has_multiple_entries,
             ),
-            CanonicalEntry::Ref(reference) => {
-                // Référence racine : l'option racine pointera vers le stage natif de la cible.
-                // Placeholder éphémère, réécrit par `resolve_pending_ref_options` (ou erreur).
-                self.record_ref_option(root_action_id, root_index, &reference.target);
-                Ok(self.next_id())
-            }
         }
     }
 
@@ -200,22 +196,16 @@ impl<'a> StoryBuilder<'a> {
     pub(in crate::native_pack::builder) fn build_shared_entries(
         &mut self,
         entries: &[CanonicalEntry],
-        shared_action_id: &str,
         approach_action_ids: &[String],
     ) -> Result<Vec<String>, String> {
         let mut targets = Vec::with_capacity(entries.len());
         for (index, entry) in entries.iter().enumerate() {
-            let approach_action_id = approach_action_ids
-                .get(index)
-                .ok_or_else(|| "Action d'approche partagee manquante.".to_string())?;
+            let approach_action_id = approach_action_ids.get(index).ok_or_else(|| {
+                UserMessage::new(codes::GRAPH_SHARED_APPROACH_ACTION_MISSING).into_transport()
+            })?;
             let approach_transition = transition(approach_action_id, 0);
-            let target = self.build_shared_entry(
-                entry,
-                index,
-                entries,
-                shared_action_id,
-                approach_transition.clone(),
-            )?;
+            let target =
+                self.build_shared_entry(entry, index, entries, approach_transition.clone())?;
             self.action_nodes.push(ActionNode {
                 id: approach_action_id.clone(),
                 name: action_node_name(),
@@ -234,7 +224,6 @@ impl<'a> StoryBuilder<'a> {
         entry: &CanonicalEntry,
         shared_index: usize,
         siblings: &[CanonicalEntry],
-        shared_action_id: &str,
         approach_transition: Transition,
     ) -> Result<String, String> {
         match entry {
@@ -312,24 +301,7 @@ impl<'a> StoryBuilder<'a> {
                 true,
             ),
             CanonicalEntry::Zip(_) => {
-                Err("Les elements partages de type ZIP ne sont pas pris en charge.".to_string())
-            }
-            CanonicalEntry::Ref(reference) => {
-                self.record_ref_option(shared_action_id, shared_index, &reference.target);
-                // La transition d'approche est construite par le builder, donc
-                // toujours `Fixed` : une sélection aléatoire n'y a pas d'indice
-                // d'option à réécrire, et l'inventer serait un rabattement.
-                let approach_option_index =
-                    approach_transition.selection.fixed_index().ok_or_else(|| {
-                        "Une transition d'approche aleatoire ne designe aucune option a reecrire."
-                            .to_string()
-                    })?;
-                self.record_ref_option(
-                    &approach_transition.action_node,
-                    approach_option_index,
-                    &reference.target,
-                );
-                Ok(self.next_id())
+                Err(UserMessage::new(codes::IMPORT_SHARED_ZIP_UNSUPPORTED).into_transport())
             }
         }
     }

@@ -402,6 +402,8 @@ pub(crate) struct DiagnosticView {
     pub(crate) path: String,
     pub(crate) node_path: Option<String>,
     pub(crate) message: String,
+    #[serde(skip_serializing_if = "serde_json::Map::is_empty")]
+    pub(crate) params: serde_json::Map<String, serde_json::Value>,
     pub(crate) resolutions: Vec<AuthoringResolution>,
 }
 
@@ -484,6 +486,8 @@ pub(crate) struct AdvancedGraphView {
     /// interdit. JavaScript la traite comme un jeton opaque, au même
     /// titre qu'un chemin d'auteur.
     pub(crate) document_fingerprint: String,
+    pub(crate) official_provenance: crate::domain::official_provenance::OfficialProvenance,
+    pub(crate) identity_locked: bool,
     pub(crate) document_origin: DocumentOrigin,
     pub(crate) default_value_origin: ValueOrigin,
     pub(crate) pack_identity: PackIdentityView,

@@ -10,6 +10,8 @@
 // mène à un geste ou à un formulaire réel — « pas de dialogue sans chemin de
 // résolution réel ».
 
+import { ArrowRight } from '../icons/LucideLocal';
+import { useCheckerTranslation } from '../../i18n/useCheckerTranslation.js';
 import { Button } from '../common/Button';
 import {
   RESOLUTION_FORM,
@@ -29,67 +31,82 @@ export function DiagnosticsPanel({
   onGesture,
   onOpenForm,
 }) {
+  const { t } = useCheckerTranslation();
+  const groups = new Map();
+  for (const issue of issues) {
+    const key = issue.nodeLabel ? (issue.nodePath ?? issue.nodeLabel) : '__pack__';
+    if (!groups.has(key)) {
+      groups.set(key, { label: issue.nodeLabel ?? t('checker:issues.pack.group'), issues: [] });
+    }
+    groups.get(key).issues.push(issue);
+  }
+
   return (
-    <section className="advanced-diagnostics advanced-diagnostics--popover" aria-label="Éléments à corriger">
-      <ul className="advanced-diagnostics__list">
-          {issues.map((issue) => {
-            const diagnostic = issue.diagnostic;
-            const resolutions = diagnostic
-              ? resolutionsForDiagnostic({ diagnostic, view, index })
+    <section aria-label={t('checker:issues.panel.aria')}>
+      {[...groups].map(([key, group]) => (
+        <div key={key} className="validation-pill-group">
+          <div className="validation-pill-group-head">
+            <span className="validation-pill-group-label">{group.label}</span>
+            <span className="validation-pill-group-count">· {group.issues.length}</span>
+          </div>
+          {group.issues.map((issue) => {
+            const resolutions = issue.diagnostic
+              ? resolutionsForDiagnostic({ diagnostic: issue.diagnostic, view, index })
               : [];
             return (
-              <li
-                key={issue.id}
-                className="advanced-diagnostics__item"
-                data-severity="error"
-              >
-                <div className="advanced-diagnostics__head">
-                  <strong>{issue.category}</strong>
+              <details key={issue.id} className="validation-pill-details">
+                <summary className="validation-pill-item">
+                  <span className="validation-pill-item-dot" aria-hidden="true" />
+                  <span className="validation-pill-item-label">{issue.message}</span>
+                  <span className="validation-pill-item-go" aria-hidden="true">
+                    <ArrowRight width={11} height={11} strokeWidth={2.6} />
+                  </span>
+                </summary>
+                <div className="validation-pill-details-body">
+                  <p className="validation-pill-details-category">{issue.category}</p>
+                  <div className="validation-pill-details-actions">
+                    {issue.nodePath && (
+                      <Button size="sm" onClick={() => onFocusPath(issue.nodePath)}>
+                        {t('checker:issues.fix.action')}
+                      </Button>
+                    )}
+                    {resolutions.map((resolution) => (
+                      <Button
+                        key={resolution.id}
+                        size="sm"
+                        variant={resolution.destructive ? 'danger-outline' : 'secondary'}
+                        disabled={disabled && resolution.nature === RESOLUTION_GESTURE}
+                        onClick={() => {
+                          if (resolution.nature === RESOLUTION_GESTURE) onGesture(resolution.gesture);
+                          else if (resolution.nature === RESOLUTION_FORM) onOpenForm(resolution);
+                          else if (resolution.nature === RESOLUTION_REVEAL) {
+                            onFocusPath(resolution.paths?.[0] ?? issue.nodePath);
+                          }
+                        }}
+                      >
+                        {resolution.label}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-                {issue.nodeLabel && (
-                  <p className="advanced-diagnostics__message"><strong>{issue.nodeLabel}</strong></p>
-                )}
-                <p className="advanced-diagnostics__message">{issue.message}</p>
-                <div className="advanced-diagnostics__actions">
-                  {issue.nodePath && (
-                    <Button size="sm" onClick={() => onFocusPath(issue.nodePath)}>
-                      Corriger
-                    </Button>
-                  )}
-                  {resolutions.map((resolution) => (
-                    <Button
-                      key={resolution.id}
-                      size="sm"
-                      variant={resolution.destructive ? 'danger-outline' : 'secondary'}
-                      disabled={disabled && resolution.nature === RESOLUTION_GESTURE}
-                      onClick={() => {
-                        if (resolution.nature === RESOLUTION_GESTURE) onGesture(resolution.gesture);
-                        else if (resolution.nature === RESOLUTION_FORM) onOpenForm(resolution);
-                        else if (resolution.nature === RESOLUTION_REVEAL) {
-                          onFocusPath(resolution.paths?.[0] ?? issue.nodePath);
-                        }
-                      }}
-                    >
-                      {resolution.label}
-                    </Button>
-                  ))}
-                </div>
-              </li>
+              </details>
             );
           })}
-          {issues.length === 0 && (
-            <li className="advanced-diagnostics__empty">Le pack peut être généré.</li>
-          )}
-      </ul>
+        </div>
+      ))}
+      {issues.length === 0 && (
+        <p className="validation-pill-empty">{t('checker:issues.empty')}</p>
+      )}
     </section>
   );
 }
 
 // Ce popover commun réunit les diagnostics derrière « à corriger » et reste
 // hors du triptyque Graphe / Inspecteur / liste des nœuds :
-// filtres, qualification et refus restent une seule surface, sans recréer de
+// diagnostics et refus restent une seule surface, sans recréer de
 // bande basse.
 export function AdvancedIssuesPanel({ context, onRequestClose }) {
+  const { t } = useCheckerTranslation();
   if (!context) return null;
   const focusAndClose = (path) => {
     context.onFocusPath?.(path);
@@ -121,7 +138,7 @@ export function AdvancedIssuesPanel({ context, onRequestClose }) {
 
       {context.working && (
         <p className="advanced-export__running" role="status">
-          Fabrication en cours : l'édition est suspendue, la vue reste navigable.
+          {t('checker:issues.working.notice')}
         </p>
       )}
 

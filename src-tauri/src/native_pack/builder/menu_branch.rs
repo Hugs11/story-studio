@@ -1,5 +1,6 @@
 use super::core::StoryBuilder;
 use super::story::EndNavContext;
+use crate::support::user_message::{codes, UserMessage};
 
 use super::super::*;
 use super::transitions::*;
@@ -152,21 +153,20 @@ impl<'a> StoryBuilder<'a> {
                         false,
                     )?);
                 }
-                CanonicalEntry::Ref(reference) => {
-                    // Une référence ne construit aucun sous-arbre : l'option pointera vers le
-                    // stage natif existant de la cible. Placeholder valide (le stage du menu)
-                    // en attendant la passe de résolution finale.
-                    self.record_ref_option(&menu_action_id, child_index, &reference.target);
-                    option_stage_ids.push(menu_stage_id.clone());
-                }
             }
         }
 
         if option_stage_ids.is_empty() {
-            return Err(format!(
-                "Le menu {} ne contient aucune histoire exploitable pour le generateur natif v1.",
-                display_label(&menu.name, "Collection")
-            ));
+            return Err(UserMessage::new(codes::GENERATION_MENU_STORIES_UNPLAYABLE)
+                .param(
+                    "display_label_menu_name_collection",
+                    if menu.name.trim().is_empty() {
+                        serde_json::json!({"code": codes::LABEL_PROJECT_COLLECTION, "params": {}})
+                    } else {
+                        serde_json::Value::String(display_label(&menu.name, "Collection"))
+                    },
+                )
+                .into_transport());
         }
 
         self.action_nodes.push(ActionNode {

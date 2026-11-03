@@ -1,9 +1,12 @@
+import { presentCheckerReport } from '../../i18n/checkerMessages.js';
+import { measuredIssueSummary, saturatedSummary, silenceSummaryParts, volumeSummary } from './packCheckerIssueClassification.js';
+import { getIntlLocale } from '../../i18n/language.js';
+import { translateChecker as t } from '../../i18n/checkerPresentation.js';
 import {
   audioMeasureRows,
   cleanLabel,
   expectedImageOk,
   formatLufs,
-  formatPeak,
   formatSeconds,
   imageMeasureRows,
   isConforming,
@@ -12,45 +15,53 @@ import {
 } from './packCheckerFormat.js';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing.js';
 import {
+  issueHasMeasure,
+  isAudioFormatIssue,
+  isSaturatedIssue,
+  hasMeasureIssue as hasMeasureIssues,
   automaticCorrectionCount,
   categoryConformanceStats,
   isAutomaticSilenceIssue,
   isAutomaticVolumeIssue,
   isOptionalSilenceIssue,
   packCorrectionCounts,
-  silenceEdgeForIssue,
 } from './packCheckerIssueClassification.js';
 
-const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
-
+// Tous les libellés sont résolus à l'export, dans la langue active au clic.
 function severityLabel(severity) {
   switch (severity) {
     case 'error':
-      return 'Erreur';
+      return t('checker:severity.error.label');
     case 'warning':
-      return 'Avertissement';
+      return t('checker:severity.warning.label');
     case 'info':
-      return 'Info';
+      return t('checker:severity.info.label');
     case 'ok':
-      return 'OK';
+      return t('checker:severity.ok.label');
     default:
-      return severity || 'Info';
+      return severity || t('checker:severity.info.label');
   }
 }
 
 function verdictLabel(verdict) {
   switch (verdict) {
     case 'valid':
-      return 'Pack conforme';
+      return t('checker:verdict.conform.title');
     case 'validWithWarnings':
-      return 'Pack validable avec avertissements';
+      return t('checker:report.verdict.warnings');
     case 'needsFix':
-      return 'Pack à corriger avant validation';
+      return t('checker:report.verdict.needsFix');
     case 'invalid':
-      return 'Pack invalide ou illisible';
+      return t('checker:report.verdict.invalid');
     default:
-      return 'Pack analysé';
+      return t('checker:report.pack.analyzed');
   }
+}
+
+// Phrase du catalogue portant des balises <strong> nommées : tout est échappé,
+// puis seules ces balises sont rétablies.
+function richHtml(text) {
+  return escapeHtml(text).replace(/&lt;(\/?)strong&gt;/g, '<$1strong>');
 }
 
 function escapeHtml(value) {
@@ -85,34 +96,8 @@ function icon(name) {
   return ICONS[name] || ICONS.info;
 }
 
-function issueText(issue) {
-  return `${issue?.message || ''} ${issue?.autoFixDescription || ''} ${issue?.technicalDetails || ''}`.toLowerCase();
-}
-
 function hasMeasureIssue(issues, key) {
-  const messages = (issues || []).map(issueText);
-  switch (key) {
-    case 'format':
-      return messages.some((message) => message.includes('format') || message.includes('mono'));
-    case 'sampleRate':
-      return messages.some((message) => (
-        message.includes('fréquence') || message.includes('frequence') || message.includes('échantillonnage')
-      ));
-    case 'silenceStart':
-      return messages.some((message) => message.includes('silence') && (message.includes('début') || message.includes('debut')));
-    case 'silenceEnd':
-      return messages.some((message) => message.includes('silence') && message.includes('fin'));
-    case 'volume':
-      return messages.some((message) => message.includes('volume') || message.includes('niveau sonore'));
-    case 'peak':
-      return messages.some((message) => message.includes('crête') || message.includes('crete') || message.includes('satur') || message.includes('clipping'));
-    case 'dimensions':
-      return messages.some((message) => message.includes('dimension') || message.includes('taille'));
-    case 'imageFormat':
-      return messages.some((message) => message.includes('format'));
-    default:
-      return false;
-  }
+  return hasMeasureIssues(issues, key);
 }
 
 function itemMap(report) {
@@ -133,98 +118,94 @@ function issuesByFilePath(report) {
 }
 
 function uniqueIssueKey(issue) {
-  return issue.filePath || `${issue.category}:${issue.label}:${issue.message}`;
+  return issue.filePath || `${issue.category}:${issue.code ?? ''}:${issue.label}`;
 }
 
+// Clés de présentation ; le classement reste porté par category/code (`match`).
 const PROBLEM_SECTIONS = [
   {
     id: 'quality',
-    title: 'Audio de mauvaise qualité (source saturée)',
-    badge: 'Source',
+    titleKey: 'checker:issue.saturated.title',
+    badgeKey: 'checker:issue.badge.source',
     bucket: 'listen',
     icon: 'warning',
-    action: "Reprends le pack depuis une source audio plus propre.",
+    actionKey: 'checker:issue.saturated.exportAction',
     match: (issue) => (
       issue.category === 'audio'
       && !issue.autoFixAvailable
-      && (issue.message || '').toLowerCase().includes('satur')
+      && isSaturatedIssue(issue)
     ),
   },
   {
     id: 'listen',
-    title: 'À écouter',
-    badge: 'Manuel',
+    titleKey: 'checker:issue.listen.title',
+    badgeKey: 'checker:issue.badge.manual',
     bucket: 'listen',
     icon: 'info',
-    action: 'Écoute ou vérifie ces fichiers avant de valider le pack.',
+    actionKey: 'checker:issue.listen.action',
     match: (issue) => !isOptionalSilenceIssue(issue) && !issue.autoFixAvailable && issue.category !== 'structure' && issue.category !== 'title',
   },
   {
     id: 'silence',
-    title: 'Silence début / fin incorrect',
-    badge: 'Auto',
+    titleKey: 'checker:issue.silence.title',
+    badgeKey: 'checker:issue.badge.auto',
     bucket: 'fix',
     icon: 'wrench',
-    action: `On ajuste le silence vers ${EDGE_SILENCE_LABEL}.`,
+    actionKey: 'checker:issue.silence.action',
     match: isAutomaticSilenceIssue,
   },
   {
     id: 'optionalSilence',
-    title: 'Suggestions facultatives',
-    badge: 'Facultatif',
+    titleKey: 'checker:issue.optionalSilence.title',
+    badgeKey: 'checker:issue.badge.optional',
     bucket: 'optional',
     icon: 'info',
-    action: `Ces silences longs peuvent être volontaires. Le pack reste conforme ; ils peuvent être ramenés à ${EDGE_SILENCE_LABEL}.`,
+    actionKey: 'checker:issue.optionalSilence.exportAction',
     match: isOptionalSilenceIssue,
   },
   {
     id: 'volume',
-    title: 'Niveau sonore incorrect',
-    badge: 'Auto',
+    titleKey: 'checker:issue.volume.title',
+    badgeKey: 'checker:issue.badge.auto',
     bucket: 'fix',
     icon: 'audio',
-    action: 'On normalise le volume au bon niveau.',
+    actionKey: 'checker:issue.volume.action',
     match: isAutomaticVolumeIssue,
   },
   {
     id: 'audioFormat',
-    title: 'Format audio à convertir',
-    badge: 'Auto',
+    titleKey: 'checker:issue.audioFormat.title',
+    badgeKey: 'checker:issue.badge.auto',
     bucket: 'fix',
     icon: 'wrench',
-    action: 'On reconvertit en MP3 mono 44,1 kHz.',
-    match: (issue) => {
-      const message = issueText(issue);
-      return issue.autoFixAvailable && issue.category === 'audio' && (
-        message.includes('format') || message.includes('fréquence') || message.includes('mono')
-      );
-    },
+    actionKey: 'checker:issue.audioFormat.action',
+    match: isAudioFormatIssue,
   },
   {
     id: 'image',
-    title: 'Image à corriger',
-    badge: 'Auto',
+    titleKey: 'checker:issue.imageCorrection.title',
+    badgeKey: 'checker:issue.badge.auto',
     bucket: 'fix',
     icon: 'image',
-    action: 'On convertit ou redimensionne en 320×240.',
+    actionKey: 'checker:issue.image.action',
     match: (issue) => issue.autoFixAvailable && issue.category === 'image',
   },
   {
     id: 'title',
-    title: 'Nom du pack à corriger',
-    badge: 'Assisté',
+    titleKey: 'checker:issue.packName.title',
+    badgeKey: 'checker:issue.badge.assisted',
     bucket: 'fix',
     icon: 'file',
-    action: 'Les métadonnées du pack demandent une correction.',
+    actionKey: 'checker:issue.packName.exportAction',
     match: (issue) => issue.category === 'title',
   },
   {
     id: 'structure',
-    title: 'Structure à vérifier',
-    badge: 'Manuel',
+    titleKey: 'checker:issue.structure.title',
+    badgeKey: 'checker:issue.badge.manual',
     bucket: 'listen',
     icon: 'network',
-    action: 'Vérifie la navigation ou les fichiers référencés.',
+    actionKey: 'checker:issue.structure.action',
     match: (issue) => issue.category === 'structure',
   },
 ];
@@ -272,67 +253,19 @@ function buildProblemGroups(report) {
   }).filter((group) => group.count > 0);
 }
 
-function silenceSummaryParts(issues, item) {
-  const hasStart = issues.some((issue) => {
-    if (silenceEdgeForIssue(issue) === 'leading') return true;
-    const message = (issue.message || '').toLowerCase();
-    return message.includes('début') || message.includes('debut');
-  });
-  const hasEnd = issues.some((issue) => (
-    silenceEdgeForIssue(issue) === 'trailing'
-    || (issue.message || '').toLowerCase().includes('fin')
-  ));
-  const parts = [];
-  if (hasStart) parts.push(`Silence début = ${formatSeconds(item?.leadingSilenceSecs)}`);
-  if (hasEnd) parts.push(`Silence fin = ${formatSeconds(item?.trailingSilenceSecs)}`);
-  return parts;
-}
-
-function measuredIssueSummary(issue, item, kind) {
-  const message = issue.message || '';
-  const lower = message.toLowerCase();
-  if (kind === 'audio') {
-    if (lower.includes('silence')) {
-      const sides = silenceSummaryParts([issue], item);
-      return sides.length ? sides.join(' | ') : message;
-    }
-    if (lower.includes('volume')) {
-      const lufs = item?.integratedLufs;
-      const direction = typeof lufs === 'number' && lufs > -10 ? 'trop haut' : 'trop bas';
-      return `Niveau sonore ${direction} (${formatLufs(lufs)})`;
-    }
-    if (lower.includes('fréquence')) {
-      return `Échantillonnage incorrect (${item?.sampleRate ? `${item.sampleRate} Hz` : 'non mesuré'})`;
-    }
-    if (lower.includes('mono')) return `Audio non mono (${item?.channels || 'canaux non mesurés'})`;
-    if (lower.includes('format')) return `Mauvais format audio (${item?.codec || 'format non mesuré'})`;
-  }
-  if (kind === 'image') {
-    const dimensions = item?.width && item?.height ? `${item.width}×${item.height}` : 'dimensions non mesurées';
-    const format = item?.format || 'format non mesuré';
-    if (lower.includes('format')) return `Mauvais format image (${format})`;
-    if (lower.includes('dimension') || lower.includes('taille')) return `Dimensions incorrectes (${dimensions})`;
-    return `Image incorrecte (${dimensions} · ${format})`;
-  }
-  return message;
-}
-
 function recordProblemSummary(record) {
   const scopedIssues = record.sectionIssues?.length ? record.sectionIssues : [record.issue];
   if (record.kind === 'audio') {
-    if (scopedIssues.some((issue) => (issue.message || '').toLowerCase().includes('satur'))) {
-      const peak = record.item?.truePeakDb;
-      return typeof peak === 'number' ? `Saturé · crête ${formatPeak(peak)}` : 'Saturé (source)';
+    if (scopedIssues.some((issue) => isSaturatedIssue(issue))) {
+      return saturatedSummary(record.item?.truePeakDb);
     }
-    const silenceIssues = scopedIssues.filter((issue) => (issue.message || '').toLowerCase().includes('silence'));
+    const silenceIssues = scopedIssues.filter((issue) => (issueHasMeasure(issue, 'silenceStart') || issueHasMeasure(issue, 'silenceEnd')));
     if (silenceIssues.length > 0) {
       const parts = silenceSummaryParts(silenceIssues, record.item);
       if (parts.length > 0) return parts.join(' | ');
     }
-    if (scopedIssues.some((issue) => (issue.message || '').toLowerCase().includes('volume'))) {
-      const lufs = record.item?.integratedLufs;
-      const direction = typeof lufs === 'number' && lufs > -10 ? 'trop haut' : 'trop bas';
-      return `Niveau sonore ${direction} (${formatLufs(lufs)})`;
+    if (scopedIssues.some((issue) => (issueHasMeasure(issue, 'volume') && issue.code !== 'CHECKER_AUDIO_NEAR_MUTE'))) {
+      return volumeSummary(record.item?.integratedLufs);
     }
   }
   if (record.kind === 'image') {
@@ -362,88 +295,35 @@ function summarizeGroups(groups, report) {
     group.bucket === 'listen' && group.records.some((record) => record.issue.severity === 'error')
   ));
 
-  if (!groups.length) {
-    return {
-      tone: 'ok',
-      icon: 'check',
-      title: 'Pack conforme',
-      subtitle: 'Aucun problème automatique ou manuel détecté.',
-      listenCount,
-      fixCount,
-      optionalCount,
-    };
-  }
-  if (hasBlocking) {
-    return {
-      tone: 'listen',
-      icon: 'warning',
-      title: 'Pack à vérifier avant export',
-      subtitle: 'Certains points demandent une vérification manuelle.',
-      listenCount,
-      fixCount,
-      optionalCount,
-    };
-  }
+  const verdict = (tone, icon, titleKey, subtitleKey, count) => ({
+    tone, icon, title: t(titleKey, { count }), subtitle: t(subtitleKey), listenCount, fixCount, optionalCount,
+  });
+  if (!groups.length) return verdict('ok', 'check', 'checker:verdict.conform.title', 'checker:verdict.conform.subtitle');
+  if (hasBlocking) return verdict('listen', 'warning', 'checker:verdict.blocking.title', 'checker:verdict.blocking.subtitle');
   if (saturatedCount > 0) {
-    return {
-      tone: 'quality',
-      icon: 'warning',
-      title: fixCount > 0 ? 'Pack corrigeable, mais audio déjà saturé' : 'Audio déjà saturé',
-      subtitle: fixCount > 0
-        ? "Le reste sera corrigé ; l'audio saturé doit être repris depuis une source propre."
-        : 'Nous conseillons de refaire le pack depuis une source audio propre.',
-      listenCount,
-      fixCount,
-      optionalCount,
-    };
+    return fixCount > 0
+      ? verdict('quality', 'warning', 'checker:verdict.saturatedFixable.title', 'checker:verdict.saturatedFixable.subtitle')
+      : verdict('quality', 'warning', 'checker:verdict.saturated.title', 'checker:verdict.saturated.subtitle');
   }
-  if (listenCount > 0) {
-    return {
-      tone: 'listen',
-      icon: 'info',
-      title: listenCount === 1
-        ? 'Pack corrigeable, avec un fichier à écouter'
-        : `Pack corrigeable, avec ${listenCount} fichiers à écouter`,
-      subtitle: 'Le reste peut être corrigé automatiquement.',
-      listenCount,
-      fixCount,
-      optionalCount,
-    };
-  }
+  if (listenCount > 0) return verdict('listen', 'info', 'checker:verdict.listen.title', 'checker:verdict.listen.subtitle', listenCount);
   if (fixCount === 0 && listenCount === 0 && optionalCount > 0) {
-    return {
-      tone: 'ok',
-      icon: 'check',
-      title: `Pack conforme, avec ${optionalCount} ajustement${optionalCount > 1 ? 's' : ''} facultatif${optionalCount > 1 ? 's' : ''}`,
-      subtitle: 'Les pauses longues peuvent être conservées telles quelles.',
-      listenCount,
-      fixCount,
-      optionalCount,
-    };
+    return verdict('ok', 'check', 'checker:verdict.optional.title', 'checker:verdict.optional.subtitle', optionalCount);
   }
-  return {
-    tone: 'fix',
-    icon: 'wrench',
-    title: 'Pack corrigeable en un clic',
-    subtitle: 'Aucun point manuel détecté.',
-    listenCount,
-    fixCount,
-    optionalCount,
-  };
+  return verdict('fix', 'wrench', 'checker:verdict.fixable.title', 'checker:verdict.fixable.subtitle');
 }
 
 function fileSummary(kind, item) {
   if (kind === 'audio') {
-    return `Silence ${formatSeconds(item?.leadingSilenceSecs)} / ${formatSeconds(item?.trailingSilenceSecs)} · ${formatLufs(item?.integratedLufs)}`;
+    return t('checker:conform.audio.summary', { leading: formatSeconds(item?.leadingSilenceSecs), trailing: formatSeconds(item?.trailingSilenceSecs), loudness: formatLufs(item?.integratedLufs) });
   }
-  const dimensions = item?.width && item?.height ? `${item.width}×${item.height}` : 'dimensions ?';
-  return `${dimensions} · ${item?.format || 'format ?'}`;
+  const dimensions = item?.width && item?.height ? `${item.width}×${item.height}` : t('checker:conform.dimensions.unknown');
+  return `${dimensions} · ${item?.format || t('checker:conform.format.unknown')}`;
 }
 
 function roleLabel(kind) {
-  if (kind === 'audio') return 'Audio';
-  if (kind === 'image') return 'Image';
-  return 'Fichier';
+  if (kind === 'audio') return t('checker:file.role.audio');
+  if (kind === 'image') return t('checker:file.role.image');
+  return t('checker:file.label.fallback');
 }
 
 function measureRowsHtml(rows, badKeys = new Set(), infoKeys = new Set()) {
@@ -460,8 +340,8 @@ function recordDetailHtml(record) {
   const item = record.item;
   let rows = [];
   if (record.kind === 'audio') rows = audioMeasureRows(item);
-  else if (record.kind === 'image') rows = [...imageMeasureRows(item), { key: 'expected', label: 'Attendu', value: '320×240' }];
-  else rows = [{ key: 'category', label: 'Catégorie', value: record.issue.category || 'Info' }];
+  else if (record.kind === 'image') rows = [...imageMeasureRows(item), { key: 'expected', label: t('checker:detail.expected.label'), value: '320×240' }];
+  else rows = [{ key: 'category', label: t('checker:detail.category.label'), value: record.issue.category || t('checker:severity.info.label') }];
   const scopedIssues = record.sectionIssues?.length ? record.sectionIssues : record.issues;
   const flaggedKeys = new Set(rows.filter((row) => hasMeasureIssue(scopedIssues, row.key)).map((row) => row.key));
   const optional = record.issue.fixDisposition === 'optional';
@@ -469,11 +349,11 @@ function recordDetailHtml(record) {
   const infoKeys = optional ? flaggedKeys : new Set();
   return html`<div class="tech-detail">
     <div>
-      <div class="tech-title">Mesures</div>
+      <div class="tech-title">${escapeHtml(t('checker:detail.measures.title'))}</div>
       ${measureRowsHtml(rows, badKeys, infoKeys)}
     </div>
     <div>
-      <div class="tech-title">Ce qui est proposé</div>
+      <div class="tech-title">${escapeHtml(t('checker:detail.proposed.title'))}</div>
       ${(record.sectionIssues?.length ? record.sectionIssues : record.issues).map((issue) => html`<div class="tech-action">
         ${icon(issue.autoFixAvailable ? 'wrench' : 'info')}
         <div>
@@ -491,12 +371,12 @@ function problemGroupHtml(group, open = false) {
       <span class="group-icon">${icon(group.icon)}</span>
       <span class="group-copy">
         <span class="group-title-row">
-          <strong>${escapeHtml(group.title)}</strong>
-          <span class="group-badge">${escapeHtml(group.badge)}</span>
+          <strong>${escapeHtml(t(group.titleKey))}</strong>
+          <span class="group-badge">${escapeHtml(t(group.badgeKey))}</span>
         </span>
-        <span>${escapeHtml(group.action)}</span>
+        <span>${escapeHtml(t(group.actionKey, { duration: formatPackAudioEdgeSilence() }))}</span>
       </span>
-      <span class="group-count"><strong>${group.count}</strong><small>${group.bucket === 'optional' ? (group.count > 1 ? 'suggestions' : 'suggestion') : (group.count > 1 ? 'fichiers' : 'fichier')}</small></span>
+      <span class="group-count"><strong>${group.count}</strong><small>${escapeHtml(group.bucket === 'optional' ? t('checker:group.count.suggestions', { count: group.count }) : t('checker:group.count.files', { count: group.count }))}</small></span>
     </summary>
     <div class="group-body">
       <div class="mini-list">
@@ -524,43 +404,43 @@ function buildConformingGroups(report) {
   if (audioFiles.length) {
     groups.push({
       id: 'audio',
-      title: 'Audio conforme',
-      subtitle: 'Silence, volume, format et crête dans les clous.',
+      title: t('checker:conform.audio.title'),
+      subtitle: t('checker:conform.audio.subtitle'),
       icon: 'audio',
       mode: 'files',
       kind: 'audio',
       files: audioFiles,
       metricStrong: String(audioFiles.length),
-      metricSmall: audioFiles.length > 1 ? 'fichiers' : 'fichier',
+      metricSmall: t('checker:group.count.files', { count: audioFiles.length }),
     });
   }
   const imageFiles = (report.imageItems || []).filter((item) => isConforming(item.status));
   if (imageFiles.length) {
     groups.push({
       id: 'image',
-      title: 'Images conformes',
-      subtitle: 'Dimensions et format conformes.',
+      title: t('checker:conform.images.title'),
+      subtitle: t('checker:conform.images.subtitle'),
       icon: 'image',
       mode: 'files',
       kind: 'image',
       files: imageFiles,
       metricStrong: String(imageFiles.length),
-      metricSmall: imageFiles.length > 1 ? 'fichiers' : 'fichier',
+      metricSmall: t('checker:group.count.files', { count: imageFiles.length }),
     });
   }
   if (titleConforming(report)) {
     groups.push({
       id: 'title',
-      title: 'Nom du pack',
-      subtitle: 'Nom et convention valides.',
+      title: t('checker:summary.packName.title'),
+      subtitle: t('checker:conform.packName.subtitle'),
       icon: 'file',
       mode: 'facts',
-      metricStrong: 'Valide',
-      metricSmall: 'Convention OK',
+      metricStrong: t('checker:summary.packName.valid'),
+      metricSmall: t('checker:summary.packName.conventionOk'),
       facts: [
-        { key: 'name', label: 'Nom', value: report.packName || '—' },
-        { key: 'title', label: 'Titre', value: report.packTitle || '—' },
-        { key: 'version', label: 'Version', value: String(report.packVersion ?? '—') },
+        { key: 'name', label: t('checker:conform.fact.name'), value: report.packName || '—' },
+        { key: 'title', label: t('checker:conform.fact.title'), value: report.packTitle || '—' },
+        { key: 'version', label: t('home:packName.version.label'), value: String(report.packVersion ?? '—') },
       ],
     });
   }
@@ -568,35 +448,35 @@ function buildConformingGroups(report) {
     const structure = report.structureSummary || {};
     groups.push({
       id: 'structure',
-      title: 'Structure',
-      subtitle: 'Navigation et références cohérentes.',
+      title: t('checker:summary.structure.title'),
+      subtitle: t('checker:conform.structure.subtitle'),
       icon: 'network',
       mode: 'facts',
-      metricStrong: 'Correcte',
-      metricSmall: `${structure.stageCount ?? 0} étapes`,
+      metricStrong: t('checker:summary.structure.correct'),
+      metricSmall: t('checker:summary.structure.steps', { count: structure.stageCount ?? 0 }),
       facts: [
-        { key: 'lunii', label: 'Compatible Lunii', value: structure.luniiCompatible ? 'Oui' : 'Non' },
-        { key: 'editable', label: 'Éditable Story Studio', value: structure.storyStudioEditable ? 'Oui' : 'Non' },
-        { key: 'stories', label: 'Histoires', value: String(structure.storyCount ?? 0) },
-        { key: 'stages', label: 'Étapes', value: String(structure.stageCount ?? 0) },
-        { key: 'actions', label: 'Listes de choix', value: String(structure.actionCount ?? 0) },
-        { key: 'refAudio', label: 'Audios référencés', value: String(structure.referencedAudioCount ?? 0) },
-        { key: 'refImage', label: 'Images référencées', value: String(structure.referencedImageCount ?? 0) },
+        { key: 'lunii', label: t('checker:conform.fact.lunii'), value: structure.luniiCompatible ? t('checker:fact.value.yes') : t('checker:fact.value.no') },
+        { key: 'editable', label: t('checker:conform.fact.editable'), value: structure.storyStudioEditable ? t('checker:fact.value.yes') : t('checker:fact.value.no') },
+        { key: 'stories', label: t('checker:conform.fact.stories'), value: String(structure.storyCount ?? 0) },
+        { key: 'stages', label: t('checker:conform.fact.stages'), value: String(structure.stageCount ?? 0) },
+        { key: 'actions', label: t('checker:conform.fact.actions'), value: String(structure.actionCount ?? 0) },
+        { key: 'refAudio', label: t('checker:conform.fact.refAudio'), value: String(structure.referencedAudioCount ?? 0) },
+        { key: 'refImage', label: t('checker:conform.fact.refImage'), value: String(structure.referencedImageCount ?? 0) },
       ],
     });
   }
   const nightDetected = Boolean(report.nightMode?.detected);
   groups.push({
     id: 'night',
-    title: 'Mode nuit',
-    subtitle: nightDetected ? 'Piste nuit détectée dans le pack.' : 'Aucune piste nuit (non requis).',
+    title: t('checker:summary.nightMode.title'),
+    subtitle: nightDetected ? t('checker:conform.nightMode.detected') : t('checker:conform.nightMode.absent'),
     icon: 'moon',
     mode: 'facts',
-    metricStrong: nightDetected ? 'Disponible' : 'Absent',
-    metricSmall: 'Non bloquant',
+    metricStrong: nightDetected ? t('checker:summary.nightMode.available') : t('checker:summary.nightMode.absent'),
+    metricSmall: t('checker:summary.nightMode.notBlocking'),
     facts: [
-      { key: 'detected', label: 'Mode nuit', value: nightDetected ? 'Disponible' : 'Absent' },
-      { key: 'blocking', label: 'Bloquant', value: 'Non' },
+      { key: 'detected', label: t('checker:summary.nightMode.title'), value: nightDetected ? t('checker:summary.nightMode.available') : t('checker:summary.nightMode.absent') },
+      { key: 'blocking', label: t('checker:conform.fact.blocking'), value: t('checker:fact.value.no') },
     ],
   });
   return groups;
@@ -609,7 +489,7 @@ function conformingGroupHtml(group, open = false) {
       <span class="group-copy">
         <span class="group-title-row">
           <strong>${escapeHtml(group.title)}</strong>
-          <span class="group-badge">Conforme</span>
+          <span class="group-badge">${escapeHtml(t('checker:conform.badge'))}</span>
         </span>
         <span>${escapeHtml(group.subtitle)}</span>
       </span>
@@ -620,17 +500,17 @@ function conformingGroupHtml(group, open = false) {
         ${group.files.map((item) => {
           const rows = group.kind === 'audio'
             ? audioMeasureRows(item)
-            : [...imageMeasureRows(item), { key: 'expected', label: 'Attendu', value: expectedImageOk(item) ? '320×240' : '320×240' }];
+            : [...imageMeasureRows(item), { key: 'expected', label: t('checker:detail.expected.label'), value: expectedImageOk(item) ? '320×240' : '320×240' }];
           return html`<details class="mini-file">
             <summary class="mini-file-row">
               <span class="role">${escapeHtml(roleLabel(group.kind))}</span>
               <span class="mini-name" title="${escapeHtml(item.filePath || item.label)}">${escapeHtml(cleanLabel(item.label))}</span>
               <span class="mini-problem">${escapeHtml(fileSummary(group.kind, item))}</span>
-              <span class="mini-severity mini-severity--ok">OK</span>
+              <span class="mini-severity mini-severity--ok">${escapeHtml(t('checker:severity.ok.label'))}</span>
             </summary>
             <div class="tech-detail tech-detail--facts">
               <div>
-                <div class="tech-title">Mesures</div>
+                <div class="tech-title">${escapeHtml(t('checker:detail.measures.title'))}</div>
                 ${measureRowsHtml(rows)}
               </div>
             </div>
@@ -638,7 +518,7 @@ function conformingGroupHtml(group, open = false) {
         }).join('')}
       </div>` : html`<div class="tech-detail tech-detail--facts">
         <div>
-          <div class="tech-title">Détails</div>
+          <div class="tech-title">${escapeHtml(t('checker:detail.facts.title'))}</div>
           ${measureRowsHtml(group.facts)}
         </div>
       </div>`}
@@ -650,13 +530,14 @@ function summaryTileHtml({ title, iconName, tone, strong, small, split }) {
   return html`<div class="summary-tile summary-tile--${tone}">
     <div class="summary-head">${icon(iconName)}<span>${escapeHtml(title)}</span></div>
     ${split ? html`<div class="split-stat">
-      <span class="split-ok"><strong>${split.ok}</strong> OK</span>
-      <span class="split-fix ${split.needsFix === 0 ? 'is-clean' : ''}"><strong>${split.needsFix}</strong> à corriger</span>
+      <span class="split-ok">${richHtml(t('checker:summary.split.ok', { value: split.ok }))}</span>
+      <span class="split-fix ${split.needsFix === 0 ? 'is-clean' : ''}">${richHtml(t('checker:summary.split.fix', { value: split.needsFix }))}</span>
     </div>` : html`<div class="single-stat"><strong>${escapeHtml(strong)}</strong><span>${escapeHtml(small)}</span></div>`}
   </div>`;
 }
 
 function reportStyles() {
+  // eslint-disable-next-line i18next/no-literal-string -- Formats et I/O : feuille CSS de l'export, sans prose.
   return `
     :root {
       color-scheme: light;
@@ -1139,22 +1020,25 @@ function reportStyles() {
   `;
 }
 
+// Nom de fichier proposé au dialogue d'export ; le repli suit la langue active.
 export function reportBaseName(report) {
-  return String(report?.packName || 'rapport-pack')
+  return String(report?.packName || t('checker:export.file.fallbackName'))
     .replace(/\.(zip|7z)$/i, '')
     .replace(/[<>:"/\\|?*\[\]+]/g, '_')
-    .trim() || 'rapport-pack';
+    .trim() || t('checker:export.file.fallbackName');
 }
 
 export function formatTechnicalLog(report) {
+  report = presentCheckerReport(report);
   return (report?.technicalLog || []).join('\n');
 }
 
 export function formatDiagnosticJson(report) {
-  return JSON.stringify(report, null, 2);
+  return JSON.stringify(presentCheckerReport(report), null, 2);
 }
 
 export function formatHtmlReport(report) {
+  report = presentCheckerReport(report);
   if (!report) return '';
   const groups = buildProblemGroups(report);
   const summary = summarizeGroups(groups, report);
@@ -1167,11 +1051,13 @@ export function formatHtmlReport(report) {
   const titleOk = title.total > 0 && title.needsFix === 0;
   const structureOk = report.structureSummary?.luniiCompatible && report.structureSummary?.storyStudioEditable;
   const nightMode = Boolean(report.nightMode?.detected);
-  const generatedAt = new Date().toLocaleString('fr-FR');
-  const titleText = `Rapport - ${report.packName || 'Pack'}`;
+  const generatedAt = new Date().toLocaleString(getIntlLocale());
+  const titleText = t('checker:export.html.title', { name: report.packName || t('checker:export.pack.fallback') });
+  const analyzedName = report.packName || t('checker:report.pack.analyzed');
+  const documentLanguage = getIntlLocale().slice(0, 2);
 
   return html`<!doctype html>
-<html lang="fr">
+<html lang="${escapeHtml(documentLanguage)}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1184,69 +1070,69 @@ export function formatHtmlReport(report) {
       <div class="modal-title">
         <span class="drop-icon">${icon('package')}</span>
         <div>
-          <strong>Vérifier un pack</strong>
-          <span title="${escapeHtml(report.packName || '')}">${escapeHtml(report.packName || 'Pack analysé')} · ${escapeHtml(generatedAt)}</span>
+          <strong>${escapeHtml(t('home:modeSelector.checker.entryLabel'))}</strong>
+          <span title="${escapeHtml(report.packName || '')}">${escapeHtml(analyzedName)} · ${escapeHtml(generatedAt)}</span>
         </div>
       </div>
-      <button class="print-button" type="button" onclick="window.print()">Imprimer / PDF</button>
+      <button class="print-button" type="button" onclick="window.print()">${escapeHtml(t('checker:export.html.print'))}</button>
     </header>
-    <section class="report" aria-label="Rapport de vérification du pack">
+    <section class="report" aria-label="${escapeHtml(t('checker:export.html.aria'))}">
       <div class="report-verdict report-verdict--${summary.tone}">
         <span class="report-orb">${icon(summary.icon)}</span>
         <div class="report-copy">
-          <span class="pack-name">${escapeHtml(report.packName || 'Pack analysé')}</span>
+          <span class="pack-name">${escapeHtml(analyzedName)}</span>
           <strong>${escapeHtml(summary.title)}</strong>
           <span>${escapeHtml(summary.subtitle)}</span>
         </div>
         <div class="report-callout">
           ${icon('info')}
-          <span><strong>${summary.listenCount}</strong> à écouter · <strong>${correctionCounts.automatic}</strong> automatiques · <strong>${correctionCounts.optional}</strong> facultatives</span>
+          <span>${richHtml(t('checker:report.callout.listen', { count: summary.listenCount }))} · ${richHtml(t('checker:report.callout.automatic', { count: correctionCounts.automatic }))} · ${richHtml(t('checker:report.callout.optional', { count: correctionCounts.optional }))}</span>
         </div>
       </div>
-      <div class="summary-tiles" aria-label="Résumé du pack">
+      <div class="summary-tiles" aria-label="${escapeHtml(t('checker:summary.tiles.aria'))}">
         ${summaryTileHtml({
-          title: 'Audio',
+          title: t('checker:summary.audio.title'),
           iconName: 'audio',
           tone: saturatedCount > 0 ? 'danger' : (audio.needsFix > 0 ? 'fix' : 'ok'),
           split: audio,
         })}
         ${summaryTileHtml({
-          title: 'Images',
+          title: t('checker:summary.images.title'),
           iconName: 'image',
           tone: images.needsFix ? 'fix' : 'ok',
           split: images,
         })}
         ${summaryTileHtml({
-          title: 'Nom du pack',
+          title: t('checker:summary.packName.title'),
           iconName: 'file',
           tone: titleOk ? 'ok' : 'fix',
-          strong: titleOk ? 'Valide' : 'À corriger',
-          small: titleOk ? 'Convention OK' : 'Métadonnées',
+          strong: titleOk ? t('checker:summary.packName.valid') : t('checker:summary.packName.toFix'),
+          small: titleOk ? t('checker:summary.packName.conventionOk') : t('checker:summary.packName.metadata'),
         })}
         ${summaryTileHtml({
-          title: 'Structure',
+          title: t('checker:summary.structure.title'),
           iconName: 'network',
           tone: structureOk ? 'ok' : 'listen',
-          strong: structureOk ? 'Correcte' : 'Vérification manuelle',
-          small: `${report.structureSummary?.stageCount ?? 0} étapes`,
+          strong: structureOk ? t('checker:summary.structure.correct') : t('checker:summary.structure.manual'),
+          small: t('checker:summary.structure.steps', { count: report.structureSummary?.stageCount ?? 0 }),
         })}
         ${summaryTileHtml({
-          title: 'Mode nuit',
+          title: t('checker:summary.nightMode.title'),
           iconName: 'moon',
           tone: nightMode ? 'ok' : 'neutral',
-          strong: nightMode ? 'Disponible' : 'Absent',
-          small: nightMode ? 'Détecté dans le pack' : 'Non bloquant',
+          strong: nightMode ? t('checker:summary.nightMode.available') : t('checker:summary.nightMode.absent'),
+          small: nightMode ? t('checker:summary.nightMode.detected') : t('checker:summary.nightMode.notBlocking'),
         })}
       </div>
-      ${groups.length === 0 ? html`<div class="empty">${icon('check')}Tout est conforme dans ce rapport.</div>` : html`<div class="groups">
+      ${groups.length === 0 ? html`<div class="empty">${icon('check')}${escapeHtml(t('checker:report.empty'))}</div>` : html`<div class="groups">
         ${groups.map((group, index) => problemGroupHtml(group, index === 0)).join('')}
       </div>`}
-      ${conformingGroups.length ? html`<div class="section-head">${icon('check')}Ce qui est conforme</div>
+      ${conformingGroups.length ? html`<div class="section-head">${icon('check')}${escapeHtml(t('checker:conform.section.title'))}</div>
       <div class="groups">
         ${conformingGroups.map((group, index) => conformingGroupHtml(group, groups.length === 0 && index === 0)).join('')}
       </div>` : ''}
       <details class="technical-log">
-        <summary>Journal technique</summary>
+        <summary>${escapeHtml(t('checker:log.technical.title'))}</summary>
         <pre>${escapeHtml(formatTechnicalLog(report))}</pre>
       </details>
     </section>
@@ -1256,92 +1142,96 @@ export function formatHtmlReport(report) {
 }
 
 export function formatReadableReport(report) {
+  report = presentCheckerReport(report);
   if (!report) return '';
   const lines = [];
-  lines.push(`# Vérification du pack`);
+  const yesNo = (value) => (value ? t('checker:markdown.value.yes') : t('checker:markdown.value.no'));
+  lines.push(`# ${t('checker:markdown.title')}`);
   lines.push('');
-  lines.push(`Pack analysé : ${report.packName}`);
-  lines.push(`Verdict : ${verdictLabel(report.verdict)}`);
+  lines.push(t('checker:markdown.pack.analyzed', { name: String(report.packName) }));
+  lines.push(t('checker:markdown.verdict.line', { verdict: verdictLabel(report.verdict) }));
   lines.push('');
-  lines.push(`- Erreurs : ${report.summary?.errors ?? 0}`);
-  lines.push(`- Avertissements : ${report.summary?.warnings ?? 0}`);
-  lines.push(`- Informations : ${report.summary?.infos ?? 0}`);
-  lines.push(`- Éléments conformes : ${report.summary?.ok ?? 0}`);
+  lines.push(`- ${t('checker:markdown.count.errors', { value: report.summary?.errors ?? 0 })}`);
+  lines.push(`- ${t('checker:markdown.count.warnings', { value: report.summary?.warnings ?? 0 })}`);
+  lines.push(`- ${t('checker:markdown.count.infos', { value: report.summary?.infos ?? 0 })}`);
+  lines.push(`- ${t('checker:markdown.count.ok', { value: report.summary?.ok ?? 0 })}`);
   const correctionCounts = packCorrectionCounts(report);
-  lines.push(`- Corrections automatiques disponibles : ${correctionCounts.automatic}`);
-  lines.push(`- Suggestions facultatives : ${correctionCounts.optional}`);
+  lines.push(`- ${t('checker:markdown.count.automatic', { value: correctionCounts.automatic })}`);
+  lines.push(`- ${t('checker:markdown.count.optional', { value: correctionCounts.optional })}`);
   lines.push('');
-  lines.push(`## Résumé`);
+  lines.push(`## ${t('checker:markdown.summary.title')}`);
   lines.push('');
   const audio = categoryConformanceStats(report.audioSummary);
   const images = categoryConformanceStats(report.imageSummary);
-  lines.push(`- Audio : ${audio.ok}/${audio.total} conformes`);
-  lines.push(`- Images : ${images.ok}/${images.total} conformes`);
-  lines.push(`- Structure Lunii : ${report.structureSummary?.luniiCompatible ? 'valide' : 'à corriger'}`);
-  lines.push(`- Édition Story Studio : ${report.structureSummary?.storyStudioEditable ? 'supportée' : 'non supportée ou à vérifier'}`);
-  lines.push(`- Mode nuit : ${report.nightMode?.detected ? 'détecté' : 'absent'}`);
+  lines.push(`- ${t('checker:markdown.summary.audio', { ok: audio.ok, total: audio.total })}`);
+  lines.push(`- ${t('checker:markdown.summary.images', { ok: images.ok, total: images.total })}`);
+  lines.push(`- ${report.structureSummary?.luniiCompatible ? t('checker:markdown.structure.valid') : t('checker:markdown.structure.toFix')}`);
+  lines.push(`- ${report.structureSummary?.storyStudioEditable ? t('checker:markdown.editing.supported') : t('checker:markdown.editing.unsupported')}`);
+  lines.push(`- ${report.nightMode?.detected ? t('checker:markdown.nightMode.detected') : t('checker:markdown.nightMode.absent')}`);
   lines.push('');
-  lines.push(`## Problèmes et points à vérifier`);
+  lines.push(`## ${t('checker:markdown.issues.title')}`);
   lines.push('');
   const issues = report.issues || [];
   if (issues.length === 0) {
-    lines.push('Aucun problème détecté.');
+    lines.push(t('checker:markdown.issues.none'));
   } else {
     for (const issue of issues) {
-      lines.push(`- ${severityLabel(issue.severity)} · ${issue.label} : ${issue.message}`);
-      if (issue.filePath) lines.push(`  Fichier : ${issue.filePath}`);
-      if (issue.technicalDetails) lines.push(`  Détail : ${issue.technicalDetails}`);
+      lines.push(`- ${t('checker:markdown.issue.line', { severity: severityLabel(issue.severity), label: String(issue.label), message: String(issue.message) })}`);
+      if (issue.filePath) lines.push(`  ${t('checker:markdown.issue.file', { path: issue.filePath })}`);
+      if (issue.technicalDetails) lines.push(`  ${t('checker:markdown.issue.detail', { detail: issue.technicalDetails })}`);
       if (issue.autoFixDescription) {
-        const prefix = isOptionalSilenceIssue(issue) ? 'Suggestion facultative' : 'Correction';
-        lines.push(`  ${prefix} : ${issue.autoFixDescription}`);
+        lines.push(`  ${isOptionalSilenceIssue(issue)
+          ? t('checker:markdown.issue.suggestion', { description: issue.autoFixDescription })
+          : t('checker:markdown.issue.correction', { description: issue.autoFixDescription })}`);
       }
     }
   }
   lines.push('');
-  lines.push(`## Ce qui est conforme`);
+  lines.push(`## ${t('checker:conform.section.title')}`);
   lines.push('');
+  const measure = (row) => t('checker:markdown.measure.pair', { label: row.label, value: row.value });
   const conformingAudio = (report.audioItems || []).filter((item) => isConforming(item.status));
   if (conformingAudio.length) {
-    lines.push(`### Audio conforme (${conformingAudio.length})`);
+    lines.push(`### ${t('checker:markdown.conform.audio', { total: conformingAudio.length })}`);
     for (const item of conformingAudio) {
-      const measures = audioMeasureRows(item).map((row) => `${row.label} : ${row.value}`).join(' · ');
+      const measures = audioMeasureRows(item).map(measure).join(' · ');
       lines.push(`- ${cleanLabel(item.label)} — ${measures}`);
     }
     lines.push('');
   }
   const conformingImages = (report.imageItems || []).filter((item) => isConforming(item.status));
   if (conformingImages.length) {
-    lines.push(`### Images conformes (${conformingImages.length})`);
+    lines.push(`### ${t('checker:markdown.conform.images', { total: conformingImages.length })}`);
     for (const item of conformingImages) {
-      const measures = imageMeasureRows(item).map((row) => `${row.label} : ${row.value}`).join(' · ');
+      const measures = imageMeasureRows(item).map(measure).join(' · ');
       lines.push(`- ${cleanLabel(item.label)} — ${measures}`);
     }
     lines.push('');
   }
   if (titleConforming(report)) {
-    lines.push(`### Nom du pack`);
-    lines.push(`- Nom : ${report.packName || '—'}`);
-    lines.push(`- Titre : ${report.packTitle || '—'}`);
-    lines.push(`- Version : ${report.packVersion ?? '—'}`);
+    lines.push(`### ${t('checker:summary.packName.title')}`);
+    lines.push(`- ${t('checker:markdown.fact.name', { value: report.packName || '—' })}`);
+    lines.push(`- ${t('checker:markdown.fact.title', { value: report.packTitle || '—' })}`);
+    lines.push(`- ${t('checker:markdown.fact.version', { value: report.packVersion ?? '—' })}`);
     lines.push('');
   }
   if (structureConforming(report)) {
     const structure = report.structureSummary || {};
-    lines.push(`### Structure`);
-    lines.push(`- Compatible Lunii : ${structure.luniiCompatible ? 'oui' : 'non'}`);
-    lines.push(`- Éditable Story Studio : ${structure.storyStudioEditable ? 'oui' : 'non'}`);
-    lines.push(`- Histoires : ${structure.storyCount ?? 0}`);
-    lines.push(`- Étapes : ${structure.stageCount ?? 0}`);
-    lines.push(`- Listes de choix : ${structure.actionCount ?? 0}`);
-    lines.push(`- Audios référencés : ${structure.referencedAudioCount ?? 0}`);
-    lines.push(`- Images référencées : ${structure.referencedImageCount ?? 0}`);
+    lines.push(`### ${t('checker:summary.structure.title')}`);
+    lines.push(`- ${t('checker:markdown.fact.lunii', { value: yesNo(structure.luniiCompatible) })}`);
+    lines.push(`- ${t('checker:markdown.fact.editable', { value: yesNo(structure.storyStudioEditable) })}`);
+    lines.push(`- ${t('checker:markdown.fact.stories', { value: structure.storyCount ?? 0 })}`);
+    lines.push(`- ${t('checker:markdown.fact.stages', { value: structure.stageCount ?? 0 })}`);
+    lines.push(`- ${t('checker:markdown.fact.actions', { value: structure.actionCount ?? 0 })}`);
+    lines.push(`- ${t('checker:markdown.fact.refAudio', { value: structure.referencedAudioCount ?? 0 })}`);
+    lines.push(`- ${t('checker:markdown.fact.refImage', { value: structure.referencedImageCount ?? 0 })}`);
     lines.push('');
   }
-  lines.push(`### Mode nuit`);
-  lines.push(`- Mode nuit : ${report.nightMode?.detected ? 'disponible' : 'absent'}`);
-  lines.push(`- Bloquant : non`);
+  lines.push(`### ${t('checker:summary.nightMode.title')}`);
+  lines.push(`- ${report.nightMode?.detected ? t('checker:markdown.nightMode.available') : t('checker:markdown.nightMode.absent')}`);
+  lines.push(`- ${t('checker:markdown.fact.blocking')}`);
   lines.push('');
-  lines.push(`## Journal technique`);
+  lines.push(`## ${t('checker:log.technical.title')}`);
   lines.push('');
   lines.push('```text');
   lines.push(formatTechnicalLog(report));

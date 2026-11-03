@@ -1,5 +1,5 @@
 import { isSameMediaPath, makeId, normalizeBaseProject, normalizeEntry, remapEntryIds } from './schema.js';
-import { extractEntry, findEntryById, findIncomingRefs } from './index.js';
+import { extractEntry, findEntryById } from './index.js';
 import { getProjectMenuDepthDiagnostic } from './menuDepth.js';
 
 function replaceEntryTree(entries, entryId, replacer) {
@@ -227,34 +227,14 @@ export function clearMediaReferences(project, path) {
   return normalizeBaseProject(next);
 }
 
-function removeEntry(project, entryId) {
+export function removeEntry(project, entryId) {
   return updateProjectRootEntries(project, removeEntryTree(project.rootEntries ?? [], entryId));
 }
 
-function removeEntries(project, entryIds) {
+export function removeEntries(project, entryIds) {
   const ids = new Set([...entryIds].filter((id) => id && id !== 'root'));
   if (ids.size === 0) return project;
   return updateProjectRootEntries(project, removeEntriesTree(project.rootEntries ?? [], ids));
-}
-
-// Supprime une entrée ET les refs qui pointeraient désormais dans le vide (garde-fou :
-// jamais de cible pendante dans le projet — cf. validation à l'export).
-export function removeEntryCascadingRefs(project, entryId) {
-  const danglingRefs = findIncomingRefs(project, entryId);
-  if (danglingRefs.length === 0) return removeEntry(project, entryId);
-  return removeEntries(project, new Set([entryId, ...danglingRefs.map((entry) => entry.id)]));
-}
-
-export function removeEntriesCascadingRefs(project, entryIds) {
-  const ids = new Set([...entryIds].filter((id) => id && id !== 'root'));
-  if (ids.size === 0) return project;
-  const danglingRefIds = new Set();
-  for (const id of ids) {
-    for (const ref of findIncomingRefs(project, id)) {
-      if (!ids.has(ref.id)) danglingRefIds.add(ref.id);
-    }
-  }
-  return removeEntries(project, new Set([...ids, ...danglingRefIds]));
 }
 
 // Un pack extrait garde les identifiants de sa source : extrait deux fois dans

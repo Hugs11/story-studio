@@ -172,7 +172,7 @@ test('a changed source signature invalidates the contextual request', () => {
 test('incoming references block assembly without modifying the project', () => {
   const a = story('a', { returnAfterPlay: 'story_play:b' });
   const b = story('b', { returnAfterPlay: 'root' });
-  const value = project([menu('menu', [a, b, { id: 'ref-b', type: 'ref', target: 'story:b' }])]);
+  const value = project([menu('menu', [a, b, story('c', { returnOnHome: 'story:b' })])]);
   const request = requestFor(value, ['a', 'b']);
   const outcome = replaceStoriesWithAssembledStory(value, {
     request,

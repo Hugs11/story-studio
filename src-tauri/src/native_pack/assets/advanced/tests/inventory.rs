@@ -461,3 +461,21 @@ fn a_tool_that_never_returns_is_interrupted_and_never_blames_the_media() {
         );
     }
 }
+
+/// `services/storyteller/media.rs` (`unreadable`) reconnaît un média abîmé en
+/// comparant la cause sérialisée à ces trois chaînes, faute de voir le type :
+/// les renommer casse silencieusement ce repérage.
+#[test]
+fn damaged_media_causes_serialize_to_the_strings_the_storyteller_compares() {
+    for (cause, expected) in [
+        (MediaCause::Undecodable, "undecodable"),
+        (MediaCause::ValidationFailed, "validation-failed"),
+        (MediaCause::Empty, "empty"),
+    ] {
+        assert_eq!(
+            serde_json::to_value(cause).unwrap(),
+            serde_json::Value::String(expected.to_string()),
+            "{cause:?}"
+        );
+    }
+}

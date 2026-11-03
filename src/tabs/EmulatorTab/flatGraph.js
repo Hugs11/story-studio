@@ -39,6 +39,9 @@ import { toPackAssetName } from '../../utils/zipAssetName.js';
 
 export const MEDIA_FROM_PACK = 'pack';
 export const MEDIA_FROM_DISK = 'disk';
+// Un média d'une consultation du catalogue : un identifiant opaque, servi par
+// le moteur pour cette consultation seulement. Aucun chemin.
+export const MEDIA_FROM_CONSULTATION = 'consultation';
 
 // Le nom réservé que Rust pose sur un emplacement dont le fichier n'existe pas
 // encore. Miroir de `native_pack::simulation::SIMULATION_MISSING_ASSET`.
@@ -74,6 +77,7 @@ function diskMedia(assetRef, path) {
 // chaque assemblage de graphe, leur identité d'objet ne prouve rien.
 export function mediaRequestKey(request) {
   if (!request) return '';
+  if (request.kind === MEDIA_FROM_CONSULTATION) return `consultation:${request.consultationId}:${request.mediaId}`;
   return request.kind === MEDIA_FROM_PACK
     ? `pack:${request.zipPath ?? ''}:${request.assetName}`
     : `disk:${request.path}`;
@@ -249,14 +253,18 @@ function documentReadiness(view, unresolvedMedia) {
  * jointure se fait par `assetRef` exactement, et deux
  * fichiers homonymes venus de deux dossiers n'y fusionnent pas.
  */
-export function documentFlatGraph(view, project) {
+export function documentFlatGraph(view, project, requestFor = null) {
   if (!view) return null;
-  const bindings = mediaBindingsByAssetRef(project);
+  const bindings = requestFor ? null : mediaBindingsByAssetRef(project);
   let unresolvedMedia = 0;
   const seenUnresolved = new Set();
   const mediaFor = (slot) => {
     if (slot?.presence !== 'value' || !slot.assetRef) return null;
-    const request = diskMedia(slot.assetRef, bindings.get(slot.assetRef)?.path);
+    // `requestFor` : les octets viennent d'ailleurs que des liaisons du projet
+    // (une consultation du catalogue). La jointure par `assetRef` est la même.
+    const request = requestFor
+      ? requestFor(slot.assetRef)
+      : diskMedia(slot.assetRef, bindings.get(slot.assetRef)?.path);
     // Une référence sans fichier utilisable ne devient pas un silence muet :
     // elle se joue en silence **et** se compte, pour que le bandeau le dise.
     if (!request && !seenUnresolved.has(slot.assetRef)) {
@@ -350,6 +358,31 @@ export function projectedFlatGraph(projection) {
   // partagé ne dit pas quelle entrée joue ; il garde seulement ses octets.
   graph.entryIdByStage = new Map(Object.entries(projection.entryIdByStage ?? {}));
   return graph;
+}
+
+// ── Source 4 : une consultation du catalogue ─────────────────────────────────
+
+/**
+ * Le graphe d'une consultation, prêt à être joué.
+ *
+ * `handle` vient de `catalogue_open_consultation`. Un pack (ZIP, dossier, 7z,
+ * enfant d'archive) ou un projet par menus arrive dans la forme de
+ * `load_pack_zip` — lue par `packFlatGraph`, comme une archive produite ; un
+ * projet graphe arrive dans la forme de la vue du document — lue par
+ * `documentFlatGraph`. Seul le transport change : chaque média est un
+ * identifiant opaque de la consultation.
+ */
+export function consultationFlatGraph(handle) {
+  if (!handle?.graph) return null;
+  const consultationId = handle.consultationId;
+  const request = (mediaId) => (typeof mediaId === 'string' && mediaId
+    ? { kind: MEDIA_FROM_CONSULTATION, assetRef: mediaId, consultationId, mediaId }
+    : null);
+  if (handle.kind === 'document') {
+    const media = handle.graph.media ?? {};
+    return documentFlatGraph(handle.graph.view, null, (assetRef) => request(Object.hasOwn(media, assetRef) ? media[assetRef] : null));
+  }
+  return packFlatGraph(handle.graph, null, request);
 }
 
 // ── Point de départ ──────────────────────────────────────────────────────────

@@ -26,6 +26,7 @@
 //! Une valeur JSON `optionIndex < -1` est refusée **au décodage** par
 //! `OptionSelection`, donc avant ce validateur : elle n'est pas traitée ici.
 
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
@@ -86,6 +87,8 @@ pub(crate) struct GraphIntegrityError {
     pub(crate) code: GraphIntegrityCode,
     pub(crate) path: String,
     pub(crate) message: String,
+    #[serde(default)]
+    pub(crate) params: serde_json::Map<String, serde_json::Value>,
 }
 
 impl GraphIntegrityError {
@@ -94,7 +97,12 @@ impl GraphIntegrityError {
             code,
             path: path.into(),
             message: message.into(),
+            params: serde_json::Map::new(),
         }
+    }
+    fn with_user_message(mut self, message: UserMessage) -> Self {
+        self.params = message.params;
+        self
     }
 }
 
@@ -174,6 +182,7 @@ pub(crate) fn graph_integrity_import_diagnostics(
     errors
         .into_iter()
         .map(|error| ImportDiagnostic {
+            params: error.params,
             severity: DiagnosticSeverity::Error,
             code: error.code.as_str().to_string(),
             path: error.path,
@@ -224,19 +233,25 @@ fn check_node_identifiers<'a, I>(
     let mut seen: HashSet<&str> = HashSet::new();
     for (id, path) in nodes {
         if id.is_empty() {
-            errors.push(GraphIntegrityError::new(
-                empty_code,
-                format!("{path}/{id_field}"),
-                format!("{label} sans identifiant : le champ « {id_field} » est vide."),
-            ));
+            errors.push(
+                GraphIntegrityError::new(
+                    empty_code,
+                    format!("{path}/{id_field}"),
+                    format!("{label} sans identifiant : le champ « {id_field} » est vide."),
+                )
+                .with_user_message(UserMessage::new(empty_code.as_str())),
+            );
             continue;
         }
         if !seen.insert(id) {
-            errors.push(GraphIntegrityError::new(
-                duplicate_code,
-                format!("{path}/{id_field}"),
-                format!("Identifiant de {label} en double : « {id} »."),
-            ));
+            errors.push(
+                GraphIntegrityError::new(
+                    duplicate_code,
+                    format!("{path}/{id_field}"),
+                    format!("Identifiant de {label} en double : « {id} »."),
+                )
+                .with_user_message(UserMessage::new(duplicate_code.as_str()).param("id", id)),
+            );
         }
     }
 }
@@ -263,14 +278,19 @@ fn check_square_one_count(
         .get(1)
         .map(|path| (*path).clone())
         .unwrap_or_else(|| "/stageNodes".to_string());
-    errors.push(GraphIntegrityError::new(
-        GraphIntegrityCode::SquareOneCount,
-        path,
-        format!(
-            "Le document doit contenir exactement un Stage squareOne ; il en contient {}.",
-            entries.len()
+    errors.push(
+        GraphIntegrityError::new(
+            GraphIntegrityCode::SquareOneCount,
+            path,
+            format!(
+                "Le document doit contenir exactement un Stage squareOne ; il en contient {}.",
+                entries.len()
+            ),
+        )
+        .with_user_message(
+            UserMessage::new(codes::SQUARE_ONE_COUNT).param("count", (entries.len()).to_string()),
         ),
-    ));
+    );
 }
 
 fn check_option_targets(
@@ -290,7 +310,9 @@ fn check_option_targets(
                         "L'option {index} de l'ActionNode « {} » est nulle : elle ne désigne aucun Stage.",
                         action.id
                     ),
-                ));
+                ).with_user_message(UserMessage::new(codes::OPTION_TARGET_NULL)
+.param("index", (index).to_string())
+.param("actionId", (action.id).to_string())));
                 continue;
             };
             if !known_stage_ids.contains(target) {
@@ -301,7 +323,10 @@ fn check_option_targets(
                         "L'option {index} de l'ActionNode « {} » désigne un Stage introuvable : « {target} ».",
                         action.id
                     ),
-                ));
+                ).with_user_message(UserMessage::new(codes::OPTION_TARGET_MISSING)
+.param("index", (index).to_string())
+.param("actionId", (action.id).to_string())
+.param("target", (target).to_string())));
             }
         }
     }
@@ -333,7 +358,10 @@ fn check_transitions(
                         "La transition {field} du Stage « {} » référence un ActionNode introuvable : « {} ».",
                         stage.uuid, transition.action_node
                     ),
-                ));
+                ).with_user_message(UserMessage::new(codes::TRANSITION_ACTION_MISSING)
+.param("field", (field).to_string())
+.param("stage", (stage.uuid).to_string())
+.param("action", (transition.action_node).to_string())));
                 continue;
             };
             let option_count = action.options.len();
@@ -345,7 +373,11 @@ fn check_transitions(
                         "La transition {field} du Stage « {} » sélectionne {} sur un ActionNode de {option_count} option(s).",
                         stage.uuid, transition.selection
                     ),
-                ));
+                ).with_user_message(UserMessage::new(codes::OPTION_SELECTION_INVALID)
+.param("field", (field).to_string())
+.param("stage", (stage.uuid).to_string())
+.param("selection", (transition.selection).to_string())
+.param("optionCount", (option_count).to_string())));
             }
         }
     }

@@ -241,27 +241,50 @@ fn presence_sensitivity_survives_the_whole_writer() {
     second.as_object_mut().expect("objet").remove("audio");
     second.as_object_mut().expect("objet").remove("image");
 
-    let payload = imported_fs_payload(story_value(
+    let base_payload = imported_fs_payload(story_value(
         vec![stage(ENTRY, true, None, Some("i.png")), second],
         vec![SECOND],
     ));
-    let source = reopen(&payload);
-    assert!(source.document.stage_nodes[1].audio.is_absent());
+    for official in [false, true] {
+        let mut author = reopen(&base_payload);
+        author.document.title = Presence::Value("Modified imported fixture".into());
+        if official {
+            author.context.official_provenance =
+                crate::domain::official_provenance::OfficialProvenance::Official;
+            author.context.official_origin_uuid = Some(ENTRY.into());
+            // Its own origin is not foreign flattened content (D7).
+            author.context.contains_official_content = false;
+        }
+        let payload = encode_authoring_payload(&author).unwrap();
+        let source = reopen(&payload);
+        assert!(source.document.stage_nodes[1].audio.is_absent());
 
-    let result = export(&payload, &[binding("i.png", &image)], &scratch.output())
-        .expect("export présence-sensible");
-    let story = story_of(&archive_entries(&result.zip_path));
+        let result = export(&payload, &[binding("i.png", &image)], &scratch.output())
+            .expect("export présence-sensible");
+        let story = story_of(&archive_entries(&result.zip_path));
 
-    // La **copie** émet `null` là où l'auteur avait omis, sans que
-    // le document d'auteur perde la distinction.
-    let second_export = &story["stageNodes"][1];
-    assert!(second_export.get("audio").is_some());
-    assert_eq!(second_export["audio"], serde_json::Value::Null);
-    assert!(story.get("image").is_none(), "pas d'`image` racine");
-    assert!(story.get("official").is_none(), "pas d'`official` racine");
-    // Le payload d'auteur, lui, conserve l'omission.
-    let after = reopen(&payload);
-    assert!(after.document.stage_nodes[1].audio.is_absent());
+        // La **copie** émet `null` là où l'auteur avait omis, sans que
+        // le document d'auteur perde la distinction.
+        let second_export = &story["stageNodes"][1];
+        assert!(second_export.get("audio").is_some());
+        assert_eq!(second_export["audio"], serde_json::Value::Null);
+        assert!(story.get("image").is_none(), "pas d'`image` racine");
+        if official {
+            assert_eq!(
+                story["official"], true,
+                "official comes from the output decision"
+            );
+            assert_eq!(story["uuid"], ENTRY);
+        } else {
+            assert!(
+                story.get("official").is_none(),
+                "non-official source never emits official"
+            );
+        }
+        // Le payload d'auteur, lui, conserve l'omission.
+        let after = reopen(&payload);
+        assert!(after.document.stage_nodes[1].audio.is_absent());
+    }
 }
 
 /// Pas d'image d'entrée, pas de couverture, et l'export **réussit**.
@@ -404,9 +427,10 @@ fn an_opaque_string_that_looks_like_an_asset_ref_is_never_renamed() {
     let image = scratch.write_media("i.png", &png_bytes(320, 240, 0));
 
     let mut value = story_value(vec![stage(ENTRY, true, None, Some("i.png"))], vec![]);
-    // Deux extensions opaques nomment le média : une sur le Stage, une à la
-    // racine du document.
-    value["stageNodes"][0]["vendorCover"] = serde_json::json!("i.png");
+    // Un alias opaque du Stage nomme le média (alias `id` divergent, préservé
+    // par décision). Une clé racine inconnue le nomme aussi : elle est ignorée
+    // à l'import et n'atteint donc pas l'archive.
+    value["stageNodes"][0]["id"] = serde_json::json!("i.png");
     value["vendorManifest"] = serde_json::json!({"cover": "i.png"});
 
     // Le décodeur d'un pack STUdio est le seul chemin qui **relève** des membres
@@ -416,10 +440,10 @@ fn an_opaque_string_that_looks_like_an_asset_ref_is_never_renamed() {
     let members = decoded_payload.context.opaque_members.clone();
     assert!(
         !members.is_empty(),
-        "le banc doit réellement porter des extensions opaques"
+        "le banc doit réellement porter un membre opaque"
     );
     for member in members {
-        if member.kind == crate::native_pack::OpaqueMemberKind::UnknownExtension {
+        if member.kind == crate::native_pack::OpaqueMemberKind::KnownAlias {
             crate::native_pack::authoring::set_opaque_export_disposition(
                 &mut decoded_payload,
                 &member.path,
@@ -446,12 +470,12 @@ fn an_opaque_string_that_looks_like_an_asset_ref_is_never_renamed() {
         "le champ média porte le nom d'archive"
     );
     assert_eq!(
-        story["stageNodes"][0]["vendorCover"], "i.png",
-        "l'extension opaque du Stage garde la chaîne d'auteur"
+        story["stageNodes"][0]["id"], "i.png",
+        "l'alias opaque du Stage garde la chaîne d'auteur"
     );
-    assert_eq!(
-        story["vendorManifest"]["cover"], "i.png",
-        "l'extension opaque racine garde la chaîne d'auteur"
+    assert!(
+        story.get("vendorManifest").is_none(),
+        "la clé racine inconnue est ignorée, jamais réémise"
     );
     // Et la chaîne opaque n'a pas été aspirée comme un média : un seul fichier.
     assert_eq!(asset_names(&entries).len(), 1);

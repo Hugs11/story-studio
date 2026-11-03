@@ -31,6 +31,7 @@ for (const [specifier, names] of [
   ['./layout/TitleBar', ['TitleBar']],
   ['./layout/Toolbar', ['Toolbar']],
   ['./AppModals', ['AppModals']],
+  ['./MediaSubscriptions/MediaSubscriptionsPanel', ['MediaSubscriptionsPanel']],
 ]) {
   doubles.set(specifier, names.map((name) => `export const ${name} = '${name}';`).join('\n'));
 }

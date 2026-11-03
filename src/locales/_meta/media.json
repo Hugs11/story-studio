@@ -1,0 +1,5254 @@
+{
+  "explorer.kind.image": {
+    "context": "Panneau Médias (médiathèque du projet) > type d’un fichier image, préfixe de la ligne d’usage (« Image · Accueil »).",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "1aa4cb0bcca7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1aa4cb0bcca7",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.kind.audio": {
+    "context": "Panneau Médias (médiathèque du projet) > type d’un fichier audio, préfixe de la ligne d’usage (« Son · Accueil »).",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "4e850716074e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4e850716074e",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.kind.archive": {
+    "context": "Panneau Médias (médiathèque du projet) > type d’un fichier ZIP/7z, préfixe de la ligne d’usage.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "66f4804ee23d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "66f4804ee23d",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.kind.file": {
+    "context": "Panneau Médias (médiathèque du projet) > type d’un fichier d’autre nature, préfixe de la ligne d’usage.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "07ceb51d3a38",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "07ceb51d3a38",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.column.name": {
+    "context": "Panneau Médias (médiathèque du projet) > vue liste > en-tête de colonne triable : nom du fichier.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "b2c124536d21",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b2c124536d21",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.column.usage": {
+    "context": "Panneau Médias (médiathèque du projet) > vue liste > en-tête de colonne : où le média est employé dans le projet.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "8d59829c1e15",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8d59829c1e15",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.column.size": {
+    "context": "Panneau Médias (médiathèque du projet) > vue liste > en-tête de colonne : taille du fichier sur le disque (octets).",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "77093e0c33ff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "77093e0c33ff",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.column.dimensions": {
+    "context": "Panneau Médias (médiathèque du projet) > vue liste > en-tête de colonne : largeur × hauteur d’une image en pixels.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "914182d5e25f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "914182d5e25f",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.column.duration": {
+    "context": "Panneau Médias (médiathèque du projet) > vue liste > en-tête de colonne : durée d’un audio.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "71d0bad42af1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "71d0bad42af1",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.column.format": {
+    "context": "Panneau Médias (médiathèque du projet) > vue liste > en-tête de colonne : codec/extension et fréquence.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "2f343666aaa8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2f343666aaa8",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.column.date": {
+    "context": "Panneau Médias (médiathèque du projet) > vue liste > en-tête de colonne : date de modification du fichier.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "99c40ab40592",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "99c40ab40592",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.column.path": {
+    "context": "Panneau Médias (médiathèque du projet) > vue liste > en-tête de colonne : chemin complet du fichier.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "21bb2b129449",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "21bb2b129449",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.column.tags": {
+    "context": "Panneau Médias (médiathèque du projet) > vue liste > en-tête de colonne : étiquettes posées par l’auteur sur le fichier.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "1331275bc537",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1331275bc537",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.usage.unknownTooltip": {
+    "context": "Panneau Médias (médiathèque du projet) > badge « ? » d’une carte quand on ignore où le média est employé (projet graphe non lu) ; info-bulle.",
+    "en": {
+      "sourceHash": "31ea2a0ad3db",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "31ea2a0ad3db",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.tags.header": {
+    "context": "Panneau Médias (médiathèque du projet) > menu contextuel d’un média > titre de la section des étiquettes (un seul fichier).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "1331275bc537",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1331275bc537",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.tags.bulkHeader": {
+    "context": "Panneau Médias (médiathèque du projet) > menu contextuel avec plusieurs fichiers sélectionnés > titre de la section des étiquettes ; {{total}} = nombre de fichiers concernés.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "373d323ffcd1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "373d323ffcd1",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.tags.newPlaceholder": {
+    "context": "Panneau Médias (médiathèque du projet) > champ de saisie d’une nouvelle étiquette (menu contextuel et fiche du média) ; placeholder court.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "936365822d84",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "936365822d84",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.tags.removeTooltip": {
+    "context": "Panneau Médias (médiathèque du projet) > fiche du média > croix d’une étiquette ; {{tag}} = nom saisi par l’auteur.",
+    "en": {
+      "sourceHash": "21343729e70c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "21343729e70c",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.tags.addTooltip": {
+    "context": "Panneau Médias (médiathèque du projet) > fiche du média > étiquette existante du projet proposée à l’ajout ; {{tag}} = nom saisi par l’auteur.",
+    "en": {
+      "sourceHash": "59841a301733",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "59841a301733",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.tags.common": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection multiple > champ pour poser la même étiquette sur tous les fichiers sélectionnés ; placeholder.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "a6992ee92c0d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a6992ee92c0d",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.created.single": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat d’un outil audio (assemblage/découpe) quand un seul fichier a été créé.",
+    "en": {
+      "sourceHash": "40850c3ec7ae",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "40850c3ec7ae",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.created.count_one": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat d’un outil audio : nombre de fichiers créés et sélectionnés (le cas d’un fichier unique a sa propre phrase). Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "8c9404744d34",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8c9404744d34",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.created.count_many": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat d’un outil audio : nombre de fichiers créés et sélectionnés (le cas d’un fichier unique a sa propre phrase). Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "0b7b0e9c03bc",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.created.count_other": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat d’un outil audio : nombre de fichiers créés et sélectionnés (le cas d’un fichier unique a sa propre phrase). Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "0b7b0e9c03bc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0b7b0e9c03bc",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.close.ariaLabel": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat d’un outil audio > bouton × ; libellé accessible.",
+    "en": {
+      "sourceHash": "3ed122ecf93d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3ed122ecf93d",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.project.applied": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat > titre quand les histoires du projet ont été remplacées par le fichier créé.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "f83d0ae4548b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f83d0ae4548b",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.files.created": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat > titre quand des fichiers ont été créés sans modifier le projet.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "f67a2149e4d2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f67a2149e4d2",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.files.stillAvailable": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat > phrase ajoutée après la raison d’un remplacement refusé (le projet n’a pas été modifié).",
+    "en": {
+      "sourceHash": "26cbd44f3b25",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "26cbd44f3b25",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.assembled.created": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat après l’assemblage de plusieurs audios ; {{name}} = nom du fichier créé.",
+    "en": {
+      "sourceHash": "c79820889b2f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c79820889b2f",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.assembled.replaced": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat quand l’assemblage a remplacé les histoires sélectionnées dans le projet.",
+    "en": {
+      "sourceHash": "3a6bd324e8fa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3a6bd324e8fa",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.replacement.refused": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat > raison générique quand le projet n’a pas accepté le fichier assemblé.",
+    "en": {
+      "sourceHash": "7553f9309247",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7553f9309247",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.split.single": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat après une découpe produisant un seul extrait ; {{name}} = nom du fichier créé.",
+    "en": {
+      "sourceHash": "dd1bc11214fe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd1bc11214fe",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.split.count_one": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat après une découpe : nombre d’extraits créés (le cas d’un seul extrait a sa propre phrase avec le nom). Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "c7e23522e06a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c7e23522e06a",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.split.count_many": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat après une découpe : nombre d’extraits créés (le cas d’un seul extrait a sa propre phrase avec le nom). Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "8d64ee4ab5d8",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.split.count_other": {
+    "context": "Panneau Médias (médiathèque du projet) > bannière de résultat après une découpe : nombre d’extraits créés (le cas d’un seul extrait a sa propre phrase avec le nom). Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "8d64ee4ab5d8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8d64ee4ab5d8",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.context.unavailable": {
+    "context": "Panneau Médias (médiathèque du projet) > assemblage ouvert depuis l’arbre > raison affichée quand le projet a changé et qu’on ne peut plus remplacer automatiquement les histoires.",
+    "en": {
+      "sourceHash": "6f099d572705",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6f099d572705",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolResult.replacement.unsafe": {
+    "context": "Panneau Médias (médiathèque du projet) > assemblage ouvert depuis l’arbre > raison générique pour laquelle le remplacement automatique n’est pas proposé.",
+    "en": {
+      "sourceHash": "facb10ff0461",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "facb10ff0461",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.reason.unknown": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > raison accolée au nom d’un média retenu par le projet quand ses usages ne sont pas encore connus (minuscule, après « — »).",
+    "en": {
+      "sourceHash": "f877ce8cabad",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f877ce8cabad",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.reason.count_one": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > raison accolée au nom d’un média retenu : nombre d’usages dans le projet (minuscule, après « — »). Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "aa4568b61562",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "aa4568b61562",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.reason.count_many": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > raison accolée au nom d’un média retenu : nombre d’usages dans le projet (minuscule, après « — »). Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "72f39f659dc5",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.reason.count_other": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > raison accolée au nom d’un média retenu : nombre d’usages dans le projet (minuscule, après « — »). Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "72f39f659dc5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "72f39f659dc5",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.reason.bound": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > raison accolée au nom d’un média que le document graphe déclare sans l’employer (minuscule, après « — »).",
+    "en": {
+      "sourceHash": "585702557d57",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "585702557d57",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.permanent.title": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > titre et bouton de confirmation quand l’option « supprimer du disque » est choisie.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "1a797b980d16",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1a797b980d16",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.remove.action": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > bouton qui retire le fichier de la médiathèque sans le supprimer du disque.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "41e22ed93372",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "41e22ed93372",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.used.single": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > titre quand le seul média choisi est encore employé dans le projet.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "cc651f5160ce",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cc651f5160ce",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.used.count_one": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > titre : nombre de médias encore employés dans le projet (le cas d’un seul média a sa propre phrase). Forme plurielle « one » (count transmis).",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "19194ecf1146",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "19194ecf1146",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.used.count_many": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > titre : nombre de médias encore employés dans le projet (le cas d’un seul média a sa propre phrase). Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "maxLength": 40,
+    "it": {
+      "sourceHash": "4be7e6074ea5",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.used.count_other": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > titre : nombre de médias encore employés dans le projet (le cas d’un seul média a sa propre phrase). Forme plurielle « other » (count transmis).",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "4be7e6074ea5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4be7e6074ea5",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.library.title": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > titre, option et entrée de menu : retirer le fichier de la liste des médias, sans toucher au disque.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "43033e62ce57",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "43033e62ce57",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.used.singleMessage": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > explication quand le seul média choisi est encore employé.",
+    "en": {
+      "sourceHash": "36f529615a0c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "36f529615a0c",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.used.message_one": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > explication : plusieurs médias choisis sont encore employés (le cas d’un seul a sa propre phrase). Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "f073f3fb0bd8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f073f3fb0bd8",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.used.message_many": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > explication : plusieurs médias choisis sont encore employés (le cas d’un seul a sa propre phrase). Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "78923f487fb4",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.used.message_other": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > explication : plusieurs médias choisis sont encore employés (le cas d’un seul a sa propre phrase). Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "78923f487fb4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "78923f487fb4",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.library.hint": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > précision sous l’option « Retirer de la médiathèque ».",
+    "en": {
+      "sourceHash": "d2dad4b38b9d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d2dad4b38b9d",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.disk.option": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > option qui supprime aussi le fichier sur le disque.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "607d3cd90aac",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "607d3cd90aac",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.disk.hint": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > avertissement sous l’option de suppression du disque.",
+    "en": {
+      "sourceHash": "cb5e94bbad3c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cb5e94bbad3c",
+      "status": "ai-reviewed"
+    }
+  },
+  "delete.disk.unavailable": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue de retrait > encadré quand au moins un fichier choisi est hors des dossiers gérés.",
+    "en": {
+      "sourceHash": "e2f62173293d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e2f62173293d",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.empty.title": {
+    "context": "Panneau Médias (médiathèque du projet) > état vide quand le projet n’a encore aucun média.",
+    "en": {
+      "sourceHash": "a0950086f4a7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a0950086f4a7",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.empty.hint": {
+    "context": "Panneau Médias (médiathèque du projet) > état vide > phrase d’aide sous le titre.",
+    "en": {
+      "sourceHash": "cf7c2bddd30d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cf7c2bddd30d",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.media.importAction": {
+    "context": "Panneau Médias (médiathèque du projet) > état vide > bouton qui ouvre le choix de fichiers audio, image ou archive à importer.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "141ee8116a4a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "141ee8116a4a",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.folder.importAction": {
+    "context": "Panneau Médias (médiathèque du projet) > état vide > bouton qui importe tout un dossier.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "47862e91f684",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "47862e91f684",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.filter.empty": {
+    "context": "Panneau Médias (médiathèque du projet) > liste vide parce que les filtres, tags ou la recherche n’ont aucun résultat.",
+    "en": {
+      "sourceHash": "13d88137299a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "13d88137299a",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.count_one": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection > nombre de médias sélectionnés. Forme plurielle « one » (count transmis).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "e27d211a1113",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e27d211a1113",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.count_many": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection > nombre de médias sélectionnés. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "maxLength": 20,
+    "it": {
+      "sourceHash": "350263c1abed",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.count_other": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection > nombre de médias sélectionnés. Forme plurielle « other » (count transmis).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "350263c1abed",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "350263c1abed",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.graph.assign": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection (Éditeur graphe) > bouton qui affecte le média sélectionné à l’emplacement visé ; {{target}} = libellé de l’emplacement fourni par le graphe.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "c794a44bef2d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c794a44bef2d",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.audio.copy_one": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection et menus contextuels > bouton qui copie les audios sélectionnés pour les coller dans l’arbre. Forme plurielle « one » (count transmis).",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "fb500955ec4c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fb500955ec4c",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.audio.copy_many": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection et menus contextuels > bouton qui copie les audios sélectionnés pour les coller dans l’arbre. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "maxLength": 24,
+    "it": {
+      "sourceHash": "d908b48bc01d",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.audio.copy_other": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection et menus contextuels > bouton qui copie les audios sélectionnés pour les coller dans l’arbre. Forme plurielle « other » (count transmis).",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "d908b48bc01d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d908b48bc01d",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.audio.cut_one": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection et menu contextuel > bouton « couper » (presse-papiers) des audios sélectionnés ; ce n’est pas la découpe d’un audio. Forme plurielle « one » (count transmis).",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "0b91d1745c37",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0b91d1745c37",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.audio.cut_many": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection et menu contextuel > bouton « couper » (presse-papiers) des audios sélectionnés ; ce n’est pas la découpe d’un audio. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "maxLength": 24,
+    "it": {
+      "sourceHash": "ee23c45140c7",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.audio.cut_other": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection et menu contextuel > bouton « couper » (presse-papiers) des audios sélectionnés ; ce n’est pas la découpe d’un audio. Forme plurielle « other » (count transmis).",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "ee23c45140c7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ee23c45140c7",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.audio.assemble": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection > ouvre l’outil qui met bout à bout les audios sélectionnés dans un nouveau fichier.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "1872c2cd2988",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1872c2cd2988",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.tag.apply": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection > bouton qui pose l’étiquette saisie sur tous les fichiers sélectionnés.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "b4c8b1dd7acd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b4c8b1dd7acd",
+      "status": "ai-reviewed"
+    }
+  },
+  "selection.clear.action": {
+    "context": "Panneau Médias (médiathèque du projet) > barre de sélection > bouton qui vide la sélection (ne supprime aucun fichier).",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "e4750da99f0f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e4750da99f0f",
+      "status": "ai-reviewed"
+    }
+  },
+  "popover.wave.seek": {
+    "context": "Panneau Médias (médiathèque du projet) > fiche d’un audio > forme d’onde ; info-bulle : cliquer déplace la lecture à cet endroit.",
+    "en": {
+      "sourceHash": "273469ec1833",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "273469ec1833",
+      "status": "ai-reviewed"
+    }
+  },
+  "popover.audio.play": {
+    "context": "Panneau Médias (médiathèque du projet) > fiche d’un audio > info-bulle du bouton lecture.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "af845394ff39",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "af845394ff39",
+      "status": "ai-reviewed"
+    }
+  },
+  "popover.audio.pause": {
+    "context": "Panneau Médias (médiathèque du projet) > fiche d’un audio > info-bulle du bouton pause pendant la lecture.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "858e4ba7a29f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "858e4ba7a29f",
+      "status": "ai-reviewed"
+    }
+  },
+  "popover.image.size": {
+    "context": "Panneau Médias (médiathèque du projet) > fiche d’une image > dimensions en pixels.",
+    "en": {
+      "sourceHash": "6cdff81fc148",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6cdff81fc148",
+      "status": "ai-reviewed"
+    }
+  },
+  "popover.image.edit": {
+    "context": "Panneau Médias (médiathèque du projet) > fiche et menu contextuel d’une image > ouvre l’éditeur d’image (recadrage, réglages) ; l’ellipse annonce un dialogue.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "538575f5d6b8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "538575f5d6b8",
+      "status": "ai-reviewed"
+    }
+  },
+  "popover.usage.openTooltip": {
+    "context": "Panneau Médias (médiathèque du projet) > fiche d’un audio > info-bulle du bouton qui sélectionne l’élément du projet qui emploie ce média ; {{target}} = nom de l’élément.",
+    "en": {
+      "sourceHash": "1c9ed87aaf9f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1c9ed87aaf9f",
+      "status": "ai-reviewed"
+    }
+  },
+  "popover.usage.show": {
+    "context": "Panneau Médias (médiathèque du projet) > fiche et menu contextuel d’un audio > sélectionne l’élément du projet qui emploie ce média.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "048314af7b1a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "048314af7b1a",
+      "status": "ai-reviewed"
+    }
+  },
+  "popover.audio.split": {
+    "context": "Panneau Médias (médiathèque du projet) > fiche et menu contextuel d’un audio > ouvre l’outil qui découpe l’audio en extraits.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "fa2b0da3f6f9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fa2b0da3f6f9",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.media.copy": {
+    "context": "Panneau Médias (médiathèque du projet) > menu contextuel d’un média > copie le fichier pour le coller dans un champ de l’arbre.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "430fbefa4c2f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "430fbefa4c2f",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.reveal.action": {
+    "context": "Panneau Médias (médiathèque du projet) > menu contextuel d’un média > ouvre le dossier du fichier dans le gestionnaire de fichiers du système.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "490b769d3bfb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "490b769d3bfb",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.path.copy": {
+    "context": "Panneau Médias (médiathèque du projet) > menu contextuel d’un média > copie le chemin complet du fichier.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "c5f602409d54",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c5f602409d54",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.audio.assemble_one": {
+    "context": "Panneau Médias (médiathèque du projet) > menu contextuel avec plusieurs audios sélectionnés (au moins 2) > ouvre l’outil d’assemblage. Forme plurielle « one » (count transmis).",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "8367a6453995",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8367a6453995",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.audio.assemble_many": {
+    "context": "Panneau Médias (médiathèque du projet) > menu contextuel avec plusieurs audios sélectionnés (au moins 2) > ouvre l’outil d’assemblage. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "maxLength": 28,
+    "it": {
+      "sourceHash": "8367a6453995",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.audio.assemble_other": {
+    "context": "Panneau Médias (médiathèque du projet) > menu contextuel avec plusieurs audios sélectionnés (au moins 2) > ouvre l’outil d’assemblage. Forme plurielle « other » (count transmis).",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "8367a6453995",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8367a6453995",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.files.remove_one": {
+    "context": "Panneau Médias (médiathèque du projet) > menus contextuels avec une sélection > retire les fichiers sélectionnés de la médiathèque (ouvre un dialogue de confirmation). Forme plurielle « one » (count transmis).",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "7c359e66c2cc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7c359e66c2cc",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.files.remove_many": {
+    "context": "Panneau Médias (médiathèque du projet) > menus contextuels avec une sélection > retire les fichiers sélectionnés de la médiathèque (ouvre un dialogue de confirmation). Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "maxLength": 48,
+    "it": {
+      "sourceHash": "71fde44f6683",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.files.remove_other": {
+    "context": "Panneau Médias (médiathèque du projet) > menus contextuels avec une sélection > retire les fichiers sélectionnés de la médiathèque (ouvre un dialogue de confirmation). Forme plurielle « other » (count transmis).",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "71fde44f6683",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "71fde44f6683",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.usage.unknown": {
+    "context": "Panneau Médias (médiathèque du projet) > ligne d’usage d’un média > suffixe quand les usages ne sont pas encore connus ; garder l’espace et le point médian initiaux.",
+    "en": {
+      "sourceHash": "4772769a0330",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4772769a0330",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.usage.line": {
+    "context": "Panneau Médias (médiathèque du projet) > ligne d’usage d’un média : type, premier usage, puis suffixe (compte ou « usages non calculés ») ; gabarit sans texte propre.",
+    "en": {
+      "sourceHash": "8580b91dcd15",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8580b91dcd15",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.file.missing": {
+    "context": "Panneau Médias (médiathèque du projet) > badge « ! » d’un média absent du disque ; info-bulle avec le chemin sur la ligne suivante.",
+    "en": {
+      "sourceHash": "3c029c2e8c2c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3c029c2e8c2c",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.filter.all": {
+    "context": "Panneau Médias (médiathèque du projet) > filtre en pastille : affiche tous les médias.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "bcda4a955df7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bcda4a955df7",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.filter.images": {
+    "context": "Panneau Médias (médiathèque du projet) > filtre en pastille : seulement les images.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "be7e2f201293",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "be7e2f201293",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.filter.audio": {
+    "context": "Panneau Médias (médiathèque du projet) > filtre en pastille : seulement les fichiers audio.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.filter.zip": {
+    "context": "Panneau Médias (médiathèque du projet) > filtre en pastille : seulement les archives ZIP/7z.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "eaca4b306928",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "eaca4b306928",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.filter.ai": {
+    "context": "Panneau Médias (médiathèque du projet) > filtre en pastille : médias produits par l’IA (XTTS, ComfyUI).",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "a75d067fa44b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a75d067fa44b",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.filter.imported": {
+    "context": "Panneau Médias (médiathèque du projet) > filtre en pastille : médias importés.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "f7286d5f36f9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f7286d5f36f9",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.filter.recorded": {
+    "context": "Panneau Médias (médiathèque du projet) > filtre en pastille : médias enregistrés au micro (record, pas save). Pastille très courte.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "1539ce57e4bb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1539ce57e4bb",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.filter.unused": {
+    "context": "Panneau Médias (médiathèque du projet) > filtre en pastille : médias qui ne sont employés nulle part dans le projet.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "331d77bfbb2b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "331d77bfbb2b",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.assign.error": {
+    "context": "Panneau Médias (médiathèque du projet) > titre du dialogue d’erreur quand l’affectation du média à l’emplacement du graphe échoue.",
+    "en": {
+      "sourceHash": "befe1d8f39ba",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "befe1d8f39ba",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.removal.usedHeader": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue « Retrait incomplet » > en-tête de la liste des médias non retirés car employés.",
+    "en": {
+      "sourceHash": "58fda76e58e8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "58fda76e58e8",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.removal.diskSingle": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue « Retrait incomplet » > en-tête quand un seul fichier n’a pas pu être supprimé du disque.",
+    "en": {
+      "sourceHash": "bcdae520ae67",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bcdae520ae67",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.removal.diskCount_one": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue « Retrait incomplet » > en-tête : nombre de fichiers que le disque a refusé de supprimer (le cas d’un seul a sa propre phrase). Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "db8a7fae4c8d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "db8a7fae4c8d",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.removal.diskCount_many": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue « Retrait incomplet » > en-tête : nombre de fichiers que le disque a refusé de supprimer (le cas d’un seul a sa propre phrase). Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "221dd4c6d07f",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.removal.diskCount_other": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue « Retrait incomplet » > en-tête : nombre de fichiers que le disque a refusé de supprimer (le cas d’un seul a sa propre phrase). Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "221dd4c6d07f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "221dd4c6d07f",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.removal.title": {
+    "context": "Panneau Médias (médiathèque du projet) > titre du dialogue d’avertissement quand certains médias n’ont pas été retirés.",
+    "en": {
+      "sourceHash": "8e361820adfd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8e361820adfd",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.removal.untouched": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue « Retrait incomplet » > phrase de conclusion après les listes.",
+    "en": {
+      "sourceHash": "b60c5e96d0f9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b60c5e96d0f9",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.split.tag": {
+    "context": "Panneau Médias (médiathèque du projet) > étiquette posée automatiquement sur les extraits créés par la découpe d’un audio. Écrite dans le projet dans la langue active au moment de la découpe, puis donnée d’auteur ; minuscule.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "122ed3ff022c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "122ed3ff022c",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.split.fallbackName": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue d’échec de découpe > nom affiché d’un extrait sans nom de fichier.",
+    "en": {
+      "sourceHash": "7224fc1ace77",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7224fc1ace77",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.split.unknownError": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue d’échec de découpe > repli quand la cause d’un échec n’est pas fournie.",
+    "en": {
+      "sourceHash": "8f5d4150fc16",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8f5d4150fc16",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.split.failedTitle": {
+    "context": "Panneau Médias (médiathèque du projet) > titre du dialogue d’avertissement après une découpe partiellement échouée.",
+    "en": {
+      "sourceHash": "86fc7a9ec680",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "86fc7a9ec680",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.split.created_one": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue d’échec de découpe > première moitié de la phrase : extraits réussis. Assemblée par explorer.split.failedSummary. Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "973b626a8cf5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "973b626a8cf5",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.split.created_many": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue d’échec de découpe > première moitié de la phrase : extraits réussis. Assemblée par explorer.split.failedSummary. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "60e5d750d808",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.split.created_other": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue d’échec de découpe > première moitié de la phrase : extraits réussis. Assemblée par explorer.split.failedSummary. Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "60e5d750d808",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "60e5d750d808",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.split.failed_one": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue d’échec de découpe > seconde moitié de la phrase : découpes en échec. Assemblée par explorer.split.failedSummary. Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "376c0e3714cd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "376c0e3714cd",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.split.failed_many": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue d’échec de découpe > seconde moitié de la phrase : découpes en échec. Assemblée par explorer.split.failedSummary. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "c0be67cb3b20",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.split.failed_other": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue d’échec de découpe > seconde moitié de la phrase : découpes en échec. Assemblée par explorer.split.failedSummary. Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "c0be67cb3b20",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c0be67cb3b20",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.split.failedSummary": {
+    "context": "Panneau Médias (médiathèque du projet) > dialogue d’échec de découpe > phrase complète : {{created}} = extraits réussis, {{failed}} = découpes en échec, {{details}} = liste technique des échecs.",
+    "en": {
+      "sourceHash": "ca368c606100",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ca368c606100",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.view.grid": {
+    "context": "Panneau Médias (médiathèque du projet) > info-bulle du bouton qui affiche les médias en grille.",
+    "en": {
+      "sourceHash": "0d8612126a64",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0d8612126a64",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.view.list": {
+    "context": "Panneau Médias (médiathèque du projet) > info-bulle du bouton qui affiche les médias en liste.",
+    "en": {
+      "sourceHash": "a535c8d712ea",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a535c8d712ea",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.columns.tooltip": {
+    "context": "Panneau Médias (médiathèque du projet) > vue liste > info-bulle du bouton qui choisit les colonnes affichées.",
+    "en": {
+      "sourceHash": "d85e290454e3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d85e290454e3",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.import.tooltip": {
+    "context": "Panneau Médias (médiathèque du projet) > barre d’outils > info-bulle du bouton d’import de fichiers.",
+    "en": {
+      "sourceHash": "59cce75b4758",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "59cce75b4758",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.importFolder.tooltip": {
+    "context": "Panneau Médias (médiathèque du projet) > barre d’outils > info-bulle du bouton qui importe un dossier et ses sous-dossiers.",
+    "en": {
+      "sourceHash": "2937493d1e73",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2937493d1e73",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.search.placeholder": {
+    "context": "Panneau Médias (médiathèque du projet) > champ de recherche (nom, chemin, usage) ; placeholder court.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "2bd604574ca4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2bd604574ca4",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.search.clear": {
+    "context": "Panneau Médias (médiathèque du projet) > bouton × du champ de recherche ; libellé accessible.",
+    "en": {
+      "sourceHash": "18c72ce6be2f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "18c72ce6be2f",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.imageEditor.title": {
+    "context": "Panneau Médias (médiathèque du projet) > titre de l’éditeur d’image ouvert depuis la médiathèque.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "13114b693298",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "13114b693298",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.imageEditor.confirm": {
+    "context": "Panneau Médias (médiathèque du projet) > éditeur d’image > bouton de validation : enregistre (save) l’image modifiée dans un nouveau fichier.",
+    "maxLength": 36,
+    "en": {
+      "sourceHash": "be576e8b3d5c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "be576e8b3d5c",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.context.importMedia": {
+    "context": "Panneau Médias (médiathèque du projet) > menu contextuel du fond de la liste > ouvre le choix de fichiers à importer.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "9d812e905178",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9d812e905178",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.context.importFolder": {
+    "context": "Panneau Médias (médiathèque du projet) > menu contextuel du fond de la liste > importe un dossier.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "b19967c54c7e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b19967c54c7e",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.drop.overlay": {
+    "context": "Panneau Médias (médiathèque du projet) > voile affiché pendant le glisser-déposer de fichiers depuis le système.",
+    "en": {
+      "sourceHash": "1736669157fb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1736669157fb",
+      "status": "ai-reviewed"
+    }
+  },
+  "explorer.edited.tag": {
+    "context": "Panneau Médias > étiquette posée automatiquement sur une image enregistrée depuis l’éditeur d’image. Écrite dans le projet dans la langue active au moment de l’enregistrement, puis donnée d’auteur ; minuscule, accord féminin (image).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "596113d0741c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "596113d0741c",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.field.audio": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; champ audio d’un Écran du graphe, après « · » (minuscule).",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "6ed8919ce204",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6ed8919ce204",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.field.image": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; champ image d’un Écran du graphe, après « · » (minuscule).",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "6105d6cc76af",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6105d6cc76af",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.field.media": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; champ média d’un autre type d’un Écran du graphe, après « · » (minuscule).",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "4a45b48a139b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4a45b48a139b",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.screen.fallback": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; Écran du graphe sans nom ni chemin (majuscule conservée, terme du glossaire).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "c61a9f55d325",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c61a9f55d325",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.home": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; image ou audio de couverture du pack (premier écran de l’audiobook), pas le bouton Home.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "533161735639",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "533161735639",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.thumbnail": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; vignette du pack affichée dans les applications de bibliothèque de packs (application Lunii, STUdio…), pas le panneau Médias.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "709acc9ef56e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "709acc9ef56e",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.nightMode": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; audio du mode nuit (terme Lunii).",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "5c5d6921f582",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5c5d6921f582",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.nativeStage": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; Écran sans nom ni identifiant d’un graphe natif importé.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "82ca2ed5f805",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "82ca2ed5f805",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.root": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; préfixe des Écrans du graphe natif rattaché au premier niveau du pack (menu racine).",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "128d80d87740",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "128d80d87740",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.untitledMenu": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; menu de l’arbre sans nom.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "076129111a17",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "076129111a17",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.importedArchive": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; archive ZIP/7z de l’arbre sans nom.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "5d8499b7bd3e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5d8499b7bd3e",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.untitledStory": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; histoire de l’arbre sans nom.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "2777dc45a995",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2777dc45a995",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.endStep": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; étape de fin d’histoire sans nom, après « nom de l’histoire · ».",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "0e48d43c887a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0e48d43c887a",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.homeStep": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; étape jouée par le bouton Home en fin d’histoire ; {{label}} = nom de l’histoire. « Home » = bouton physique de la Lunii (identique dans les trois langues).",
+    "en": {
+      "sourceHash": "9f41100d75cc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9f41100d75cc",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.generatedVoice": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; audio produit par la synthèse vocale sans libellé de cible.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "c0baee5f30d1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c0baee5f30d1",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.generatedImage": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; image produite par ComfyUI sans nom de workflow.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "40c233eeee94",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "40c233eeee94",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.label.library": {
+    "context": "Panneau Médias > colonne/ligne « Usage » : libellé de repli de l’élément qui emploie le média, calculé dans la langue active et jamais écrit dans le projet ; fichier présent dans la médiathèque sans être employé dans le projet.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "15405707a271",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "15405707a271",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.drag.sounds_one": {
+    "context": "Panneau Médias > étiquette flottante pendant le glisser-déposer de plusieurs audios sélectionnés. Forme plurielle « one » (count transmis).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "e958fa0cc800",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e958fa0cc800",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.drag.sounds_many": {
+    "context": "Panneau Médias > étiquette flottante pendant le glisser-déposer de plusieurs audios sélectionnés. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "maxLength": 16,
+    "it": {
+      "sourceHash": "a7d3da8a078a",
+      "status": "ai-reviewed"
+    }
+  },
+  "tile.drag.sounds_other": {
+    "context": "Panneau Médias > étiquette flottante pendant le glisser-déposer de plusieurs audios sélectionnés. Forme plurielle « other » (count transmis).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "a7d3da8a078a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a7d3da8a078a",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.source.project": {
+    "context": "Panneau Médias > ligne d’usage > repli de provenance d’un média du projet quand aucun libellé d’usage n’existe.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "9c466199f8ec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9c466199f8ec",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.source.advanced": {
+    "context": "Panneau Médias > ligne d’usage > repli de provenance d’un média du document de l’Éditeur graphe.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "ba1f144e22f9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ba1f144e22f9",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.source.nativeGraph": {
+    "context": "Panneau Médias > ligne d’usage > repli de provenance d’un média d’un graphe natif importé.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "d8c29261366c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d8c29261366c",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.source.storyTitle": {
+    "context": "Panneau Médias > ligne d’usage > repli de provenance : média de titre (image ou audio) d’une histoire.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "fd607bece0dc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fd607bece0dc",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.source.storyEnd": {
+    "context": "Panneau Médias > ligne d’usage > repli de provenance : média de fin d’une histoire.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "c761f074745b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c761f074745b",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.source.library": {
+    "context": "Panneau Médias > ligne d’usage > repli de provenance : fichier ajouté à la médiathèque sans être employé.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "15405707a271",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "15405707a271",
+      "status": "ai-reviewed"
+    }
+  },
+  "story.unnamed": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > repli quand l’histoire n’a pas de nom (minuscule, entre guillemets dans une phrase). Sert aussi de base au nom du fichier assemblé, écrit dans la langue active au moment de l’assemblage.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "9f7c21e34d40",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9f7c21e34d40",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.unavailable.title": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > titre du dialogue quand l’outil ne peut pas s’ouvrir pour la sélection.",
+    "en": {
+      "sourceHash": "e9c8fd477a25",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e9c8fd477a25",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.emptySelection": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison du refus : la sélection est vide.",
+    "en": {
+      "sourceHash": "740cb4569d3c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "740cb4569d3c",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.mixedSelection": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison du refus : la sélection contient autre chose que des histoires.",
+    "en": {
+      "sourceHash": "be05a71605b0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "be05a71605b0",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.missingAudio": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison du refus ; {{name}} = nom de l’histoire (donnée d’auteur ou repli « sans nom »).",
+    "en": {
+      "sourceHash": "e11bd45307c8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e11bd45307c8",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.inaccessibleAudio": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison du refus ; {{name}} = nom de l’histoire.",
+    "en": {
+      "sourceHash": "01f00252b51e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "01f00252b51e",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.splitCount": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison du refus de la découpe : plusieurs histoires sélectionnées.",
+    "en": {
+      "sourceHash": "7bd6716c90be",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7bd6716c90be",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.assembleCount": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison du refus de l’assemblage : moins de deux histoires sélectionnées.",
+    "en": {
+      "sourceHash": "e31bd8e240df",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e31bd8e240df",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.missingContext": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison : l’outil a été ouvert depuis la médiathèque, sans lien avec des histoires du projet.",
+    "en": {
+      "sourceHash": "12cd97a87199",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "12cd97a87199",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.sourceChanged": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison : le projet ne correspond plus à la demande initiale.",
+    "en": {
+      "sourceHash": "95ba98370470",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "95ba98370470",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.projectChanged": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison : le projet a été modifié pendant l’assemblage ou la découpe.",
+    "en": {
+      "sourceHash": "f81bef9eff3c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f81bef9eff3c",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.twoStoriesNeeded": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison du refus du remplacement automatique par le fichier assemblé.",
+    "en": {
+      "sourceHash": "0d3983ef8b01",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0d3983ef8b01",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.multipleParents": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison du refus du remplacement automatique.",
+    "en": {
+      "sourceHash": "96ca629b7c4b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "96ca629b7c4b",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.notConsecutive": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison du refus du remplacement automatique.",
+    "en": {
+      "sourceHash": "0f51b071916b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0f51b071916b",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.ambiguousNavigation": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison du refus du remplacement automatique : une fin d’histoire ne mène pas directement à la suivante.",
+    "en": {
+      "sourceHash": "5542bff1c23b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5542bff1c23b",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.incomingNavigation": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison du refus du remplacement automatique.",
+    "en": {
+      "sourceHash": "470cfcd0efdd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "470cfcd0efdd",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.missingOutput": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison : le fichier produit par l’assemblage n’existe pas.",
+    "en": {
+      "sourceHash": "7b312014460f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7b312014460f",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.inactiveRequest": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison : la demande a été remplacée ou annulée.",
+    "en": {
+      "sourceHash": "ebf28f61190b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ebf28f61190b",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.actionNotAllowed": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison du refus du remplacement.",
+    "en": {
+      "sourceHash": "f71a2e32bb56",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f71a2e32bb56",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.unknownAction": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison : action interne inconnue (cas défensif).",
+    "en": {
+      "sourceHash": "427bb34dab13",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "427bb34dab13",
+      "status": "ai-reviewed"
+    }
+  },
+  "tool.refusal.mutationRefused": {
+    "context": "Outils audio contextuels (assembler/découper des histoires depuis l’arbre ou le diagramme) > raison générique quand le projet refuse le remplacement.",
+    "en": {
+      "sourceHash": "44fbf647fae9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "44fbf647fae9",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.fallback.stem": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > radical de nom de fichier utilisé si le champ « Nom du fichier final » est vide ; écrit dans le nom du fichier créé (minuscule, sans espace).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "c0d142a8f47e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c0d142a8f47e",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.error.generic": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > message d’erreur quand aucune cause n’est fournie.",
+    "en": {
+      "sourceHash": "badf84c67fb1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "badf84c67fb1",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.error.ffmpeg": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > message d’erreur d’un échec FFmpeg ; {{detail}} = première ligne du message d’erreur.",
+    "en": {
+      "sourceHash": "c2c8c229efa3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c2c8c229efa3",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.workspace.missing": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > erreur quand le réglage « Emplacement de travail » (Workspace folder) n’est pas défini.",
+    "en": {
+      "sourceHash": "71780be5e24c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "71780be5e24c",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.items.tooFew": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > erreur quand l’utilisateur a retiré trop d’audios de la liste.",
+    "en": {
+      "sourceHash": "abbaaef1ead2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "abbaaef1ead2",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.silence.invalid": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > erreur de saisie de la durée de silence.",
+    "en": {
+      "sourceHash": "e74d23a297bb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e74d23a297bb",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.replace.title": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > titre quand le résultat remplacera les histoires sélectionnées dans l’arbre.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "59f26b1d14a8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "59f26b1d14a8",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.title": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > titre du dialogue.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "e7d8a2b4e917",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e7d8a2b4e917",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.context.stories_one": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > rappel, en gras, des histoires de l’arbre à l’origine de l’assemblage. Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "c4e71f87984f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c4e71f87984f",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.context.stories_many": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > rappel, en gras, des histoires de l’arbre à l’origine de l’assemblage. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "594448d4b8e4",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.context.stories_other": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > rappel, en gras, des histoires de l’arbre à l’origine de l’assemblage. Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "594448d4b8e4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "594448d4b8e4",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.intro.description": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > phrase d’introduction.",
+    "en": {
+      "sourceHash": "2e824b9ae1cd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2e824b9ae1cd",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.intro.originals": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > phrase d’introduction.",
+    "en": {
+      "sourceHash": "ad168825facc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ad168825facc",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.intro.replace": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > phrase quand le remplacement automatique est prévu.",
+    "en": {
+      "sourceHash": "2222891d3f5d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2222891d3f5d",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.project.unchanged": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > phrase quand l’assemblage ne remplacera pas les histoires.",
+    "en": {
+      "sourceHash": "039400988595",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "039400988595",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.project.unchangedReason": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > même phrase avec la raison du non-remplacement ; {{reason}} = phrase complète déjà traduite.",
+    "en": {
+      "sourceHash": "508b262e054c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "508b262e054c",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.ignored.notice_one": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > note quand la sélection contenait des images ou archives. Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "e405b6aaed40",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e405b6aaed40",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.ignored.notice_many": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > note quand la sélection contenait des images ou archives. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "5ceb0db20980",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.ignored.notice_other": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > note quand la sélection contenait des images ou archives. Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "5ceb0db20980",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5ceb0db20980",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.list.title": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > titre de la liste réordonnable.",
+    "en": {
+      "sourceHash": "f1ef2d358045",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f1ef2d358045",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.item.up": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > info-bulle de la flèche ↑ d’une ligne.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "37b60293a81c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "37b60293a81c",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.item.down": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > info-bulle de la flèche ↓ d’une ligne.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "21cbc06983ec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "21cbc06983ec",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.options.title": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > titre de la section des options.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "d0db8b5e364b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d0db8b5e364b",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.silence.label": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > case à cocher.",
+    "en": {
+      "sourceHash": "aee343d00cda",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "aee343d00cda",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.silence.unit": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > unité après le champ de durée du silence (minuscule).",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "05f7175245e0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "05f7175245e0",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.sources.note": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > note sous les options.",
+    "en": {
+      "sourceHash": "2368661d3c45",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2368661d3c45",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.output.label": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > libellé du champ du nom du fichier créé.",
+    "en": {
+      "sourceHash": "0cd3307b2f62",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0cd3307b2f62",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.output.placeholder": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > exemple de nom de fichier dans le champ vide ; garder l’extension .flac et le style sans espace.",
+    "en": {
+      "sourceHash": "424c44940450",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "424c44940450",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.output.created": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > libellé devant le chemin du fichier qui sera créé.",
+    "en": {
+      "sourceHash": "075e81b98ac2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "075e81b98ac2",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.submit.progress": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > bouton principal pendant le traitement.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "983982146334",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "983982146334",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.submit.replace": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > bouton principal quand le résultat remplacera les histoires.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "66a0e985b180",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "66a0e985b180",
+      "status": "ai-reviewed"
+    }
+  },
+  "assembly.submit.action": {
+    "context": "Dialogue « Assembler des audios » (médiathèque) > bouton principal.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "8ae5ed28f5a2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8ae5ed28f5a2",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.default.title": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > titre par défaut quand l’appelant n’en fournit pas.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "fc58b88a9ca9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fc58b88a9ca9",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.default.confirm": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > bouton de validation par défaut.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "5e1776eb9ea7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5e1776eb9ea7",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.gif.unsupported": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > erreur affichée sur le canevas quand la source est un GIF.",
+    "en": {
+      "sourceHash": "52ed7606f494",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "52ed7606f494",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.init.failed": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > erreur affichée sur le canevas.",
+    "en": {
+      "sourceHash": "dcc7109a28c0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dcc7109a28c0",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.load.failed": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > erreur affichée sur le canevas quand le fichier n’est pas une image lisible.",
+    "en": {
+      "sourceHash": "ead678e6fffb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ead678e6fffb",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.read.failed": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > erreur affichée sur le canevas quand le fichier est inaccessible.",
+    "en": {
+      "sourceHash": "05d6007357f8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "05d6007357f8",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.render.failed": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > erreur affichée sur le canevas. Le FR source garde « echoue » sans accent (texte historique conservé).",
+    "en": {
+      "sourceHash": "97073f040beb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "97073f040beb",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.export.failed": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > erreur générique après un échec d’enregistrement.",
+    "en": {
+      "sourceHash": "2d085de8065d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2d085de8065d",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.export.noWorkspace": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > erreur quand l’image doit être enregistrée comme nouveau média sans dossier de projet.",
+    "en": {
+      "sourceHash": "55e5785b3f72",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "55e5785b3f72",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.canvas.hint": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > aide sous le canevas ; « Molette » = molette de la souris (pas celle de la Lunii).",
+    "en": {
+      "sourceHash": "c5be11093ecd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c5be11093ecd",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.cover.tooltip": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > info-bulle du bouton « Ajuster ».",
+    "en": {
+      "sourceHash": "554d2205bbb3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "554d2205bbb3",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.cover.action": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > petit bouton : agrandit l’image pour remplir le cadre en la rognant.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "63d542868390",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "63d542868390",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.contain.tooltip": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > info-bulle du bouton « Centrer ».",
+    "en": {
+      "sourceHash": "21221616b42a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "21221616b42a",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.contain.action": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > petit bouton : réduit l’image pour qu’elle soit entièrement visible.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "8dfb61ed4cb3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8dfb61ed4cb3",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.filters.title": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > titre du panneau des filtres.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "6e2287796c72",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6e2287796c72",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.filter.brightness": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > libellé d’un curseur.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "5b661b4e3e14",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5b661b4e3e14",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.filter.contrast": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > libellé d’un curseur.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "7cfb945aa92e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7cfb945aa92e",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.filter.saturation": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > libellé d’un curseur.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "993f024b650e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "993f024b650e",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.filter.blur": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > libellé d’un curseur.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "9c51b7eacf15",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9c51b7eacf15",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.filter.thickness": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > libellé d’un curseur qui épaissit les traits de l’image.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "9930487b4208",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9930487b4208",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.vignette.title": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > titre du groupe de curseurs de vignettage.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "5c9fad44da71",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5c9fad44da71",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.vignette.help": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > aide du groupe Vignettage.",
+    "en": {
+      "sourceHash": "3cb7c4e3378c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3cb7c4e3378c",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.vignette.intensity": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > curseur du vignettage.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "4c126478365c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4c126478365c",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.vignette.size": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > curseur du vignettage.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "77093e0c33ff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "77093e0c33ff",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.vignette.feather": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > curseur du vignettage : largeur du dégradé.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "89ad3663bb60",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "89ad3663bb60",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.filter.grayscale": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > case à cocher.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "77dc64bdeb91",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "77dc64bdeb91",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.filter.invert": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > case à cocher : inverse les couleurs.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "4befca35504c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4befca35504c",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.advanced.hide": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > bouton qui replie les filtres avancés ; garder le triangle.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "734a9f955bc6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "734a9f955bc6",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.advanced.show": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > bouton qui déplie les filtres avancés ; garder le triangle.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "e3a9b3377ae1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e3a9b3377ae1",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.filter.hue": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > curseur avancé.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "9a054a2c60a5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9a054a2c60a5",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.filter.sepia": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > curseur avancé.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "f36d6efc50db",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f36d6efc50db",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.filters.reset": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > bouton.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "442c7f653be7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "442c7f653be7",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.save.progress": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > bouton de validation pendant l’enregistrement (save) de l’image.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "0f02d9ec0f50",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0f02d9ec0f50",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.levels.title": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > titre du groupe Niveaux (histogramme).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "4fa1343a6cf6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4fa1343a6cf6",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.levels.help": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > aide du groupe Niveaux.",
+    "en": {
+      "sourceHash": "5512e30d59db",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5512e30d59db",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.levels.black": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > curseur du point noir.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "363e04e91a4c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "363e04e91a4c",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.levels.gamma": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > curseur gamma (tons moyens) ; terme technique identique.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "a8ab3d5805c9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a8ab3d5805c9",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.levels.white": {
+    "context": "Éditeur d’image (recadrage et filtres d’une image 320×240) > curseur du point blanc.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "a3bdd3c553e0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a3bdd3c553e0",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEdit.created.notice": {
+    "context": "Panneau Médias > modification d’une image enregistrée comme nouveau média > toast de confirmation (quelques secondes).",
+    "en": {
+      "sourceHash": "9c981ec2fbb4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9c981ec2fbb4",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEdit.unavailable.title": {
+    "context": "Panneau Médias > modification d’une image enregistrée comme nouveau média > titre de l’avertissement quand aucun dossier de projet n’est disponible.",
+    "en": {
+      "sourceHash": "c6912e1012df",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c6912e1012df",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEdit.unavailable.message": {
+    "context": "Panneau Médias > modification d’une image enregistrée comme nouveau média > message de l’avertissement.",
+    "en": {
+      "sourceHash": "dc4c0effe2df",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dc4c0effe2df",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.fade.in": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > titre du réglage du fondu de début.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "1c8177906e45",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1c8177906e45",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.fade.out": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > titre du réglage du fondu de fin.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "0243eb585ef6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0243eb585ef6",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.fade.cut": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > titre du réglage du fondu appliqué au point de coupe.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "1e655902b4e1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1e655902b4e1",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.fade.inValue": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton de fondu de début ; {{time}} = durée formatée m:ss.",
+    "en": {
+      "sourceHash": "77916cf6b035",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "77916cf6b035",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.fade.outValue": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton de fondu de fin ; {{time}} = durée formatée m:ss.",
+    "en": {
+      "sourceHash": "61195c300728",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "61195c300728",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.fade.edit": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > menu contextuel de la forme d’onde sur un fondu existant.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "9b1aebbf2d39",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9b1aebbf2d39",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.fade.addIn": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > menu contextuel et info-bulle du bouton de fondu de début.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "c0672ed98fc3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c0672ed98fc3",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.fade.addOut": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > menu contextuel et info-bulle du bouton de fondu de fin.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "f95a8847edba",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f95a8847edba",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.fade.add": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > menu contextuel de la forme d’onde au point de coupe.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "d9c4408cbfc2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d9c4408cbfc2",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.mark.start": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton « { » ; (i) = raccourci clavier, à garder.",
+    "en": {
+      "sourceHash": "a1caca4c6674",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a1caca4c6674",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.mark.end": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton « } » ; (o) = raccourci clavier, à garder.",
+    "en": {
+      "sourceHash": "6dafa038e75d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6dafa038e75d",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.transport.pause": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton lecture pendant la lecture ; Espace = touche du clavier.",
+    "en": {
+      "sourceHash": "56efc53b2a7a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "56efc53b2a7a",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.transport.playPause": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton lecture à l’arrêt ; Espace = touche du clavier.",
+    "en": {
+      "sourceHash": "e888e086f8e0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e888e086f8e0",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.transport.stop": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton d’arrêt de la lecture.",
+    "en": {
+      "sourceHash": "cae7d57bc067",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cae7d57bc067",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.transport.back": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton de recul.",
+    "en": {
+      "sourceHash": "0a7260cce09c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0a7260cce09c",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.transport.forward": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton d’avance.",
+    "en": {
+      "sourceHash": "1f2c713d43af",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1f2c713d43af",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.goTo.start": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle ; raccourci clavier à garder.",
+    "en": {
+      "sourceHash": "16f830b34d9f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "16f830b34d9f",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.goTo.end": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle ; raccourci clavier à garder.",
+    "en": {
+      "sourceHash": "df10bde97de6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "df10bde97de6",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.selection.keep": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton qui ne conserve que la sélection ; raccourci à garder.",
+    "en": {
+      "sourceHash": "0a1bd15476e2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0a1bd15476e2",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.selection.cut": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton qui retire la sélection de l’audio ; raccourci à garder.",
+    "en": {
+      "sourceHash": "dfa2f1302c3d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dfa2f1302c3d",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.title": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > titre ; {{name}} = nom du fichier.",
+    "maxLength": 60,
+    "en": {
+      "sourceHash": "cdfc78b3cd8c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cdfc78b3cd8c",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.waveform.analyzing": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > état de chargement de la forme d’onde.",
+    "en": {
+      "sourceHash": "5c2ce5b665ed",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5c2ce5b665ed",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.file.loading": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > état de chargement du fichier.",
+    "en": {
+      "sourceHash": "bd6896d14f31",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bd6896d14f31",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.zoom.label": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > libellé du curseur de zoom de la forme d’onde.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "509c517ede79",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "509c517ede79",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.zoom.hint": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > rappel des raccourcis : Ctrl + molette de la souris ou +/- pour zoomer, flèches pour déplacer de 50 ms, touches Début/Fin du clavier.",
+    "en": {
+      "sourceHash": "37f24411e24f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "37f24411e24f",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.selection.in": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > libellé du point d’entrée de la sélection, suivi du temps en gras.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "d9c7efe13095",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d9c7efe13095",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.selection.out": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > libellé du point de sortie de la sélection, suivi du temps en gras.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "987ce358afb7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "987ce358afb7",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.selection.preview": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > bouton qui joue seulement la sélection.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "119af0bcd182",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "119af0bcd182",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.restore.tooltip": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton de restauration.",
+    "en": {
+      "sourceHash": "24f9ac564638",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "24f9ac564638",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.restore.action": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > bouton qui revient au fichier sauvegardé avant toute édition.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "98fd8f780756",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "98fd8f780756",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.preview.audioProgress": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > état pendant le calcul de l’aperçu.",
+    "en": {
+      "sourceHash": "6888408a00e2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6888408a00e2",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.preview.pending": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton de validation pendant le calcul d’un aperçu.",
+    "en": {
+      "sourceHash": "f644118d3012",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f644118d3012",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.apply.action": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > bouton principal (et son info-bulle) qui écrit les modifications dans le fichier.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "f9b7efc71316",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f9b7efc71316",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.apply.nothingTooltip": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > info-bulle du bouton principal désactivé.",
+    "en": {
+      "sourceHash": "1c10c2bc4246",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1c10c2bc4246",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.preview.progress": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > bouton principal pendant le calcul d’un aperçu.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "a2b1fde78f25",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a2b1fde78f25",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.apply.progress": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > bouton principal pendant l’écriture des modifications.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "f680d4a70e42",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f680d4a70e42",
+      "status": "ai-reviewed"
+    }
+  },
+  "audioEditor.apply.nothing": {
+    "context": "Éditeur audio (garder/supprimer une sélection, fondus) ouvert depuis un champ audio > bouton principal désactivé quand rien n’a changé.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "72b7c3f5caff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "72b7c3f5caff",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.segment.defaultName": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > nom de fichier proposé pour un nouvel extrait ; {{stem}} = nom du fichier source, {{index}} = numéro sur deux chiffres. Écrit dans la langue active à l’ajout ; garder underscores et .flac.",
+    "en": {
+      "sourceHash": "196e1627d48b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "196e1627d48b",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.segment.fallbackStem": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > nom de fichier de repli si le champ d’un extrait est vide (minuscule, sans espace).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "bf61553a9979",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bf61553a9979",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.error.generic": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > erreur quand aucune cause n’est fournie.",
+    "en": {
+      "sourceHash": "6001d49bf1ed",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6001d49bf1ed",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.error.ffmpeg": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > erreur d’un échec FFmpeg ; {{detail}} = première ligne du message d’erreur.",
+    "en": {
+      "sourceHash": "30866cd95190",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "30866cd95190",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.load.failed": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > erreur de chargement de la forme d’onde.",
+    "en": {
+      "sourceHash": "9e470f5dcec1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9e470f5dcec1",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.selection.invalid": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > erreur quand la plage sélectionnée est vide ou inversée.",
+    "en": {
+      "sourceHash": "b072839e9c0e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b072839e9c0e",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.workspace.missing": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > erreur quand le réglage « Emplacement de travail » (Workspace folder) n’est pas défini.",
+    "en": {
+      "sourceHash": "9d6384cda08a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9d6384cda08a",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.segments.empty": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > erreur quand on lance la génération sans extrait.",
+    "en": {
+      "sourceHash": "cbe53ca13d4f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cbe53ca13d4f",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.segments.noneCreated": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > erreur quand tous les extraits ont échoué sans cause fournie.",
+    "en": {
+      "sourceHash": "cb748fb70b1b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cb748fb70b1b",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.source.label": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > libellé devant le nom du fichier découpé.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "0e570ca6fabe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0e570ca6fabe",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.context.story": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > rappel en gras quand la découpe est lancée depuis une histoire de l’arbre ; {{name}} = nom de l’histoire.",
+    "en": {
+      "sourceHash": "3c9a4ef7a6f8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3c9a4ef7a6f8",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.context.unchanged": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > précision sous le rappel de l’histoire.",
+    "en": {
+      "sourceHash": "4829eeb80ddb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4829eeb80ddb",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.help": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > aide en haut du dialogue.",
+    "en": {
+      "sourceHash": "49b0c2ae7d36",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "49b0c2ae7d36",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.loading": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > état de chargement de la forme d’onde.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "66474911d953",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "66474911d953",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.zoom.hint": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > rappel des raccourcis : molette de la souris, flèches, J/K/L pour le défilement, touches Début/Fin.",
+    "en": {
+      "sourceHash": "1551a2695149",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1551a2695149",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.preview.action": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > bouton qui joue la plage sélectionnée.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "11529cec5085",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "11529cec5085",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.segment.add": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > bouton qui ajoute la plage sélectionnée à la liste des extraits.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "318552987a40",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "318552987a40",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.segments.title": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > titre de la liste des extraits.",
+    "en": {
+      "sourceHash": "52e3aed7b709",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "52e3aed7b709",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.segments.none": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > liste vide.",
+    "en": {
+      "sourceHash": "5862e602a888",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5862e602a888",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.segment.preview": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > info-bulle du bouton lecture d’une ligne.",
+    "en": {
+      "sourceHash": "65f9abd0d29b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "65f9abd0d29b",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.segment.remove": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > info-bulle du bouton corbeille d’une ligne (retire l’extrait de la liste).",
+    "en": {
+      "sourceHash": "7b124d900dd2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7b124d900dd2",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.destination.label": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > libellé devant le dossier où seront créés les extraits.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "293d404a500f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "293d404a500f",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.submit.progress": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > bouton principal pendant la découpe.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "1dfc6d677f67",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1dfc6d677f67",
+      "status": "ai-reviewed"
+    }
+  },
+  "splitter.submit.action": {
+    "context": "Dialogue « Découper un audio » (crée des extraits sans modifier l’original) > bouton principal qui crée les fichiers des extraits.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "2605e1691662",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2605e1691662",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.microphone.failed": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > erreur ; {{detail}} = message technique du système, non traduit.",
+    "en": {
+      "sourceHash": "2796ef3c9ea4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2796ef3c9ea4",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.preview.failed": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > erreur d’écoute de l’enregistrement ; {{detail}} = message technique du système.",
+    "en": {
+      "sourceHash": "b8d3b3c5317d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b8d3b3c5317d",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.write.failedPrefix": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > préfixe placé devant le message d’erreur traduit de l’enregistrement sur le disque ; garder l’espace final.",
+    "en": {
+      "sourceHash": "2d94f2fff546",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2d94f2fff546",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.title": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > titre (enregistrement au micro).",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "9b6de9d51dc3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9b6de9d51dc3",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.countdown.hint": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > texte sous le compte à rebours avant l’enregistrement.",
+    "en": {
+      "sourceHash": "ec8287fbe270",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ec8287fbe270",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.stop.action": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > bouton qui arrête l’enregistrement ; garder le symbole.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "8d42e0e1fb68",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8d42e0e1fb68",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.duration.label": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > durée de l’enregistrement ; {{duration}} = mm:ss.",
+    "en": {
+      "sourceHash": "eb96c51e52ff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "eb96c51e52ff",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.preview.loading": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > état de l’écoute.",
+    "en": {
+      "sourceHash": "10562388b63f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "10562388b63f",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.preview.playing": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > état de l’écoute ; positions mm:ss.",
+    "en": {
+      "sourceHash": "7c85973f0eef",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7c85973f0eef",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.preview.paused": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > état de l’écoute ; {{position}} = mm:ss.",
+    "en": {
+      "sourceHash": "ca9202ff8572",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ca9202ff8572",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.preview.ended": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > état de l’écoute.",
+    "en": {
+      "sourceHash": "09f6d8f8471b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "09f6d8f8471b",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.name.placeholder": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > placeholder du champ du nom de fichier (l’extension .webm est affichée à côté).",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "1887084a783d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1887084a783d",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.preview.resume": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > bouton de reprise de l’écoute ; garder le symbole.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "e7b14c025270",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e7b14c025270",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.preview.listen": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > bouton d’écoute de l’enregistrement ; garder le symbole.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "6f2d04371629",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6f2d04371629",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.preview.pause": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > bouton pause de l’écoute ; garder le symbole.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "69792beda415",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "69792beda415",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.retry.action": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > bouton qui jette la prise et relance le compte à rebours ; garder le symbole.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "5beb7a8eecf5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5beb7a8eecf5",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.use.action": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > bouton qui enregistre (save) la prise et l’utilise ; garder le symbole.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "0accb7db1041",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0accb7db1041",
+      "status": "ai-reviewed"
+    }
+  },
+  "record.saving.progress": {
+    "context": "Dialogue d’enregistrement au micro (record, pas save) > état pendant l’écriture sur le disque.",
+    "en": {
+      "sourceHash": "c6e40e003b73",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c6e40e003b73",
+      "status": "ai-reviewed"
+    }
+  },
+  "triage.title": {
+    "context": "Dialogue de tri des médias de session (à l’enregistrement d’un projet temporaire) > titre.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "402e4ab4ec70",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "402e4ab4ec70",
+      "status": "ai-reviewed"
+    }
+  },
+  "triage.unused.count_one": {
+    "context": "Dialogue de tri des médias de session (à l’enregistrement d’un projet temporaire) > première phrase de l’introduction : nombre de médias inutilisés. Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "e18c48e59b4f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e18c48e59b4f",
+      "status": "ai-reviewed"
+    }
+  },
+  "triage.unused.count_many": {
+    "context": "Dialogue de tri des médias de session (à l’enregistrement d’un projet temporaire) > première phrase de l’introduction : nombre de médias inutilisés. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "38b7e2947e36",
+      "status": "ai-reviewed"
+    }
+  },
+  "triage.unused.count_other": {
+    "context": "Dialogue de tri des médias de session (à l’enregistrement d’un projet temporaire) > première phrase de l’introduction : nombre de médias inutilisés. Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "38b7e2947e36",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "38b7e2947e36",
+      "status": "ai-reviewed"
+    }
+  },
+  "triage.keep.hint": {
+    "context": "Dialogue de tri des médias de session (à l’enregistrement d’un projet temporaire) > seconde phrase de l’introduction.",
+    "en": {
+      "sourceHash": "40e6f6aeaf35",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "40e6f6aeaf35",
+      "status": "ai-reviewed"
+    }
+  },
+  "triage.dropAll.action": {
+    "context": "Dialogue de tri des médias de session (à l’enregistrement d’un projet temporaire) > bouton qui laisse supprimer tous les médias listés.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "67441d269a10",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "67441d269a10",
+      "status": "ai-reviewed"
+    }
+  },
+  "triage.keep.action": {
+    "context": "Dialogue de tri des médias de session (à l’enregistrement d’un projet temporaire) > bouton principal qui copie les médias cochés dans le projet.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "acdd4e2c41ae",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "acdd4e2c41ae",
+      "status": "ai-reviewed"
+    }
+  },
+  "triage.copy.incompleteTitle": {
+    "context": "Dialogue de tri des médias de session (à l’enregistrement d’un projet temporaire) > titre du dialogue quand certains médias n’ont pas pu être copiés.",
+    "en": {
+      "sourceHash": "8c4c39189255",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8c4c39189255",
+      "status": "ai-reviewed"
+    }
+  },
+  "triage.copy.incompleteMessage": {
+    "context": "Dialogue de tri des médias de session (à l’enregistrement d’un projet temporaire) > message ; {{details}} = liste « • chemin + erreur » ; garder les sauts de ligne.",
+    "en": {
+      "sourceHash": "fccc4790a2b2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fccc4790a2b2",
+      "status": "ai-reviewed"
+    }
+  },
+  "triage.copy.drop": {
+    "context": "Dialogue de tri des médias de session (à l’enregistrement d’un projet temporaire) > bouton du dialogue de copie incomplète.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "278af16575b1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "278af16575b1",
+      "status": "ai-reviewed"
+    }
+  },
+  "triage.copy.retry": {
+    "context": "Dialogue de tri des médias de session (à l’enregistrement d’un projet temporaire) > bouton principal du dialogue de copie incomplète.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "af273d956b5b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "af273d956b5b",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.kind.audio": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > type d’un fichier manquant (minuscule, petite étiquette).",
+    "maxLength": 10,
+    "en": {
+      "sourceHash": "6ed8919ce204",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6ed8919ce204",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.kind.image": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > type d’un fichier manquant (minuscule, petite étiquette).",
+    "maxLength": 10,
+    "en": {
+      "sourceHash": "6105d6cc76af",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6105d6cc76af",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.kind.archive": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > type d’un fichier manquant (minuscule, petite étiquette).",
+    "maxLength": 10,
+    "en": {
+      "sourceHash": "0eb3e36bfb24",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0eb3e36bfb24",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.kind.media": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > type d’un fichier manquant d’autre nature (minuscule, petite étiquette ; le FR source écrit « média » sans accent).",
+    "maxLength": 10,
+    "en": {
+      "sourceHash": "4a45b48a139b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4a45b48a139b",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.row.resolved": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > état d’une ligne reliée à un nouveau fichier.",
+    "en": {
+      "sourceHash": "7cf8beefef48",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7cf8beefef48",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.row.ambiguous_one": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > état d’une ligne quand plusieurs fichiers du même nom ont été trouvés (toujours au moins 2). Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "ab29ba7dfd51",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ab29ba7dfd51",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.row.ambiguous_many": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > état d’une ligne quand plusieurs fichiers du même nom ont été trouvés (toujours au moins 2). Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "94294b370219",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.row.ambiguous_other": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > état d’une ligne quand plusieurs fichiers du même nom ont été trouvés (toujours au moins 2). Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "94294b370219",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "94294b370219",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.row.missing": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > état d’une ligne sans libellé d’usage.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "a178c6e0a32b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a178c6e0a32b",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.title": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > titre et libellé accessible du dialogue.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "87ef3b27b00a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "87ef3b27b00a",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.remaining.count_one": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > compteur de l’en-tête : fichiers encore à relier. Forme plurielle « one » (count transmis).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "33b76ed8788c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "33b76ed8788c",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.remaining.count_many": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > compteur de l’en-tête : fichiers encore à relier. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "maxLength": 16,
+    "it": {
+      "sourceHash": "20e368c17718",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.remaining.count_other": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > compteur de l’en-tête : fichiers encore à relier. Forme plurielle « other » (count transmis).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "20e368c17718",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "20e368c17718",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.all.resolved": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > compteur de l’en-tête quand tout est relié.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "bfc84fff0b4b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bfc84fff0b4b",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.progress.label_one": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > progression « N relié(s) sur total » ; famille plurielle pilotée par count = nombre de médias déjà reliés ; chiffres en gras (composant nommé strong).",
+    "en": {
+      "sourceHash": "50a13ef4d11a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "50a13ef4d11a",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.progress.label_many": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > progression « N relié(s) sur total » ; famille plurielle pilotée par count = nombre de médias déjà reliés ; chiffres en gras (composant nommé strong).",
+    "it": {
+      "sourceHash": "08df3c711fa1",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.progress.label_other": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > progression « N relié(s) sur total » ; famille plurielle pilotée par count = nombre de médias déjà reliés ; chiffres en gras (composant nommé strong).",
+    "it": {
+      "sourceHash": "08df3c711fa1",
+      "status": "ai-reviewed"
+    },
+    "en": {
+      "sourceHash": "08df3c711fa1",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.search.placeholder": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > champ de recherche ; placeholder.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "b784a56af695",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b784a56af695",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.filter.ariaLabel": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > libellé accessible du groupe de boutons Tous/Restants/Reliés.",
+    "en": {
+      "sourceHash": "96ea73f9243f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "96ea73f9243f",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.filter.all": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > bouton de filtre, suivi du compte.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "2ff599814388",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2ff599814388",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.filter.remaining": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > bouton de filtre : fichiers encore à relier, suivi du compte.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "71f13f52ccd7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "71f13f52ccd7",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.filter.resolved": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > bouton de filtre : fichiers déjà reliés, suivi du compte.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "ba27563a4edd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ba27563a4edd",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.filter.empty": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > liste vide.",
+    "en": {
+      "sourceHash": "01d7a02b7c7d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "01d7a02b7c7d",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.group.expand": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > libellé accessible du chevron d’un dossier replié.",
+    "en": {
+      "sourceHash": "c688d0b8ff24",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c688d0b8ff24",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.group.collapse": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > libellé accessible du chevron d’un dossier déplié.",
+    "en": {
+      "sourceHash": "8307b7d1ecd0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8307b7d1ecd0",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.group.resolved_one": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > sous-titre d’un dossier entièrement relié. Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "14ddc9cfd6bc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "14ddc9cfd6bc",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.group.resolved_many": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > sous-titre d’un dossier entièrement relié. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "2bac2546afd5",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.group.resolved_other": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > sous-titre d’un dossier entièrement relié. Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "2bac2546afd5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2bac2546afd5",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.group.missing_one": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > sous-titre d’un dossier : fichiers encore manquants. Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "7d5f85201471",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7d5f85201471",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.group.missing_many": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > sous-titre d’un dossier : fichiers encore manquants. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "dd9d9a06db5c",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.group.missing_other": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > sous-titre d’un dossier : fichiers encore manquants. Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "dd9d9a06db5c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd9d9a06db5c",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.folder.change": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > bouton d’un groupe déjà relié : choisir un autre dossier.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "860a1901d0fc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "860a1901d0fc",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.folder.choose": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > bouton d’un groupe : choisir le dossier où chercher ces fichiers.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "3c84449b6838",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3c84449b6838",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.match.placeholder": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > première option de la liste des correspondances.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "397049a6ab90",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "397049a6ab90",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.file.choose": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > bouton d’une ligne : choisir le fichier de remplacement.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "3f2aaae20144",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3f2aaae20144",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.ignoreAll.action": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > bouton qui ferme le dialogue sans relier.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "9d7c1c9ae5ac",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9d7c1c9ae5ac",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.workspace.scan": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > bouton qui cherche les fichiers dans l’emplacement de travail (Workspace folder / Cartella di lavoro).",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "041b1fa31c19",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "041b1fa31c19",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.ready.label_one": {
+    "context": "Dialogue « Médias introuvables » > pied, nombre de médias prêts à appliquer « N / total » ; famille plurielle pilotée par count = nombre de médias reliés ; premier chiffre en gras (composant nommé strong).",
+    "en": {
+      "sourceHash": "67b68f5b7009",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "67b68f5b7009",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.ready.label_many": {
+    "context": "Dialogue « Médias introuvables » > pied, nombre de médias prêts à appliquer « N / total » ; famille plurielle pilotée par count = nombre de médias reliés ; premier chiffre en gras (composant nommé strong).",
+    "it": {
+      "sourceHash": "2b3d535fa649",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.ready.label_other": {
+    "context": "Dialogue « Médias introuvables » > pied, nombre de médias prêts à appliquer « N / total » ; famille plurielle pilotée par count = nombre de médias reliés ; premier chiffre en gras (composant nommé strong).",
+    "it": {
+      "sourceHash": "2b3d535fa649",
+      "status": "ai-reviewed"
+    },
+    "en": {
+      "sourceHash": "2b3d535fa649",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.apply.action": {
+    "context": "Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) > bouton principal : remplace les chemins puis enregistre (save) le projet.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "fdbc66c6836e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fdbc66c6836e",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.source.fallback": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > repli quand la provenance d’un abonnement est inconnue (YouTube et Podcast restent des marques invariables).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "0e570ca6fabe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0e570ca6fabe",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.newVideos.count_one": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > nombre de nouveautés d’une chaîne ou playlist YouTube, après le nom du projet. Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "c8bbcf86c0c9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c8bbcf86c0c9",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.newVideos.count_many": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > nombre de nouveautés d’une chaîne ou playlist YouTube, après le nom du projet. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "6c581f91a9c4",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.newVideos.count_other": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > nombre de nouveautés d’une chaîne ou playlist YouTube, après le nom du projet. Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "6c581f91a9c4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6c581f91a9c4",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.newEpisodes.count_one": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > nombre de nouveautés d’un podcast, après le nom du projet. Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "183e5bb26026",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "183e5bb26026",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.newEpisodes.count_many": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > nombre de nouveautés d’un podcast, après le nom du projet. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "650c0b1881c7",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.newEpisodes.count_other": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > nombre de nouveautés d’un podcast, après le nom du projet. Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "650c0b1881c7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "650c0b1881c7",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.state.active": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > état d’un abonnement (masculin : le suivi).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "ad26287ab66b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ad26287ab66b",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.state.paused": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > état d’un abonnement mis en pause par l’utilisateur.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "ff129984f4a1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ff129984f4a1",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.project.missing": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > état ajouté après « · » quand le fichier du projet suivi a disparu.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "f11f43ee080f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f11f43ee080f",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.tools.install": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > bouton qui installe l’outil YouTube (yt-dlp).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "bb6b121974b6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bb6b121974b6",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.tools.update": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > bouton qui met à jour l’outil YouTube (yt-dlp).",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "f475e8cf6bdc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f475e8cf6bdc",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.tools.missing": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > avis sur les outils YouTube.",
+    "en": {
+      "sourceHash": "ea292e9dc28d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ea292e9dc28d",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.tools.outdated": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > avis sur les outils YouTube.",
+    "en": {
+      "sourceHash": "5df1a36f527f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5df1a36f527f",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.tools.updating": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > bouton pendant la mise à jour de l’outil.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "fe7eb9c2fcb9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fe7eb9c2fcb9",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.tools.updateFailedPrefix": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > préfixe devant l’erreur traduite de la mise à jour de l’outil YouTube ; garder l’espace final.",
+    "en": {
+      "sourceHash": "eb0e00f4351c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "eb0e00f4351c",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.notifications.count_one": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > libellé accessible du bouton d’ouverture du panneau quand des nouveautés attendent. Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "8f66ff268b16",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8f66ff268b16",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.notifications.count_many": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > libellé accessible du bouton d’ouverture du panneau quand des nouveautés attendent. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "5c4f2732b21e",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.notifications.count_other": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > libellé accessible du bouton d’ouverture du panneau quand des nouveautés attendent. Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "5c4f2732b21e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5c4f2732b21e",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.notifications.title": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > bouton d’ouverture du panneau et titre de section.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "788011833a5a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "788011833a5a",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.panel.ariaLabel": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > libellé accessible du panneau.",
+    "en": {
+      "sourceHash": "99a6702764f0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "99a6702764f0",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.panel.title": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > titre du panneau.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "5daa02eaa0e3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5daa02eaa0e3",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.panel.close": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > libellé accessible du bouton ×.",
+    "en": {
+      "sourceHash": "0b696f264076",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0b696f264076",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.notifications.empty": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > section Notifications vide.",
+    "en": {
+      "sourceHash": "c209de60ba45",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c209de60ba45",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.open.action": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > bouton d’une notification : ouvre le projet et l’import des nouveautés.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "9fb440435a04",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9fb440435a04",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.notification.remove": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > libellé accessible du bouton Supprimer d’une notification ; {{title}} = titre de la source.",
+    "en": {
+      "sourceHash": "535fb05a6efd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "535fb05a6efd",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.list.title": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > titre de la section des abonnements.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "3485b0384f9e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3485b0384f9e",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.check.progress": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > bouton pendant la recherche de nouveautés.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "c7984dcce6f3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c7984dcce6f3",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.check.action": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > bouton qui cherche tout de suite les nouveautés.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "f1db3274a2c0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f1db3274a2c0",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.list.empty": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > section Abonnements vide.",
+    "en": {
+      "sourceHash": "2fc7e67181c5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2fc7e67181c5",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.project.relocate": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > bouton (et titre de dialogue) pour désigner le nouvel emplacement du projet suivi.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "c75164fbf933",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c75164fbf933",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.pause.action": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > bouton qui met l’abonnement en pause.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "bc3327aef9c5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bc3327aef9c5",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.resume.action": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > bouton qui réactive l’abonnement.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "ddd913203fe2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ddd913203fe2",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.follow.remove": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > libellé accessible du bouton Supprimer d’un abonnement ; {{title}} = titre de la source.",
+    "en": {
+      "sourceHash": "e75cefdf46ff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e75cefdf46ff",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.error.missingProject": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > erreur d’un abonnement ; cite le bouton « Retrouver le projet » (même traduction que subscriptions.project.relocate). Retenue par clé dans le registre local.",
+    "en": {
+      "sourceHash": "6be6b8aeed38",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6be6b8aeed38",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.error.youtubeNotReady": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > erreur d’un abonnement YouTube tant que l’outil n’a pas été préparé.",
+    "en": {
+      "sourceHash": "6f3f2811d269",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6f3f2811d269",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.registry.unreadable": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > alerte de stockage local.",
+    "en": {
+      "sourceHash": "b423ca8e94e8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b423ca8e94e8",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.registry.writeFailed": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > alerte de stockage local (save).",
+    "en": {
+      "sourceHash": "06a98d025ccd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "06a98d025ccd",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.open.title": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > titre du dialogue d’erreur à l’ouverture d’une notification.",
+    "en": {
+      "sourceHash": "28b35d0b609d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "28b35d0b609d",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.open.missing": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > message du dialogue ; {{name}} = nom ou chemin du projet ; cite les boutons du panneau.",
+    "en": {
+      "sourceHash": "d82e5f328949",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d82e5f328949",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.relocate.mismatch": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > erreur quand le fichier choisi pour « Retrouver le projet » n’est pas le bon.",
+    "en": {
+      "sourceHash": "eb3aea79ded6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "eb3aea79ded6",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.check.cancelled": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > erreur interne quand la vérification est interrompue.",
+    "en": {
+      "sourceHash": "cc1e634dd9c2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cc1e634dd9c2",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.source.incomplete": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > erreur de lecture d’une source.",
+    "en": {
+      "sourceHash": "074b7695058e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "074b7695058e",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.source.unstableId": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > erreur de lecture d’une source.",
+    "en": {
+      "sourceHash": "8fcc95c3e8f5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8fcc95c3e8f5",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.source.tooLarge": {
+    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > erreur de lecture d’une très grande source.",
+    "en": {
+      "sourceHash": "c587b4b99430",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c587b4b99430",
+      "status": "ai-reviewed"
+    }
+  },
+  "transfer.incomplete.title": {
+    "context": "Dialogue d’erreur après le transfert des fichiers dans l’emplacement de travail > titre.",
+    "en": {
+      "sourceHash": "55ace3da0514",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "55ace3da0514",
+      "status": "ai-reviewed"
+    }
+  },
+  "transfer.incomplete.message": {
+    "context": "Dialogue d’erreur après le transfert des fichiers > phrase avant la liste des fichiers en échec et de leurs causes.",
+    "en": {
+      "sourceHash": "221e3767aa4c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "221e3767aa4c",
+      "status": "ai-reviewed"
+    }
+  },
+  "output.workspace.missing": {
+    "context": "Erreur affichée par les outils qui créent un média (enregistrement, assemblage, découpe, image) quand l’emplacement de travail (Workspace folder) n’est pas défini.",
+    "en": {
+      "sourceHash": "394678ee09d6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "394678ee09d6",
+      "status": "ai-reviewed"
+    }
+  },
+  "output.project.locked": {
+    "context": "Erreur des outils qui créent un média pendant que l’enregistrement (save) range les fichiers du projet.",
+    "en": {
+      "sourceHash": "87cf38f7aece",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "87cf38f7aece",
+      "status": "ai-reviewed"
+    }
+  },
+  "output.category.invalid": {
+    "context": "Erreur interne d’un outil média (dossier de destination inconnu) ; cas défensif.",
+    "en": {
+      "sourceHash": "b3352f7e0c11",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b3352f7e0c11",
+      "status": "ai-reviewed"
+    }
+  },
+  "player.webAudio.unavailable": {
+    "context": "Lecteur audio partagé > erreur quand le moteur audio du système (Web Audio) est absent ; peut apparaître après « Lecture impossible : ».",
+    "en": {
+      "sourceHash": "02d36c8a4bb4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "02d36c8a4bb4",
+      "status": "ai-reviewed"
+    }
+  },
+  "player.decode.timeout": {
+    "context": "Lecteur audio partagé > erreur quand le fichier met trop de temps à être décodé.",
+    "en": {
+      "sourceHash": "a7da6f787971",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a7da6f787971",
+      "status": "ai-reviewed"
+    }
+  },
+  "imageEditor.sidecar.invalid": {
+    "context": "Erreur à la relecture des réglages d’édition d’une image (fichier .edit.json associé) ; {{path}} = chemin de ce fichier.",
+    "en": {
+      "sourceHash": "94dd097f7840",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "94dd097f7840",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.normalize.label": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > segment du mode de silence : mesure et ajuste.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "63d542868390",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "63d542868390",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.normalize.ariaLabel": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > libellé accessible du segment « Ajuster ».",
+    "en": {
+      "sourceHash": "1398b7f74364",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1398b7f74364",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.normalize.help": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > aide du mode « Ajuster » ; {{leading}}/{{trailing}} = durées formatées (« 0,4 s »).",
+    "en": {
+      "sourceHash": "6a9485b18727",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6a9485b18727",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.add.label": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > segment du mode de silence : ajoute un silence fixe.",
+    "maxLength": 14,
+    "en": {
+      "sourceHash": "00f9c5334547",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "00f9c5334547",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.add.ariaLabel": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > libellé accessible du segment « Ajouter » ; durées formatées.",
+    "en": {
+      "sourceHash": "401c618e4e7a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "401c618e4e7a",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.add.help": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > aide du mode « Ajouter ».",
+    "en": {
+      "sourceHash": "2a4db4d8b33a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2a4db4d8b33a",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.off.label": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > segment du mode de silence : ne modifie pas les silences.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "e9681b23e9bc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e9681b23e9bc",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.off.ariaLabel": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > libellé accessible du segment « Ne rien faire ».",
+    "en": {
+      "sourceHash": "fcf060d16337",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fcf060d16337",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.off.help": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > aide du mode « Ne rien faire ».",
+    "en": {
+      "sourceHash": "69d3923919a0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "69d3923919a0",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.duration.error": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > erreur sous un champ de durée ; {{max}} = plafond en secondes.",
+    "en": {
+      "sourceHash": "71f0664f7dfc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "71f0664f7dfc",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.section.ariaLabel": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > libellé accessible de la section (pack = audiobook/audiolibro).",
+    "en": {
+      "sourceHash": "1f76a3ac5e3a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1f76a3ac5e3a",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.section.title": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > titre de la section.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "0f16f4f9cbfd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0f16f4f9cbfd",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.loudness.help": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > info-bulle de l’interrupteur « Harmoniser le volume ».",
+    "en": {
+      "sourceHash": "84dad07082e2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "84dad07082e2",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.loudness.title": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > libellé de l’interrupteur.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "e5dc8909acd2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e5dc8909acd2",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.loudness.ariaLabel": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > libellé accessible de l’interrupteur.",
+    "en": {
+      "sourceHash": "a82ef3781d48",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a82ef3781d48",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.silence.title": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > titre du réglage des silences.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "85c3a8c3c78d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "85c3a8c3c78d",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.scope.custom": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > badge : les durées du pack diffèrent des Préférences.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "2b6b4f6ab31b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2b6b4f6ab31b",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.scope.default": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > badge : les durées viennent des Préférences.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "291b4fc834dc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "291b4fc834dc",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.durations.closeTooltip": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > info-bulle du stylo quand l’éditeur de durées est ouvert.",
+    "en": {
+      "sourceHash": "faf9db1a14fc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "faf9db1a14fc",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.durations.edit": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > info-bulle et libellé accessible du stylo.",
+    "en": {
+      "sourceHash": "f184fe727bae",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f184fe727bae",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.durations.closeAriaLabel": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > libellé accessible du stylo quand l’éditeur est ouvert.",
+    "en": {
+      "sourceHash": "52cf37a96666",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "52cf37a96666",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.durations.invalid": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > avis quand une durée saisie est invalide.",
+    "en": {
+      "sourceHash": "e643c46d7bf7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e643c46d7bf7",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.durations.groupAriaLabel": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > libellé accessible du groupe de champs.",
+    "en": {
+      "sourceHash": "a329f23ec788",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a329f23ec788",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.duration.leading": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > libellé du champ de durée du silence de début, en secondes.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "8f1c8773e884",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8f1c8773e884",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.duration.trailing": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > libellé du champ de durée du silence de fin, en secondes.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "6fd68cae2e4d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6fd68cae2e4d",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.duration.note": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > note sous les champs ; « Préférences » = réglages de l’application.",
+    "en": {
+      "sourceHash": "a3e40b496855",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a3e40b496855",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.durations.reset": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > bouton qui efface les durées personnalisées.",
+    "maxLength": 36,
+    "en": {
+      "sourceHash": "0c4f7b2d1e01",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0c4f7b2d1e01",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.silence.modeAriaLabel": {
+    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > libellé accessible du groupe de segments.",
+    "en": {
+      "sourceHash": "3d71c40d7db7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3d71c40d7db7",
+      "status": "ai-reviewed"
+    }
+  }
+}

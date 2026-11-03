@@ -1,3 +1,6 @@
+use crate::support::user_message::codes;
+#[cfg(test)]
+use crate::support::user_message::MessageTransportAssertions as _;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -112,7 +115,7 @@ fn optional_audio_silence_selection_is_validated_and_deduplicated() {
     );
     assert!(invalid
         .expect_err("stale selection must fail")
-        .contains("inconnue ou obsolète"));
+        .contains_any_code(&[codes::CHECKER_AUDIO_SUGGESTION_STALE]));
 
     let excessive = build_audio_fix_plans(
         &report,
@@ -128,7 +131,7 @@ fn optional_audio_silence_selection_is_validated_and_deduplicated() {
     );
     assert!(excessive
         .expect_err("selection count must be bounded")
-        .contains("Trop de suggestions audio sélectionnées"));
+        .contains_any_code(&[codes::CHECKER_AUDIO_SELECTION_LIMIT]));
 }
 
 #[test]
@@ -290,6 +293,7 @@ fn fixed_zip_uses_source_archive_name_after_temporary_conversion() {
         None,
         None,
         &|_| {},
+        None,
     )
     .expect("create fixed pack");
 
@@ -338,13 +342,37 @@ fn audio_silence_is_evaluated_per_file_when_ffmpeg_is_available() {
         .issues
         .iter()
         .filter(|issue| issue.file_path.as_deref() == Some("assets/short.mp3"))
-        .filter(|issue| issue.message.contains("silence"))
+        .filter(|issue| {
+            matches!(
+                issue.code.as_deref(),
+                Some(
+                    "audioLeadingSilenceTooShort"
+                        | "audioTrailingSilenceTooShort"
+                        | "audioLeadingSilenceLong"
+                        | "audioTrailingSilenceLong"
+                        | "CHECKER_AUDIO_LEADING_UNMEASURABLE"
+                        | "CHECKER_AUDIO_TRAILING_UNMEASURABLE"
+                )
+            )
+        })
         .count();
     let ok_silence_warnings = report
         .issues
         .iter()
         .filter(|issue| issue.file_path.as_deref() == Some("assets/ok.mp3"))
-        .filter(|issue| issue.message.contains("silence"))
+        .filter(|issue| {
+            matches!(
+                issue.code.as_deref(),
+                Some(
+                    "audioLeadingSilenceTooShort"
+                        | "audioTrailingSilenceTooShort"
+                        | "audioLeadingSilenceLong"
+                        | "audioTrailingSilenceLong"
+                        | "CHECKER_AUDIO_LEADING_UNMEASURABLE"
+                        | "CHECKER_AUDIO_TRAILING_UNMEASURABLE"
+                )
+            )
+        })
         .count();
     assert!(short_silence_warnings >= 1);
     assert_eq!(ok_silence_warnings, 0);
@@ -639,12 +667,21 @@ fn long_title_is_allowed_when_zip_name_matches_community_convention() {
     assert!(report.issues.iter().any(|issue| {
         issue.category == "title"
             && issue.severity == models::PackValidationSeverity::Ok
-            && issue.message.contains("convention communautaire")
+            && issue
+                .message
+                .contains_any_code(&[codes::CHECKER_NAMING_CONVENTION_MATCHED])
     }));
-    assert!(!report
+    let title_issues: Vec<_> = report
         .issues
         .iter()
-        .any(|issue| { issue.category == "title" && issue.message.contains("long") }));
+        .filter(|issue| issue.category == "title")
+        .collect();
+    assert_eq!(
+        title_issues.len(),
+        1,
+        "the matching convention produces only the successful title check"
+    );
+    assert_eq!(title_issues[0].severity, models::PackValidationSeverity::Ok);
 
     fs::remove_dir_all(dir).expect("cleanup temp dir");
 }
@@ -698,9 +735,9 @@ fn unsupported_image_format_is_flagged_and_converted_to_png() {
     assert_eq!(item.status, "warning");
     assert!(item.auto_fix_available);
     assert_eq!(item.format.as_deref(), Some("GIF"));
-    assert!(issues
-        .iter()
-        .any(|entry| entry.message.contains("format non pris en charge")));
+    assert!(issues.iter().any(|entry| entry
+        .message
+        .contains_any_code(&[codes::CHECKER_IMAGE_FORMAT])));
 
     let fixed = image::fix_image_bytes(&gif).expect("convert gif to png");
     assert_eq!(
@@ -1181,6 +1218,183 @@ fn an_unreadable_identity_is_refused_before_anything_changes() {
         &uuid_patch("{7f3d1c2b-4a5e-4f60-9b8c-0d1e2f3a4b5c}"),
     )
     .expect_err("graphie refusée");
-    assert!(error.contains("n'est pas lisible"), "{error}");
+    assert!(
+        error.contains_any_code(&[codes::PACK_IDENTITY_UNREADABLE]),
+        "{error}"
+    );
     assert_eq!(story, original);
+}
+
+#[test]
+fn convention_reader_accepts_the_shared_age_bound_fixtures() {
+    let cases: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+        "../../../../scripts/fixtures/catalogue/file-names.json"
+    ))
+    .unwrap();
+    for case in cases {
+        assert!(super::parse_community_convention_name(
+            case["name"].as_str().unwrap()
+        ));
+    }
+    assert!(!super::parse_community_convention_name("8-5+]Titre"));
+    assert!(!super::parse_community_convention_name("5--8+]Titre"));
+}
+
+#[test]
+fn shared_zip_writer_normalizes_entry_names_without_recompressing_media() {
+    use std::io::{Read, Seek, SeekFrom};
+    let root = std::env::temp_dir().join(format!("checker-paths-{}", uuid::Uuid::new_v4()));
+    fs::create_dir_all(&root).unwrap();
+    let source = root.join("source.zip");
+    let output = root.join("output.zip");
+    let bytes = b"unchanged audio data";
+    let mut writer = zip::ZipWriter::new(fs::File::create(&source).unwrap());
+    writer
+        .start_file(
+            "assets\\audio",
+            zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Deflated),
+        )
+        .unwrap();
+    writer.write_all(bytes).unwrap();
+    writer.finish().unwrap();
+    let compressed = |path: &Path, name: &str| {
+        let mut file = fs::File::open(path).unwrap();
+        let mut archive = zip::ZipArchive::new(file.try_clone().unwrap()).unwrap();
+        let mut entry = archive.by_name(name).unwrap();
+        let mut decoded = Vec::new();
+        entry.read_to_end(&mut decoded).unwrap();
+        assert_eq!(decoded, bytes);
+        file.seek(SeekFrom::Start(entry.data_start())).unwrap();
+        let mut raw = vec![0; entry.compressed_size() as usize];
+        file.read_exact(&mut raw).unwrap();
+        raw
+    };
+    let original = compressed(&source, "assets\\audio");
+    write_fixed_zip_to(
+        zip::ZipArchive::new(fs::File::open(&source).unwrap()).unwrap(),
+        fs::File::create(&output).unwrap(),
+        None,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        None,
+    )
+    .unwrap();
+    assert_eq!(compressed(&output, "assets/audio"), original);
+    assert!(zip::ZipArchive::new(fs::File::open(&output).unwrap())
+        .unwrap()
+        .by_name("assets\\audio")
+        .is_err());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn official_checker_writer_keeps_identity_and_synthesizes_official_from_decision() {
+    use crate::domain::official_provenance::OfficialProvenance;
+    use crate::native_pack::output_identity::{decide, ContentIdentity, OutputForm};
+    let base = std::env::temp_dir().join(format!("official-checker-{}", uuid::Uuid::new_v4()));
+    fs::create_dir_all(&base).unwrap();
+    let source = base.join("source.zip");
+    let output = base.join("fixed.zip");
+    let uuid = "00000000-0000-4000-8000-00000000000a";
+    let story = serde_json::json!({"uuid":uuid,"title":"Modified", "stageNodes":[{"uuid":uuid,"squareOne":true}],"actionNodes":[]});
+    let mut writer = zip::ZipWriter::new(fs::File::create(&source).unwrap());
+    writer
+        .start_file("story.json", zip::write::SimpleFileOptions::default())
+        .unwrap();
+    writer.write_all(story.to_string().as_bytes()).unwrap();
+    writer.finish().unwrap();
+    let identity = decide(
+        ContentIdentity {
+            provenance: OfficialProvenance::Official,
+            uuid,
+            origin_uuid: Some(uuid),
+        },
+        OutputForm::Rewritten,
+        &[],
+        false,
+        None::<&crate::services::catalogue::CatalogueState>,
+    )
+    .unwrap();
+    write_fixed_zip(
+        &identity,
+        &source,
+        &output,
+        &story,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .unwrap();
+    let mut archive = zip::ZipArchive::new(fs::File::open(output).unwrap()).unwrap();
+    let emitted: serde_json::Value =
+        serde_json::from_reader(archive.by_name("story.json").unwrap()).unwrap();
+    assert_eq!(emitted["uuid"], uuid);
+    assert_eq!(emitted["stageNodes"][0]["uuid"], uuid);
+    assert_eq!(emitted["official"], true);
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
+fn correction_accepts_a_requested_official_uuid_and_locks_an_official_source() {
+    struct Fake;
+    const OFFICIAL: &str = "00000000-0000-4000-8000-00000000000a";
+    const OTHER: &str = "00000000-0000-4000-8000-00000000000b";
+    impl crate::services::official_packs::OfficialCatalogue for Fake {
+        type Error = user_message::UserMessage;
+        fn contains_official(&self, uuid: &str) -> Result<bool, Self::Error> {
+            Ok(uuid == OFFICIAL)
+        }
+    }
+    let identity = correction_identity(OTHER, OFFICIAL, Some(&Fake)).unwrap();
+    let dir = temp_dir("requested_official");
+    fs::create_dir_all(&dir).unwrap();
+    let source = dir.join("source.zip");
+    let output = dir.join("fixed.zip");
+    let story = serde_json::json!({"uuid": OFFICIAL, "stageNodes":[{"uuid":OFFICIAL,"squareOne":true}],"actionNodes":[]});
+    write_studio_zip(&source, story.clone(), &[]);
+    write_fixed_zip(
+        &identity,
+        &source,
+        &output,
+        &story,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .unwrap();
+    let emitted = zip_doc::read_pack_doc(&output).unwrap().story;
+    assert_eq!(emitted["uuid"], OFFICIAL);
+    assert_eq!(emitted["official"], true);
+    assert_eq!(
+        correction_identity(OFFICIAL, OTHER, Some(&Fake))
+            .unwrap_err()
+            .code,
+        codes::OFFICIAL_IDENTITY_LOCKED
+    );
+    fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn fixed_zip_of_a_folder_keeps_its_whole_name_even_with_a_dot() {
+    let dir = std::env::temp_dir().join(format!("ss_fixed_name_{}", std::process::id()));
+    let folder = dir.join("Histoire v1.2");
+    fs::create_dir_all(&folder).expect("create folder");
+    let archive = dir.join("Histoire v1.2.zip");
+    fs::write(&archive, b"x").expect("write archive");
+
+    let from_folder = unique_fixed_zip_path(&folder, Some(&dir), None);
+    assert_eq!(
+        from_folder.file_name().unwrap(),
+        "Histoire v1.2 - corrigé.zip"
+    );
+    // Un fichier garde sa règle : l'extension est retirée.
+    let from_file = unique_fixed_zip_path(&archive, Some(&dir), None);
+    assert_eq!(
+        from_file.file_name().unwrap(),
+        "Histoire v1.2 - corrigé.zip"
+    );
+
+    fs::remove_dir_all(dir).expect("cleanup");
 }

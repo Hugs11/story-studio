@@ -1,3 +1,4 @@
+import { useCommonTranslation } from '../../i18n/commonPresentation.js';
 import {
   useCallback,
   useEffect,
@@ -18,6 +19,7 @@ function clamp(value, min, max) {
 }
 
 export function StructureActionsOverflow({ actions }) {
+  const { t } = useCommonTranslation();
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState(null);
   const triggerRef = useRef(null);
@@ -108,12 +110,12 @@ export function StructureActionsOverflow({ actions }) {
 
   return (
     <>
-      <Tooltip text="Plus d’actions" placement="below">
+      <Tooltip text={t('common:structure.overflow.tooltip')} placement="below">
         <button
           ref={triggerRef}
           type="button"
           className={`structure-actions-btn structure-actions-overflow-trigger${open ? ' is-active' : ''}`}
-          aria-label="Plus d’actions"
+          aria-label={t('common:structure.overflow.tooltip')}
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => {
@@ -130,7 +132,7 @@ export function StructureActionsOverflow({ actions }) {
           ref={menuRef}
           className="structure-actions-overflow-menu"
           role="menu"
-          aria-label="Actions supplémentaires"
+          aria-label={t('common:structure.overflow.ariaLabel')}
           onKeyDown={handleMenuKeyDown}
           style={position
             ? { left: position.left, top: position.top }

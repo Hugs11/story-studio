@@ -212,7 +212,7 @@ fn an_orphan_action_blocks_while_its_runtime_dimensions_stay_supported() {
 #[test]
 fn warnings_and_infos_never_block() {
     let mut source = nominal();
-    // Ligne 31 : scaffold strictement vide, `INFO`.
+    // Ligne 30 : scaffold strictement vide, `INFO`.
     source["actionNodes"]
         .as_array_mut()
         .unwrap()
@@ -303,7 +303,7 @@ fn the_other_two_decode_refusals_are_also_refusals_and_not_qualifications() {
 
 #[test]
 fn a_graph_integrity_failure_qualifies_nothing() {
-    // Ligne 29 : référence pendante. Ligne 6 : sélection insatisfiable.
+    // Ligne 28 : référence pendante. Ligne 6 : sélection insatisfiable.
     let mut dangling = nominal();
     dangling["actionNodes"][0]["options"][0] = json!("absent-stage");
     let mut unsatisfiable = nominal();
@@ -342,10 +342,6 @@ fn an_inapplicable_line_is_not_an_unevaluated_dimension() {
         None
     );
     assert_eq!(
-        qualification(&readiness, DimensionId::UnknownExtension),
-        None
-    );
-    assert_eq!(
         readiness.interoperability,
         DimensionQualification::Supported
     );
@@ -356,8 +352,8 @@ fn an_inapplicable_line_is_not_an_unevaluated_dimension() {
 #[test]
 fn the_contract_catalogue_is_complete_and_unambiguous() {
     let all = ContractLine::ALL;
-    assert_eq!(all.len(), 31, "le catalogue compte 31 lignes de données");
-    assert_eq!(all.iter().collect::<BTreeSet<_>>().len(), 31);
+    assert_eq!(all.len(), 30, "le catalogue compte 30 lignes de données");
+    assert_eq!(all.iter().collect::<BTreeSet<_>>().len(), 30);
     for (index, line) in all.into_iter().enumerate() {
         assert_eq!(line.row(), index + 1);
         assert!(!line.label().is_empty());
@@ -370,7 +366,7 @@ fn the_contract_catalogue_is_complete_and_unambiguous() {
         .into_iter()
         .flat_map(DimensionId::lines)
         .collect::<BTreeSet<_>>();
-    assert_eq!(dimension_lines.len(), 23);
+    assert_eq!(dimension_lines.len(), 22);
     for line in all {
         assert_eq!(
             line.contract_qualification().is_some(),
@@ -400,7 +396,7 @@ fn the_contract_catalogue_is_complete_and_unambiguous() {
     );
 }
 
-/// Les six payloads qui, ensemble, exercent les 23 lignes de dimension.
+/// Les six payloads qui, ensemble, exercent les 22 lignes de dimension.
 fn coverage_fixtures() -> Vec<(&'static str, DecodedStoryDocument)> {
     // Graphies, roue large, sélection Random, entrée déplacée.
     let mut graphies = nominal();
@@ -451,7 +447,7 @@ fn coverage_fixtures() -> Vec<(&'static str, DecodedStoryDocument)> {
         }
     );
 
-    // Enrichis et extension inconnue.
+    // Enrichis, et une clé inconnue que l'import ignore sans rien dire.
     let mut enriched = nominal();
     enriched["stageNodes"][0]["groupId"] = json!("groupe-1");
     enriched["actionNodes"][0]["type"] = json!("story.storyaction");
@@ -591,10 +587,12 @@ fn enriched_markers_stay_untested_even_though_the_author_cycle_preserves_them() 
         qualification(&readiness, DimensionId::EnrichedGroupFidelity),
         Some(DimensionQualification::Untested)
     );
-    assert_eq!(
-        qualification(&readiness, DimensionId::UnknownExtension),
-        Some(DimensionQualification::Untested)
-    );
+    // La clé inconnue de la fixture est ignorée : aucun membre opaque.
+    assert!(payload
+        .context
+        .opaque_members
+        .iter()
+        .all(|member| member.key != "storyStudioMetadata"));
     assert_eq!(readiness.interoperability, DimensionQualification::Untested);
 }
 

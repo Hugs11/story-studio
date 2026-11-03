@@ -1,3 +1,5 @@
+import { useTranslation, Trans } from 'react-i18next';
+import { graphTranslationEngine, translateGraph as t } from '../../i18n/graphPresentation.js';
 // Retirer un nœud en conservant les raccords que le geste ne vise pas.
 // Une Action qui menait à un Écran supprimé garde sa place de destination,
 // signalée comme à compléter. Annuler ne touche pas au projet.
@@ -14,11 +16,9 @@ import {
 } from '../../store/advancedAuthoring/authoringPlans.js';
 
 function DeleteStageBody({ index, stagePath, busy, onCancel, onConfirm }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const entry = index.byPath.get(stagePath);
   const incoming = stageRemovalImpact(index, stagePath).occurrences;
-  const destinationNotice = incoming.length === 1
-    ? ' Un choix devra être remplacé dans la liste de choix concernée.'
-    : ` ${incoming.length} choix devront être remplacés dans les listes de choix concernées.`;
 
   const confirm = () => {
     const plan = advancedGestures.stageRemovalPlan({
@@ -36,13 +36,11 @@ function DeleteStageBody({ index, stagePath, busy, onCancel, onConfirm }) {
 
   return (
     <AdvancedDialog
-      title={`Retirer l'Écran « ${entry.label.label} »`}
-      description={`Cet Écran sera retiré.${incoming.length > 0
-        ? `${destinationNotice} Les raccords depuis les autres Écrans resteront en place.`
-        : ''}`}
+      title={t('graph:remove.stage.title', { name: entry.label.label })}
+      description={incoming.length > 0 ? t('graph:remove.stage.impact', { count: incoming.length }) : t('graph:remove.stage.empty')}
       onCancel={onCancel}
       onConfirm={confirm}
-      confirmLabel="Retirer"
+      confirmLabel={t('graph:remove.confirm.label')}
       confirmKind="danger"
       busy={busy}
     >
@@ -51,22 +49,21 @@ function DeleteStageBody({ index, stagePath, busy, onCancel, onConfirm }) {
           {incoming.map((row) => (
             <li key={row.optionId} className="advanced-decision-list__row">
               <span className="advanced-decision-list__what">
-                <strong>{row.actionLabel}</strong> — destination {row.ordinal + 1}
+                <Trans i18n={graphTranslationEngine()} t={t} i18nKey="graph:remove.stage.references" values={{ name: row.actionLabel, ordinal: row.ordinal + 1 }} components={{ strong: <strong /> }} />
               </span>
             </li>
           ))}
         </ul>
       )}
       {incoming.length > 0 && (
-        <p className="advanced-field__note">
-          Les destinations manquantes apparaîtront dans « À corriger ».
-        </p>
+        <p className="advanced-field__note">{t('graph:remove.stage.missing')}</p>
       )}
     </AdvancedDialog>
   );
 }
 
 function DeleteActionBody({ index, actionPath, busy, onCancel, onConfirm }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const entry = index.byPath.get(actionPath);
   const impact = actionRemovalImpact(index, actionPath);
 
@@ -84,15 +81,15 @@ function DeleteActionBody({ index, actionPath, busy, onCancel, onConfirm }) {
 
   return (
     <AdvancedDialog
-      title={`Retirer la liste de choix « ${entry.label.label} »`}
+      title={t('graph:remove.action.title', { name: entry.label.label })}
       description={
         impact.transitions.length === 0
-          ? "Cette liste de choix sera retirée."
-          : `Cette liste de choix sera retirée. ${impact.transitions.length} raccord(s) vers elle seront coupés et signalés dans « À corriger ».`
+          ? t('graph:remove.action.empty')
+          : t('graph:remove.action.impact', { count: impact.transitions.length })
       }
       onCancel={onCancel}
       onConfirm={confirm}
-      confirmLabel="Retirer"
+      confirmLabel={t('graph:remove.confirm.label')}
       confirmKind="danger"
       busy={busy}
     >
@@ -101,7 +98,7 @@ function DeleteActionBody({ index, actionPath, busy, onCancel, onConfirm }) {
           {impact.transitions.map((row) => (
             <li key={`${row.stagePath}#${row.slot}`} className="advanced-decision-list__row">
               <span className="advanced-decision-list__what">
-                <strong>{row.stageLabel}</strong> — {row.slot === 'ok' ? 'OK' : 'Accueil'}
+                <Trans i18n={graphTranslationEngine()} t={t} i18nKey="graph:remove.reference.row" values={{ name: row.stageLabel, slot: row.slot === 'ok' ? t('graph:exit.ok.label') : t('graph:exit.home.label') }} components={{ strong: <strong /> }} />
               </span>
             </li>
           ))}

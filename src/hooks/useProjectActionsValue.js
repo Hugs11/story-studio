@@ -42,6 +42,7 @@ export function useProjectActionsValue({
     onUpdateRoot: mutations.handleUpdateRoot,
     onUpdateMedia: store.updateRootMedia,
     onUpdateStoryAudio: store.updateStoryAudio,
+    onUpdateGlobalOption: store.updateGlobalOption,
     onUpdateMenu: mutations.handleUpdateMenu,
     onDeleteMenu: mutations.handleDeleteMenu,
     onUpdateItem: mutations.handleUpdateItem,

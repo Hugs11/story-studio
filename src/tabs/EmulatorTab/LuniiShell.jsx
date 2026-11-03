@@ -1,3 +1,4 @@
+import { translateCommon as t } from '../../i18n/commonPresentation.js';
 import { Tooltip } from '../../components/common/Tooltip';
 import { formatPlaybackTime } from './navigationResolvers';
 import '../EmulatorTab.css';
@@ -26,11 +27,11 @@ export function LuniiShell({
         <div className="lunii-top-controls">
           <div className="lunii-top-controls-left">
             {dragHandleProps && (
-              <Tooltip text="Déplacer le simulateur">
+              <Tooltip text={t('common:simulator.window.move')}>
                 <button
                   type="button"
                   className="lunii-drag-handle"
-                  aria-label="Déplacer le simulateur"
+                  aria-label={t('common:simulator.window.move')}
                   {...dragHandleProps}
                 >
                   ⋮⋮
@@ -39,29 +40,25 @@ export function LuniiShell({
             )}
             {chromeControls && (
               <>
-                <Tooltip text={chromeControls.autoPlaybackEnabled ? "Désactiver les transitions automatiques dans le simulateur" : "Réactiver les transitions automatiques dans le simulateur"}>
+                <Tooltip text={chromeControls.autoPlaybackEnabled ? t('common:simulator.auto.disable') : t('common:simulator.auto.enable')}>
                   <button
                     type="button"
                     className={`lunii-chip-btn${chromeControls.autoPlaybackEnabled ? ' is-active' : ''}`}
                     onClick={chromeControls.toggleAutoPlayback}
-                  >
-                    Auto
-                  </button>
+                  >{t('common:simulator.auto.label')}</button>
                 </Tooltip>
-                <Tooltip text={chromeControls.transparentPreview ? "Rendre l'aperçu opaque" : "Rendre l'aperçu transparent"}>
+                <Tooltip text={chromeControls.transparentPreview ? t('common:simulator.opacity.opaque') : t('common:simulator.opacity.transparent')}>
                   <button
                     type="button"
                     className={`lunii-chip-btn${chromeControls.transparentPreview ? ' is-active' : ''}`}
                     onClick={chromeControls.toggleTransparentPreview}
-                  >
-                    Transparence
-                  </button>
+                  >{t('common:simulator.opacity.label')}</button>
                 </Tooltip>
               </>
             )}
           </div>
           {onClose && (
-            <button type="button" className="lunii-close-btn" onClick={onClose} aria-label="Fermer le simulateur">
+            <button type="button" className="lunii-close-btn" onClick={onClose} aria-label={t('common:simulator.window.close')}>
               ×
             </button>
           )}
@@ -69,14 +66,12 @@ export function LuniiShell({
       )}
       {playbackControls?.visible && (
         <div className="lunii-playback-bar">
-          <Tooltip text="Reculer de 10 secondes">
+          <Tooltip text={t('common:simulator.seek.backward')}>
             <button
               className="lunii-playback-jump"
               type="button"
               onClick={() => playbackControls.onSeek(playbackControls.currentTime - 10)}
-            >
-              -10s
-            </button>
+            >{t('common:simulator.seek.backwardLabel')}</button>
           </Tooltip>
           <span className="lunii-playback-time">{formatPlaybackTime(playbackControls.currentTime)}</span>
           <input
@@ -90,14 +85,12 @@ export function LuniiShell({
             disabled={playbackControls.duration <= 0}
           />
           <span className="lunii-playback-time">{formatPlaybackTime(playbackControls.duration)}</span>
-          <Tooltip text="Avancer de 10 secondes">
+          <Tooltip text={t('common:simulator.seek.forward')}>
             <button
               className="lunii-playback-jump"
               type="button"
               onClick={() => playbackControls.onSeek(playbackControls.currentTime + 10)}
-            >
-              +10s
-            </button>
+            >{t('common:simulator.seek.forwardLabel')}</button>
           </Tooltip>
         </div>
       )}
@@ -121,7 +114,7 @@ export function LuniiShell({
           <button
             type="button"
             className="lunii-btn-round"
-            aria-label="Accueil"
+            aria-label={t('common:simulator.home.label')}
             onClick={onHome}
             disabled={homeDisabled}
           >
@@ -130,7 +123,7 @@ export function LuniiShell({
           <button
             type="button"
             className="lunii-btn-round"
-            aria-label={paused ? 'Reprendre' : 'Pause'}
+            aria-label={paused ? t('common:simulator.pause.resume') : t('common:simulator.pause.label')}
             onClick={onPause}
             disabled={pauseDisabled}
           >
@@ -141,9 +134,7 @@ export function LuniiShell({
             className="lunii-btn-round lunii-btn-ok"
             onClick={onOk}
             disabled={okDisabled}
-          >
-            OK
-          </button>
+          >{t('common:simulator.ok.label')}</button>
         </div>
       </div>
     </div>

@@ -1,0 +1,3 @@
+.catalogue-backup-export .catalogue-path,
+.catalogue-backup-export .catalogue-backup-path { overflow-wrap: anywhere; user-select: text; }
+.catalogue-backup-export input:not([type="checkbox"]) { max-width: 100%; width: 100%; box-sizing: border-box; }

@@ -1,3 +1,5 @@
+import { presentUserMessage } from '../../i18n/userMessage.js';
+import { productionRef, productionTextFields } from '../../i18n/productionPresentation.js';
 // Le parcours de fabrication du pack, côté éditeur graphe.
 //
 // Les deux éditeurs traversent désormais les mêmes quatre étapes, dans le même
@@ -29,17 +31,19 @@
 // **relevé que l'application tient déjà** : l'audit de liaisons requalifie
 // chaque média à chaque passage, et c'est lui qui alimente le bandeau de
 // reconnexion. Aucune règle n'est inventée ; la même question est posée plus
-// tôt.
+// tôt. Les observations absentes ou indéterminées sont ensuite revérifiées
+// directement avant de refuser : un ancien relevé ne suffit pas à ce verdict.
 
-import { MEDIA_BINDING_MISSING, readMediaBindings } from '../projectModel/mediaBindings.js';
+import { MEDIA_BINDING_MISSING, readMediaBindings, resolveMediaBindingStatuses } from '../projectModel/mediaBindings.js';
 import { EXPORT_REFUSAL, PREPARATION_REFUSAL } from '../advancedExport/exportOutcome.js';
+import { mediaVerificationProblem, recheckProductionPaths } from './mediaVerification.js';
 
 // Forme commune d'un refus, identique à celle que `classifyExportRefusal` rend
 // pour un refus venu du moteur : le rapport d'export n'a donc qu'un seul
 // branchement à connaître, et un refus précoce se lit exactement comme le refus
 // tardif qu'il remplace.
 function refusal(fields) {
-  return {
+  return productionTextFields({
     kind: null,
     preparationKind: null,
     title: '',
@@ -59,7 +63,7 @@ function refusal(fields) {
     // aussi en toutes lettres.
     beforeEngine: true,
     ...fields,
-  };
+  });
 }
 
 /**
@@ -75,9 +79,8 @@ export function documentBlockage(summary) {
   return refusal({
     kind: EXPORT_REFUSAL.PREPARATION,
     preparationKind: PREPARATION_REFUSAL.READINESS_BLOCKED,
-    title: "Fabrication impossible — qualification d'export bloquée",
-    message: "Rien n'a été fabriqué et aucun dossier n'a été demandé : le document porte "
-      + `${blocking.length} point(s) à corriger avant de produire le pack.`,
+    title: productionRef('production:refusal.readiness.title'),
+    message: productionRef('production:refusal.readiness.message', { count: blocking.length }),
     // Le rapport rend ces lignes telles quelles : chacune porte son niveau, son
     // code, son message et l'emplacement concerné — « ce qui bloque, et où ».
     diagnostics: blocking.map((row) => (
@@ -99,9 +102,8 @@ export function emptyPackBlockage(referencedAssetRefs) {
   if (!Array.isArray(referencedAssetRefs) || referencedAssetRefs.length > 0) return null;
   return refusal({
     kind: EXPORT_REFUSAL.REQUEST,
-    title: 'Fabrication impossible — pack sans média',
-    message: 'Le pack ne contient aucun son ni aucune image : ajoute au moins un média '
-      + 'à un Écran avant de générer.',
+    title: productionRef('production:refusal.empty.title'),
+    message: productionRef('production:refusal.empty.message'),
   });
 }
 
@@ -116,7 +118,7 @@ export function emptyPackBlockage(referencedAssetRefs) {
  */
 export function mediaBlockage(project, referencedAssetRefs) {
   if (!Array.isArray(referencedAssetRefs)) {
-    throw new TypeError('Les références médias du document doivent être connues avant la production.');
+    throw Object.assign(Object.defineProperties(new TypeError('PRODUCTION_MEDIA_REFERENCES_REQUIRED'), Object.getOwnPropertyDescriptors(productionTextFields({ message: productionRef('production:work.media.unknown') }))), { presentationRef: productionRef('production:work.media.unknown') });
   }
   const entries = [];
   const referenced = new Set(referencedAssetRefs);
@@ -141,9 +143,8 @@ export function mediaBlockage(project, referencedAssetRefs) {
   if (entries.length === 0) return null;
   return refusal({
     kind: EXPORT_REFUSAL.MEDIA_UNAVAILABLE,
-    title: 'Fabrication impossible — médias indisponibles',
-    message: "Rien n'a été fabriqué et aucun dossier n'a été demandé : les médias utilisés "
-      + 'par le pack ci-dessous sont indisponibles.',
+    title: productionRef('production:refusal.media.title'),
+    message: productionRef('production:refusal.media.message'),
     entries,
   });
 }
@@ -159,6 +160,32 @@ export function advancedProductionBlockage({ readinessSummary, project, referenc
   return documentBlockage(readinessSummary)
     ?? emptyPackBlockage(referencedAssetRefs)
     ?? mediaBlockage(project, referencedAssetRefs);
+}
+
+async function checkedMediaBlockage(project, referencedAssetRefs, fileAudit, verifyPath) {
+  // Valider aussi la forme de l'inventaire avant de sonder le disque.
+  const initial = mediaBlockage(project, referencedAssetRefs);
+  const referenced = new Set(referencedAssetRefs);
+  const candidates = {};
+  for (const binding of readMediaBindings(project)) {
+    const path = binding?.path;
+    if (!referenced.has(binding?.assetRef) || typeof path !== 'string' || !path.trim()) continue;
+    const observed = fileAudit[path];
+    if (binding.status === MEDIA_BINDING_MISSING || observed === false || observed === null) {
+      candidates[path] = observed === null ? null : false;
+    }
+  }
+  if (Object.keys(candidates).length === 0) return initial;
+  const checked = await recheckProductionPaths(candidates, verifyPath);
+  const unverified = Object.keys(checked).filter((path) => checked[path] === null);
+  if (unverified.length > 0) {
+    return refusal({
+      kind: EXPORT_REFUSAL.REQUEST,
+      ...mediaVerificationProblem(),
+      diagnostics: unverified,
+    });
+  }
+  return mediaBlockage(resolveMediaBindingStatuses(project, checked), referencedAssetRefs);
 }
 
 export const ADVANCED_PRODUCTION = Object.freeze({
@@ -179,6 +206,8 @@ export async function runAdvancedProduction({
   readProject,
   assessReadiness,
   readReferencedMedia,
+  fileAudit = {},
+  verifyPath,
   chooseFolder,
   start,
   refuse,
@@ -193,10 +222,10 @@ export async function runAdvancedProduction({
     // une porte qui n'a pas pu regarder ne dit pas « rien ne bloque ».
     const stopped = refusal({
       kind: EXPORT_REFUSAL.REQUEST,
-      title: 'Fabrication impossible',
-      message: "La qualification du document n'a pas pu être calculée, et rien n'a été fabriqué : "
-        + String(error?.message ?? error),
+      title: productionRef('production:refusal.failure.title'),
+      message: productionRef('production:refusal.assessment.message', { reason: { userMessage: error } }),
       code: error?.code ?? null,
+      technicalDetail: presentUserMessage(error).technicalDetail,
     });
     refuse(stopped);
     return { outcome: ADVANCED_PRODUCTION.REFUSED, refusal: stopped };
@@ -207,14 +236,14 @@ export async function runAdvancedProduction({
     try {
       const referencedAssetRefs = await readReferencedMedia(project);
       blockage = emptyPackBlockage(referencedAssetRefs)
-        ?? mediaBlockage(project, referencedAssetRefs);
+        ?? await checkedMediaBlockage(project, referencedAssetRefs, fileAudit, verifyPath);
     } catch (error) {
       blockage = refusal({
         kind: EXPORT_REFUSAL.REQUEST,
-        title: 'Fabrication impossible',
-        message: "Les médias du document n'ont pas pu être vérifiés, et rien n'a été fabriqué : "
-          + String(error?.message ?? error),
+        title: productionRef('production:refusal.failure.title'),
+        message: productionRef('production:refusal.mediaCheck.message', { reason: { userMessage: error } }),
         code: error?.code ?? null,
+      technicalDetail: presentUserMessage(error).technicalDetail,
       });
     }
   }

@@ -33,6 +33,8 @@ pub(crate) struct FidelityReport {
     pub(crate) invalid_transition_count: usize,
     pub(crate) asset_presence_gap_count: usize,
     pub(crate) topology_gaps: Vec<String>,
+    #[serde(skip)]
+    pub(crate) topology_gap_kinds: Vec<TopologyGapKind>,
     pub(crate) asset_presence_gaps: Vec<String>,
     pub(crate) gaps: Vec<String>,
 }
@@ -45,6 +47,7 @@ impl FidelityReport {
             oracle_stage_count: 0,
             invalid_transition_count: 0,
             asset_presence_gap_count: 0,
+            topology_gap_kinds: vec![TopologyGapKind::Other],
             topology_gaps: vec![reason.clone()],
             asset_presence_gaps: Vec::new(),
             gaps: vec![reason],
@@ -59,6 +62,7 @@ impl FidelityReport {
             oracle_stage_count: 0,
             invalid_transition_count: 0,
             asset_presence_gap_count: 0,
+            topology_gap_kinds: Vec::new(),
             topology_gaps: Vec::new(),
             asset_presence_gaps: Vec::new(),
             gaps: Vec::new(),
@@ -165,18 +169,21 @@ pub(crate) fn compare_documents_structural(
     oracle: &StoryDocument,
 ) -> FidelityReport {
     let mut topology_gaps = Vec::new();
+    let mut topology_gap_kinds = Vec::new();
 
     if !generated
         .stage_nodes
         .iter()
         .any(|stage| stage.is_square_one())
     {
+        topology_gap_kinds.push(TopologyGapKind::MissingEntry);
         topology_gaps.push("stage squareOne manquant dans la génération canonique".to_string());
     }
     // Le juge est un oracle de **comportement runtime**, pas l'oracle d'auteur :
     // il compare le mode nuit effectif, pour lequel absent et `false` sont
     // équivalents. La distinction de présence reste portée par le document.
     if generated.night_mode_available.is_true() != oracle.night_mode_available.is_true() {
+        topology_gap_kinds.push(TopologyGapKind::NightMode);
         topology_gaps.push(format!(
             "nightModeAvailable : généré={} oracle={}",
             generated.night_mode_available.is_true(),
@@ -184,6 +191,11 @@ pub(crate) fn compare_documents_structural(
         ));
     }
 
+    topology_gap_kinds.extend(
+        multiset_differences(&node_shapes(generated), &node_shapes(oracle))
+            .into_iter()
+            .map(|_| TopologyGapKind::Other),
+    );
     topology_gaps.extend(compare_multiset(
         "stage",
         &node_shapes(generated),
@@ -192,6 +204,15 @@ pub(crate) fn compare_documents_structural(
 
     let generated_topology = topology_shapes(generated);
     let oracle_topology = topology_shapes(oracle);
+    topology_gap_kinds.extend(
+        multiset_differences(&generated_topology.shapes, &oracle_topology.shapes)
+            .into_iter()
+            .map(|shape| TopologyGapKind::Transition(shape.clone())),
+    );
+    topology_gap_kinds.extend(std::iter::repeat_n(
+        TopologyGapKind::InvalidTransition,
+        generated_topology.invalid_transitions.len() + oracle_topology.invalid_transitions.len(),
+    ));
     topology_gaps.extend(compare_multiset(
         "transition",
         &generated_topology.shapes,
@@ -228,6 +249,7 @@ pub(crate) fn compare_documents_structural(
         invalid_transition_count,
         asset_presence_gap_count,
         topology_gaps,
+        topology_gap_kinds,
         asset_presence_gaps,
         gaps,
     }
@@ -320,8 +342,71 @@ enum TransitionState {
     },
 }
 
+/// Preuve interne exclue des rapports IPC/persistés ; texte purement diagnostique.
+#[derive(Debug, Clone)]
+pub(crate) enum TopologyGapKind {
+    Other,
+    MissingEntry,
+    NightMode,
+    InvalidTransition,
+    Transition(TopologyShape),
+}
+
+impl TopologyGapKind {
+    pub(crate) fn blocks_aggregate_tolerance(&self) -> bool {
+        matches!(
+            self,
+            Self::NightMode | Self::MissingEntry | Self::InvalidTransition
+        )
+    }
+
+    pub(crate) fn is_end_home_or_night(&self) -> bool {
+        match self {
+            Self::NightMode => true,
+            Self::Transition(shape) => {
+                if matches!(shape.state, TransitionState::Invalid { .. }) {
+                    return false;
+                }
+                // Le reconnaisseur Debug historique cherchait dans la source et la cible.
+                // Conserver exactement cette union, y compris les champs true/false mêlés.
+                let mut controls = vec![&shape.source];
+                if let TransitionState::OptionTarget { target, .. } = &shape.state {
+                    controls.push(target);
+                }
+                match shape.kind {
+                    TransitionKind::Home => {
+                        controls.iter().any(|c| c.pause) && controls.iter().any(|c| c.autoplay)
+                    }
+                    TransitionKind::Ok => {
+                        controls.iter().any(|c| c.has_audio)
+                            && controls.iter().any(|c| !c.has_image)
+                            && controls.iter().any(|c| !c.wheel)
+                            && controls.iter().any(|c| c.ok)
+                            && controls.iter().any(|c| c.home)
+                            && controls.iter().any(|c| !c.pause)
+                    }
+                }
+            }
+            _ => false,
+        }
+    }
+}
+
+fn multiset_differences<'a, T: Ord>(
+    generated: &'a BTreeMap<T, usize>,
+    oracle: &'a BTreeMap<T, usize>,
+) -> Vec<&'a T> {
+    let mut keys: BTreeSet<&T> = generated.keys().collect();
+    keys.extend(oracle.keys());
+    keys.into_iter()
+        .filter(|key| {
+            generated.get(*key).copied().unwrap_or(0) != oracle.get(*key).copied().unwrap_or(0)
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-struct TopologyShape {
+pub(crate) struct TopologyShape {
     source: ControlShape,
     kind: TransitionKind,
     state: TransitionState,
@@ -591,8 +676,8 @@ fn compare_asset_presence(generated: &StoryDocument, oracle: &StoryDocument) -> 
 mod tests {
     use super::*;
     use crate::native_pack::{
-        named_option_targets, CanonicalEntry, CanonicalMenu, CanonicalOptions, CanonicalRef,
-        CanonicalStory, Presence,
+        named_option_targets, CanonicalEntry, CanonicalMenu, CanonicalOptions, CanonicalStory,
+        Presence,
     };
 
     fn story(id: &str, name: &str, audio: &str) -> CanonicalEntry {
@@ -797,12 +882,12 @@ mod tests {
         assert!(report.generated_stage_count > 0);
     }
 
-    /// Génération impossible (ref vers une cible inexistante → échec bloquant de
-    /// `resolve_pending_ref_options`) : verdict « non fidèle », pas une erreur du juge.
+    /// Génération impossible (dossier sans aucun choix jouable → échec bloquant de
+    /// `build_menu_branch`) : verdict « non fidèle », pas une erreur du juge.
     #[test]
     fn judge_reports_unfaithful_when_canonical_build_fails() {
         let project = CanonicalProject {
-            name: "Ref cassée".to_string(),
+            name: "Dossier vide".to_string(),
             project_type: "pack".to_string(),
             pack_version: 1,
             pack_description: String::new(),
@@ -819,14 +904,7 @@ mod tests {
                 name: "Carrefour".to_string(),
                 audio: Some("menu.mp3".to_string()),
                 image: Some("menu.png".to_string()),
-                children: vec![
-                    story("story-a", "Histoire A", "a.mp3"),
-                    CanonicalEntry::Ref(CanonicalRef {
-                        id: "lien".to_string(),
-                        target: "story:cible-inexistante".to_string(),
-                        ref_kind: Some("continue".to_string()),
-                    }),
-                ],
+                children: Vec::new(),
                 ..Default::default()
             })],
 
@@ -1045,7 +1123,10 @@ mod tests {
             .expect_err("unfaithful nativeGraph must be blocked");
 
         assert!(
-            error.contains("Génération bloquée"),
+            crate::support::user_message::contains_code(
+                &error,
+                "EXPORT_CANONICAL_GRAPH_DIVERGENCE_DETAIL"
+            ),
             "diagnostic inattendu : {error}",
         );
     }
@@ -1168,5 +1249,111 @@ mod tests {
         let report = compare_documents_structural(&document, &document);
         assert!(!report.faithful);
         assert!(report.invalid_transition_count > 0);
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn test_end_gap(home: bool) -> TopologyGapKind {
+    TopologyGapKind::Transition(TopologyShape {
+        source: ControlShape {
+            square_one: false,
+            has_audio: true,
+            has_image: false,
+            wheel: false,
+            ok: !home,
+            home: true,
+            pause: home,
+            autoplay: home,
+        },
+        kind: if home {
+            TransitionKind::Home
+        } else {
+            TransitionKind::Ok
+        },
+        state: TransitionState::Missing,
+    })
+}
+
+#[cfg(test)]
+mod tolerance_contract_tests {
+    use super::*;
+    #[test]
+    fn typed_tolerance_matches_every_historical_debug_motif() {
+        // Toutes les formes booléennes, les deux ports, la source seule ou avec
+        // cible, et chaque classe d’état dont Invalid : ancien reconnaisseur comme oracle.
+        let controls: Vec<_> = (0..256)
+            .map(|n| ControlShape {
+                square_one: n & 1 != 0,
+                has_audio: n & 2 != 0,
+                has_image: n & 4 != 0,
+                wheel: n & 8 != 0,
+                ok: n & 16 != 0,
+                home: n & 32 != 0,
+                pause: n & 64 != 0,
+                autoplay: n & 128 != 0,
+            })
+            .collect();
+        for source in &controls {
+            for target in &controls {
+                for kind in [TransitionKind::Ok, TransitionKind::Home] {
+                    for state in [
+                        TransitionState::Missing,
+                        TransitionState::Selected {
+                            selection: OptionSelection::Fixed(0),
+                            option_count: 1,
+                        },
+                        TransitionState::OptionTarget {
+                            target: target.clone(),
+                            option_index: 0,
+                            option_count: 1,
+                        },
+                        TransitionState::Invalid {
+                            reason: InvalidTransitionKind::MissingAction,
+                            selection: OptionSelection::Fixed(0),
+                            option_count: None,
+                        },
+                    ] {
+                        let shape = TopologyShape {
+                            source: source.clone(),
+                            kind: kind.clone(),
+                            state,
+                        };
+                        let text = format!("transition généré=1 oracle=0 : {shape:?}");
+                        let old = !text.contains("Invalid")
+                            && ((text.contains("kind: Home")
+                                && text.contains("pause: true")
+                                && text.contains("autoplay: true"))
+                                || (text.contains("kind: Ok")
+                                    && text.contains("has_audio: true")
+                                    && text.contains("has_image: false")
+                                    && text.contains("wheel: false")
+                                    && text.contains("ok: true")
+                                    && text.contains("home: true")
+                                    && text.contains("pause: false")));
+                        assert_eq!(
+                            TopologyGapKind::Transition(shape).is_end_home_or_night(),
+                            old,
+                            "{text}"
+                        );
+                    }
+                }
+            }
+        }
+        assert!(TopologyGapKind::NightMode.is_end_home_or_night());
+        for gap in [
+            TopologyGapKind::Other,
+            TopologyGapKind::MissingEntry,
+            TopologyGapKind::InvalidTransition,
+        ] {
+            assert!(!gap.is_end_home_or_night());
+        }
+        for gap in [
+            TopologyGapKind::NightMode,
+            TopologyGapKind::MissingEntry,
+            TopologyGapKind::InvalidTransition,
+        ] {
+            assert!(gap.blocks_aggregate_tolerance());
+        }
+        assert!(!TopologyGapKind::Other.blocks_aggregate_tolerance());
     }
 }

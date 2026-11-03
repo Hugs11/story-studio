@@ -416,4 +416,291 @@ per-file** limit.
 
 yt-dlp and Deno remain downloaded at runtime and are not bundled. Piper 1.6 is bundled
 without its voice models; corresponding-source availability for the exact
-runtime build must accompany the 0.9.6 release.
+runtime build must accompany each release, including Story Studio 0.9.10.
+
+## rusqlite and SQLite
+
+- **Used by:** the Rust catalogue durable store and reconstructible index.
+- **Version:** rusqlite `0.40.2`, resolved in `src-tauri/Cargo.lock`; default features disabled, `bundled` and `backup` enabled.
+- **Upstream project:** <https://github.com/rusqlite/rusqlite>.
+- **License:** MIT.
+- **Copyright notice:** Copyright (c) 2014 The rusqlite developers.
+- **Bundled license text:** `public/licenses/rusqlite-MIT.txt`.
+
+SQLite is compiled into the application through libsqlite3-sys. SQLite is in the public domain: <https://www.sqlite.org/copyright.html>.
+
+## notify-debouncer-full
+
+- **Used by:** the pack library, for source folder watching.
+- **Version:** `0.7.0`, resolved in `src-tauri/Cargo.lock`, default features enabled.
+- **Upstream project:** <https://github.com/notify-rs/notify>.
+- **License retained:** MIT (upstream offers MIT OR Apache-2.0).
+- **Copyright notice:** Copyright (c) 2023 Notify Contributors.
+- **Bundled license text:** `public/licenses/notify-debouncer-full-MIT.txt`.
+- **Transitive watcher:** notify `8.2.0`, CC0-1.0;
+  <https://docs.rs/crate/notify/8.2.0/source/LICENSE-CC0>. Its text is bundled at
+  `public/licenses/notify-CC0.txt`; see the dedicated entry below.
+
+### Catalogue age prefix recognition — STUdio Perso (MPL-2.0)
+
+`src-tauri/src/services/catalogue/age_prefix.rs` adapts the recognition rules and
+example cases of STUdio Perso's `web-ui/javascript/src/utils/agePrefix.js` and
+`agePrefix.test.js` (age prefix at the start of a file name, optional language
+marker, ages 0 to 18). That file is available under the Mozilla Public License 2.0:
+<https://www.mozilla.org/MPL/2.0/>. Its source and modifications are distributed
+in this repository. Other Story Studio files retain their existing licenses.
+
+### Catalogue operation summaries — STUdio Perso (MPL-2.0)
+
+`src/store/catalogue/operationView.js`, `components/Catalogue/operations/ScanSummary.jsx`
+and `scripts/catalogueOperationView.test.mjs` adapt the behavioural cases of
+STUdio Perso's `batchProgress.test.js`, `batchImport.js` and `ImportSummary.js`:
+closing progress leaves work running, grouped results, persistent error summaries,
+and temporary success summaries paused on hover or keyboard focus. These adaptations
+are distributed in source here under MPL-2.0; no upload or replacement logic is used.
+
+### Catalogue metadata drafts (MPL-2.0)
+
+The three-state editing, explicit reset and conflict-rebase contracts and test
+cases in `src/store/catalogue/metadataDraft.js` and
+`scripts/catalogueData.test.mjs` are adapted from STUdio Perso's
+`web-ui/javascript/src/utils/overridesDraft.js` and `overridesDraft.test.js`.
+Those files retain the Mozilla Public License 2.0 notice. Field-origin
+presentation follows `metadataPresentation.js`; the implementation is local.
+
+### dom_query (MIT)
+
+- **Used by:** on-demand inert HTML metadata extraction in the catalogue.
+- **Version:** `0.27.0`, default features disabled, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project and license:** <https://github.com/niklak/dom_query> (MIT).
+- **Copyright notice:** Copyright (c) 2023 Mykola Humanov
+- **License text:** [public/licenses/dom_query-MIT.txt](public/licenses/dom_query-MIT.txt).
+
+### html5ever (MIT)
+
+- **Used by:** bounded parsing of the same catalogue HTML pages: its tree builder drives
+  dom_query's tree sink (`TreeSink`) under element, attribute and depth budgets.
+- **Version:** `0.38.0`, pinned in `src-tauri/Cargo.toml` (the version dom_query
+  already uses), resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/servo/html5ever>.
+- **License retained:** MIT (upstream offers MIT OR Apache-2.0).
+- **Copyright notice:** Copyright (c) 2014 The html5ever Project Developers
+- **License text:** [public/licenses/html5ever-MIT.txt](public/licenses/html5ever-MIT.txt),
+  copied verbatim from the crate's `LICENSE-MIT`.
+
+## junkyard 0.1.0
+
+- **Used by:** the catalogue system trash adapter.
+- **Version:** `0.1.0`, pinned in `src-tauri/Cargo.toml` and `Cargo.lock`.
+- **Upstream project:** <https://github.com/errmayank/junkyard>.
+- **License retained:** MIT (upstream offers MIT OR Apache-2.0).
+- **Bundled license text:** `public/licenses/junkyard-MIT.txt`, copied verbatim
+  from the crate's `LICENSE-MIT` and shipped by Vite in `dist/licenses/`.
+  The upstream file has no separate copyright header.
+- No optional features enabled. Native platform dependencies are resolved by
+  the crate and retained in `src-tauri/Cargo.lock`.
+
+### Catalogue filename titles — STUdio Perso (MPL-2.0)
+
+`src-tauri/src/services/catalogue/lunii_db/names.rs` adapts the filename
+cleaning rules of STUdio Perso's `metadata/.../PackNameCleaner.java`:
+age prefix, archive extension, timestamp suffix and repeated title removal.
+That file remains under the Mozilla Public License 2.0:
+<https://mozilla.org/MPL/2.0/>.
+
+## tauri-plugin-single-instance
+
+- **Version:** 2.4.5 (exact Cargo dependency).
+- **License:** MIT OR Apache-2.0; MIT option retained.
+- **Source:** https://github.com/tauri-apps/plugins-workspace/tree/v2/plugins/single-instance
+- **Used by:** startup exclusion and activation of the existing main window.
+- **Copyright notice:** `Copyright (c) 2017 - Present The Tauri Programme in the Commons Conservancy`.
+- **Bundled license text:** `public/licenses/tauri-plugin-single-instance-MIT.txt`, copied verbatim from the crate's `LICENSE_MIT` (MIT option retained).
+
+## Additional JavaScript runtime dependencies
+
+### i18next 26.4.2
+
+- **Used by:** application internationalization.
+- **Version:** `26.4.2`, resolved in `package-lock.json`.
+- **Upstream project:** <https://github.com/i18next/i18next>.
+- **Versioned source:** <https://www.npmjs.com/package/i18next/v/26.4.2>.
+- **License:** MIT.
+- **Copyright notice:** Copyright (c) 2011-present i18next
+- **License text:** [public/licenses/i18next-MIT.txt](public/licenses/i18next-MIT.txt), copied verbatim from `node_modules/i18next/LICENSE`.
+
+### react-i18next 17.0.15
+
+- **Used by:** React integration of i18next.
+- **Version:** `17.0.15`, resolved in `package-lock.json`.
+- **Upstream project:** <https://github.com/i18next/react-i18next>.
+- **Versioned source:** <https://www.npmjs.com/package/react-i18next/v/17.0.15>.
+- **License:** MIT.
+- **Copyright notice:** Copyright (c) 2015-present i18next
+- **License text:** [public/licenses/react-i18next-MIT.txt](public/licenses/react-i18next-MIT.txt), copied verbatim from `node_modules/react-i18next/LICENSE`.
+
+### html-parse-stringify 4.0.1
+
+- **Used by:** HTML parsing in the i18next integration.
+- **Version:** `4.0.1`, resolved in `package-lock.json`.
+- **Upstream project:** <https://github.com/i18next/html-parse-stringify>.
+- **Versioned source:** <https://www.npmjs.com/package/html-parse-stringify/v/4.0.1>.
+- **License:** MIT.
+- **Copyright notices:** Copyright (c) 2025 Henrik Joreteg <henrik@joreteg.com>
+  Copyright (c) 2026-present i18next (https://github.com/i18next)
+- **License text:** [public/licenses/html-parse-stringify-MIT.txt](public/licenses/html-parse-stringify-MIT.txt), copied verbatim from `node_modules/html-parse-stringify/LICENSE`.
+
+### use-sync-external-store 1.7.0
+
+- **Used by:** React's external store subscription support.
+- **Version:** `1.7.0`, resolved in `package-lock.json`.
+- **Upstream project:** <https://github.com/react/react>, package directory `packages/use-sync-external-store`.
+- **Versioned source:** <https://www.npmjs.com/package/use-sync-external-store/v/1.7.0>.
+- **License:** MIT.
+- **Copyright notice:** Copyright (c) Meta Platforms, Inc. and affiliates.
+- **License text:** [public/licenses/use-sync-external-store-MIT.txt](public/licenses/use-sync-external-store-MIT.txt), copied verbatim from `node_modules/use-sync-external-store/LICENSE`.
+
+## Additional Rust runtime dependencies
+
+### libsqlite3-sys 0.38.2
+
+- **Used by:** SQLite bindings (bundled SQLite) used by rusqlite.
+- **Version:** `0.38.2`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/rusqlite/rusqlite>.
+- **Versioned source:** <https://docs.rs/crate/libsqlite3-sys/0.38.2/source/>.
+- **License:** MIT.
+- **Copyright notice:** Copyright (c) 2014 The rusqlite developers.
+- **License text:** [public/licenses/rusqlite-MIT.txt](public/licenses/rusqlite-MIT.txt); the crate's `LICENSE` is byte-identical to rusqlite's license.
+
+### fallible-iterator 0.3.0
+
+- **Used by:** rusqlite 0.40.2, as a runtime iterator dependency.
+- **Version:** `0.3.0`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/sfackler/rust-fallible-iterator>.
+- **Versioned source:** <https://docs.rs/crate/fallible-iterator/0.3.0/source/>.
+- **License retained:** MIT (upstream offers MIT OR Apache-2.0).
+- **Copyright notice:** Copyright (c) 2015 The rust-openssl-verify Developers
+- **License text:** [public/licenses/fallible-iterator-MIT.txt](public/licenses/fallible-iterator-MIT.txt), copied verbatim from `LICENSE-MIT`.
+
+### fallible-streaming-iterator 0.1.9
+
+- **Used by:** rusqlite 0.40.2, as a runtime iterator dependency.
+- **Version:** `0.1.9`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/sfackler/fallible-streaming-iterator>.
+- **Versioned source:** <https://docs.rs/crate/fallible-streaming-iterator/0.1.9/source/>.
+- **License retained:** MIT (upstream offers MIT OR Apache-2.0).
+- **Copyright notice:** Copyright (c) 2016 The fallible-streaming-iterator Developers
+- **License text:** [public/licenses/fallible-streaming-iterator-MIT.txt](public/licenses/fallible-streaming-iterator-MIT.txt), copied verbatim from `LICENSE-MIT`.
+
+### file-id 0.2.3
+
+- **Used by:** notify-debouncer-full, as a runtime file identity dependency.
+- **Version:** `0.2.3`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/notify-rs/notify>.
+- **Versioned source:** <https://docs.rs/crate/file-id/0.2.3/source/>.
+- **License retained:** MIT (upstream offers MIT OR Apache-2.0).
+- **Copyright notice:** Copyright (c) 2023 Notify Contributors.
+- **License text:** [public/licenses/notify-debouncer-full-MIT.txt](public/licenses/notify-debouncer-full-MIT.txt); `LICENSE-MIT` is byte-identical to this text.
+
+### notify-types 2.1.0
+
+- **Used by:** notify-debouncer-full, for watcher event types.
+- **Version:** `2.1.0`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/notify-rs/notify>.
+- **Versioned source:** <https://docs.rs/crate/notify-types/2.1.0/source/>.
+- **License retained:** MIT (upstream offers MIT OR Apache-2.0).
+- **Copyright notice:** Copyright (c) 2023 Notify Contributors.
+- **License text:** [public/licenses/notify-debouncer-full-MIT.txt](public/licenses/notify-debouncer-full-MIT.txt); `LICENSE-MIT` is byte-identical to this text.
+
+### notify 8.2.0
+
+- **Used by:** notify-debouncer-full, as the file watcher.
+- **Version:** `8.2.0`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/notify-rs/notify>.
+- **Versioned source:** <https://docs.rs/crate/notify/8.2.0/source/>.
+- **License:** CC0-1.0.
+- **License text:** [public/licenses/notify-CC0.txt](public/licenses/notify-CC0.txt), copied verbatim from `LICENSE-CC0`.
+
+## Platform-specific file watcher backends
+
+### inotify 0.11.5 (Linux)
+
+- **Used by:** notify, as its Linux file watcher backend.
+- **Version:** `0.11.5`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/hannobraun/inotify-rs>.
+- **Versioned source:** <https://docs.rs/crate/inotify/0.11.5/source/>.
+- **License:** ISC.
+- **Copyright notice:** Copyright (c) Hanno Braun and contributors
+- **License text:** [public/licenses/inotify-ISC.txt](public/licenses/inotify-ISC.txt), copied verbatim from the crate's `LICENSE`.
+
+### inotify-sys 0.1.8 (Linux)
+
+- **Used by:** inotify, for Linux system bindings.
+- **Version:** `0.1.8`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/hannobraun/inotify-sys>.
+- **Versioned source:** <https://docs.rs/crate/inotify-sys/0.1.8/source/>.
+- **License:** ISC.
+- **Copyright notice:** Copyright (c) Hanno Braun and contributors
+- **License text:** [public/licenses/inotify-sys-ISC.txt](public/licenses/inotify-sys-ISC.txt), copied verbatim from the crate's `LICENSE`.
+
+### fsevent-sys 4.1.0 (macOS)
+
+- **Used by:** notify, as its macOS file watcher backend.
+- **Version:** `4.1.0`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/octplane/fsevent-rust/tree/master/fsevent-sys>.
+- **Versioned source:** <https://docs.rs/crate/fsevent-sys/4.1.0/source/>.
+- **License:** MIT.
+- **Copyright notice:** Copyright (c) 2015 Pierre Baillet
+- **License text:** [public/licenses/fsevent-sys-MIT.txt](public/licenses/fsevent-sys-MIT.txt), copied verbatim from the crate's `LICENSE`.
+
+## Windows runtime dependencies of junkyard
+
+### windows 0.62.2 (Windows)
+
+- **Used by:** `junkyard 0.1.0`, as its Windows runtime dependency.
+- **Version:** `0.62.2`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/microsoft/windows-rs>.
+- **Versioned source:** <https://docs.rs/crate/windows/0.62.2/source/>.
+- **License retained:** MIT (upstream offers MIT OR Apache-2.0).
+- **Copyright notice:** Copyright (c) Microsoft Corporation.
+- **License text:** [public/licenses/windows-rs-MIT.txt](public/licenses/windows-rs-MIT.txt), shared verbatim by the five Windows crates listed here.
+
+### windows-collections 0.3.2 (Windows)
+
+- **Used by:** transitively via `windows 0.62.2`, through `junkyard 0.1.0`.
+- **Version:** `0.3.2`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/microsoft/windows-rs>.
+- **Versioned source:** <https://docs.rs/crate/windows-collections/0.3.2/source/>.
+- **License retained:** MIT (upstream offers MIT OR Apache-2.0).
+- **Copyright notice:** Copyright (c) Microsoft Corporation.
+- **License text:** [public/licenses/windows-rs-MIT.txt](public/licenses/windows-rs-MIT.txt).
+
+### windows-future 0.3.2 (Windows)
+
+- **Used by:** transitively via `windows 0.62.2`, through `junkyard 0.1.0`.
+- **Version:** `0.3.2`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/microsoft/windows-rs>.
+- **Versioned source:** <https://docs.rs/crate/windows-future/0.3.2/source/>.
+- **License retained:** MIT (upstream offers MIT OR Apache-2.0).
+- **Copyright notice:** Copyright (c) Microsoft Corporation.
+- **License text:** [public/licenses/windows-rs-MIT.txt](public/licenses/windows-rs-MIT.txt).
+
+### windows-numerics 0.3.1 (Windows)
+
+- **Used by:** transitively via `windows 0.62.2`, through `junkyard 0.1.0`.
+- **Version:** `0.3.1`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/microsoft/windows-rs>.
+- **Versioned source:** <https://docs.rs/crate/windows-numerics/0.3.1/source/>.
+- **License retained:** MIT (upstream offers MIT OR Apache-2.0).
+- **Copyright notice:** Copyright (c) Microsoft Corporation.
+- **License text:** [public/licenses/windows-rs-MIT.txt](public/licenses/windows-rs-MIT.txt).
+
+### windows-threading 0.2.1 (Windows)
+
+- **Used by:** transitively via `windows-future 0.3.2`, then `windows 0.62.2`, through `junkyard 0.1.0`.
+- **Version:** `0.2.1`, resolved in `src-tauri/Cargo.lock`.
+- **Upstream project:** <https://github.com/microsoft/windows-rs>.
+- **Versioned source:** <https://docs.rs/crate/windows-threading/0.2.1/source/>.
+- **License retained:** MIT (upstream offers MIT OR Apache-2.0).
+- **Copyright notice:** Copyright (c) Microsoft Corporation.
+- **License text:** [public/licenses/windows-rs-MIT.txt](public/licenses/windows-rs-MIT.txt).

@@ -1,4 +1,16 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { AggregateDestinationChoice, AggregateGenerationReview } from './AggregateDestinationChoice.jsx';
+import { aggregateDestinationReducer, INITIAL_AGGREGATE_DESTINATION, createAggregateConfirmation, moveAggregatePack, refreshAggregateMetadata } from './aggregateLanding.js';
+import { GenerationFolderPrompt } from '../Catalogue/open/GenerationFolderPrompt.jsx';
+import { nativeGenerationLock } from '../../store/nativeGenerationLock.js';
+import { catalogueAssemblyApi } from '../../store/catalogue/catalogueAssemblyApi.js';
+import { assemblyPacks } from '../../store/catalogue/assemblySelection.js';
+import { AssemblyExcludedList } from '../Catalogue/assembly/AssemblyExcludedList.jsx';
+import { translateHome as t } from '../../i18n/homePresentation.js';
+import { useHomeTranslation } from '../../i18n/useHomeTranslation.js';
+import { useMessageLanguage } from '../../i18n/useMessageLanguage.js';
+import {presentUserMessage, presentStoredError } from '../../i18n/userMessage.js';
+import { TechnicalDetail } from '../common/UserMessage.jsx';
+import { Suspense, lazy, useEffect, useRef, useState, useReducer } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
@@ -31,7 +43,8 @@ import {
   Trash2,
   Upload,
 } from '../icons/LucideLocal';
-import { pickAudio, pickImage, pickMultipleZip, getLastExportDir, saveLastExportDir } from '../../hooks/useFileDialog';
+import { convertFolderPackToZip, readPathKinds } from '../../utils/packFolder';
+import { pickAudio, pickFolder, pickImage, pickMultipleZip, getLastExportDir, saveLastExportDir } from '../../hooks/useFileDialog';
 import { copyMediaToWorkspace, projectToRustExport } from '../../store/projectIO';
 import { buildAggregateProject, defaultMetadataForPacks } from './aggregateProject.js';
 import { sanitizeImportedName } from '../../store/projectStore';
@@ -59,17 +72,17 @@ const PackNameModal = lazy(() => import('../layout/PackNameModal')
   .then((module) => ({ default: module.PackNameModal })));
 
 const STEPS = [
-  { key: 'packs', label: 'Packs' },
-  { key: 'audio', label: 'Audio' },
-  { key: 'image', label: 'Image' },
-  { key: 'metadata', label: 'Métadonnées' },
+  { key: 'packs', labelKey: 'home:aggregate.step.packs' },
+  { key: 'audio', labelKey: 'home:aggregate.step.audio' },
+  { key: 'image', labelKey: 'home:aggregate.step.image' },
+  { key: 'metadata', labelKey: 'home:aggregate.step.metadata' },
 ];
 
 function formatBytes(bytes) {
   if (!bytes || bytes <= 0) return '';
   const mb = bytes / (1024 * 1024);
-  if (mb >= 1) return `${mb.toFixed(mb >= 10 ? 0 : 1)} Mo`;
-  return `${Math.max(1, Math.round(bytes / 1024))} Ko`;
+  if (mb >= 1) return t('home:aggregate.size.megabytes', { size: mb.toFixed(mb >= 10 ? 0 : 1) });
+  return t('home:aggregate.size.kilobytes', { size: Math.max(1, Math.round(bytes / 1024)) });
 }
 
 function getSquareOne(data) {
@@ -81,20 +94,28 @@ function getPackStoryCount(data) {
   return Math.max(0, stages.filter((stage) => !stage?.squareOne).length);
 }
 
-export function AggregatePacksFunnel({ onClose }) {
+export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePreparation, onLand, onLanded }) {
+  const { t } = useHomeTranslation();
+  useMessageLanguage();
   const { xttsSettings, onUpdateXttsSettings } = useProjectContext();
   const [step, setStep] = useState(0);
-  const [packs, setPacks] = useState([]);
+  const [packs, setPacks] = useState(() => preparation ? assemblyPacks(preparation) : []);
+  const [destination, dispatchDestination] = useReducer(aggregateDestinationReducer, INITIAL_AGGREGATE_DESTINATION);
+  const ageEdited = useRef(false);
+  const busyRef = useRef(false);
+  const cancelledRef = useRef(false);
+  const mountedRef = useRef(true);
   const [loadingPacks, setLoadingPacks] = useState(false);
   const [rootAudio, setRootAudio] = useState('');
   const [rootImage, setRootImage] = useState('');
   // L'identité du pack est tirée une fois, à l'ouverture de l'assistant : les
   // générations successives livrent le même pack, qui remplace le précédent.
-  const [metadata, setMetadata] = useState(() => defaultMetadataForPacks([], generateUuid()));
+  const [metadata, setMetadata] = useState(() => ({ ...defaultMetadataForPacks([], generateUuid()), minAge: preparation?.suggestedAgeMin == null ? '' : String(preparation.suggestedAgeMin) }));
   const [outputDir, setOutputDir] = useState(() => getLastExportDir() || '');
-  const [phase, setPhase] = useState('collect'); // collect | generating | done
+  const [phase, setPhase] = useState('collect'); // collect | landing | generating | done
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
+  const [technicalDetail, setTechnicalDetail] = useState('');
   const [result, setResult] = useState(null);
   const [audioEditorOpen, setAudioEditorOpen] = useState(false);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
@@ -107,10 +128,19 @@ export function AggregatePacksFunnel({ onClose }) {
   const imageUrl = useLocalFile(rootImage);
   const audioUrl = useLocalFile(rootAudio);
 
+  async function cleanupAssistantSession() {
+    const sessionDir = sessionDirRef.current;
+    if (!sessionDir) return;
+    sessionDirRef.current = '';
+    await invoke('cleanup_session_workspace', { path: sessionDir }).catch(() => {});
+  }
+
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
-      const sessionDir = sessionDirRef.current;
-      if (sessionDir) invoke('cleanup_session_workspace', { path: sessionDir }).catch(() => {});
+      mountedRef.current = false;
+      // A native reader may outlive the surface that launched it.
+      if (!busyRef.current) void cleanupAssistantSession();
       disposeAudioPlayerRef(audioRef);
     };
   }, []);
@@ -121,11 +151,7 @@ export function AggregatePacksFunnel({ onClose }) {
   }, [audioUrl]);
 
   useEffect(() => {
-    if (packs.length === 0) return;
-    setMetadata((current) => {
-      if (current.title && current.title !== 'Mes histoires du soir') return current;
-      return { ...current, ...defaultMetadataForPacks(packs, current.uuid) };
-    });
+    setMetadata(current => refreshAggregateMetadata(current, packs, ageEdited.current));
   }, [packs]);
 
   async function ensureSessionDir() {
@@ -142,22 +168,29 @@ export function AggregatePacksFunnel({ onClose }) {
   }
 
   async function addPackPaths(paths) {
+    // Un dossier de pack vaut une archive : converti par le lecteur unique du moteur,
+    // puis traité comme un .zip. Le type réel vient du moteur, pas de l'extension.
+    const kinds = await readPathKinds(paths || []);
+    const isFolder = (path) => kinds?.get(path) === 'folder';
     const candidates = (paths || [])
-      .filter((path) => /\.(zip|7z)$/i.test(path))
-      .filter((path) => !packs.some((pack) => pack.path === path));
+      .filter((path) => isFolder(path) || (/\.(zip|7z)$/i.test(path) && kinds?.get(path) !== 'folder'))
+      .filter((path) => !packs.some((pack) => (pack.sourcePath ?? pack.path) === path));
     if (candidates.length === 0) return;
     setLoadingPacks(true);
     setError('');
+    setTechnicalDetail('');
     try {
       const nextPacks = [];
-      for (const path of candidates) {
+      for (const sourcePath of candidates) {
+        let path = sourcePath;
         try {
+          if (isFolder(sourcePath)) path = await convertFolderPackToZip(sourcePath);
           const json = await invoke('load_pack_zip', { zipPath: path });
           const data = JSON.parse(json);
           const sq = getSquareOne(data);
-          const fileName = basename(path) || path;
+          const fileName = basename(sourcePath) || sourcePath;
           const parsed = parseConventionName(fileName);
-          const title = sanitizeImportedName(data.title?.trim() || parsed?.title || basenameNoExt(path), fileName);
+          const title = sanitizeImportedName(data.title?.trim() || parsed?.title || basenameNoExt(sourcePath), fileName);
           let sizeBytes = 0;
           try {
             sizeBytes = Number((await stat(path))?.size || 0);
@@ -165,15 +198,21 @@ export function AggregatePacksFunnel({ onClose }) {
           nextPacks.push({
             id: crypto.randomUUID(),
             path,
+            ...(sourcePath !== path ? { sourcePath } : {}),
             fileName,
             name: title,
             coverImage: sq?.image || null,
             coverAudio: sq?.audio || null,
+            packUuid: sq?.uuid || data.uuid || '',
+            officialProvenance: data.officialProvenance ?? 'unknown',
+            officialOriginUuid: data.officialOriginUuid,
             storyCount: getPackStoryCount(data),
             sizeBytes,
           });
         } catch (packError) {
-          setError(`Pack ignoré : ${basename(path) || path}\n${packError}`);
+          const presented = presentUserMessage(packError);
+          setError({ userMessage: packError, codedOnly: true, prefix: { key: 'home:aggregate.packs.ignoredPrefix', params: { name: basename(sourcePath) || sourcePath } } });
+          setTechnicalDetail(presented.technicalDetail);
         }
       }
       if (nextPacks.length) setPacks((current) => [...current, ...nextPacks]);
@@ -185,6 +224,11 @@ export function AggregatePacksFunnel({ onClose }) {
   async function handleBrowsePacks() {
     const files = await pickMultipleZip();
     await addPackPaths(files);
+  }
+
+  async function handleBrowsePackFolders() {
+    const folders = await pickFolder({ multiple: true });
+    await addPackPaths(Array.isArray(folders) ? folders : folders ? [folders] : []);
   }
 
   async function handlePickAudio() {
@@ -239,13 +283,7 @@ export function AggregatePacksFunnel({ onClose }) {
   }
 
   function movePack(index, delta) {
-    setPacks((current) => {
-      const next = [...current];
-      const target = index + delta;
-      if (target < 0 || target >= next.length) return current;
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
+    setPacks(current => moveAggregatePack(current, index, delta));
   }
 
   function removePack(id) {
@@ -265,39 +303,76 @@ export function AggregatePacksFunnel({ onClose }) {
       if (canGoTo(step + 1)) setStep(step + 1);
       return;
     }
-    void generate();
+    return;
   }
 
-  function saveMetadataDraft(draft) {
+  function saveMetadataDraft(draft, changedField) {
+    if (changedField === 'minAge' || (draft.minAge !== undefined && String(draft.minAge) !== String(metadata.minAge))) ageEdited.current = true;
     setMetadata((current) => ({ ...current, ...draft }));
   }
 
   async function saveMetadataAndGenerate(draft) {
+    if (draft.minAge !== undefined && String(draft.minAge) !== String(metadata.minAge)) ageEdited.current = true;
     const nextMetadata = { ...metadata, ...draft };
     setMetadata(nextMetadata);
+    if (destination.destination === 'editor') {
+      if (busyRef.current || !onLand) return;
+      busyRef.current = true;
+      // eslint-disable-next-line i18next/no-literal-string -- État interne de préparation de session.
+      setPhase('landing');
+      setError('');
+      setTechnicalDetail('');
+      try {
+        const landed = await onLand({ draft: { packs, rootAudio, rootImage, metadata: nextMetadata }, preparation });
+        if (landed) {
+          await handleClose(true);
+          onLanded?.();
+          return;
+        }
+      } catch (landingError) {
+        setError({ userMessage: landingError, codedOnly: true });
+        setTechnicalDetail(presentUserMessage(landingError).technicalDetail);
+      } finally {
+        busyRef.current = false;
+        if (!mountedRef.current) await cleanupAssistantSession();
+        else setPhase('collect');
+      }
+      return;
+    }
     // Le dossier de sortie est choisi ici, au moment de générer (comme le flux
     // normal), plutôt que dans une étape dédiée en amont.
     const selected = await openDialog({
       directory: true,
       multiple: false,
-      title: 'Dossier de sortie du pack',
+      title: t('home:aggregate.output.dialogTitle'),
       defaultPath: outputDir || getLastExportDir() || undefined,
     });
     if (!selected) return;
     setOutputDir(selected);
     saveLastExportDir(selected);
-    await generate(nextMetadata, selected);
+    // eslint-disable-next-line i18next/no-literal-string -- Événement du réducteur de destination.
+    dispatchDestination({ type: 'review', confirmation: createAggregateConfirmation({ packs, rootAudio, rootImage, metadata: nextMetadata }, selected) });
   }
 
-  async function generate(metadataOverride = metadata, outputFolder = outputDir) {
-    const activeMetadata = { ...metadata, ...metadataOverride };
+  async function generate(confirmation) {
+    const { packs, rootAudio, rootImage, metadata: activeMetadata } = confirmation.draft;
+    const outputFolder = confirmation.folder;
     if (!packs.length || !rootAudio || !rootImage || !activeMetadata.title?.trim() || !outputFolder) return;
+    if (busyRef.current) return;
+    const generationLease = nativeGenerationLock.acquire({ owner: 'aggregate', label: activeMetadata.title });
+    if (!generationLease) { setError({ key: 'home:aggregate.generation.busy', params: {} }); return; }
+    busyRef.current = true;
+    cancelledRef.current = false;
+    dispatchDestination({ type: 'cancel' });
     setPhase('generating');
     setProgress(0.05);
     setError('');
+    setTechnicalDetail('');
     let unlisten = null;
     let timer = null;
+    let assemblyTask = null;
     try {
+      if (preparation) assemblyTask = await catalogueAssemblyApi.retainTask(preparation.preparationId);
       const sessionDir = await ensureSessionDir();
       const preparedAudio = await copyToSession(rootAudio, activeMetadata.title || 'agregation');
       setProgress(0.12);
@@ -307,7 +382,7 @@ export function AggregatePacksFunnel({ onClose }) {
       for (let index = 0; index < packs.length; index += 1) {
         const pack = packs[index];
         const copiedZip = await copyToSession(pack.path, activeMetadata.title || 'agregation');
-        preparedPacks.push({ ...pack, path: copiedZip });
+        preparedPacks.push({ ...pack, path: copiedZip, coverImage: pack.coverImage ? await copyToSession(pack.coverImage, activeMetadata.title) : pack.coverImage, coverAudio: pack.coverAudio ? await copyToSession(pack.coverAudio, activeMetadata.title) : pack.coverAudio });
         setProgress(0.18 + ((index + 1) / packs.length) * 0.18);
       }
 
@@ -325,6 +400,7 @@ export function AggregatePacksFunnel({ onClose }) {
         setProgress((current) => Math.min(0.9, current + 0.012));
       }, 350);
       logger.info(`aggregate-funnel:generate start count=${packs.length} output='${outputFolder}' session='${sessionDir}'`);
+      if (cancelledRef.current) throw { key: 'home:aggregate.generation.cancelled', params: {} };
       const generationResult = await invoke('generate_pack', { projectJson, outputFolder });
       const resultPath = typeof generationResult === 'string'
         ? generationResult
@@ -332,7 +408,7 @@ export function AggregatePacksFunnel({ onClose }) {
       const warnings = Array.isArray(generationResult?.warnings)
         ? generationResult.warnings
         : [];
-      if (!resultPath) throw new Error('Le moteur n’a renvoyé aucun chemin de ZIP.');
+      if (!resultPath) throw { key: 'home:aggregate.generation.missingPath', params: {} };
       window.clearInterval(timer);
       timer = null;
       unlisten?.();
@@ -350,30 +426,28 @@ export function AggregatePacksFunnel({ onClose }) {
         storyCount: packs.reduce((sum, pack) => sum + (pack.storyCount || 0), 0),
         warnings,
       });
-      if (sessionDirRef.current) {
-        await invoke('cleanup_session_workspace', { path: sessionDirRef.current }).catch(() => {});
-        sessionDirRef.current = '';
-      }
       setPhase('done');
     } catch (generationError) {
       window.clearInterval(timer);
       unlisten?.();
-      setError(`La génération a échoué : ${generationError?.message ?? generationError}`);
+      const presented = presentUserMessage(generationError);
+      setError({ userMessage: generationError, codedOnly: true, prefix: { key: 'home:aggregate.generation.errorPrefix' } });
+      setTechnicalDetail(presented.technicalDetail);
       setPhase('collect');
-      if (sessionDirRef.current) {
-        await invoke('cleanup_session_workspace', { path: sessionDirRef.current }).catch(() => {});
-        sessionDirRef.current = '';
+    } finally {
+      try { if (assemblyTask) await catalogueAssemblyApi.finishTask(assemblyTask.leaseId); }
+      finally {
+        generationLease.release();
+        busyRef.current = false;
+        if (!mountedRef.current) await cleanupAssistantSession();
       }
     }
   }
 
-  async function handleClose() {
-    if (phase === 'generating') return;
-    const sessionDir = sessionDirRef.current;
-    if (sessionDir) {
-      await invoke('cleanup_session_workspace', { path: sessionDir }).catch(() => {});
-      sessionDirRef.current = '';
-    }
+  async function handleClose(landed = false) {
+    if (busyRef.current && landed !== true) return;
+    await cleanupAssistantSession();
+    await onReleasePreparation?.();
     onClose?.();
   }
 
@@ -387,24 +461,25 @@ export function AggregatePacksFunnel({ onClose }) {
   );
   const previewProject = buildAggregateProject({ packs, rootAudio, rootImage, metadata });
   const generationPhases = [
-    { label: 'Agrégation des packs', status: progress >= 0.28 ? 'done' : 'active' },
-    { label: 'Harmonisation du volume', status: progress < 0.28 ? 'todo' : progress >= 0.55 ? 'done' : 'active' },
-    { label: 'Encodage des images 320x240', status: progress < 0.55 ? 'todo' : progress >= 0.8 ? 'done' : 'active' },
-    { label: 'Construction du ZIP', status: progress < 0.8 ? 'todo' : progress >= 1 ? 'done' : 'active' },
+    { label: t('home:aggregate.phase.combine'), status: progress >= 0.28 ? 'done' : 'active' },
+    { label: t('home:aggregate.phase.volume'), status: progress < 0.28 ? 'todo' : progress >= 0.55 ? 'done' : 'active' },
+    { label: t('home:aggregate.phase.images'), status: progress < 0.55 ? 'todo' : progress >= 0.8 ? 'done' : 'active' },
+    { label: t('home:aggregate.phase.archive'), status: progress < 0.8 ? 'todo' : progress >= 1 ? 'done' : 'active' },
   ];
 
   return (
     <FunnelShell
       icon={<Package />}
-      title="Agréger des packs"
-      subtitle="Génère un nouveau pack à partir de plusieurs archives."
-      onClose={handleClose}
+      title={t('home:modeSelector.aggregate.label')}
+      subtitle={t('home:aggregate.header.description')}
+      onClose={() => handleClose()}
+      closeDisabled={phase === 'generating' || phase === 'landing'}
       showChrome={phase === 'collect'}
       size="wide"
-      ariaLabel="Agréger des packs"
+      ariaLabel={t('home:modeSelector.aggregate.label')}
       stepper={(
         <FunnelStepper
-          steps={STEPS}
+          steps={STEPS.map((step) => ({ ...step, label: t(step.labelKey) }))}
           current={step}
           onStepClick={(index) => { if (canGoTo(index)) setStep(index); }}
           disabled={phase !== 'collect'}
@@ -414,49 +489,50 @@ export function AggregatePacksFunnel({ onClose }) {
         <FunnelFooter
           onBack={() => setStep((current) => Math.max(0, current - 1))}
           backDisabled={step === 0}
-          stepLabel={`Étape ${step + 1} / ${STEPS.length}`}
+          stepLabel={t('home:funnel.footer.stepCount', { step: step + 1, total: STEPS.length })}
           onPrimary={handlePrimary}
-          primaryLabel={step === STEPS.length - 1 ? 'Générer le pack' : 'Continuer'}
+          primaryLabel={step === STEPS.length - 1 ? t('home:aggregate.generation.action') : t('home:funnel.footer.continue')}
           primaryIcon={step === STEPS.length - 1 ? <Package /> : null}
           primaryDisabled={primaryDisabled}
         />
       )}
     >
+      {phase === 'landing' && <p role="status">{t('home:aggregate.destination.opening')}</p>}
       {phase === 'generating' && (
+        <div><button type="button" className="funnel-btn" onClick={() => { cancelledRef.current = true; void invoke('cancel_generate_pack').catch(() => {}); }}>{t('common:dialog.cancel.label')}</button>
         <FunnelGenerationState
-          title="Génération du pack…"
-          hint="Ne ferme pas la fenêtre."
+          title={t('home:aggregate.generation.title')}
+          hint={t('home:funnel.generation.hint')}
           phases={generationPhases}
           progress={progress}
-        />
+        /></div>
       )}
 
       {phase === 'done' && (
         <FunnelDoneState
-          title="Pack généré"
+          title={t('home:aggregate.done.title')}
           fileName={result?.fileName}
           meta={[
             formatBytes(result?.sizeBytes),
-            `${result?.storyCount ?? totalStories} histoire${(result?.storyCount ?? totalStories) > 1 ? 's' : ''}`,
-            `${result?.packCount ?? packs.length} packs agrégés`,
+            t('home:aggregate.count.stories', { count: result?.storyCount ?? totalStories }),
+            t('home:aggregate.done.packCount', { count: result?.packCount ?? packs.length }),
           ].filter(Boolean).join(' · ')}
           notice={result?.warnings?.length ? (
             <div>
               <strong>
-                Pack généré avec {result.warnings.length} avertissement{result.warnings.length > 1 ? 's' : ''} audio.
+                {t('home:aggregate.done.audioWarnings', { count: result.warnings.length })}
               </strong>
               {result.warnings.map((warning, index) => (
-                <div key={`${warning.code || 'audio'}-${warning.role || index}`}>{warning.message}</div>
+                <div key={`${warning.code || 'audio'}-${warning.role || index}`}>{presentUserMessage(warning).message}<TechnicalDetail value={presentUserMessage(warning).technicalDetail} /></div>
               ))}
-              <small>Le ZIP est utilisable ; vérifie de préférence ces passages sur la Lunii.</small>
+              <small>{t('home:aggregate.done.warningHint')}</small>
             </div>
           ) : null}
         >
-          <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={() => outputDir && openPath(outputDir)}>
-            Ouvrir le dossier
-          </FunnelToolButton>
-          <button type="button" className="funnel-btn funnel-btn-primary" onClick={handleClose}>
-            <span>Terminer</span>
+          <GenerationFolderPrompt outputPath={result?.path} />
+          <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={() => outputDir && openPath(outputDir)}>{t('home:aggregate.done.openFolder')}</FunnelToolButton>
+          <button type="button" className="funnel-btn funnel-btn-primary" onClick={() => handleClose()}>
+            <span>{t('home:aggregate.done.finish')}</span>
             <House />
           </button>
         </FunnelDoneState>
@@ -464,23 +540,24 @@ export function AggregatePacksFunnel({ onClose }) {
 
       {phase === 'collect' && step === 0 && (
         <div className="funnel-step-content aggregate-step">
+          <AssemblyExcludedList entries={preparation?.excluded} />
           <FunnelSectionHeader
             icon={<Package />}
-            title="Sélection des packs"
-            description="Glisse plusieurs .zip ou .7z — l'ordre définit le menu agrégé."
+            title={t('home:aggregate.packs.title')}
+            description={t('home:aggregate.packs.description')}
           />
           <FunnelDropZone
             icon={<Upload />}
-            title="Dépose tes archives ici"
-            hint="Formats acceptés : .zip, .7z · plusieurs à la fois"
+            title={t('home:aggregate.packs.dropTitle')}
+            hint={t('home:aggregate.packs.formats')}
             onFiles={addPackPaths}
             disabled={loadingPacks}
           >
-            <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={handleBrowsePacks} disabled={loadingPacks}>
-              Parcourir…
-            </FunnelToolButton>
+            <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={handleBrowsePacks} disabled={loadingPacks}>{t('home:aggregate.packs.browse')}</FunnelToolButton>
+            <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={handleBrowsePackFolders} disabled={loadingPacks}>{t('home:aggregate.packs.browseFolder')}</FunnelToolButton>
           </FunnelDropZone>
 
+          {preparation && <p>{t('catalogue:assembly.effectiveValues')}</p>}
           {packs.length > 0 && (
             <div className="aggregate-pack-list">
               {packs.map((pack, index) => (
@@ -488,30 +565,32 @@ export function AggregatePacksFunnel({ onClose }) {
                   <span className="aggregate-pack-handle" aria-hidden="true">⋮⋮</span>
                   <span className="aggregate-pack-icon"><Package /></span>
                   <span className="aggregate-pack-copy">
-                    <span className="aggregate-pack-name" title={pack.fileName}>{pack.fileName}</span>
+                    {preparation && pack.provenance?.some(field => field.effective?.origin === 'correction' || field.effective?.origin === 'cleared') && <span>{t('catalogue:data.corrected')}</span>}
+                    {preparation ? <input aria-label={t('home:aggregate.packs.title')} value={pack.name} onChange={event => setPacks(current => current.map(item => item.id === pack.id ? { ...item, name: event.target.value } : item))} /> : <span className="aggregate-pack-name" title={pack.fileName}>{pack.fileName}</span>}
                     <span className="aggregate-pack-meta">
-                      {[formatBytes(pack.sizeBytes), `${pack.storyCount} scène${pack.storyCount > 1 ? 's' : ''}`].filter(Boolean).join(' · ')}
+                      {preparation && <button type="button" onClick={async () => { const image = await pickImage(); if (image) setPacks(current => current.map(item => item.id === pack.id ? { ...item, coverImage: image } : item)); }}>{t('home:aggregate.image.choose')}</button>}
+                      {[formatBytes(pack.sizeBytes), t('home:aggregate.count.scenes', { count: pack.storyCount })].filter(Boolean).join(' · ')}
                     </span>
                   </span>
-                  <button type="button" className="aggregate-icon-btn" onClick={() => movePack(index, -1)} disabled={index === 0} aria-label="Monter">
+                  <button type="button" className="aggregate-icon-btn" onClick={() => movePack(index, -1)} disabled={index === 0} aria-label={t('home:aggregate.packs.moveUp')}>
                     <MoveUp />
                   </button>
-                  <button type="button" className="aggregate-icon-btn" onClick={() => movePack(index, 1)} disabled={index === packs.length - 1} aria-label="Descendre">
+                  <button type="button" className="aggregate-icon-btn" onClick={() => movePack(index, 1)} disabled={index === packs.length - 1} aria-label={t('home:aggregate.packs.moveDown')}>
                     <MoveDown />
                   </button>
-                  <button type="button" className="aggregate-icon-btn" onClick={() => removePack(pack.id)} aria-label="Retirer">
+                  <button type="button" className="aggregate-icon-btn" onClick={() => removePack(pack.id)} aria-label={t('home:aggregate.packs.remove')}>
                     <Trash2 />
                   </button>
                 </div>
               ))}
               <div className="aggregate-pack-list-foot">
-                <span>{packs.length} pack{packs.length > 1 ? 's' : ''} · {totalStories} scène{totalStories > 1 ? 's' : ''}</span>
+                <span>{t('home:aggregate.count.packs', { count: packs.length })} · {t('home:aggregate.count.scenes', { count: totalStories })}</span>
                 <span>{formatBytes(totalSize)}</span>
               </div>
             </div>
           )}
-          {loadingPacks && <div className="aggregate-inline-note">Lecture des métadonnées…</div>}
-          {error && <div className="funnel-error" role="alert">{error}</div>}
+          {loadingPacks && <div className="aggregate-inline-note">{t('home:aggregate.packs.loading')}</div>}
+          {error && <div className="funnel-error" role="alert">{presentStoredError(error)}<TechnicalDetail value={technicalDetail} /></div>}
         </div>
       )}
 
@@ -519,15 +598,15 @@ export function AggregatePacksFunnel({ onClose }) {
         <div className="funnel-step-content aggregate-step">
           <FunnelSectionHeader
             icon={<Mic />}
-            title="Audio du menu"
-            description="La voix qui annonce le menu agrégé sur la Boîte à Histoires."
+            title={t('home:aggregate.audio.title')}
+            description={t('home:aggregate.audio.description')}
           />
           <div className="aggregate-audio-card">
             <button
               type="button"
               className="aggregate-play-btn"
               disabled={!audioUrl}
-              aria-label={audioPlaying ? "Mettre l'audio en pause" : "Lire l'audio"}
+              aria-label={audioPlaying ? t('home:aggregate.audio.pause') : t('home:aggregate.audio.play')}
               onClick={toggleAudioPreview}
             >
               {audioPlaying ? <Pause /> : <Play />}
@@ -537,27 +616,19 @@ export function AggregatePacksFunnel({ onClose }) {
                 <span key={index} style={{ height: `${10 + ((index * 13) % 30)}px` }} />
               ))}
             </div>
-            <div className="aggregate-selected-file" title={rootAudio}>{rootAudio ? basename(rootAudio) : 'Aucun audio choisi'}</div>
+            <div className="aggregate-selected-file" title={rootAudio}>{rootAudio ? basename(rootAudio) : t('home:aggregate.audio.empty')}</div>
           </div>
           <div className="aggregate-tool-grid">
-            <FunnelToolButton icon={<FolderOpen />} accent="neutral" block onClick={handlePickAudio}>
-              Choisir un audio
-            </FunnelToolButton>
-            <FunnelToolButton icon={<Mic />} accent="violet" variant="solid" block onClick={handleRecordAudio}>
-              Enregistrer au micro
-            </FunnelToolButton>
+            <FunnelToolButton icon={<FolderOpen />} accent="neutral" block onClick={handlePickAudio}>{t('home:aggregate.audio.choose')}</FunnelToolButton>
+            <FunnelToolButton icon={<Mic />} accent="violet" variant="solid" block onClick={handleRecordAudio}>{t('home:aggregate.audio.record')}</FunnelToolButton>
             {ttsAvailable && (
-              <FunnelToolButton icon={<Speech />} accent="violet" variant="solid" block onClick={handleGenerateVoice}>
-                Générer une voix
-              </FunnelToolButton>
+              <FunnelToolButton icon={<Speech />} accent="violet" variant="solid" block onClick={handleGenerateVoice}>{t('home:aggregate.audio.voice')}</FunnelToolButton>
             )}
             <FunnelToolButton icon={<Scissors />} accent="neutral" block onClick={async () => {
               if (!rootAudio) return;
               await ensureSessionDir();
               setAudioEditorOpen(true);
-            }} disabled={!rootAudio}>
-              Édition audio
-            </FunnelToolButton>
+            }} disabled={!rootAudio}>{t('home:aggregate.audio.edit')}</FunnelToolButton>
           </div>
         </div>
       )}
@@ -566,22 +637,20 @@ export function AggregatePacksFunnel({ onClose }) {
         <div className="funnel-step-content aggregate-step">
           <FunnelSectionHeader
             icon={<Image />}
-            title="Image de couverture"
-            description="Image affichée à l'écran de la Boîte à Histoires."
+            title={t('home:aggregate.image.title')}
+            description={t('home:aggregate.image.description')}
           />
           <div className="aggregate-image-layout">
             <div className="aggregate-image-preview">
               {imageUrl ? <img src={imageUrl} alt="" /> : (
                 <div className="aggregate-image-placeholder">
-                  <strong>{metadata.title || 'Mes histoires du soir'}</strong>
-                  <span>{packs.length} pack{packs.length > 1 ? 's' : ''} agrégé{packs.length > 1 ? 's' : ''}</span>
+                  <strong>{metadata.title || t('home:aggregate.creation.title')}</strong>
+                  <span>{t('home:aggregate.count.combined', { count: packs.length })}</span>
                 </div>
               )}
             </div>
             <div className="aggregate-image-actions">
-              <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={handlePickImage}>
-                Choisir une image
-              </FunnelToolButton>
+              <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={handlePickImage}>{t('home:aggregate.image.choose')}</FunnelToolButton>
               <FunnelToolButton
                 icon={<Sparkles />}
                 accent="violet"
@@ -591,19 +660,16 @@ export function AggregatePacksFunnel({ onClose }) {
                     await ensureSessionDir();
                     setTextImageOpen(true);
                   } catch (sessionError) {
-                    setError(`Impossible de préparer la session : ${sessionError?.message ?? sessionError}`);
+                    setError({ userMessage: sessionError, codedOnly: true, prefix: { key: 'home:aggregate.session.errorPrefix' } });
+                    setTechnicalDetail(presentUserMessage(sessionError).technicalDetail);
                   }
                 }}
-              >
-                Générer une image-titre
-              </FunnelToolButton>
+              >{t('home:aggregate.image.generate')}</FunnelToolButton>
               <FunnelToolButton icon={<Crop />} accent="violet" variant="outline" onClick={async () => {
                 await ensureSessionDir();
                 setImageEditorOpen(true);
-              }} disabled={!rootImage}>
-                Retouche image
-              </FunnelToolButton>
-              <div className="aggregate-inline-note">320 × 240 · recadrage automatique à la génération.</div>
+              }} disabled={!rootImage}>{t('home:aggregate.image.edit')}</FunnelToolButton>
+              <div className="aggregate-inline-note">{t('home:aggregate.image.dimensionsHint')}</div>
             </div>
           </div>
         </div>
@@ -613,24 +679,31 @@ export function AggregatePacksFunnel({ onClose }) {
         <div className="funnel-step-content aggregate-step aggregate-metadata-step">
           <FunnelSectionHeader
             icon={<Package />}
-            title="Métadonnées"
-            description="Panneau PackNameModal pré-rempli, cohérent avec Modifier un pack."
-            trailing={<span className="funnel-badge">Pré-rempli</span>}
+            title={t('home:aggregate.step.metadata')}
+            description={t('home:aggregate.metadata.description')}
+            trailing={<span className="funnel-badge">{t('home:aggregate.metadata.badge')}</span>}
           />
-          <Suspense fallback={null}>
+          {/* eslint-disable-next-line i18next/no-literal-string -- Événement interne du choix de destination. */}
+          <AggregateDestinationChoice destination={destination.destination} onChoose={value => dispatchDestination({ type: 'choose', destination: value })} />
+          {destination.confirmation ? <AggregateGenerationReview {...destination.confirmation}
+            onCancel={() => dispatchDestination({ type: 'cancel' })}
+            onConfirm={() => { const review = destination.confirmation; void generate(review); }} /> : <Suspense fallback={null}>
             <PackNameModal
               open
               embedded
+              allowUnknownAge
               packMetadata={metadata}
               project={previewProject}
               coverImage={rootImage}
               exportFolder={outputDir || null}
+              onDraftChange={saveMetadataDraft}
               onSave={saveMetadataDraft}
               onSaveAndGenerate={saveMetadataAndGenerate}
+              primaryActionLabel={destination.destination === 'editor' ? t('home:aggregate.destination.editor') : t('home:aggregate.destination.review')}
               onClose={() => setStep(2)}
             />
-          </Suspense>
-          {error && <div className="funnel-error" role="alert">{error}</div>}
+          </Suspense>}
+          {error && <div className="funnel-error" role="alert">{presentStoredError(error)}<TechnicalDetail value={technicalDetail} /></div>}
         </div>
       )}
 
@@ -669,8 +742,9 @@ export function AggregatePacksFunnel({ onClose }) {
           <GenerateVoiceModal
             savePath={null}
             xttsSettings={xttsSettings}
-            label="Audio du menu"
-            initialText={metadata.title || 'Mes histoires du soir'}
+            label={t('home:aggregate.audio.title')}
+            labelRef={{ key: 'home:aggregate.audio.title' }}
+            initialText={metadata.title || t('home:aggregate.creation.title')}
             filenameHint={`menu-${metadata.title || 'agregation'}`}
             target={null}
             onUpdateXttsSettings={onUpdateXttsSettings}
@@ -698,7 +772,7 @@ export function AggregatePacksFunnel({ onClose }) {
       {textImageOpen && (
         <Suspense fallback={null}>
           <TextImagePromptModal
-            defaultText={metadata.title || 'Mes histoires du soir'}
+            defaultText={metadata.title || t('home:aggregate.creation.title')}
             workspaceDir={sessionDirRef.current || ''}
             onConfirm={(path) => {
               if (path) setRootImage(path);

@@ -1,8 +1,13 @@
+import { normalizeOfficialProvenance, officialIdentityFields, entryOfficialIdentityFields, containsOfficialContent } from '../officialProvenance.js';
+import { normalizeProjectStorage } from '../projectStorage.js';
+import { normalizeProjectSubscriptions } from '../mediaSubscriptions.js';
 import { assertFreeProjectEnvelope } from './envelope.js';
 import { normalizeNavigationTarget } from '../navigationTargets.js';
 import {
   getPackAudioEdgeSilenceSettings,
   normalizePackAudioEdgeSilence,
+  readPackAudioEdgeSilenceOverrides,
+  resolvePackAudioEdgeSilence,
   PACK_SILENCE_MODES,
 } from '../../config/audioProcessing.js';
 import { getExportPackName, parseConventionName } from '../../utils/packConvention.js';
@@ -59,9 +64,14 @@ function normalizeOptions(options) {
     : Object.prototype.hasOwnProperty.call(options ?? {}, 'addSilence')
       ? (options?.addSilence ? 'add' : 'off')
       : 'normalize';
+  const edgeSilenceOverrides = Object.fromEntries(
+    Object.entries(readPackAudioEdgeSilenceOverrides(options))
+      .filter(([, value]) => value !== null),
+  );
   return {
     silenceMode,
     harmonizeLoudness: options?.harmonizeLoudness ?? true,
+    ...edgeSilenceOverrides,
     autoNext: options?.autoNext ?? false,
     nightMode: options?.nightMode ?? false,
     // Absent des anciens projets : conserver l'enchaînement automatique historique.
@@ -74,7 +84,6 @@ function normalizeOptions(options) {
 
 function inferEntryType(entry) {
   if (!entry || typeof entry !== 'object') return 'story';
-  if (entry.type === 'ref') return 'ref';
   if (entry.type === 'menu' || Array.isArray(entry.children) || (!entry.type && Array.isArray(entry.items))) {
     return 'menu';
   }
@@ -104,6 +113,7 @@ function normalizeImportWarnings(value) {
       field: typeof warning.field === 'string' ? warning.field : '',
       targetStageId: typeof warning.targetStageId === 'string' ? warning.targetStageId : null,
       targetStageName: typeof warning.targetStageName === 'string' ? warning.targetStageName : '',
+  // eslint-disable-next-line i18next/no-literal-string -- Migration persistée : conserver la valeur historique, ne pas la traduire.
       message: typeof warning.message === 'string' ? warning.message : 'Transition importee non modelisee.',
       sourceRootId: typeof warning.sourceRootId === 'string' ? warning.sourceRootId : null,
       sourceName: typeof warning.sourceName === 'string' ? warning.sourceName : '',
@@ -193,22 +203,13 @@ function applyContinuationIdMap(entry, idMap) {
   return next;
 }
 
-function applyRefTargetIdMap(entry, idMap) {
-  if (!entry || typeof entry !== 'object') return entry;
-  const next = entry.type === 'ref'
-    ? { ...entry, target: rewritePrefixedNavigationTarget(entry.target, idMap) }
-    : entry;
-  if (!Array.isArray(next.children)) return next;
-  return { ...next, children: next.children.map((child) => applyRefTargetIdMap(child, idMap)) };
-}
-
 // Réattribue les identifiants d'un sous-arbre selon `idMap` (ancien → nouveau)
 // et fait suivre les cibles de navigation qui les désignent : fins, Accueil,
-// étapes et choix d'après lecture, refs. Une cible vers un identifiant absent de
+// étapes et choix d'après lecture. Une cible vers un identifiant absent de
 // `idMap` reste telle quelle.
 export function remapEntryIds(entry, idMap) {
   if (!(idMap instanceof Map) || idMap.size === 0) return entry;
-  return applyRefTargetIdMap(applyContinuationIdMap(entry, idMap), idMap);
+  return applyContinuationIdMap(entry, idMap);
 }
 
 function prefixImportedContinuationChildren(children, menuId) {
@@ -248,6 +249,7 @@ function normalizeAfterPlaybackStep(value) {
 
 export function normalizeStoryEntry(entry = {}) {
   return {
+    ...entryOfficialIdentityFields(entry),
     id: entry.id || makeId(),
     type: 'story',
     name: entry.name || '',
@@ -298,26 +300,10 @@ export function normalizeZipEntry(entry = {}) {
     name: entry.name || '',
     treeColor: normalizeTreeColor(entry.treeColor),
     zipPath: normalizeLocalFilePath(entry.zipPath),
+    ...(entry.packUuid ? { packUuid: entry.packUuid } : {}),
+    ...entryOfficialIdentityFields(entry),
     coverImage: normalizeLocalFilePath(entry.coverImage),
     coverAudio: normalizeLocalFilePath(entry.coverAudio),
-  };
-}
-
-// Pointeur pur vers une autre entree (menu/story/etape). Permet de representer
-// convergence, boucle et fin partagee sans dupliquer le noeud cible : l'arbre
-// porte chaque noeud une fois, et les aretes restantes deviennent des `ref`.
-// `target` reutilise l'encodage navigation existant (menu:/story:/story_play:/
-// story_home_step:) plutot qu'un id nu, pour viser n'importe quel noeud avec un
-// seul resolveur. Un id nu sans prefixe est interprete comme `menu:<id>`.
-export function normalizeRefEntry(entry = {}) {
-  return {
-    id: entry.id || makeId(),
-    type: 'ref',
-    target: normalizeNavigationTarget(entry.target ?? entry.targetId),
-    refKind: entry.refKind === 'return' ? 'return' : 'continue',
-    label: typeof entry.label === 'string' ? entry.label : '',
-    treeColor: normalizeTreeColor(entry.treeColor),
-    nativeStageId: typeof entry.nativeStageId === 'string' ? entry.nativeStageId : null,
   };
 }
 
@@ -327,6 +313,7 @@ export function normalizeMenuEntry(entry = {}) {
   const rawChildren = Array.isArray(entry.children) ? entry.children : (entry.items ?? []);
   const children = importedContinuation ? prefixImportedContinuationChildren(rawChildren, id) : rawChildren;
   return {
+    ...entryOfficialIdentityFields(entry),
     id,
     type: 'menu',
     name: entry.name ?? '',
@@ -359,8 +346,6 @@ export function normalizeEntry(entry = {}) {
       return normalizeMenuEntry(entry);
     case 'zip':
       return normalizeZipEntry(entry);
-    case 'ref':
-      return normalizeRefEntry(entry);
     default:
       return normalizeStoryEntry(entry);
   }
@@ -440,6 +425,7 @@ function normalizePackVersion(value) {
 }
 
 function normalizePackMinAge(value) {
+  if (value === '') return '';
   const parsed = String(value ?? '').match(/\d+/)?.[0] ?? '';
   return parsed || DEFAULT_PACK_METADATA.minAge;
 }
@@ -448,6 +434,8 @@ function normalizePackMetadata(value = {}) {
   const metadata = value && typeof value === 'object' ? value : {};
   const namingMode = metadata.namingMode === 'legacy' ? 'legacy' : 'convention';
   return {
+    // eslint-disable-next-line i18next/no-literal-string -- Clé du format .mbah : champ optionnel sérialisé, jamais un texte visible.
+    ...(Object.hasOwn(metadata, 'language') ? { language: String(metadata.language ?? '').trim() } : {}),
     title: String(metadata.title ?? '').trim(),
     author: String(metadata.author ?? '').trim(),
     version: normalizePackVersion(metadata.version),
@@ -567,7 +555,9 @@ export function normalizeBaseProject(project = {}) {
   const thumbnailImage = sameImage ? rootImage : rawThumbnailImage;
   const nativeTitle = nativeGraph?.document?.title;
   const endNodeName = String(project.endNodeName ?? '').trim() === 'Nœud de fin'
+  // eslint-disable-next-line i18next/no-literal-string -- Migration persistée : conserver la valeur historique, ne pas la traduire.
     ? 'Message de fin'
+  // eslint-disable-next-line i18next/no-literal-string -- Migration persistée : conserver la valeur historique, ne pas la traduire.
     : (project.endNodeName ?? 'Message de fin');
 
   return {
@@ -575,9 +565,14 @@ export function normalizeBaseProject(project = {}) {
     authoringMode: 'free',
     version: Math.max(project.version ?? 1, rootEntries.length > 0 ? 2 : 1),
     projectName,
+    officialProvenance: normalizeOfficialProvenance(project.officialProvenance),
+    ...officialIdentityFields({ officialOriginUuid: project.officialOriginUuid }),
+    containsOfficialContent: rootEntries.some(containsOfficialContent),
+    ...(project.storage ? { storage: normalizeProjectStorage(project.storage) } : {}),
     packMetadata: packMetadata.title
       ? packMetadata
       : normalizePackMetadata({ ...packMetadata, title: typeof nativeTitle === 'string' ? nativeTitle : '' }),
+  // eslint-disable-next-line i18next/no-literal-string -- Migration persistée : conserver la valeur historique, ne pas la traduire.
     rootName: project.rootName ?? (projectType === 'pack' ? 'Menu racine' : ''),
     endNodeName,
     projectType,
@@ -594,6 +589,8 @@ export function normalizeBaseProject(project = {}) {
     globalOptions: normalizeOptions(project.globalOptions),
     importWarnings: nativeGraph ? [] : importWarnings,
     rootEntries,
+    ...((mediaSubscriptions) => (mediaSubscriptions.length ? { mediaSubscriptions } : {}))(
+      normalizeProjectSubscriptions(project.mediaSubscriptions)),
   };
 }
 
@@ -610,12 +607,16 @@ export function projectToSerializable(project) {
 }
 
 export function projectToRustExport(project, audioEdgeSilence = getPackAudioEdgeSilenceSettings()) {
-  const serializable = projectToSerializable(project);
+  const { storage: _storage, mediaSubscriptions: _mediaSubscriptions, ...serializable } = projectToSerializable(project);
   const packMetadata = normalizePackMetadata(serializable.packMetadata);
   if (serializable.projectType === 'simple' && !String(packMetadata.title || '').trim()) {
     const fallback = String(serializable.projectName || '').trim();
     if (fallback) packMetadata.title = fallback;
   }
+  const resolvedEdgeSilence = resolvePackAudioEdgeSilence(
+    serializable.globalOptions,
+    audioEdgeSilence,
+  );
   return {
     ...serializable,
     name: getExportPackName(packMetadata),
@@ -626,8 +627,8 @@ export function projectToRustExport(project, audioEdgeSilence = getPackAudioEdge
       ...serializable.globalOptions,
       silenceMode: serializable.globalOptions.silenceMode,
       addSilenceDurationSec: {
-        start: normalizePackAudioEdgeSilence(audioEdgeSilence?.leading),
-        end: normalizePackAudioEdgeSilence(audioEdgeSilence?.trailing),
+        start: normalizePackAudioEdgeSilence(resolvedEdgeSilence.leading),
+        end: normalizePackAudioEdgeSilence(resolvedEdgeSilence.trailing),
       },
     },
   };

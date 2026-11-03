@@ -11,16 +11,16 @@
 //! `cancel_generate_pack` annule donc un export avancé comme il annule une
 //! génération Libre, et l'interface n'aura qu'un seul geste à câbler.
 
+use crate::support::user_message::UserMessage;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use serde::Deserialize;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::commands::generation::GenerationCancelState;
 use crate::native_pack::advanced_export::{
-    export_advanced_pack_with_cancel, AdvancedAudioOptions, AdvancedExportError,
-    AdvancedExportResult,
+    AdvancedAudioOptions, AdvancedExportError, AdvancedExportResult,
 };
 use crate::native_pack::persistence::AdvancedMediaBinding;
 
@@ -95,7 +95,10 @@ pub async fn export_advanced_pack(
     // argument pour la même raison que `archive_name` : c'est une donnée de
     // projet, et le moteur ne reçoit que le document.
     cover_image: Option<String>,
-) -> Result<AdvancedExportResult, AdvancedExportError> {
+) -> Result<
+    crate::services::catalogue::open::generation::Published<AdvancedExportResult>,
+    AdvancedExportError,
+> {
     log::info!(target: "advanced_export",
         "export_advanced_pack start: bindings={} outputFolder='{}'",
         media_bindings.len(), output_folder,
@@ -110,10 +113,16 @@ pub async fn export_advanced_pack(
 
     tauri::async_runtime::spawn_blocking(move || {
         let emit = |message: &str| {
-            let _ = app.emit("generate-log", message.to_string());
+            let _ = app.emit("generate-log", UserMessage::from(message.to_string()));
         };
         let should_cancel = || cancel_state.is_cancelled();
-        export_advanced_pack_with_cancel(
+        // Declared to the catalogue watcher before the engine writes.
+        let write = crate::services::catalogue::writes::OwnWrite::begin(
+            crate::services::catalogue::writes::Declaration::new("generation")
+                .subtree(&output_folder),
+        );
+        let result = crate::native_pack::advanced_export::export_advanced_pack_with_catalogue(
+            &app.state::<crate::services::catalogue::CatalogueState>(),
             &payload,
             &media_bindings,
             &PathBuf::from(&output_folder),
@@ -127,7 +136,12 @@ pub async fn export_advanced_pack(
         )
         .inspect_err(
             |error| log::error!(target: "advanced_export", "export_advanced_pack failed: {error}"),
-        )
+        );
+        write.finish(&result, |done| vec![done.zip_path.clone().into()]);
+        result.map(|done| {
+            let path = PathBuf::from(&done.zip_path);
+            crate::services::catalogue::open::generation::Published::capture(done, &path)
+        })
     })
     .await
     .map_err(|error| AdvancedExportError::OutputWrite {

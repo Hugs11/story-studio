@@ -8,6 +8,7 @@
 //! cache privé de l'application, noms de fichiers assainis, plafonds sur la liste
 //! et la taille.
 
+use crate::support::user_message::codes;
 use serde::Serialize;
 
 mod download;
@@ -59,19 +60,24 @@ pub struct YoutubeList {
     pub page_size: usize,
     /// Déterminé en demandant une entrée sentinelle après la page courante.
     pub has_next: bool,
+    /// État des outils, présent seulement en mode « outils installés
+    /// uniquement » (vérification de fond des suivis).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools: Option<ToolStatus>,
 }
 
 pub use download::download_audio;
 pub use error::YoutubeError;
-pub use metadata::{fetch_audio_languages, fetch_list};
+pub use metadata::{fetch_audio_languages, fetch_list, fetch_list_named};
 pub(crate) use provision::update_ytdlp as update_ytdlp_binary;
+pub use tool::{ToolMode, ToolStatus};
 
 /// Action manuelle « Mettre à jour » : force la dernière version de yt-dlp et
 /// prépare le moteur JavaScript s'il manque encore.
 pub fn update_tools(home: &std::path::Path, emit: &dyn Fn(&str)) -> Result<(), YoutubeError> {
     update_ytdlp_binary(home, emit)?;
     if js_runtime::ensure_js_runtime(home, emit).is_none() {
-        emit("yt-dlp est à jour, mais le moteur JavaScript n'a pas pu être préparé.");
+        emit(codes::YOUTUBE_YTDLP_DENO_PREPARE_FAILED_TRANSPORT);
     }
     Ok(())
 }
@@ -82,7 +88,7 @@ mod tests {
         format_duration, is_channel_source, normalize_listing_url, page_window,
         parse_audio_language_lines, parse_list_json, reorder_numbered_series, validate_youtube_url,
     };
-    use super::{download_audio, fetch_audio_languages, fetch_list, update_ytdlp_binary};
+    use super::{download_audio, fetch_audio_languages, fetch_list, update_ytdlp_binary, ToolMode};
     use std::path::Path;
     use uuid::Uuid;
 
@@ -128,6 +134,12 @@ mod tests {
         assert!(list.videos[0].audio_languages.is_empty());
         assert!(!list.videos[0].audio_languages_resolved);
         assert!(!list.has_next);
+        assert!(list.tools.is_none());
+        let json = serde_json::to_value(&list).unwrap();
+        assert!(
+            json.get("tools").is_none(),
+            "le résultat par défaut garde sa forme historique"
+        );
     }
 
     #[test]
@@ -358,6 +370,7 @@ not-json
             Some(custom.to_string_lossy().as_ref()),
             &video_url,
             1,
+            ToolMode::Provision,
             &emit,
         )
         .expect("read public video metadata");
@@ -378,8 +391,16 @@ not-json
                 "https://www.youtube.com/playlist?list=PLxrLFHZQc8nqMzvzB0Ml0nGWgjnB9HO7f"
                     .to_string()
             });
-        let playlist = fetch_list(&home, &downloads, None, &playlist_url, 1, &emit)
-            .expect("read public playlist fixture");
+        let playlist = fetch_list(
+            &home,
+            &downloads,
+            None,
+            &playlist_url,
+            1,
+            ToolMode::Provision,
+            &emit,
+        )
+        .expect("read public playlist fixture");
         assert!(playlist.videos.len() > 1);
         assert_eq!(playlist.page, 1);
 

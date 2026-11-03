@@ -1,0 +1,30 @@
+/* Age and user labels share one geometry; image overlays share one surface. */
+.catalogue-filter-badge {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 4px;
+  height: 26px;
+  min-height: 26px;
+  max-width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-regular);
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
+}
+.catalogue-card-tag.catalogue-filter-badge { display: inline-flex; background: var(--control-bg); }
+button.catalogue-filter-badge { cursor: pointer; }
+button.catalogue-filter-badge:hover { border-color: var(--control-border-hover); background: var(--control-bg-hover); }
+button.catalogue-filter-badge:focus-visible { outline: 1px solid var(--focus-ring); outline-offset: 2px; }
+.catalogue-card .catalogue-filter-badge { height: 22px; min-height: 22px; border: 0; border-radius: var(--radius-pill); background: var(--catalogue-cover-pill-bg); color: var(--catalogue-cover-text); font-weight: var(--weight-semibold); box-shadow: var(--catalogue-cover-pill-shadow); }
+.catalogue-card button.catalogue-filter-badge:hover { background: var(--catalogue-cover-pill-bg); text-decoration: underline; }

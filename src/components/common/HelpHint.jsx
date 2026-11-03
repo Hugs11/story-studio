@@ -6,6 +6,7 @@
 import { Tooltip } from './Tooltip';
 import './HelpHint.css';
 
+// Le parent fournit le texte traduit à l’affichage ; « ? » est un glyphe technique.
 export function HelpHint({ text }) {
   return (
     <Tooltip text={text} asChild wrap>

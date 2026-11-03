@@ -445,6 +445,29 @@
   background: color-mix(in oklch, oklch(0.78 0.13 240) 22%, transparent);
   border-color: color-mix(in oklch, oklch(0.78 0.13 240) 35%, transparent);
 }
+.badge-nav--auto-next {
+  padding: 0;
+  color: var(--accent-text);
+  background: transparent;
+  border-color: transparent;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.badge-nav--auto-next:hover {
+  color: var(--accent-text);
+  background: var(--accent-dim);
+}
+.badge-nav--auto-next:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.tree-auto-next-icon {
+  display: inline-flex;
+  align-items: center;
+}
+.tree-auto-next-icon svg + svg {
+  margin-left: -7px;
+}
 .badge-nav--error {
   color: oklch(0.70 0.22 25);
   background: color-mix(in oklch, oklch(0.70 0.22 25) 22%, transparent);

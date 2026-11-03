@@ -14,6 +14,7 @@
 //! cohérente, elles ne l'auditent pas. Le point de confiance est l'exécuteur
 //! fermé, pas ces hachages.
 
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
@@ -62,7 +63,7 @@ struct ReadContent {
 fn error_detail(read: Option<&Result<ReadContent, String>>) -> String {
     match read {
         Some(Err(error)) => error.clone(),
-        _ => "adresse absente de la relecture".to_string(),
+        _ => UserMessage::new(codes::EXPORT_REVIEW_ADDRESS_MISSING).into_transport(),
     }
 }
 
@@ -136,8 +137,8 @@ pub(crate) fn verify_attachment(
 
         let Some(inventoried) = media.iter().find(|item| item.asset_ref == asset_ref) else {
             disagreements.push(complain(
-                "un média inventorié".to_string(),
-                "aucun".to_string(),
+                UserMessage::new(codes::GENERATION_INVENTORIED_MEDIA_EXPECTED).into_transport(),
+                UserMessage::new(codes::LABEL_RESULT_NONE_MASCULINE).into_transport(),
             ));
             continue;
         };
@@ -156,7 +157,12 @@ pub(crate) fn verify_attachment(
             }
             other => {
                 disagreements.push(complain(
-                    format!("l'instantané {}", inventoried.snapshot_sha256),
+                    UserMessage::new(codes::LABEL_PROJECT_SNAPSHOT_VALUE)
+                        .param(
+                            "inventoried_snapshot_sha256",
+                            (inventoried.snapshot_sha256).to_string(),
+                        )
+                        .into_transport(),
                     error_detail(other),
                 ));
                 continue;
@@ -167,8 +173,8 @@ pub(crate) fn verify_attachment(
         //    sortie est relue à l'adresse que cette clé désigne.
         let Some(task) = tasks.get(asset_ref) else {
             disagreements.push(complain(
-                "une tâche de conversion".to_string(),
-                "aucune".to_string(),
+                UserMessage::new(codes::GENERATION_CONVERSION_TASK_EXPECTED).into_transport(),
+                UserMessage::new(codes::LABEL_RESULT_NONE_FEMININE).into_transport(),
             ));
             continue;
         };
@@ -182,8 +188,10 @@ pub(crate) fn verify_attachment(
         let task_key = task.task_key();
         let Some(executed) = registry.get(&task_key) else {
             disagreements.push(complain(
-                format!("une sortie pour la tâche {task_key}"),
-                "aucune".to_string(),
+                UserMessage::new(codes::GENERATION_TASK_OUTPUT_EXPECTED)
+                    .param("task_key", (task_key).to_string())
+                    .into_transport(),
+                UserMessage::new(codes::LABEL_RESULT_NONE_FEMININE).into_transport(),
             ));
             continue;
         };
@@ -206,7 +214,9 @@ pub(crate) fn verify_attachment(
             }
             other => {
                 disagreements.push(complain(
-                    format!("la sortie {task_key}"),
+                    UserMessage::new(codes::LABEL_TASK_OUTPUT_VALUE)
+                        .param("task_key", (task_key).to_string())
+                        .into_transport(),
                     error_detail(other),
                 ));
                 continue;
@@ -217,15 +227,17 @@ pub(crate) fn verify_attachment(
         //    réellement établi dans les octets finaux.
         let Some(archive_name) = table.archive_name(asset_ref) else {
             disagreements.push(complain(
-                "un nom d'archive".to_string(),
-                "aucun".to_string(),
+                UserMessage::new(codes::EXPORT_ARCHIVE_NAME_EXPECTED).into_transport(),
+                UserMessage::new(codes::LABEL_RESULT_NONE_MASCULINE).into_transport(),
             ));
             continue;
         };
         let expected_extension = task.plan().output_extension();
         if !archive_name.ends_with(&format!(".{expected_extension}")) {
             disagreements.push(complain(
-                format!("une extension .{expected_extension}"),
+                UserMessage::new(codes::EXPORT_FILE_EXTENSION_EXPECTED)
+                    .param("expected_extension", (expected_extension).to_string())
+                    .into_transport(),
                 archive_name.to_string(),
             ));
             continue;
@@ -237,7 +249,9 @@ pub(crate) fn verify_attachment(
         //    contenu le nom de l'autre.
         if !is_derived_name(output_bytes, expected_extension, archive_name) {
             disagreements.push(complain(
-                format!("le nom dérivé des octets de {task_key}"),
+                UserMessage::new(codes::LABEL_CONTENT_DERIVED_FILENAME)
+                    .param("task_key", (task_key).to_string())
+                    .into_transport(),
                 archive_name.to_string(),
             ));
             continue;
@@ -280,8 +294,11 @@ pub(crate) fn verify_attachment(
                 asset_ref: asset_ref.to_string(),
                 stage_uuid: None,
                 kind: None,
-                expected: "une référence du document".to_string(),
-                observed: format!("une entrée de table sans référent : {archive_name}"),
+                expected: UserMessage::new(codes::EXPORT_DOCUMENT_REFERENCE_EXPECTED)
+                    .into_transport(),
+                observed: UserMessage::new(codes::EXPORT_TABLE_REFERENT_EXPECTED)
+                    .param("archive_name", (archive_name).to_string())
+                    .into_transport(),
             });
         }
     }
@@ -296,8 +313,13 @@ pub(crate) fn verify_attachment(
                 asset_ref: String::new(),
                 stage_uuid: None,
                 kind: None,
-                expected: format!("un suffixe unique pour {other}"),
-                observed: format!("{name} partage le suffixe {suffix}"),
+                expected: UserMessage::new(codes::EXPORT_UNIQUE_SUFFIX_EXPECTED)
+                    .param("other", (other).to_string())
+                    .into_transport(),
+                observed: UserMessage::new(codes::LABEL_SHARED_SUFFIX_VALUE)
+                    .param("name", (name).to_string())
+                    .param("suffix", (suffix).to_string())
+                    .into_transport(),
             }),
         }
     }

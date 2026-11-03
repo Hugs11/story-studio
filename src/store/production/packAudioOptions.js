@@ -1,16 +1,16 @@
-// Ce que les réglages audio du tiroir deviennent quand ils partent au moteur.
+// Ce que les réglages audio de la fiche du pack deviennent quand ils partent au moteur.
 //
-// Deux choses s'assemblent ici, et elles ne vivent pas au même endroit :
+// Deux choses s'assemblent ici, et elles n'ont pas la même source :
 //
 // - **le traitement demandé** — harmoniser ou non, et lequel des trois modes de
 //   silence — appartient au projet, parce que l'auteur le règle pour ce
 //   pack-là ;
-// - **les durées de silence** appartiennent à l'application, parce qu'elles
-//   décrivent la cible de l'appareil et non l'intention d'un projet. Elles sont
-//   réglées dans les préférences et rappelées dans le tiroir.
+// - **les durées de silence** héritent des préférences de l'application, mais
+//   un pack peut porter ses propres valeurs. La fiche enregistre ces
+//   dérogations dans `globalOptions`; ce module résout les valeurs effectives.
 //
-// La chaîne Libre faisait déjà cet assemblage, dans `projectToRustExport`. La
-// chaîne graphe, elle, n'envoyait que la moitié du couple : la commande
+// La chaîne Libre assemble ces valeurs dans `projectToRustExport`. La chaîne
+// graphe, elle, n'envoyait que la moitié du couple : la commande
 // `export_advanced_pack` sait lire `leadingSilenceSec` et `trailingSilenceSec`
 // depuis son premier jour, et le planificateur de médias les utilise, mais
 // l'interface ne les lui donnait jamais. Ce module est l'endroit qui les
@@ -19,6 +19,7 @@
 import {
   getPackAudioEdgeSilenceSettings,
   readPackAudioProcessing,
+  resolvePackAudioEdgeSilence,
 } from '../../config/audioProcessing.js';
 
 /**
@@ -33,10 +34,11 @@ export function advancedPackAudioOptions(
   edgeSilence = getPackAudioEdgeSilenceSettings(),
 ) {
   const { silenceMode, harmonizeLoudness } = readPackAudioProcessing(globalOptions);
+  const resolvedEdgeSilence = resolvePackAudioEdgeSilence(globalOptions, edgeSilence);
   return {
     silenceMode,
     harmonizeLoudness,
-    leadingSilenceSec: edgeSilence?.leading,
-    trailingSilenceSec: edgeSilence?.trailing,
+    leadingSilenceSec: resolvedEdgeSilence.leading,
+    trailingSilenceSec: resolvedEdgeSilence.trailing,
   };
 }

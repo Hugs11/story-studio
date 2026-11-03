@@ -117,7 +117,7 @@ test('le walker ne rend que les liaisons déclarées, jamais une clé du payload
   assert.deepEqual(refs.map((ref) => ref.scope), ['advanced-asset', 'advanced-asset']);
   assert.deepEqual(refs.map((ref) => ref.key), ['path', 'path']);
   assert.deepEqual(refs.map((ref) => ref.path), [`${OLD_DIR}/medias/intro.mp3`, `${OLD_DIR}/voix/intro.mp3`]);
-  assert.deepEqual(refs.map((ref) => ref.label), ['Média avancé: a1b2c3.mp3', 'Média avancé: z9y8x7.mp3']);
+  assert.deepEqual(refs.map((ref) => ref.label), ['Média avancé : a1b2c3.mp3', 'Média avancé : z9y8x7.mp3']);
 
   // Les valeurs de l'extension opaque sont dans le payload, jamais dans le walker.
   const walked = refs.map((ref) => ref.path).join('|');
@@ -182,7 +182,7 @@ test('un média manquant reste lié et le projet reste encodable', async () => {
   assert.deepEqual(reread.authoring.mediaBindings, audited.authoring.mediaBindings);
 
   const missing = collectMissingMedia(audited, { [`${OLD_DIR}/medias/disparu.mp3`]: false });
-  assert.deepEqual(missing.map((item) => [item.fileName, item.labels]), [['disparu.mp3', ['Média avancé: a1b2c3.mp3']]]);
+  assert.deepEqual(missing.map((item) => [item.fileName, item.labels]), [['disparu.mp3', ['Média avancé : a1b2c3.mp3']]]);
 });
 
 test('le statut est redérivé du disque et « non audité » n’est pas « manquant »', () => {

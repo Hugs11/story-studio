@@ -1,3 +1,4 @@
+import { graphPresentationError } from '../../i18n/graphPresentation.js';
 // Formes IPC des gestes d'auteur de l'Éditeur avancé.
 //
 // Ce module ne mute rien et n'ouvre jamais le payload : il assemble la demande
@@ -40,22 +41,22 @@ export const ADVANCED_MEDIA_FIELDS = Object.freeze(['audio', 'image']);
 // rabattu vers `0`, et la sentinelle est nommée plutôt que recopiée.
 export const RANDOM_OPTION_INDEX = -1;
 
-function fail(message) {
-  throw new TypeError(message);
+function fail(key, params) {
+  throw graphPresentationError(TypeError, key, params);
 }
 
 function requireText(value, label) {
-  if (typeof value !== 'string' || value.length === 0) fail(`${label} doit être une chaîne non vide.`);
+  if (typeof value !== 'string' || value.length === 0) fail('graph:guard.text.required', { field: label });
   return value;
 }
 
 function requireRank(value, label) {
-  if (!Number.isInteger(value) || value < 0) fail(`${label} doit être un rang entier positif ou nul.`);
+  if (!Number.isInteger(value) || value < 0) fail('graph:guard.rank.required', { field: label });
   return value;
 }
 
 function requireOneOf(value, allowed, label) {
-  if (!allowed.includes(value)) fail(`${label} doit être l'un de : ${allowed.join(', ')}.`);
+  if (!allowed.includes(value)) fail('graph:guard.enum.required', { field: label, allowed: allowed.join(', ') });
   return value;
 }
 
@@ -110,8 +111,8 @@ export const advancedGestures = Object.freeze({
   // --- Contrôles : chaque booléen indépendamment -----
   setStageControls(stageUuid, members) {
     const named = Object.keys(members ?? {});
-    if (named.length === 0) fail('Nommer au moins un contrôle à modifier.');
-    named.forEach((key) => requireOneOf(key, ADVANCED_CONTROL_KEYS, 'contrôle'));
+    if (named.length === 0) fail('graph:guard.controls.required');
+    named.forEach((key) => requireOneOf(key, ADVANCED_CONTROL_KEYS, { key: 'graph:guard.control.label' }));
     return {
       gesture: 'set-stage-controls',
       stageUuid: requireText(stageUuid, 'stageUuid'),
@@ -122,10 +123,10 @@ export const advancedGestures = Object.freeze({
   // étape d'undo. Un Écran sans objet de contrôles fait refuser la demande
   // entière, comme il le ferait seul.
   setStagesControls(stageUuids, members) {
-    if (!Array.isArray(stageUuids) || stageUuids.length === 0) fail('Désigner au moins un Écran.');
+    if (!Array.isArray(stageUuids) || stageUuids.length === 0) fail('graph:guard.stages.required');
     const named = Object.keys(members ?? {});
-    if (named.length === 0) fail('Nommer au moins un contrôle à modifier.');
-    named.forEach((key) => requireOneOf(key, ADVANCED_CONTROL_KEYS, 'contrôle'));
+    if (named.length === 0) fail('graph:guard.controls.required');
+    named.forEach((key) => requireOneOf(key, ADVANCED_CONTROL_KEYS, { key: 'graph:guard.control.label' }));
     return {
       gesture: 'set-stages-controls',
       stageUuids: stageUuids.map((uuid) => requireText(uuid, 'stageUuid')),
@@ -190,7 +191,7 @@ export const advancedGestures = Object.freeze({
   // cibles : envoyer des cibles fusionnerait deux occurrences de même
   // destination, exactement ce que le panneau rend visible.
   reorderActionOptions(actionId, newPositionOfOld) {
-    if (!Array.isArray(newPositionOfOld)) fail('newPositionOfOld doit être un tableau de rangs.');
+    if (!Array.isArray(newPositionOfOld)) fail('graph:guard.permutation.required');
     newPositionOfOld.forEach((rank) => requireRank(rank, 'newPositionOfOld[]'));
     return {
       gesture: 'reorder-action-options',
@@ -272,7 +273,7 @@ export const advancedGestures = Object.freeze({
   // Les chemins viennent du DTO et restent opaques. Une sélection multiple
   // produit un seul geste, donc une seule étape d'annulation.
   setNodeColor(paths, color) {
-    if (!Array.isArray(paths) || paths.length === 0) fail('Nommer au moins un nœud à colorer.');
+    if (!Array.isArray(paths) || paths.length === 0) fail('graph:guard.nodes.required');
     paths.forEach((path) => requireText(path, 'paths[]'));
     return { gesture: 'set-node-color', paths, color: color ?? null };
   },
@@ -335,8 +336,8 @@ export const advancedGestures = Object.freeze({
   // pour un document importé, sa racine `uuid` dans la même transaction.
   setDocumentMetadata(members) {
     const named = Object.keys(members ?? {});
-    if (named.length === 0) fail('Nommer au moins une métadonnée à modifier.');
-    named.forEach((key) => requireOneOf(key, ADVANCED_METADATA_KEYS, 'métadonnée'));
+    if (named.length === 0) fail('graph:guard.metadata.required');
+    named.forEach((key) => requireOneOf(key, ADVANCED_METADATA_KEYS, { key: 'graph:guard.metadata.label' }));
     return { gesture: 'set-document-metadata', update: { ...members } };
   },
 
@@ -349,7 +350,7 @@ export const advancedGestures = Object.freeze({
   // d'undo. Chaque entrée est `{ node, position }`, comme une disposition.
   setAuthoredPositions(positions) {
     if (!Array.isArray(positions) || positions.length === 0) {
-      fail('Un déplacement de groupe porte au moins un nœud.');
+      fail('graph:guard.group.required');
     }
     return { gesture: 'set-authored-positions', positions };
   },
@@ -357,7 +358,7 @@ export const advancedGestures = Object.freeze({
   // `context.editorPositions` et ne touche pas au document.
   applyViewLayout(positions) {
     if (!Array.isArray(positions) || positions.length === 0) {
-      fail('Une disposition conservée porte au moins un nœud.');
+      fail('graph:guard.layout.required');
     }
     return { gesture: 'apply-view-layout', positions };
   },

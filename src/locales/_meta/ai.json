@@ -1,0 +1,1864 @@
+{
+  "voice.generation.title": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.generation.title; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Générer une voix ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "4cbed9f96ff1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4cbed9f96ff1",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.text.label": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.text.label; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Texte à lire ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "9f00f69b14c5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9f00f69b14c5",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.text.placeholder": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.text.placeholder; modale de synthèse vocale, ne change pas la langue du texte auteur ; exemple indicatif dans le champ, pas une valeur envoyée. Texte source exact : « Tape ici le texte à transformer en voix… ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "644906f48933",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "644906f48933",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.text.prefilled": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.text.prefilled; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Le texte est prérempli d’après le champ audio actuel. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "8fc7697b5e10",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8fc7697b5e10",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.text.help": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.text.help; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Saisis le texte exact à lire par la voix. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "d1491dc5c9a0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d1491dc5c9a0",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.piper.ready": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.piper.ready; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Voix prête à l’emploi, sans configuration. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "3d6c9802871f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3d6c9802871f",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.text.empty": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.text.empty; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Il n’y a aucun texte à lire. Saisis un texte. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "bf8d4d819507",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bf8d4d819507",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.selection.required": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.selection.required; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Choisis une voix. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "e1665e129a8e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e1665e129a8e",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.piper.preparing": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.piper.preparing; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Préparation de la voix… (téléchargement unique) ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "8eb3b3eda91a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8eb3b3eda91a",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.piper.retry": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.piper.retry; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « \nRéessaie, ou passe à XTTS dans les Préférences si le problème persiste. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "b5db2117cff1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b5db2117cff1",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.preparation.action": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.preparation.action; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Préparation… ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "d038e2acfee3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d038e2acfee3",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.queue.action": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.queue.action; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Ajout… ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "479e71b1be77",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "479e71b1be77",
+      "status": "ai-reviewed"
+    }
+  },
+  "generation.submit.action": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — generation.submit.action; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Générer ». Bouton : envoie les paramètres saisis au moteur puis ferme la modale.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "2605e1691662",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2605e1691662",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.language.label": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.language.label; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Langue ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "5f6baab4dbe1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5f6baab4dbe1",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.selection.label": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.selection.label; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Voix ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "f35326ab620f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f35326ab620f",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.catalog.loading": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.catalog.loading; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Chargement des voix… ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "d041328df3da",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d041328df3da",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.piper.help": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.piper.help; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Piper fonctionne sans serveur ni configuration. La voix est téléchargée automatiquement au premier usage. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "f600466fc893",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f600466fc893",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.xtts.connecting": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.xtts.connecting; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Connexion à XTTS… ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "307d0c4e458f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "307d0c4e458f",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.selection.empty": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.selection.empty; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Aucune voix disponible ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "bdb6acc8837e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bdb6acc8837e",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.xtts.ready": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.xtts.ready; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « XTTS est prêt. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "d572f00f5708",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d572f00f5708",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.xtts.noVoices": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.xtts.noVoices; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « XTTS est prêt, mais aucune voix n’a été retournée. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "fdc81b7d7c76",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fdc81b7d7c76",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.xtts.required": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.xtts.required; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Choisis une voix XTTS. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "6a5df9e907bf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6a5df9e907bf",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.xtts.initializing": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.xtts.initializing; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Initialisation… ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "1347b8f0a0e4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1347b8f0a0e4",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.xtts.badge": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.xtts.badge; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Voix XTTS ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "d4c96c830d87",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d4c96c830d87",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.xtts.refresh": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.xtts.refresh; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Actualiser XTTS ». Bouton : interroge à nouveau XTTS pour rafraîchir les voix détectées.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "bd0ad0e91785",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bd0ad0e91785",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.selection.current": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.selection.current; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Voix sélectionnée ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "44f4e16f6bda",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "44f4e16f6bda",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.xtts.empty": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.xtts.empty; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Aucune voix détectée par XTTS ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "24ade7aad956",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "24ade7aad956",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.favorites.limited": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.favorites.limited; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Liste limitée aux voix favorites configurées dans les Préférences. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "d8fbf8d5a056",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d8fbf8d5a056",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.favorites.unavailable": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.favorites.unavailable; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Les voix favorites sont indisponibles ; toutes les voix XTTS détectées sont affichées. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "35945023b64e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "35945023b64e",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.favorites.help": {
+    "context": "src/components/GenerateVoiceModal/GenerateVoiceModal.jsx — voice.favorites.help; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Toutes les voix retournées par XTTS sont disponibles. Ajoute des favorites dans les Préférences pour réduire cette liste. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "a12790abe91b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a12790abe91b",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.workflow.unavailable": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.workflow.unavailable; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Le workflow utilisé par cette génération n’est plus disponible. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "d6d3f696a4b6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d6d3f696a4b6",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.reference.required": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.reference.required; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Une image de référence est requise pour ce workflow. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "a9ee27204808",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a9ee27204808",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.generation.title": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.generation.title; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Générer une image avec ComfyUI ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "8b025a3b2aec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8b025a3b2aec",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.workflow.label": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.workflow.label; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Workflow ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "2e2d5c5649b7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2e2d5c5649b7",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.workflow.loading": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.workflow.loading; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Chargement des workflows… ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "e478dc4ee4c8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e478dc4ee4c8",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.workflow.empty": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.workflow.empty; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Aucun workflow disponible. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "9bc0384f87fc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9bc0384f87fc",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.reference.badge": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.reference.badge; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Image requise ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "ef0075e3d1fc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ef0075e3d1fc",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.reference.label": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.reference.label; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Image de référence ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "e872cb850266",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e872cb850266",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.reference.root": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.reference.root; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Utiliser l’image de couverture du Menu racine ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "e3e51ba5758e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e3e51ba5758e",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.reference.choose": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.reference.choose; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Choisir une image… ». Bouton qui ouvre le sélecteur d’image de référence. Aucune écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "87dfc7ed3efa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "87dfc7ed3efa",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.prompt.label": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.prompt.label; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Prompt ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "5c39123805ff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5c39123805ff",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.prompt.placeholder": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.prompt.placeholder; modale ComfyUI ou file de génération ; exemple indicatif dans le champ, pas une valeur envoyée. Texte source exact : « lunii_style, simple illustration… ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "638816095427",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "638816095427",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.negative.label": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.negative.label; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Prompt négatif ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "8d222862bde4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8d222862bde4",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.negative.placeholder": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.negative.placeholder; modale ComfyUI ou file de génération ; exemple indicatif dans le champ, pas une valeur envoyée. Texte source exact : « color, photo, realistic… ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "bb6a821ef49f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bb6a821ef49f",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.variants.label": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.variants.label; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Variantes ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "64774cce5542",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "64774cce5542",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.advanced.toggle": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.advanced.toggle; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Paramètres avancés ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "6a3872b29001",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6a3872b29001",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.seed.label": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.seed.label; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Seed ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "367ef06b8fbf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "367ef06b8fbf",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.seed.random": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.seed.random; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Seed aléatoire ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "300a555c735d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "300a555c735d",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.steps.label": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.steps.label; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Steps ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "1de3df70ddf4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1de3df70ddf4",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.cfg.label": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.cfg.label; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « CFG ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "12cb64fe927b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "12cb64fe927b",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.lora.label": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — image.lora.label; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « LoRA ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "c0f5e2c9f730",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c0f5e2c9f730",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.status.pending": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.status.pending; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « En attente ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "2f6c8477e92b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2f6c8477e92b",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.status.submitting": {
+    "context": "src/components/SDGenerateModal/SDGenerateModal.jsx — queue.status.submitting; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Envoi… ». Bouton : envoie les paramètres saisis au moteur puis ferme la modale.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "1ccef8a10ca7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1ccef8a10ca7",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.status.running": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.status.running; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Génération… ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "1dfc6d677f67",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1dfc6d677f67",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.status.done": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.status.done; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Terminé ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "f28acc85bfcb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f28acc85bfcb",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.status.error": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.status.error; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Erreur ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "46148e250e72",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "46148e250e72",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.kind.image": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.kind.image; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Image ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "1aa4cb0bcca7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1aa4cb0bcca7",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "queue.kind.audio": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.kind.audio; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Audio ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "queue.image.dragHelp": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.image.dragHelp; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Glisse l’image vers un emplacement d’image pour l’utiliser. Clique pour la prévisualiser. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "a8dcba30d8b0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a8dcba30d8b0",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.image.fallback": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.image.fallback; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Image générée ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "40c233eeee94",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "40c233eeee94",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.audio.stop": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.audio.stop; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Arrêter ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "5130281b4441",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5130281b4441",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.audio.play": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.audio.play; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Lire ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "af845394ff39",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "af845394ff39",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.error.fallback": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.error.fallback; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Erreur de génération ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "7eb49acfcfb3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7eb49acfcfb3",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.result.empty": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.result.empty; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Aucun fichier ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "c28576304d96",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c28576304d96",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.image.name": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.image.name; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Image IA ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "cba1b2ccbddc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cba1b2ccbddc",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.audio.name": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.audio.name; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Audio IA ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "857a92f4c1ea",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "857a92f4c1ea",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.example.target": {
+    "context": "src/hooks/useAdvancedExamples.js — queue.example.target ; colonne Destination de la file de génération pour un audio d’exemple ; résolu dans la langue active à la présentation. Texte source exact : « {{name}} — exemple ». {{name}} est le texte de l’écran, à conserver tel quel. Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 64,
+    "en": {
+      "sourceHash": "65aee6a2544e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "65aee6a2544e",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.image.regenerateAria": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.image.regenerateAria; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Régénérer l'image ». Commande : rouvre la modale avec les paramètres de la génération sélectionnée.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "2712dc11e62c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2712dc11e62c",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.image.regenerate": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.image.regenerate; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Régénérer ». Commande : rouvre la modale avec les paramètres de la génération sélectionnée.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "c0c689fe7179",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c0c689fe7179",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.job.removeAria": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.job.removeAria; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Retirer de la file ». Commande : retire cette tâche terminée de la file.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "48bc1bf856d4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "48bc1bf856d4",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.job.remove": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.job.remove; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Retirer ». Commande : retire cette tâche terminée de la file.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "41e22ed93372",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "41e22ed93372",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.panel.title": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.panel.title; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Générations IA ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "e2896311207c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e2896311207c",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.completed.clear": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.completed.clear; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Effacer terminées ». Bouton : retire les tâches terminées ou échouées de la file, garde leurs fichiers.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "c08ea032b462",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c08ea032b462",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.panel.empty": {
+    "context": "src/components/SDQueuePanel/SDQueuePanel.jsx — queue.panel.empty; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Aucune génération en cours. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "46cf813f6b8d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "46cf813f6b8d",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.column.type": {
+    "context": "src/components/SDQueuePanel/useQueueColumnWidths.js — queue.column.type; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Type ». En-tête : décrit les données de la colonne, sans action.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "baaddf70fb5d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "baaddf70fb5d",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.column.name": {
+    "context": "src/components/SDQueuePanel/useQueueColumnWidths.js — queue.column.name; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Nom ». En-tête : décrit les données de la colonne, sans action.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "b2c124536d21",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b2c124536d21",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.column.target": {
+    "context": "src/components/SDQueuePanel/useQueueColumnWidths.js — queue.column.target; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Destination ». En-tête : décrit les données de la colonne, sans action.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "293d404a500f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "293d404a500f",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.column.result": {
+    "context": "src/components/SDQueuePanel/useQueueColumnWidths.js — queue.column.result; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Résultat ». En-tête : décrit les données de la colonne, sans action.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "f1ed9999c72b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f1ed9999c72b",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.column.status": {
+    "context": "src/components/SDQueuePanel/useQueueColumnWidths.js — queue.column.status; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Statut ». En-tête : décrit les données de la colonne, sans action.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "dee377cfd8cd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dee377cfd8cd",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.column.usage": {
+    "context": "src/components/SDQueuePanel/useQueueColumnWidths.js — queue.column.usage; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Usage ». En-tête : décrit les données de la colonne, sans action.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "8d59829c1e15",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8d59829c1e15",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.column.date": {
+    "context": "src/components/SDQueuePanel/useQueueColumnWidths.js — queue.column.date; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Date ». En-tête : décrit les données de la colonne, sans action.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "99c40ab40592",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "99c40ab40592",
+      "status": "ai-reviewed"
+    }
+  },
+  "textImage.title.fallback": {
+    "context": "src/components/TextImageGenerator/TextImagePromptModal.jsx — textImage.title.fallback; modale image-titre et export de la prévisualisation ; résolu dans la langue active à la présentation. Texte source exact : « Sans titre ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "2c847c1c25d5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2c847c1c25d5",
+      "status": "ai-reviewed"
+    }
+  },
+  "textImage.generation.title": {
+    "context": "src/components/TextImageGenerator/TextImagePromptModal.jsx — textImage.generation.title; modale image-titre et export de la prévisualisation ; résolu dans la langue active à la présentation. Texte source exact : « Générer une image-titre ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "a8917ce823f3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a8917ce823f3",
+      "status": "ai-reviewed"
+    }
+  },
+  "textImage.text.placeholder": {
+    "context": "src/components/TextImageGenerator/TextImagePromptModal.jsx — textImage.text.placeholder; modale image-titre et export de la prévisualisation ; exemple indicatif dans le champ, pas une valeur envoyée. Texte source exact : « Texte à afficher ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "174a2603d66f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "174a2603d66f",
+      "status": "ai-reviewed"
+    }
+  },
+  "textImage.generation.progress": {
+    "context": "src/components/TextImageGenerator/TextImagePromptModal.jsx — textImage.generation.progress; modale image-titre et export de la prévisualisation ; résolu dans la langue active à la présentation. Texte source exact : « Génération… ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "1dfc6d677f67",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1dfc6d677f67",
+      "status": "ai-reviewed"
+    }
+  },
+  "textImage.filename.invalid": {
+    "context": "src/components/TextImageGenerator/generateTextImage.js — textImage.filename.invalid; modale image-titre et export de la prévisualisation ; résolu dans la langue active à la présentation. Texte source exact : « Nom de fichier image invalide. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "e6e36cc69a79",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e6e36cc69a79",
+      "status": "ai-reviewed"
+    }
+  },
+  "textImage.filename.tooMany": {
+    "context": "src/components/TextImageGenerator/generateTextImage.js — textImage.filename.tooMany; modale image-titre et export de la prévisualisation ; résolu dans la langue active à la présentation. Texte source exact : « Trop d’images portent ce nom. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "edf3e1fa99be",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "edf3e1fa99be",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.state.unknown": {
+    "context": "src/hooks/useAiJobUsage.js — usage.state.unknown; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Usage non calculé ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "31404d336cc5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "31404d336cc5",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.state.unknownHelp": {
+    "context": "src/hooks/useAiJobUsage.js — usage.state.unknownHelp; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Le fichier est lié au projet. Les Écrans qui l’emploient ne sont pas encore connus : ouvre l’éditeur du projet pour les établir. ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "829a06b76f36",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "829a06b76f36",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.audio.root": {
+    "context": "src/hooks/useAiJobUsage.js — usage.audio.root; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « audio d’accueil ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "07a426917f1a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "07a426917f1a",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.audio.end": {
+    "context": "src/hooks/useAiJobUsage.js — usage.audio.end; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « audio de fin ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "8451967edeef",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8451967edeef",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.audio.selection": {
+    "context": "src/hooks/useAiJobUsage.js — usage.audio.selection; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « audio de sélection ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "78315d378ce0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "78315d378ce0",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.audio.playback": {
+    "context": "src/hooks/useAiJobUsage.js — usage.audio.playback; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « audio de lecture ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "f4a4483ca228",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f4a4483ca228",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.audio.after": {
+    "context": "src/hooks/useAiJobUsage.js — usage.audio.after; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « audio après lecture ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "c46337065ae8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c46337065ae8",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.audio.sequence": {
+    "context": "src/hooks/useAiJobUsage.js — usage.audio.sequence; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « audio de fin intermédiaire ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "049d97b3d0f4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "049d97b3d0f4",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.audio.home": {
+    "context": "src/hooks/useAiJobUsage.js — usage.audio.home; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « audio Home pendant lecture ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "09a2e5f2b14d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "09a2e5f2b14d",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.audio.cover": {
+    "context": "src/hooks/useAiJobUsage.js — usage.audio.cover; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « audio de couverture ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "3a82247cbaa6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3a82247cbaa6",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.audio.field": {
+    "context": "src/hooks/useAiJobUsage.js — usage.audio.field; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « champ audio ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "d3080add3e8f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d3080add3e8f",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.audio.used": {
+    "context": "src/hooks/useAiJobUsage.js — usage.audio.used; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Utilisé ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "de1cbf05dcc7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "de1cbf05dcc7",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.audio.unused": {
+    "context": "src/hooks/useAiJobUsage.js — usage.audio.unused; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Non utilisé ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "fcc027d4ff2b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fcc027d4ff2b",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.audio.unbound": {
+    "context": "src/hooks/useAiJobUsage.js — usage.audio.unbound; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Aucune liaison du document ne pointe vers ce fichier. ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "049e09547ca2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "049e09547ca2",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.file.unreferenced": {
+    "context": "src/hooks/useAiJobUsage.js — usage.file.unreferenced; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Le fichier est lié au projet, mais aucun Écran ne l’emploie. ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "5e2f055ed29e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5e2f055ed29e",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.node.home": {
+    "context": "src/hooks/useAiJobUsage.js — usage.node.home; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Accueil ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "533161735639",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "533161735639",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.node.end": {
+    "context": "src/hooks/useAiJobUsage.js — usage.node.end; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Fin ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "5a2af601e7a2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5a2af601e7a2",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.node.menu": {
+    "context": "src/hooks/useAiJobUsage.js — usage.node.menu; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Menu sans titre ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "076129111a17",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "076129111a17",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.node.zip": {
+    "context": "src/hooks/useAiJobUsage.js — usage.node.zip; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « ZIP sans titre ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "46b009dbbfcc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "46b009dbbfcc",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.node.story": {
+    "context": "src/hooks/useAiJobUsage.js — usage.node.story; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Histoire sans titre ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "2777dc45a995",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2777dc45a995",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.node.mainStory": {
+    "context": "src/hooks/useAiJobUsage.js — usage.node.mainStory; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Histoire principale ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "7178848c9c4f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7178848c9c4f",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.node.sequence": {
+    "context": "src/hooks/useAiJobUsage.js — usage.node.sequence; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Séquence de fin ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "3c6a8b11db1f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3c6a8b11db1f",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.image.used": {
+    "context": "src/hooks/useAiJobUsage.js — usage.image.used; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Utilisée ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "d777feef7195",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d777feef7195",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.image.unused": {
+    "context": "src/hooks/useAiJobUsage.js — usage.image.unused; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Non utilisée ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "6eed2b051bc3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6eed2b051bc3",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.image.unbound": {
+    "context": "src/hooks/useAiJobUsage.js — usage.image.unbound; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Aucune liaison du document ne pointe vers ces fichiers. ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "ed2221343415",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ed2221343415",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.image.start": {
+    "context": "src/hooks/useAiJobUsage.js — usage.image.start; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « image d’accueil ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "2d3c558fa8da",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2d3c558fa8da",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.image.thumbnail": {
+    "context": "src/hooks/useAiJobUsage.js — usage.image.thumbnail; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « vignette ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "05bf250f1340",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "05bf250f1340",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.image.menu": {
+    "context": "src/hooks/useAiJobUsage.js — usage.image.menu; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « image du menu ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "677d29c13ead",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "677d29c13ead",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.image.story": {
+    "context": "src/hooks/useAiJobUsage.js — usage.image.story; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « image de l’histoire ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "21a3ae43ec55",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "21a3ae43ec55",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.image.selection": {
+    "context": "src/hooks/useAiJobUsage.js — usage.image.selection; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « image de sélection ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "db90df4973aa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "db90df4973aa",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.image.cover": {
+    "context": "src/hooks/useAiJobUsage.js — usage.image.cover; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « couverture ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "99b8c4f74e83",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "99b8c4f74e83",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.image.unassigned": {
+    "context": "src/hooks/useAiJobUsage.js — usage.image.unassigned; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Aucune image de cette génération n’est assignée au projet. ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "2ab9306c81e0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2ab9306c81e0",
+      "status": "ai-reviewed"
+    }
+  },
+  "target.root.cover": {
+    "context": "src/store/aiJobLabels.js — target.root.cover; destination affichée de la génération, nom auteur conservé ; résolu dans la langue active à la présentation. Texte source exact : « Menu racine - image Lunii + catalogue ». Destination : précise le champ qui recevra l’image, sans renommer le nœud.",
+    "en": {
+      "sourceHash": "2398247b36ec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2398247b36ec",
+      "status": "ai-reviewed"
+    }
+  },
+  "target.root.image": {
+    "context": "src/store/aiJobLabels.js — target.root.image; destination affichée de la génération, nom auteur conservé ; résolu dans la langue active à la présentation. Texte source exact : « Menu racine - image Lunii ». Destination : précise le champ qui recevra l’image, sans renommer le nœud.",
+    "en": {
+      "sourceHash": "cb3fe4a534fa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cb3fe4a534fa",
+      "status": "ai-reviewed"
+    }
+  },
+  "target.root.thumbnail": {
+    "context": "src/store/aiJobLabels.js — target.root.thumbnail; destination affichée de la génération, nom auteur conservé ; résolu dans la langue active à la présentation. Texte source exact : « Menu racine - vignette catalogue ». Destination : précise le champ qui recevra l’image, sans renommer le nœud.",
+    "en": {
+      "sourceHash": "d64481420155",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d64481420155",
+      "status": "ai-reviewed"
+    }
+  },
+  "target.node.story": {
+    "context": "src/store/aiJobLabels.js — target.node.story; destination affichée de la génération, nom auteur conservé ; résolu dans la langue active à la présentation. Texte source exact : « Histoire ». Destination : précise le champ qui recevra l’image, sans renommer le nœud.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "7c574fe25d60",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7c574fe25d60",
+      "status": "ai-reviewed"
+    }
+  },
+  "target.node.folder": {
+    "context": "src/store/aiJobLabels.js — target.node.folder; destination affichée de la génération, nom auteur conservé ; résolu dans la langue active à la présentation. Texte source exact : « Dossier ». Destination : précise le champ qui recevra l’image, sans renommer le nœud.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "2cdf175d11ce",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2cdf175d11ce",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.text.tooLong": {
+    "context": "IA et TTS — voice.text.tooLong; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Le texte est trop long pour Piper ({{length}} caractères, maximum {{maximum}}). Raccourcis-le. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "900bcbc38a0a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "900bcbc38a0a",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.output.help": {
+    "context": "IA et TTS — voice.output.help; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Le fichier sera stocké dans <strong>voix-générées/</strong> dans l’emplacement de travail. ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "bb55d6db5f91",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bb55d6db5f91",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.speed.label": {
+    "context": "IA et TTS — voice.speed.label; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « Vitesse · {{speed}}× ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "acb3158e04a1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "acb3158e04a1",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.option.download": {
+    "context": "IA et TTS — voice.option.download; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « {{voice}} — à télécharger ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "874b87a54d5e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "874b87a54d5e",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.progress.label": {
+    "context": "IA et TTS — queue.progress.label; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Progression {{percent}}% ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "518bc48230d9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "518bc48230d9",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.image.preview": {
+    "context": "IA et TTS — queue.image.preview; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Prévisualiser {{filename}} ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "b2038454cfc6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b2038454cfc6",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.audio.stopFile": {
+    "context": "IA et TTS — queue.audio.stopFile; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Arrêter {{filename}} ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "64deda1e6914",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "64deda1e6914",
+      "status": "ai-reviewed"
+    }
+  },
+  "queue.audio.playFile": {
+    "context": "IA et TTS — queue.audio.playFile; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Lire {{filename}} ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "f39626a7b7cd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f39626a7b7cd",
+      "status": "ai-reviewed"
+    }
+  },
+  "image.submit.multiple": {
+    "context": "IA et TTS — image.submit.multiple; modale ComfyUI ou file de génération ; résolu dans la langue active à la présentation. Texte source exact : « Générer ×{{count}} ». Bouton : envoie les paramètres saisis au moteur puis ferme la modale.",
+    "en": {
+      "sourceHash": "34e8425a147d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "34e8425a147d",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.screen.detail": {
+    "context": "IA et TTS — usage.screen.detail; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Écran : {{name}} · Champ : {{field}} ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "7ce7ff36a4f7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7ce7ff36a4f7",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.node.detail": {
+    "context": "IA et TTS — usage.node.detail; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Nœud : {{name}} · Champ : {{field}} ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "99594b903dec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "99594b903dec",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.node.modified": {
+    "context": "IA et TTS — usage.node.modified; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Nœud : {{name}} · Champ modifié : {{field}} ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "2a4d1996b2e0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2a4d1996b2e0",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.field.missing": {
+    "context": "IA et TTS — usage.field.missing; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « {{field}} n’existe plus ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "9ecff71588d3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9ecff71588d3",
+      "status": "ai-reviewed"
+    }
+  },
+  "usage.node.homeStep": {
+    "context": "IA et TTS — usage.node.homeStep; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « {{name}} · Home pendant lecture ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "63249ee2ecb7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "63249ee2ecb7",
+      "status": "ai-reviewed"
+    }
+  },
+  "target.story.home": {
+    "context": "IA et TTS — target.story.home; destination affichée de la génération, nom auteur conservé ; résolu dans la langue active à la présentation. Texte source exact : « {{name}} - image de la réaction Accueil ». Destination : précise le champ qui recevra l’image, sans renommer le nœud.",
+    "en": {
+      "sourceHash": "34167ba32512",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "34167ba32512",
+      "status": "ai-reviewed"
+    }
+  },
+  "target.stage.image": {
+    "context": "IA et TTS — target.stage.image; destination affichée de la génération, nom auteur conservé ; résolu dans la langue active à la présentation. Texte source exact : « Éditeur graphe - Écran {{id}} ». Destination : précise le champ qui recevra l’image, sans renommer le nœud.",
+    "en": {
+      "sourceHash": "b8611a267212",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b8611a267212",
+      "status": "ai-reviewed"
+    }
+  },
+  "target.story.selection": {
+    "context": "IA et TTS — target.story.selection; destination affichée de la génération, nom auteur conservé ; résolu dans la langue active à la présentation. Texte source exact : « {{name}} - image de sélection ». Destination : précise le champ qui recevra l’image, sans renommer le nœud.",
+    "en": {
+      "sourceHash": "7427e95f7556",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7427e95f7556",
+      "status": "ai-reviewed"
+    }
+  },
+  "target.folder.image": {
+    "context": "IA et TTS — target.folder.image; destination affichée de la génération, nom auteur conservé ; résolu dans la langue active à la présentation. Texte source exact : « {{name}} - image du dossier ». Destination : précise le champ qui recevra l’image, sans renommer le nœud.",
+    "en": {
+      "sourceHash": "5f32816604e4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5f32816604e4",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.text.count_many": {
+    "context": "IA et TTS — voice.text.count_many; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « {{count}} caractères ». Libellé de présentation sans écriture de texte dans le projet.",
+    "it": {
+      "sourceHash": "6e69f59d8201",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "voice.text.count_one": {
+    "context": "IA et TTS — voice.text.count_one; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « {{count}} caractère ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "61aa993fb9b5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "61aa993fb9b5",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "voice.text.count_other": {
+    "context": "IA et TTS — voice.text.count_other; modale de synthèse vocale, ne change pas la langue du texte auteur ; résolu dans la langue active à la présentation. Texte source exact : « {{count}} caractères ». Libellé de présentation sans écriture de texte dans le projet.",
+    "en": {
+      "sourceHash": "6e69f59d8201",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6e69f59d8201",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.audio.count_many": {
+    "context": "IA et TTS — usage.audio.count_many; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Utilisé ×{{count}} ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "it": {
+      "sourceHash": "7120e1858a22",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.audio.count_one": {
+    "context": "IA et TTS — usage.audio.count_one; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Utilisé ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "de1cbf05dcc7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "de1cbf05dcc7",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.audio.count_other": {
+    "context": "IA et TTS — usage.audio.count_other; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Utilisé ×{{count}} ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "7120e1858a22",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7120e1858a22",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.image.count_many": {
+    "context": "IA et TTS — usage.image.count_many; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Utilisée ×{{count}} ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "it": {
+      "sourceHash": "7ffcd08d7622",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.image.count_one": {
+    "context": "IA et TTS — usage.image.count_one; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Utilisée ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "d777feef7195",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d777feef7195",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.image.count_other": {
+    "context": "IA et TTS — usage.image.count_other; file IA, information sur l’emploi du fichier dans le projet ; résolu dans la langue active à la présentation. Texte source exact : « Utilisée ×{{count}} ». Information non interactive recalculée depuis les liaisons du projet ; aucune modification des noms ou médias.",
+    "en": {
+      "sourceHash": "7ffcd08d7622",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7ffcd08d7622",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "voice.language.fr": {
+    "context": "Modale voix Piper/XTTS, option fr du sélecteur de langue de synthèse ; change la langue envoyée au moteur, indépendamment de la langue de l’interface. Libellé court. Texte source exact : « Français ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "e495d53b967a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e495d53b967a",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.language.en": {
+    "context": "Modale voix Piper/XTTS, option en du sélecteur de langue de synthèse ; change la langue envoyée au moteur, indépendamment de la langue de l’interface. Libellé court. Texte source exact : « English ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "ba118bf7fc9c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ba118bf7fc9c",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.language.es": {
+    "context": "Modale voix Piper/XTTS, option es du sélecteur de langue de synthèse ; change la langue envoyée au moteur, indépendamment de la langue de l’interface. Libellé court. Texte source exact : « Español ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "94b382b61b9d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "94b382b61b9d",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.language.de": {
+    "context": "Modale voix Piper/XTTS, option de du sélecteur de langue de synthèse ; change la langue envoyée au moteur, indépendamment de la langue de l’interface. Libellé court. Texte source exact : « Deutsch ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "801cfe0fa118",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "801cfe0fa118",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.language.it": {
+    "context": "Modale voix Piper/XTTS, option it du sélecteur de langue de synthèse ; change la langue envoyée au moteur, indépendamment de la langue de l’interface. Libellé court. Texte source exact : « Italiano ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "432a99a172dd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "432a99a172dd",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.language.pt": {
+    "context": "Modale voix Piper/XTTS, option pt du sélecteur de langue de synthèse ; change la langue envoyée au moteur, indépendamment de la langue de l’interface. Libellé court. Texte source exact : « Português ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "d4ada8ec2764",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d4ada8ec2764",
+      "status": "ai-reviewed"
+    }
+  },
+  "voice.language.enGB": {
+    "context": "Modale Piper, option langue anglais GB ; la variante détermine le choix de voix, sans modifier la langue UI. Libellé court. Texte source exact : « English UK ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 28,
+    "en": {
+      "status": "ai-reviewed",
+      "sourceHash": "e6d8c4364350"
+    },
+    "it": {
+      "status": "ai-reviewed",
+      "sourceHash": "e6d8c4364350"
+    }
+  },
+  "voice.language.enUS": {
+    "context": "Modale Piper, option langue anglais US ; la variante détermine le choix de voix, sans modifier la langue UI. Libellé court. Texte source exact : « English US ». Libellé de présentation sans écriture de texte dans le projet.",
+    "maxLength": 28,
+    "en": {
+      "status": "ai-reviewed",
+      "sourceHash": "91089b0173a1"
+    },
+    "it": {
+      "status": "ai-reviewed",
+      "sourceHash": "91089b0173a1"
+    }
+  },
+  "usage.graphImage.count_one": {
+    "context": "File IA, badge d’utilisation d’une image dans le graphe ; conserve le féminin singulier historique, suivi du nombre de liaisons si multiple. Texte source : « Utilisée ». Badge non interactif, 40 caractères.",
+    "en": {
+      "sourceHash": "d777feef7195",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d777feef7195",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.graphImage.count_many": {
+    "context": "File IA, badge d’utilisation d’une image dans le graphe ; conserve le féminin singulier historique, suivi du nombre de liaisons si multiple. Texte source : « Utilisée ×{{count}} ». Badge non interactif, 40 caractères.",
+    "it": {
+      "sourceHash": "7ffcd08d7622",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "usage.graphImage.count_other": {
+    "context": "File IA, badge d’utilisation d’une image dans le graphe ; conserve le féminin singulier historique, suivi du nombre de liaisons si multiple. Texte source : « Utilisée ×{{count}} ». Badge non interactif, 40 caractères.",
+    "en": {
+      "sourceHash": "7ffcd08d7622",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7ffcd08d7622",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "voice.text.emptyCount": {
+    "context": "Modale de génération Piper/XTTS, compteur sous le texte TTS vide ; conserver le pluriel français historique à zéro (0 caractères). Clé explicite réservée au texte vide, count exact ; les nombres positifs suivent les catégories CLDR.",
+    "en": {
+      "sourceHash": "6e69f59d8201",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6e69f59d8201",
+      "status": "ai-reviewed"
+    }
+  }
+}

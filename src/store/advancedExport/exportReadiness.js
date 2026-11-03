@@ -1,3 +1,5 @@
+import { presentUserMessage } from '../../i18n/userMessage.js';
+import { translateChecker } from '../../i18n/checkerPresentation.js';
 // La readiness, lue en deux informations qui ne se confondent pas.
 //
 // `SUPPORTED` ne veut pas dire export autorisé : un document peut avoir toutes
@@ -37,25 +39,31 @@ const QUALIFICATION = Object.freeze({
   SUPPORTED: 'SUPPORTED',
 });
 
+// Clés des libellés, résolues à chaque lecture (accesseurs des lignes).
 const QUALIFICATION_LABELS = Object.freeze({
-  UNTESTED: 'non qualifié',
-  PREPARED: 'préparé',
-  SUPPORTED: 'supporté',
+  UNTESTED: 'checker:readiness.qualification.untested',
+  PREPARED: 'checker:readiness.qualification.prepared',
+  SUPPORTED: 'checker:readiness.qualification.supported',
 });
 
 const SOURCE_LABELS = Object.freeze({
-  decode: 'décodage',
-  'graph-integrity': 'intégrité du graphe',
-  authoring: "décision d'auteur",
-  readiness: 'qualification',
+  decode: 'checker:readiness.source.decode',
+  'graph-integrity': 'checker:readiness.source.integrity',
+  authoring: 'checker:readiness.source.authoring',
+  readiness: 'checker:readiness.source.readiness',
 });
 
 const LEVEL_LABELS = Object.freeze({
-  INFO: 'information',
-  WARNING: 'avertissement',
-  ACTION_REQUIRED: 'décision requise',
-  ERROR: 'erreur',
+  INFO: 'checker:readiness.level.info',
+  WARNING: 'checker:readiness.level.warning',
+  ACTION_REQUIRED: 'checker:readiness.level.action',
+  ERROR: 'checker:readiness.level.error',
 });
+
+// Valeur hors table : la donnée brute, comme avant.
+function label(table, value, fallback = value) {
+  return Object.hasOwn(table, value ?? '') ? translateChecker(table[value]) : fallback;
+}
 
 // Le niveau d'un diagnostic, tel que chaque source le sérialise. `graph-integrity`
 // n'en porte pas : Rust le fixe à `Error` dans `level()`, et cette absence est
@@ -75,7 +83,7 @@ export function readinessDiagnosticLevel(diagnostic) {
 }
 
 function readinessLevelLabel(level) {
-  return LEVEL_LABELS[level] ?? level;
+  return label(LEVEL_LABELS, level);
 }
 
 function blocksDisplay(level) {
@@ -95,12 +103,12 @@ export function summarizeReadiness(readiness) {
     const level = readinessDiagnosticLevel(diagnostic);
     return {
       source: diagnostic?.source ?? null,
-      sourceLabel: SOURCE_LABELS[diagnostic?.source] ?? diagnostic?.source ?? 'diagnostic',
+      get sourceLabel() { return label(SOURCE_LABELS, diagnostic?.source, diagnostic?.source ?? translateChecker('checker:readiness.source.fallback')); },
       code: codeOf(diagnostic),
       path: diagnostic?.path ?? '',
-      message: diagnostic?.message ?? '',
+      get message() { return presentUserMessage(diagnostic).message; },
       level,
-      levelLabel: readinessLevelLabel(level),
+      get levelLabel() { return readinessLevelLabel(level); },
       blocking: blocksDisplay(level),
       resolutions: Array.isArray(diagnostic?.resolutions) ? diagnostic.resolutions : [],
     };
@@ -112,9 +120,9 @@ export function summarizeReadiness(readiness) {
   return {
     blocked: readiness.blocked === true,
     interoperability: readiness.interoperability ?? QUALIFICATION.UNTESTED,
-    interoperabilityLabel: QUALIFICATION_LABELS[readiness.interoperability]
-      ?? readiness.interoperability
-      ?? QUALIFICATION_LABELS.UNTESTED,
+    get interoperabilityLabel() {
+      return label(QUALIFICATION_LABELS, readiness.interoperability, readiness.interoperability ?? translateChecker(QUALIFICATION_LABELS.UNTESTED));
+    },
     // Les blocages d'abord, dans l'ordre où Rust les a rendus : l'ordre
     // rendu est une information, le réordonner par sévérité perdrait le lien
     // avec lui.
@@ -124,7 +132,7 @@ export function summarizeReadiness(readiness) {
     dimensions: dimensions.map((dimension) => ({
       id: dimension?.id ?? '',
       qualification: dimension?.qualification ?? QUALIFICATION.UNTESTED,
-      qualificationLabel: QUALIFICATION_LABELS[dimension?.qualification] ?? dimension?.qualification,
+      get qualificationLabel() { return label(QUALIFICATION_LABELS, dimension?.qualification); },
       evidence: Array.isArray(dimension?.evidence) ? dimension.evidence : [],
     })),
     // `UNTESTED` est une limite de qualification, pas un document invalide :

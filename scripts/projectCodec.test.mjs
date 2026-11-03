@@ -1,3 +1,4 @@
+import { createProjectStorage } from '../src/store/projectStorage.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -7,7 +8,8 @@ import {
 import { shouldPromptRegenerateImportedUuid } from '../src/store/projectHelpers.js';
 
 const advanced = () => ({
-  schemaVersion: 4, authoringMode: 'advanced', projectType: 'advanced', rootEntries: [],
+  schemaVersion: 4, authoringMode: 'advanced', officialProvenance: 'unknown', projectType: 'advanced', rootEntries: [],
+  storage: createProjectStorage(),
   projectName: 'Projet', authoring: {
     payload: '{"payloadVersion":1,"opaque":9007199254740993}',
     editorState: { version: 1, viewport: { x: 120.5, y: -3.25, zoom: 0.75 }, selection: { stages: ['/stageNodes/@uuid=removed#0'] } },

@@ -56,5 +56,5 @@ test('le mode aléatoire est séparé des choix et utilise l’icône Lucide Dic
   assert.match(html, /Un choix au hasard, à chaque fois/);
   assert.match(html, /<rect[^>]*width="12"[^>]*height="12"[^>]*x="2"[^>]*y="10"/);
   assert.doesNotMatch(html, /Commence sur/);
-  assert.doesNotMatch(html, /<select/);
+  assert.doesNotMatch(html, /<select|role="combobox"/);
 });

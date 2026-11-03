@@ -1,0 +1,884 @@
+[
+  {
+    "code": "ACTION_ID_EMPTY",
+    "params": []
+  },
+  {
+    "code": "ACTION_NOT_EMPTY",
+    "params": [
+      "action_node"
+    ]
+  },
+  {
+    "code": "ACTION_STILL_TARGETED",
+    "params": [
+      "count"
+    ]
+  },
+  {
+    "code": "AMBIGUOUS_NODE",
+    "params": [
+      "count",
+      "kind",
+      "wanted"
+    ]
+  },
+  {
+    "code": "ANODE_MISSING_ID",
+    "params": [
+      "i"
+    ]
+  },
+  {
+    "code": "ANODE_MISSING_OPTIONS",
+    "params": [
+      "i"
+    ]
+  },
+  {
+    "code": "ASSET_REF_ALREADY_BOUND",
+    "params": [
+      "asset_ref"
+    ]
+  },
+  {
+    "code": "AUDIO_NOT_MONO",
+    "params": [
+      "mode",
+      "name"
+    ]
+  },
+  {
+    "code": "AUDIO_NO_MPEG_FRAME",
+    "params": [
+      "name"
+    ]
+  },
+  {
+    "code": "AUDIO_TOO_SHORT",
+    "params": [
+      "name"
+    ]
+  },
+  {
+    "code": "AUDIO_WRONG_SAMPLE_RATE",
+    "params": [
+      "name",
+      "sr"
+    ]
+  },
+  {
+    "code": "CHECKER_AUDIO_CHANNELS",
+    "params": []
+  },
+  {
+    "code": "CHECKER_AUDIO_CLIPPED",
+    "params": []
+  },
+  {
+    "code": "CHECKER_AUDIO_FORMAT",
+    "params": []
+  },
+  {
+    "code": "CHECKER_AUDIO_LEADING_UNMEASURABLE",
+    "params": []
+  },
+  {
+    "code": "CHECKER_AUDIO_NEAR_MUTE",
+    "params": []
+  },
+  {
+    "code": "CHECKER_AUDIO_SAMPLE_RATE",
+    "params": []
+  },
+  {
+    "code": "CHECKER_AUDIO_SILENT",
+    "params": []
+  },
+  {
+    "code": "CHECKER_AUDIO_TOO_SHORT",
+    "params": []
+  },
+  {
+    "code": "CHECKER_AUDIO_TRAILING_UNMEASURABLE",
+    "params": []
+  },
+  {
+    "code": "CHECKER_AUDIO_UNMEASURABLE",
+    "params": []
+  },
+  {
+    "code": "CHECKER_AUDIO_VOLUME",
+    "params": [
+      "direction"
+    ]
+  },
+  {
+    "code": "CHECKER_AUDIO_VOLUME_UNMEASURABLE",
+    "params": []
+  },
+  {
+    "code": "CHECKER_IMAGE_DIMENSIONS",
+    "params": []
+  },
+  {
+    "code": "CHECKER_IMAGE_FORMAT",
+    "params": []
+  },
+  {
+    "code": "CHECKER_IMAGE_FORMAT_DIMENSIONS",
+    "params": []
+  },
+  {
+    "code": "CHECKER_IMAGE_UNREADABLE",
+    "params": []
+  },
+  {
+    "code": "CHECKER_PACK_UNREADABLE",
+    "params": []
+  },
+  {
+    "code": "CHECKER_STORY_UNREADABLE",
+    "params": []
+  },
+  {
+    "code": "CHECKER_ZIP_INVALID",
+    "params": []
+  },
+  {
+    "code": "CONTROL_SETTINGS_ABSENT",
+    "params": []
+  },
+  {
+    "code": "CONTROL_SETTINGS_INCOMPLETE",
+    "params": []
+  },
+  {
+    "code": "DUPLICATE_ACTION_ID",
+    "params": [
+      "id"
+    ]
+  },
+  {
+    "code": "DUPLICATE_LAYOUT_ENTRY",
+    "params": []
+  },
+  {
+    "code": "DUPLICATE_MEDIA_BINDING",
+    "params": [
+      "assetRef"
+    ]
+  },
+  {
+    "code": "DUPLICATE_NODE_COLOR_TARGET",
+    "params": []
+  },
+  {
+    "code": "DUPLICATE_STAGE",
+    "params": []
+  },
+  {
+    "code": "DUPLICATE_STAGE_ID",
+    "params": [
+      "id"
+    ]
+  },
+  {
+    "code": "EMPTY_CONTROLS_UPDATE",
+    "params": []
+  },
+  {
+    "code": "EMPTY_DOCUMENT_UUID",
+    "params": []
+  },
+  {
+    "code": "EMPTY_LAYOUT",
+    "params": []
+  },
+  {
+    "code": "EMPTY_METADATA_UPDATE",
+    "params": []
+  },
+  {
+    "code": "EMPTY_NODE_COLOR_TARGETS",
+    "params": []
+  },
+  {
+    "code": "EMPTY_STAGE_SELECTION",
+    "params": []
+  },
+  {
+    "code": "ENRICHED_GROUP_INCOHERENT",
+    "params": [
+      "group_id",
+      "kind"
+    ]
+  },
+  {
+    "code": "ENRICHED_GROUP_UNKNOWN",
+    "params": [
+      "group_id"
+    ]
+  },
+  {
+    "code": "ENRICHED_TYPE_UNKNOWN",
+    "params": [
+      "stage_type"
+    ]
+  },
+  {
+    "code": "ENTRY_STAGE_AS_OPTION",
+    "params": []
+  },
+  {
+    "code": "GENERATION_CANCELLED",
+    "params": []
+  },
+  {
+    "code": "GROUP_FLATTEN_REFUSED",
+    "params": [
+      "groupId"
+    ]
+  },
+  {
+    "code": "HOME_LOOPS_TO_SELF",
+    "params": []
+  },
+  {
+    "code": "IDENTIFIER_COLLISION",
+    "params": []
+  },
+  {
+    "code": "IMPORT_INCOMPLETE_CONTROLS",
+    "params": []
+  },
+  {
+    "code": "IMPORT_INVALID_ARCHIVE",
+    "params": []
+  },
+  {
+    "code": "IMPORT_MISSING_MEDIA",
+    "params": []
+  },
+  {
+    "code": "IMPORT_PASSWORD_REQUIRED",
+    "params": []
+  },
+  {
+    "code": "IMPORT_UNSUPPORTED_COMPRESSION",
+    "params": []
+  },
+  {
+    "code": "IMPORT_UNSUPPORTED_VARIANT",
+    "params": []
+  },
+  {
+    "code": "INVALID_ACTION_ID",
+    "params": []
+  },
+  {
+    "code": "INVALID_ASSET_REF",
+    "params": []
+  },
+  {
+    "code": "INVALID_AUTHORING_PAYLOAD",
+    "params": [
+      "expected",
+      "found",
+      "path"
+    ]
+  },
+  {
+    "code": "INVALID_CONSTRUCTION",
+    "params": []
+  },
+  {
+    "code": "INVALID_CONTROL_SETTINGS",
+    "params": [
+      "expected",
+      "found",
+      "path"
+    ]
+  },
+  {
+    "code": "INVALID_DOCUMENT_VERSION",
+    "params": [
+      "value"
+    ]
+  },
+  {
+    "code": "INVALID_FORMAT_FIELD",
+    "params": [
+      "format"
+    ]
+  },
+  {
+    "code": "INVALID_MEDIA_BINDING",
+    "params": []
+  },
+  {
+    "code": "INVALID_OPTION_PERMUTATION",
+    "params": [
+      "count",
+      "rankCount"
+    ]
+  },
+  {
+    "code": "INVALID_PACK_IDENTITY",
+    "params": []
+  },
+  {
+    "code": "INVALID_PASTE",
+    "params": [
+      "ordinal",
+      "rank"
+    ]
+  },
+  {
+    "code": "INVALID_PATH",
+    "params": []
+  },
+  {
+    "code": "INVALID_PAYLOAD_JSON",
+    "params": [
+      "expected",
+      "found",
+      "path"
+    ]
+  },
+  {
+    "code": "INVALID_PAYLOAD_SHAPE",
+    "params": [
+      "expected",
+      "found",
+      "path"
+    ]
+  },
+  {
+    "code": "INVALID_PAYLOAD_VERSION",
+    "params": [
+      "expected",
+      "found",
+      "path"
+    ]
+  },
+  {
+    "code": "INVALID_REMOVAL",
+    "params": []
+  },
+  {
+    "code": "MISSING_AUDIO_ASSET",
+    "params": [
+      "audio",
+      "i",
+      "id"
+    ]
+  },
+  {
+    "code": "MISSING_FIELD_ACTIONNODES",
+    "params": []
+  },
+  {
+    "code": "MISSING_FIELD_FORMAT",
+    "params": []
+  },
+  {
+    "code": "MISSING_FIELD_STAGENODES",
+    "params": []
+  },
+  {
+    "code": "MISSING_FIELD_TITLE",
+    "params": []
+  },
+  {
+    "code": "MISSING_FIELD_VERSION",
+    "params": []
+  },
+  {
+    "code": "MISSING_IMAGE_ASSET",
+    "params": [
+      "i",
+      "id",
+      "image"
+    ]
+  },
+  {
+    "code": "MISSING_STORY_JSON",
+    "params": []
+  },
+  {
+    "code": "NO_ASSETS_DIR",
+    "params": []
+  },
+  {
+    "code": "NO_CREATED_STAGE",
+    "params": []
+  },
+  {
+    "code": "NO_EDITOR_POSITION",
+    "params": []
+  },
+  {
+    "code": "NO_USABLE_EXIT",
+    "params": []
+  },
+  {
+    "code": "OK_LOOPS_TO_SELF",
+    "params": []
+  },
+  {
+    "code": "OK_WITHOUT_USABLE_DESTINATION",
+    "params": []
+  },
+  {
+    "code": "OPAQUE_DISPOSITION_REFUSED",
+    "params": [
+      "key",
+      "path"
+    ]
+  },
+  {
+    "code": "OPAQUE_EXTENSION_DISPOSITION_REQUIRED",
+    "params": []
+  },
+  {
+    "code": "OPAQUE_EXTENSION_DISPOSITION_STALE",
+    "params": []
+  },
+  {
+    "code": "OPAQUE_EXTENSION_PRESERVED_UNTESTED",
+    "params": []
+  },
+  {
+    "code": "OPTION_DECISION_REQUIRED",
+    "params": []
+  },
+  {
+    "code": "OPTION_INDEX_OUT_OF_DIALECT",
+    "params": [
+      "index"
+    ]
+  },
+  {
+    "code": "OPTION_ORDINAL_OUT_OF_RANGE",
+    "params": [
+      "action_id",
+      "bound",
+      "count",
+      "ordinal"
+    ]
+  },
+  {
+    "code": "OPTION_SELECTION_DECISION_REQUIRED",
+    "params": [
+      "ordinal"
+    ]
+  },
+  {
+    "code": "OPTION_SELECTION_INVALID",
+    "params": [
+      "field",
+      "optionCount",
+      "selection",
+      "stage"
+    ]
+  },
+  {
+    "code": "OPTION_SELECTION_OUT_OF_BOUNDS",
+    "params": [
+      "action_id",
+      "remaining",
+      "selection"
+    ]
+  },
+  {
+    "code": "OPTION_TARGET_MISSING",
+    "params": [
+      "actionId",
+      "index",
+      "target"
+    ]
+  },
+  {
+    "code": "OPTION_TARGET_NULL",
+    "params": [
+      "actionId",
+      "index"
+    ]
+  },
+  {
+    "code": "ORPHAN_ACTION_AUTHORED_CONTENT",
+    "params": []
+  },
+  {
+    "code": "ORPHAN_ACTION_EMPTY_SCAFFOLD",
+    "params": []
+  },
+  {
+    "code": "PACK_NOT_EDITABLE",
+    "params": []
+  },
+  {
+    "code": "PAYLOAD_ENCODING_FAILED",
+    "params": [
+      "expected",
+      "found",
+      "path"
+    ]
+  },
+  {
+    "code": "PAYLOAD_MIGRATION_REQUIRED",
+    "params": [
+      "expected",
+      "found",
+      "path"
+    ]
+  },
+  {
+    "code": "POSITION_DISPOSITION_REFUSED",
+    "params": [
+      "path"
+    ]
+  },
+  {
+    "code": "POSITION_NOT_ADDRESSABLE",
+    "params": [
+      "path"
+    ]
+  },
+  {
+    "code": "POSITION_NOT_FINITE",
+    "params": [
+      "number"
+    ]
+  },
+  {
+    "code": "POSITION_OUT_OF_SHORT_RANGE",
+    "params": [
+      "count"
+    ]
+  },
+  {
+    "code": "ROOT_UUID_DIVERGENT",
+    "params": [
+      "identity",
+      "rootUuid"
+    ]
+  },
+  {
+    "code": "SNODE_INVALID_AUDIO",
+    "params": [
+      "i",
+      "id"
+    ]
+  },
+  {
+    "code": "SNODE_MISSING_AUDIO",
+    "params": [
+      "i",
+      "id"
+    ]
+  },
+  {
+    "code": "SNODE_MISSING_CONTROL",
+    "params": [
+      "ctrl",
+      "i",
+      "id"
+    ]
+  },
+  {
+    "code": "SNODE_MISSING_CONTROL_SETTINGS",
+    "params": [
+      "i",
+      "id"
+    ]
+  },
+  {
+    "code": "SNODE_MISSING_UUID",
+    "params": [
+      "i"
+    ]
+  },
+  {
+    "code": "SQUARE_ONE_COUNT",
+    "params": [
+      "count"
+    ]
+  },
+  {
+    "code": "SQUARE_ONE_REMOVAL",
+    "params": []
+  },
+  {
+    "code": "STAGE_ID_EMPTY",
+    "params": []
+  },
+  {
+    "code": "STAGE_STILL_TARGETED",
+    "params": [
+      "count"
+    ]
+  },
+  {
+    "code": "STORY_JSON_INVALID",
+    "params": [
+      "reason"
+    ]
+  },
+  {
+    "code": "STORY_JSON_READ_ERROR",
+    "params": [
+      "reason"
+    ]
+  },
+  {
+    "code": "TRANSITION_ACTION_MISSING",
+    "params": [
+      "action",
+      "field",
+      "stage"
+    ]
+  },
+  {
+    "code": "TRANSITION_DECISION_REQUIRED",
+    "params": []
+  },
+  {
+    "code": "TRANSITION_SEVERED_BY_REMOVAL",
+    "params": [
+      "control"
+    ]
+  },
+  {
+    "code": "UNBOUND_ASSET_REF",
+    "params": [
+      "asset_ref"
+    ]
+  },
+  {
+    "code": "UNEXPECTED_ERROR",
+    "params": []
+  },
+  {
+    "code": "UNEXPECTED_OPTION_DECISION",
+    "params": []
+  },
+  {
+    "code": "UNEXPECTED_SELECTION_DECISION",
+    "params": []
+  },
+  {
+    "code": "UNEXPECTED_TRANSITION_DECISION",
+    "params": []
+  },
+  {
+    "code": "UNKNOWN_ACTION",
+    "params": []
+  },
+  {
+    "code": "UNKNOWN_ASSET_REF",
+    "params": [
+      "asset_ref"
+    ]
+  },
+  {
+    "code": "UNKNOWN_NODE",
+    "params": [
+      "kind",
+      "wanted"
+    ]
+  },
+  {
+    "code": "UNKNOWN_NODE_PATH",
+    "params": []
+  },
+  {
+    "code": "UNKNOWN_PAYLOAD_FIELD",
+    "params": [
+      "expected",
+      "found",
+      "path"
+    ]
+  },
+  {
+    "code": "UNKNOWN_STAGE",
+    "params": [
+      "uuid"
+    ]
+  },
+  {
+    "code": "UNSUPPORTED_NODE_COLOR",
+    "params": [
+      "value"
+    ]
+  },
+  {
+    "code": "UNSUPPORTED_PAYLOAD_VERSION",
+    "params": [
+      "expected",
+      "found",
+      "path"
+    ]
+  },
+  {
+    "code": "UNSUPPORTED_REMOVAL_RESOLUTION",
+    "params": []
+  },
+  {
+    "code": "ZIP_INVALID",
+    "params": [
+      "reason"
+    ]
+  },
+  {
+    "code": "ZIP_OPEN_FAILED",
+    "params": [
+      "reason"
+    ]
+  },
+  {
+    "code": "age_restricted",
+    "params": []
+  },
+  {
+    "code": "archive-name-collision",
+    "params": [
+      "count"
+    ]
+  },
+  {
+    "code": "audioLeadingSilenceLong",
+    "params": []
+  },
+  {
+    "code": "audioLeadingSilenceTooShort",
+    "params": []
+  },
+  {
+    "code": "audioTrailingSilenceLong",
+    "params": []
+  },
+  {
+    "code": "audioTrailingSilenceTooShort",
+    "params": []
+  },
+  {
+    "code": "blocked",
+    "params": []
+  },
+  {
+    "code": "control-settings-incomplete",
+    "params": [
+      "detail"
+    ]
+  },
+  {
+    "code": "control-settings-member-not-boolean",
+    "params": []
+  },
+  {
+    "code": "control-settings-not-object",
+    "params": []
+  },
+  {
+    "code": "duplicate-root-key-last-wins",
+    "params": [
+      "discarded",
+      "discardedCount",
+      "retained"
+    ]
+  },
+  {
+    "code": "export-cancelled",
+    "params": []
+  },
+  {
+    "code": "geo_blocked",
+    "params": []
+  },
+  {
+    "code": "live",
+    "params": []
+  },
+  {
+    "code": "media-oracle",
+    "params": [
+      "count"
+    ]
+  },
+  {
+    "code": "media-unavailable",
+    "params": [
+      "count"
+    ]
+  },
+  {
+    "code": "members_only",
+    "params": []
+  },
+  {
+    "code": "network",
+    "params": []
+  },
+  {
+    "code": "other",
+    "params": []
+  },
+  {
+    "code": "output-write",
+    "params": [
+      "path"
+    ]
+  },
+  {
+    "code": "payload-decode",
+    "params": []
+  },
+  {
+    "code": "preparation",
+    "params": []
+  },
+  {
+    "code": "private",
+    "params": []
+  },
+  {
+    "code": "story-document-invalid",
+    "params": [
+      "reason"
+    ]
+  },
+  {
+    "code": "story-json-invalid",
+    "params": []
+  },
+  {
+    "code": "too_large",
+    "params": []
+  },
+  {
+    "code": "tool_missing",
+    "params": []
+  },
+  {
+    "code": "transition-missing-action-node",
+    "params": []
+  },
+  {
+    "code": "transition-missing-option-index",
+    "params": []
+  },
+  {
+    "code": "transition-not-object",
+    "params": []
+  },
+  {
+    "code": "transition-option-index-below-minus-one",
+    "params": []
+  },
+  {
+    "code": "unavailable",
+    "params": []
+  }
+]

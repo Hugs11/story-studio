@@ -367,7 +367,10 @@ mod tests {
             .build()
             .expect_err("la production refuse une histoire sans son");
         assert!(
-            refusal.contains("storyAudio"),
+            crate::support::user_message::contains_code(
+                &refusal,
+                "GENERATION_PREPARED_ASSET_MISSING"
+            ) && refusal.contains("storyAudio"),
             "refus inattendu : {refusal}"
         );
     }

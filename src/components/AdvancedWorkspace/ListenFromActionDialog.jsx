@@ -1,3 +1,5 @@
+import { graphTranslationEngine } from '../../i18n/graphPresentation.js';
+import { useTranslation } from 'react-i18next';
 // Simuler depuis une Action : choisir d'abord où l'on part.
 //
 // Une Action n'est pas un point de départ. Le simulateur part d'un **Écran**, et
@@ -47,11 +49,12 @@ export function actionDestinations(index, path) {
 }
 
 const STATE_TEXT = {
-  null: 'choix vide — il ne mène à aucun Écran',
-  dangling: 'Écran manquant — l’Écran désigné n’existe pas dans le document',
+  null: 'graph:listen.choice.empty',
+  dangling: 'graph:listen.choice.missing',
 };
 
 export function ListenFromActionDialog({ inspected, index, onCancel, onListen }) {
+  const { t } = useTranslation('graph', { i18n: graphTranslationEngine() });
   const destinations = useMemo(() => actionDestinations(index, inspected.path), [index, inspected.path]);
   const ready = destinations.filter((one) => one.state === 'ready');
   // Aucune présélection, même quand une seule destination est exploitable :
@@ -60,15 +63,15 @@ export function ListenFromActionDialog({ inspected, index, onCancel, onListen })
 
   return (
     <AdvancedDialog
-      title={`Simuler depuis « ${inspected.label.label} »`}
+      title={t('graph:listen.dialog.title', { name: inspected.label.label })}
       description={
         ready.length === 0
-          ? 'Cette liste de choix ne mène à aucun Écran exploitable : il n’y a pas de point de départ à simuler.'
-          : 'Une liste de choix n’est pas un point de départ. Choisissez l’Écran d’où commencer la simulation.'
+          ? t("graph:listen.dialog.empty")
+          : t("graph:listen.dialog.description")
       }
       onCancel={onCancel}
       onConfirm={chosen ? () => onListen(chosen) : null}
-      confirmLabel="Simuler"
+      confirmLabel={t("graph:listen.dialog.confirm")}
       confirmDisabled={!chosen}
     >
       <ol className="advanced-listen-choices">
@@ -83,25 +86,23 @@ export function ListenFromActionDialog({ inspected, index, onCancel, onListen })
                   checked={chosen === one.targetPath}
                   onChange={() => setChosen(one.targetPath)}
                 />
-                <span className="advanced-listen-choice__rank">occurrence {one.ordinal + 1}</span>
+                <span className="advanced-listen-choice__rank">{t('graph:listen.choice.occurrence', { ordinal: one.ordinal + 1 })}</span>
                 <span className="advanced-listen-choice__target">
                   {one.label}
-                  {one.isFallback && <em> (sans nom)</em>}
+                  {one.isFallback && <em>{t("graph:picker.name.fallback")}</em>}
                 </span>
               </label>
             ) : (
               <>
-                <span className="advanced-listen-choice__rank">occurrence {one.ordinal + 1}</span>
-                <span className="advanced-listen-choice__reason">{STATE_TEXT[one.state]}</span>
+                <span className="advanced-listen-choice__rank">{t('graph:listen.choice.occurrence', { ordinal: one.ordinal + 1 })}</span>
+                <span className="advanced-listen-choice__reason">{t(STATE_TEXT[one.state])}</span>
               </>
             )}
           </li>
         ))}
         {destinations.length === 0 && (
           <li className="advanced-listen-choice is-null">
-            <span className="advanced-listen-choice__reason">
-              Cette liste de choix ne propose aucun choix.
-            </span>
+            <span className="advanced-listen-choice__reason">{t("graph:listen.list.empty")}</span>
           </li>
         )}
       </ol>

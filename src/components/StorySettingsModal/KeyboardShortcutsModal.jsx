@@ -1,3 +1,4 @@
+import { useHelpTranslation } from '../../i18n/helpPresentation.js';
 import { useMemo, useState } from 'react';
 import { Button } from '../common/Button';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -11,17 +12,17 @@ import {
   resetKeyboardShortcutsForScope,
   shortcutFromEvent,
 } from '../../store/keyboardShortcuts';
-import { normalizeFrenchSearchText } from '../../utils/frenchText.js';
+import { normalizeSearchText } from '../../utils/frenchText.js';
 import './KeyboardShortcutsModal.css';
 
-function matchesQuery(definition, shortcut, query) {
+function matchesQuery(definition, shortcut, query, t) {
   if (!query) return true;
   const haystack = [
-    definition.label,
+    t(definition.labelKey),
     definition.scope,
     formatShortcut(shortcut),
   ].filter(Boolean).join(' ');
-  return normalizeFrenchSearchText(haystack).includes(query);
+  return normalizeSearchText(haystack).includes(query);
 }
 
 export function KeyboardShortcutsModal({
@@ -29,20 +30,21 @@ export function KeyboardShortcutsModal({
   onChange,
   onClose,
 }) {
+  const { t, language } = useHelpTranslation();
   const [captureId, setCaptureId] = useState(null);
   const [message, setMessage] = useState('');
   const [query, setQuery] = useState('');
 
   const normalizedQuery = useMemo(
-    () => normalizeFrenchSearchText(query).trim(),
+    () => normalizeSearchText(query).trim(),
     [query],
   );
 
   const sections = useMemo(() => SHORTCUT_SCOPES.map((scope) => {
     const items = SHORTCUT_DEFINITIONS.filter((d) => d.scope === scope.id)
-      .filter((d) => matchesQuery(d, shortcuts?.[d.id] ?? d.defaultShortcut, normalizedQuery));
+      .filter((d) => matchesQuery(d, shortcuts?.[d.id] ?? d.defaultShortcut, normalizedQuery, t));
     return { scope, items };
-  }).filter((section) => section.items.length > 0), [shortcuts, normalizedQuery]);
+  }).filter((section) => section.items.length > 0), [shortcuts, normalizedQuery, t, language]);
 
   function handleKeyDown(event, definition) {
     if (event.key === 'Escape') {
@@ -60,8 +62,7 @@ export function KeyboardShortcutsModal({
 
     const conflict = findShortcutConflict(shortcuts, definition.id, nextShortcut);
     if (conflict) {
-      const scopeLabel = SHORTCUT_SCOPES.find((s) => s.id === conflict.scope)?.label || conflict.scope;
-      setMessage(`Déjà utilisé par « ${conflict.label} » dans ${scopeLabel}.`);
+      setMessage({ actionKey: conflict.labelKey, scopeKey: SHORTCUT_SCOPES.find((s) => s.id === conflict.scope).labelKey });
       return;
     }
 
@@ -108,25 +109,25 @@ export function KeyboardShortcutsModal({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="modal-header">
-          <span>Raccourcis clavier</span>
+          <span>{t('help:keyboard.modal.title')}</span>
           <Button variant="icon" className="modal-close" onClick={onClose}>✕</Button>
         </div>
 
         <div className="keyboard-shortcuts-body">
           <div className="keyboard-shortcuts-lead">
-            Clique sur un raccourci puis presse la nouvelle combinaison. Échap annule la capture.
+            {t('help:keyboard.capture.instructions')}
           </div>
 
           <input
             type="search"
             className="keyboard-shortcuts-search"
-            placeholder="Rechercher un raccourci…"
+            placeholder={t('help:keyboard.search.placeholder')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
 
           {sections.length === 0 ? (
-            <div className="keyboard-shortcuts-empty">Aucun raccourci ne correspond à « {query} ».</div>
+            <div className="keyboard-shortcuts-empty">{t('help:keyboard.search.empty', { query })}</div>
           ) : null}
 
           {sections.map(({ scope, items }) => {
@@ -135,9 +136,9 @@ export function KeyboardShortcutsModal({
               <div key={scope.id} className="keyboard-shortcuts-section">
                 <div className="keyboard-shortcuts-section-head">
                   <div className="keyboard-shortcuts-section-title">
-                    {scope.label}
+                    {t(scope.labelKey)}
                     {scope.id === 'a11y' ? (
-                      <span className="keyboard-shortcuts-fixed-badge">lecture seule</span>
+                      <span className="keyboard-shortcuts-fixed-badge">{t('help:keyboard.scope.readOnly')}</span>
                     ) : null}
                   </div>
                   {editableInScope ? (
@@ -145,14 +146,14 @@ export function KeyboardShortcutsModal({
                       type="button"
                       className="keyboard-shortcuts-section-reset"
                       onClick={() => handleResetScope(scope.id)}
-                      title={`Restaurer les valeurs par défaut pour « ${scope.label} »`}
+                      title={t('help:keyboard.scope.resetTitle', { scope: t(scope.labelKey) })}
                     >
-                      Réinitialiser
+                      {t('help:keyboard.scope.resetAction')}
                     </button>
                   ) : null}
                 </div>
-                {scope.description ? (
-                  <div className="keyboard-shortcuts-section-desc">{scope.description}</div>
+                {scope.descriptionKey ? (
+                  <div className="keyboard-shortcuts-section-desc">{t(scope.descriptionKey)}</div>
                 ) : null}
                 <div className="keyboard-shortcuts-list">
                   {items.map((definition) => {
@@ -161,9 +162,9 @@ export function KeyboardShortcutsModal({
                       return (
                         <div key={definition.id} className="keyboard-shortcut-row is-readonly">
                           <div className="keyboard-shortcut-info">
-                            <div className="opts-row-label">{definition.label}</div>
-                            {definition.readOnlyReason ? (
-                              <div className="opts-row-sub">{definition.readOnlyReason}</div>
+                            <div className="opts-row-label">{t(definition.labelKey)}</div>
+                            {definition.readOnlyReasonKey ? (
+                              <div className="opts-row-sub">{t(definition.readOnlyReasonKey)}</div>
                             ) : null}
                           </div>
                           <div className="keyboard-shortcut-keys">
@@ -178,9 +179,9 @@ export function KeyboardShortcutsModal({
                     return (
                       <div key={definition.id} className="keyboard-shortcut-row">
                         <div className="keyboard-shortcut-info">
-                          <div className="opts-row-label">{definition.label}</div>
+                          <div className="opts-row-label">{t(definition.labelKey)}</div>
                           <div className="opts-row-sub">
-                            Défaut : {formatShortcut(DEFAULT_SHORTCUTS[definition.id] ?? definition.defaultShortcut)}
+                            {t('help:keyboard.shortcut.defaultLabel', { shortcut: formatShortcut(DEFAULT_SHORTCUTS[definition.id] ?? definition.defaultShortcut) })}
                           </div>
                         </div>
                         <button
@@ -192,7 +193,7 @@ export function KeyboardShortcutsModal({
                           }}
                           onKeyDown={(event) => captureId === definition.id && handleKeyDown(event, definition)}
                         >
-                          {captureId === definition.id ? 'Appuie sur un raccourci…' : formatShortcut(currentShortcut)}
+                          {captureId === definition.id ? t('help:keyboard.capture.waiting') : formatShortcut(currentShortcut)}
                         </button>
                       </div>
                     );
@@ -202,11 +203,11 @@ export function KeyboardShortcutsModal({
             );
           })}
 
-          {message ? <div className="keyboard-shortcuts-message">{message}</div> : null}
+          {message ? <div className="keyboard-shortcuts-message">{t('help:keyboard.conflict.message', { action: t(message.actionKey), scope: t(message.scopeKey) })}</div> : null}
 
           <div className="keyboard-shortcuts-actions">
-            <Button onClick={handleResetAll}>Tout réinitialiser</Button>
-            <Button variant="primary-violet" onClick={onClose}>Fermer</Button>
+            <Button onClick={handleResetAll}>{t('help:keyboard.resetAll.action')}</Button>
+            <Button variant="primary-violet" onClick={onClose}>{t('common:dialog.close.label')}</Button>
           </div>
         </div>
       </div>

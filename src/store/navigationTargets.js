@@ -71,7 +71,7 @@ export function decodeNavigationStoryId(target) {
 }
 
 // Id d'entrée ciblé par une cible typée (menu:/story:/story_play:/story_home_step:), ou null.
-export function refTargetEntryId(target) {
+export function navigationTargetEntryId(target) {
   return decodeNavigationStoryId(target) ?? decodeNavigationMenuId(target) ?? null;
 }
 

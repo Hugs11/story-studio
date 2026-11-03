@@ -1,4 +1,8 @@
 use super::*;
+use crate::support::user_message;
+use crate::support::user_message::codes;
+#[cfg(test)]
+use crate::support::user_message::MessageTransportAssertions as _;
 
 #[test]
 fn validate_existing_file_path_documents_current_canonicalization() {
@@ -30,27 +34,30 @@ fn validate_existing_file_path_documents_current_canonicalization() {
         "Fichier test",
     )
     .unwrap_err();
-    assert!(err.contains("Fichier test"));
-    assert!(err.contains("introuvable") || err.contains("inaccessible"));
+    let message: user_message::UserMessage = serde_json::from_str(&err).expect("coded file error");
+    assert_eq!(message.code, codes::FILES_NOT_FOUND_OR_INACCESSIBLE);
+    assert_eq!(message.params["label"], "Fichier test");
 
     let err = validate_existing_file_path(project_dir.to_str().expect("dir utf8"), "Fichier test")
         .unwrap_err();
-    assert!(err.contains("invalide"));
+    assert!(err.contains_any_code(&[codes::LABEL_VALUE_INVALID]));
 
     fs::remove_dir_all(project_dir).expect("cleanup temp project dir");
 }
 
 #[test]
 fn unpack_destination_requires_an_absolute_workspace_and_never_reuses_a_folder() {
-    assert!(validate_unpack_dest_dir("pack", "").is_err());
-    assert!(validate_unpack_dest_dir("pack", "relative-workspace").is_err());
+    assert!(validate_unpack_dest_dir("pack", "", None).is_err());
+    assert!(validate_unpack_dest_dir("pack", "relative-workspace", None).is_err());
 
     let workspace = temp_project_dir("unpack_destination");
     fs::create_dir_all(&workspace).expect("create workspace");
-    let first = validate_unpack_dest_dir("ignored/Pack Été", workspace.to_str().expect("utf8"))
-        .expect("reserve first extraction");
-    let second = validate_unpack_dest_dir("ignored/Pack Été", workspace.to_str().expect("utf8"))
-        .expect("reserve second extraction");
+    let first =
+        validate_unpack_dest_dir("ignored/Pack Été", workspace.to_str().expect("utf8"), None)
+            .expect("reserve first extraction");
+    let second =
+        validate_unpack_dest_dir("ignored/Pack Été", workspace.to_str().expect("utf8"), None)
+            .expect("reserve second extraction");
     let base = fs::canonicalize(workspace.join("zips-extraits")).expect("canonical base");
 
     assert_eq!(first.parent(), Some(base.as_path()));
@@ -102,4 +109,69 @@ fn validate_existing_file_path_accepts_windows_extended_prefix() {
     );
 
     fs::remove_dir_all(project_dir).expect("cleanup temp project dir");
+}
+
+#[test]
+fn project_extractions_stay_isolated_under_the_owned_folder() {
+    let workspace = temp_project_dir("project_unpack");
+    fs::create_dir_all(&workspace).unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    let folder = resolve_project_folder(workspace.to_str().unwrap(), "Azuro", &id, true).unwrap();
+    let destination = ProjectMediaDestination {
+        folder,
+        work_id: id,
+    };
+    let first =
+        validate_unpack_dest_dir("Pack", workspace.to_str().unwrap(), Some(&destination)).unwrap();
+    let second =
+        validate_unpack_dest_dir("Pack", workspace.to_str().unwrap(), Some(&destination)).unwrap();
+    assert_ne!(first, second);
+    assert_eq!(
+        first.parent(),
+        Some(
+            fs::canonicalize(workspace.join("zips-extraits/Azuro"))
+                .unwrap()
+                .as_path()
+        )
+    );
+    fs::remove_dir_all(workspace).unwrap();
+}
+
+#[test]
+fn translated_path_labels_keep_their_message_value_and_original_detail() {
+    use crate::support::user_message::{codes, MessageLabel, UserMessage};
+    let context = MessageLabel::new(
+        "Histoire / Loup",
+        UserMessage::new(codes::LABEL_PROJECT_PATH)
+            .param(
+                "context",
+                MessageLabel::literal("Histoire", codes::LABEL_PROJECT_STORY).value(),
+            )
+            .param("name", "Loup"),
+    );
+    let label = MessageLabel::new(
+        "Histoire / Loup : audio",
+        UserMessage::new(codes::LABEL_PROJECT_AUDIO).param("context", context.value()),
+    );
+    let missing = temp_project_dir("coded_label").join("missing.wav");
+    for error in [
+        validate_existing_file_path_with_label(missing.to_str().unwrap(), &label).unwrap_err(),
+        validate_existing_dir_path_with_label(missing.to_str().unwrap(), &label).unwrap_err(),
+    ] {
+        let message: UserMessage = serde_json::from_str(&error).unwrap();
+        assert_eq!(message.code, codes::FILES_NOT_FOUND_OR_INACCESSIBLE);
+        assert_eq!(message.params["label"], label.value());
+        assert!(message
+            .detail
+            .unwrap()
+            .starts_with("Histoire / Loup : audio introuvable ou inaccessible : "));
+    }
+    let error = absolute_path_with_label("", &label).unwrap_err();
+    let message: UserMessage = serde_json::from_str(&error).unwrap();
+    assert_eq!(message.code, codes::LABEL_VALUE_EMPTY);
+    assert_eq!(message.params["label"], label.value());
+    assert_eq!(
+        message.detail.as_deref(),
+        Some("Histoire / Loup : audio vide.")
+    );
 }

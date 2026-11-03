@@ -6,9 +6,26 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { dropFiles } from './drop.mjs';
-import { answerNext, discardPendingAnswer } from './dialogs.mjs';
+import { answerNext, dialogLog, discardPendingAnswer } from './dialogs.mjs';
 
 export const MODALS = '[role="dialog"], [role="alertdialog"]';
+
+export const CATALOGUE_DENSITY = '.catalogue-statusbar input[type="range"]#catalogue-card-density';
+
+// Curseur natif : Home puis flèches, sans écriture de value ni événement simulé.
+export async function setCatalogueDensity(page, index) {
+  if (![0, 1, 2].includes(index)) throw new Error('Cran de densité invalide');
+  await page.locator(CATALOGUE_DENSITY).waitFor();
+  await page.evaluate(selector => document.querySelector(selector).focus(), CATALOGUE_DENSITY);
+  const keys = ['Home', ...Array(index).fill('ArrowRight')];
+  for (const key of keys) {
+    if (page.client) {
+      const value = key === 'Home' ? '\uE011' : '\uE014';
+      await page.client.command('POST', '/actions', { actions: [{ type: 'key', id: 'keyboard', actions: [{ type: 'keyDown', value }, { type: 'keyUp', value }] }] });
+      await page.drain();
+    } else await page.keyboard.press(key);
+  }
+}
 
 export async function clickButton(scope, name, { timeout = 0 } = {}) {
   const started = Date.now();
@@ -21,7 +38,7 @@ export async function clickButton(scope, name, { timeout = 0 } = {}) {
     }
     if (timeout) await new Promise(done => setTimeout(done, 250));
   } while (Date.now() - started < timeout);
-  return false;
+  throw new Error(`Bouton introuvable : ${String(name)}`);
 }
 
 export function modalWithText(page, text) {
@@ -51,9 +68,8 @@ export function projectMenuButton(page) {
 /**
  * Depuis l'accueil : ouvre un nouveau projet dans le mode donné
  * ('simple' | 'pack' | 'advanced'). Rend la main quand l'éditeur est affiché
- * (barre d'outils « Projet » visible ; pour 'advanced', attend en plus que
- * « Générer le pack » soit actif, l'ouverture du graphe prenant quelques
- * secondes).
+ * (barre d'outils « Projet » visible ; pour 'advanced', attend en plus
+ * l'Écran initial dans la liste du graphe, donc son index effectivement chargé).
  */
 export async function newProject(page, mode, { timeout = 120_000 } = {}) {
   const name = EDITOR_TILE_NAME[mode];
@@ -84,6 +100,10 @@ export async function newProject(page, mode, { timeout = 120_000 } = {}) {
   ]);
   if (mode === 'advanced') {
     await page.getByRole('button', { name: /Générer le pack/ }).first().waitFor({ timeout });
+    // La barre précède Suspense et la lecture de l'index. Créer ici sans
+    // attendre la liste donne un second « Écran 1 » (tour 2 C1).
+    // 1f5e559ca : le nom suivant est calculé depuis view.index.
+    await page.locator('li[role="option"][data-kind="stage"]:visible').first().waitFor({ timeout });
   }
 }
 
@@ -220,10 +240,11 @@ async function generatePackWithDialog(page, outDir, { uuid, timeout, events }) {
     return { zip: null, refusal: `génération bloquée : ${validation.count} à corriger`, blockingCount: validation.count, prompts: [], outDirListing: listing() };
   }
   await answerNext(page, 'open', outDir);
+  const dialogCount = (await dialogLog(page)).length;
+  let clickedAt = Date.now();
   await page.keyboard.press('Control+g');
   const prompts = [];
-  await clickButton(page, /Appliquer\s*&\s*générer/, { timeout: 30_000 });
-  const clickedAt = Date.now();
+  await enterGeneration(page, { dialogCount, outDir, onApply: () => { clickedAt = Date.now(); } });
   const revision = modalWithText(page, 'Nouvelle révision');
   await revision.waitFor({ timeout: 5_000 }).catch(() => {});
   if (await revision.count()) {
@@ -261,4 +282,24 @@ async function generatePackWithDialog(page, outDir, { uuid, timeout, events }) {
     await page.waitForTimeout(1000);
   }
   return { zip: null, timeout: true, prompts, outDirListing: readdirSync(outDir) };
+}
+
+// bedf99e82 conserve la voie simple déjà nommée : elle ouvre directement
+// le dossier. Exiger ce dialogue réellement répondu, ou le CTA de la fiche ;
+// l'absence des deux reste un échec technique, jamais un succès implicite.
+export async function enterGeneration(page, { dialogCount, outDir, onApply = () => {}, timeout = 30_000 }) {
+  const deadline = Date.now() + timeout;
+  do {
+    const sheet = page.locator('.pack-meta-modal:visible');
+    if (await sheet.count()) {
+      await clickButton(sheet, /Appliquer\s*&\s*générer/, { timeout: 5_000 });
+      onApply();
+      return;
+    }
+    const direct = (await dialogLog(page)).slice(dialogCount).some(entry =>
+      entry.kind === 'open' && entry.args?.[0]?.directory === true && entry.answered === outDir);
+    if (direct) return;
+    await page.waitForTimeout(100);
+  } while (Date.now() < deadline);
+  throw new Error('Génération : ni fiche du pack ni choix du dossier sous ' + timeout + ' ms');
 }

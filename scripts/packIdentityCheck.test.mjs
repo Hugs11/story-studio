@@ -15,7 +15,7 @@ function bridge(refusal = null) {
 test('a readable UUID passes and asks the shared Rust rule', async () => {
   const { invoke, calls } = bridge();
   assert.equal(await packIdentityRefusal('0A1B2C3D4E5F4A6B8C7D9E0F1A2B3C4D', invoke), null);
-  assert.deepEqual(calls, [{ command: 'check_pack_identity', args: { value: '0A1B2C3D4E5F4A6B8C7D9E0F1A2B3C4D' } }]);
+  assert.deepEqual(calls, [{ command: 'check_pack_identity', args: { value: '0A1B2C3D4E5F4A6B8C7D9E0F1A2B3C4D', currentUuid: '', officialProvenance: 'unknown' } }]);
 });
 
 test('a refused UUID says why and what to do', async () => {
@@ -30,4 +30,10 @@ test('an empty UUID is sent as an empty string, never as undefined', async () =>
   const { invoke, calls } = bridge("L'UUID du pack est vide.");
   assert.match(await packIdentityRefusal(undefined, invoke), /est vide/);
   assert.equal(calls[0].args.value, '');
+});
+
+test('checker sends the source identity and provenance alongside the requested UUID', async () => {
+  const { invoke, calls } = bridge();
+  await packIdentityRefusal('requested', invoke, 'source', 'official');
+  assert.deepEqual(calls[0].args, { value: 'requested', currentUuid: 'source', officialProvenance: 'official' });
 });

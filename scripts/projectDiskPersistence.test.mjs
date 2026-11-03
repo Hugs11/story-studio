@@ -52,11 +52,13 @@ const simpleProject = () => normalizeProjectData({
   rootEntries: [{ id: 'story-1', type: 'story', name: 'Le renard' }],
 });
 
-const refProject = () => normalizeProjectData({
-  projectName: 'pack-a-refs',
+// Convergence hébergée : une histoire du dossier revient, après lecture, à une
+// histoire de la racine (la seule forme de convergence de l'éditeur par menus).
+const convergenceProject = () => normalizeProjectData({
+  projectName: 'pack-convergent',
   rootEntries: [
     { id: 'story-1', type: 'story', name: 'Partagée' },
-    { id: 'menu-1', type: 'menu', name: 'Dossier', children: [{ id: 'ref-1', type: 'ref', target: 'story:story-1' }] },
+    { id: 'menu-1', type: 'menu', name: 'Dossier', children: [{ id: 'story-2', type: 'story', name: 'Détour', returnAfterPlay: 'story_play:story-1' }] },
   ],
 });
 
@@ -83,7 +85,7 @@ const readJson = async (path) => JSON.parse(await fs.readFile(path, 'utf8'));
 
 test('les trois témoins Libre traversent enregistrement, relecture et Save As', async () => {
   await withHarness(async (harness) => {
-    for (const [name, build] of [['simple', simpleProject], ['refs', refProject], ['oracle', oracleProject]]) {
+    for (const [name, build] of [['simple', simpleProject], ['convergence', convergenceProject], ['oracle', oracleProject]]) {
       const projectDir = await harness.mkdirp(name);
       const savePath = `${projectDir}/${name}.mbah`;
       const saved = await io.saveProject(build(), savePath);
@@ -316,7 +318,7 @@ test('le transfert d’un projet avancé copie hors du projet et requalifie les 
 
     const candidates = io.collectTransferableProjectFiles(project, savePath);
     assert.deepEqual(candidates.map((candidate) => candidate.path), [`${externe}/voix.mp3`]);
-    assert.deepEqual(candidates.map((candidate) => candidate.label), ['Média avancé: externe.mp3']);
+    assert.deepEqual(candidates.map((candidate) => candidate.label), ['Média avancé : externe.mp3']);
 
     const transferred = await io.transferProjectFilesToProject(
       project,
@@ -340,7 +342,7 @@ test('le transfert d’un projet avancé copie hors du projet et requalifie les 
     );
     assert.equal(failing.copiedCount, 0);
     assert.deepEqual(failing.errors.map((error) => [error.path, error.label]),
-      [[`${externe}/voix.mp3`, 'Média avancé: externe.mp3']]);
+      [[`${externe}/voix.mp3`, 'Média avancé : externe.mp3']]);
     assert.equal(failing.project.authoring.mediaBindings[0].path, `${externe}/voix.mp3`);
     assert.equal(failing.project.authoring.mediaBindings[0].status, 'missing');
   });

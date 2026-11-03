@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, UserMessage};
 use uuid::Uuid;
 
 use super::super::preparation::deterministic_stage_uuid;
@@ -6,7 +7,6 @@ use super::super::{
     reorder_document_for_display, validate_document_for_studio_compat, ActionNode, ControlSettings,
     NativeAssetPreparationReport, Presence, StageNode, StoryDocument, Transition,
 };
-use super::refs::PendingRefOption;
 use super::{menu::*, story::*, transitions::*};
 
 pub(in crate::native_pack) struct StoryBuilder<'a> {
@@ -22,7 +22,6 @@ pub(in crate::native_pack) struct StoryBuilder<'a> {
         std::collections::HashMap<String, MenuPrealloc>,
     pub(in crate::native_pack::builder) story_prealloc:
         std::collections::HashMap<String, StoryPrealloc>,
-    pub(in crate::native_pack::builder) pending_ref_options: Vec<PendingRefOption>,
     /// Actions de lecture émises pour un Écran combiné : utiles seulement si une
     /// transition les référence (`story_play:`), ce qu'on ne sait qu'une fois
     /// tout l'arbre construit.
@@ -43,7 +42,6 @@ impl<'a> StoryBuilder<'a> {
             night_bridge_cache: std::collections::HashMap::new(),
             menu_prealloc: std::collections::HashMap::new(),
             story_prealloc: std::collections::HashMap::new(),
-            pending_ref_options: Vec::new(),
             combined_play_action_ids: Vec::new(),
             imported_group_ids: std::collections::HashSet::new(),
         }
@@ -108,15 +106,12 @@ impl<'a> StoryBuilder<'a> {
         };
 
         if root_targets.is_empty() {
-            return Err("Aucune entree native construite pour le projet.".to_string());
+            return Err(UserMessage::new(codes::GENERATION_NATIVE_ENTRIES_EMPTY).into_transport());
         }
 
         if let Some(action_id) = shared_action_id.as_deref() {
-            let shared_targets = self.build_shared_entries(
-                &project.shared_entries,
-                action_id,
-                &shared_approach_action_ids,
-            )?;
+            let shared_targets =
+                self.build_shared_entries(&project.shared_entries, &shared_approach_action_ids)?;
             self.action_nodes.push(ActionNode {
                 id: action_id.to_string(),
                 name: action_node_name(),
@@ -152,9 +147,6 @@ impl<'a> StoryBuilder<'a> {
             position: no_authored_position(),
         });
 
-        // Tout l'arbre est construit : les nœuds `ref` peuvent maintenant pointer vers
-        // le vrai stage natif de leur cible (y compris les références « en avant »).
-        self.resolve_pending_ref_options()?;
         self.drop_unreferenced_combined_play_actions();
         release_entry_identity(
             &mut self.stage_nodes,
@@ -233,7 +225,9 @@ impl<'a> StoryBuilder<'a> {
         if self.report.for_simulation {
             return Ok(crate::native_pack::simulation::SIMULATION_MISSING_ASSET.to_string());
         }
-        Err(format!("Asset prepare introuvable pour le role {}", role))
+        Err(UserMessage::new(codes::GENERATION_PREPARED_ASSET_MISSING)
+            .param("role", (role).to_string())
+            .into_transport())
     }
 
     pub(in crate::native_pack::builder) fn next_id(&self) -> String {

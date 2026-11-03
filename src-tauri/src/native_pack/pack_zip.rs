@@ -29,6 +29,7 @@ pub(super) struct ArchiveAsset<'a> {
 
 /// Le contenu exact d'une archive, avant écriture.
 pub(super) struct ArchiveContents<'a> {
+    pub(super) identity: &'a super::output_identity::OutputIdentity,
     pub(super) story_json: &'a str,
     pub(super) assets: Vec<ArchiveAsset<'a>>,
     /// Couverture déjà encodée en PNG. `None` quand l'écran d'entrée n'a pas
@@ -92,6 +93,16 @@ pub(super) fn write_pack_zip(
     contents: &ArchiveContents<'_>,
     zip_path: &Path,
 ) -> Result<(), ZipWriteError> {
+    let authorized_story = contents
+        .identity
+        .serialize(contents.story_json)
+        .map_err(|error| ZipWriteError::at(zip_path, error))?;
+    if authorized_story != contents.story_json {
+        return Err(ZipWriteError::at(
+            zip_path,
+            "Output identity was not applied before serialization",
+        ));
+    }
     if let Some(parent) = zip_path.parent() {
         fs::create_dir_all(parent).map_err(|error| ZipWriteError::at(parent, error))?;
     }

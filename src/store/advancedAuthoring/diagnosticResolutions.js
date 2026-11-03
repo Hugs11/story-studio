@@ -1,3 +1,4 @@
+import { translateGraph as t } from '../../i18n/graphPresentation.js';
 // Ce qu'une résolution de diagnostic demande réellement à l'auteur.
 //
 // Règle tenue ici et vérifiée par les tests : **pas de dialogue sans
@@ -24,40 +25,40 @@ export const RESOLUTION_FORM = 'form';
 export const RESOLUTION_REVEAL = 'reveal';
 
 const BLOCKING_COPY = Object.freeze({
-  STAGE_ID_EMPTY: ['Erreur de structure', "Cet Écran n’a pas d’identifiant."],
-  DUPLICATE_STAGE_ID: ['Erreur de structure', 'Plusieurs Écrans utilisent le même identifiant.'],
-  ACTION_ID_EMPTY: ['Erreur de structure', "Cette liste de choix n’a pas d’identifiant."],
-  DUPLICATE_ACTION_ID: ['Erreur de structure', 'Plusieurs listes de choix utilisent le même identifiant.'],
-  SQUARE_ONE_COUNT: ['Erreur de structure', 'Le pack doit avoir un seul Écran racine.'],
-  TRANSITION_ACTION_MISSING: ['Erreur de structure', 'Une transition mène vers une liste de choix inexistante.'],
-  OPTION_TARGET_NULL: ['Erreur de structure', 'Un choix de cette liste attend son Écran.'],
-  OPTION_TARGET_MISSING: ['Erreur de structure', 'Un choix de cette liste mène vers un Écran inexistant.'],
-  OPTION_SELECTION_INVALID: ['Erreur de structure', 'Le choix d’arrivée dans cette liste est invalide.'],
-  ENRICHED_GROUP_INCOHERENT: ['Décision requise', 'Ce groupe doit être réparé ou aplati avant la génération.'],
-  ORPHAN_ACTION_AUTHORED_CONTENT: ['Erreur de structure', 'Cette liste de choix doit être ouverte par un Écran, ou retirée.'],
+  STAGE_ID_EMPTY: ['graph:diagnostics.structure.category', 'graph:diagnostics.stageId.empty'],
+  DUPLICATE_STAGE_ID: ['graph:diagnostics.structure.category', 'graph:diagnostics.stageId.duplicate'],
+  ACTION_ID_EMPTY: ['graph:diagnostics.structure.category', 'graph:diagnostics.actionId.empty'],
+  DUPLICATE_ACTION_ID: ['graph:diagnostics.structure.category', 'graph:diagnostics.actionId.duplicate'],
+  SQUARE_ONE_COUNT: ['graph:diagnostics.structure.category', 'graph:diagnostics.entry.count'],
+  TRANSITION_ACTION_MISSING: ['graph:diagnostics.structure.category', 'graph:diagnostics.transition.missing'],
+  OPTION_TARGET_NULL: ['graph:diagnostics.structure.category', 'graph:diagnostics.option.null'],
+  OPTION_TARGET_MISSING: ['graph:diagnostics.structure.category', 'graph:diagnostics.option.missing'],
+  OPTION_SELECTION_INVALID: ['graph:diagnostics.structure.category', 'graph:diagnostics.selection.invalid'],
+  ENRICHED_GROUP_INCOHERENT: ['graph:diagnostics.decision.category', 'graph:diagnostics.group.incoherent'],
+  ORPHAN_ACTION_AUTHORED_CONTENT: ['graph:diagnostics.structure.category', 'graph:diagnostics.action.orphan'],
   // Posé par une coupe, jamais déduit du document : un Écran sans destination
   // est indiscernable d'un Écran de fin, et un projet neuf en est un.
-  TRANSITION_SEVERED_BY_REMOVAL: ['Erreur de structure', 'Cet Écran a perdu sa destination : le raccorder, ou désactiver son bouton.'],
-  POSITION_DISPOSITION_STALE: ['Décision requise', 'La position de ce nœud doit être validée de nouveau.'],
-  POSITION_OUT_OF_RANGE_ACTION_REQUIRED: ['Décision requise', 'La position de ce nœud doit être adaptée avant la génération.'],
-  OPAQUE_EXTENSION_DISPOSITION_STALE: ['Décision requise', 'Une donnée importée doit être validée de nouveau.'],
-  OPAQUE_EXTENSION_DISPOSITION_REQUIRED: ['Décision requise', 'Choisissez comment traiter une donnée importée non reconnue.'],
-  CONTROL_SETTINGS_INCOMPLETE: ['Réglage incomplet', 'Configurez les boutons de cet Écran.'],
+  TRANSITION_SEVERED_BY_REMOVAL: ['graph:diagnostics.structure.category', 'graph:diagnostics.transition.severed'],
+  POSITION_DISPOSITION_STALE: ['graph:diagnostics.decision.category', 'graph:diagnostics.position.stale'],
+  POSITION_OUT_OF_RANGE_ACTION_REQUIRED: ['graph:diagnostics.decision.category', 'graph:diagnostics.position.range'],
+  OPAQUE_EXTENSION_DISPOSITION_STALE: ['graph:diagnostics.decision.category', 'graph:diagnostics.opaque.stale'],
+  OPAQUE_EXTENSION_DISPOSITION_REQUIRED: ['graph:diagnostics.decision.category', 'graph:diagnostics.opaque.required'],
+  CONTROL_SETTINGS_INCOMPLETE: ['graph:diagnostics.controls.category', 'graph:diagnostics.controls.incomplete'],
   // Règles de navigation de la Lunii (`port_rules.rs`), les mêmes qu'au
   // générateur par menus : la Lunii s'y bloque ou y montre un faux menu racine.
-  HOME_LOOPS_TO_SELF: ['Navigation bloquante', 'Le bouton Accueil ramène cet Écran sur lui-même.'],
-  OK_LOOPS_TO_SELF: ['Navigation bloquante', 'Le bouton OK ramène cet Écran sur lui-même.'],
-  OK_WITHOUT_USABLE_DESTINATION: ['Navigation bloquante', 'OK ou la fin automatique est actif sans destination utilisable.'],
-  NO_USABLE_EXIT: ['Navigation bloquante', 'Cet Écran accessible ne permet aucune sortie, même par la molette.'],
-  ENTRY_STAGE_AS_OPTION: ['Navigation bloquante', 'Un choix de cette liste mène à l’Écran d’entrée.'],
+  HOME_LOOPS_TO_SELF: ['graph:diagnostics.navigation.category', 'graph:diagnostics.home.loop'],
+  OK_LOOPS_TO_SELF: ['graph:diagnostics.navigation.category', 'graph:diagnostics.ok.loop'],
+  OK_WITHOUT_USABLE_DESTINATION: ['graph:diagnostics.navigation.category', 'graph:diagnostics.ok.missing'],
+  NO_USABLE_EXIT: ['graph:diagnostics.navigation.category', 'graph:diagnostics.exit.absent'],
+  ENTRY_STAGE_AS_OPTION: ['graph:diagnostics.navigation.category', 'graph:diagnostics.entry.option'],
 });
 
 function blockingCopy(row) {
   return BLOCKING_COPY[row.code]
-    ?? [row.source === 'decode' ? 'Erreur de document' : 'Erreur de structure',
+    ?? [row.source === 'decode' ? 'graph:diagnostics.document.category' : 'graph:diagnostics.structure.category',
       row.source === 'decode'
-        ? 'Le document contient une donnée invalide.'
-        : 'La structure du pack doit être corrigée avant la génération.'];
+        ? 'graph:diagnostics.decode.invalid'
+        : 'graph:diagnostics.structure.invalid'];
 }
 
 function fallbackNodePath(row, index) {
@@ -70,9 +71,9 @@ function affectedNodeLabel(nodePath, index) {
   const entry = nodePath ? index?.byPath?.get(nodePath) : null;
   const label = entry?.label?.label;
   if (!label) return null;
-  const kind = entry.kind === STAGE_KIND ? 'Écran'
-    : entry.kind === ACTION_KIND ? 'Liste de choix' : 'Nœud';
-  return `${kind} « ${label} »`;
+  const kind = entry.kind === STAGE_KIND ? t('graph:type.stage.label')
+    : entry.kind === ACTION_KIND ? t('graph:type.action.label') : t('graph:diagnostics.node.kind');
+  return t('graph:diagnostics.node.label', { kind, name: label });
 }
 
 // La liste utilisateur ne reprend que les portes qui bloquent réellement la
@@ -81,20 +82,22 @@ function affectedNodeLabel(nodePath, index) {
 export function buildAdvancedBlockingIssues({
   summary, diagnostics = [], usage = null, index = null, readinessError = null,
 }) {
+  /* eslint-disable i18next/no-literal-string -- Clé technique opaque composée de code, NUL et chemin ; aucun texte affiché. */
   const diagnosticByKey = new Map(diagnostics.map((diagnostic) => [
     `${diagnostic.code}\u0000${diagnostic.path}`,
     diagnostic,
   ]));
   const issues = (summary?.blocking ?? []).map((row, position) => {
     const diagnostic = diagnosticByKey.get(`${row.code}\u0000${row.path}`) ?? null;
+    /* eslint-enable i18next/no-literal-string */
     const [category, message] = blockingCopy(row);
     return {
       id: `blocking:${row.source}:${row.code}:${row.path}:${position}`,
-      category,
-      message,
+      get category() { return t(category); },
+      get message() { return t(message); },
       // Le chemin de secours sert à guider la réparation d'une erreur du
       // document ; il ne désigne pas un nœud fautif.
-      nodeLabel: affectedNodeLabel(diagnostic?.nodePath, index),
+      get nodeLabel() { return affectedNodeLabel(diagnostic?.nodePath, index); },
       // L'absence d'Écran d'entrée concerne le document entier. On conduit
       // tout de même l'auteur vers un Écran existant pour qu'il puisse agir.
       nodePath: diagnostic?.nodePath ?? fallbackNodePath(row, index),
@@ -105,8 +108,8 @@ export function buildAdvancedBlockingIssues({
   if (readinessError) {
     issues.push({
       id: 'readiness:failed',
-      category: 'Erreur de document',
-      message: 'Le document ne peut pas être vérifié avant la génération.',
+      get category() { return t('graph:diagnostics.document.category'); },
+      get message() { return t('graph:diagnostics.readiness.failed'); },
       nodeLabel: null,
       nodePath: null,
       diagnostic: null,
@@ -118,14 +121,14 @@ export function buildAdvancedBlockingIssues({
     const firstUsage = entry.usages?.[0] ?? null;
     const nodePath = firstUsage?.nodePath ?? null;
     const label = nodePath ? index?.byPath.get(nodePath)?.label?.label : null;
-    const field = firstUsage?.field === 'image' ? 'image' : 'audio';
+    const fieldKey = firstUsage?.field === 'image' ? 'graph:diagnostics.media.image' : 'graph:diagnostics.media.audio';
     issues.push({
       id: `media:${entry.assetRef}`,
-      category: 'Média manquant',
-      nodeLabel: affectedNodeLabel(nodePath, index),
-      message: label
-        ? `Ajoutez le fichier ${field} de « ${label} ».`
-        : `Ajoutez le fichier ${field} utilisé par le pack.`,
+      get category() { return t('graph:diagnostics.media.category'); },
+      get nodeLabel() { return affectedNodeLabel(nodePath, index); },
+      get message() { return label
+        ? t('graph:diagnostics.media.named', { field: t(fieldKey), name: label })
+        : t('graph:diagnostics.media.unnamed', { field: t(fieldKey) }); },
       nodePath,
       diagnostic: null,
     });
@@ -136,30 +139,30 @@ export function buildAdvancedBlockingIssues({
 const POSITION_DISPOSITIONS = Object.freeze({
   'scale-position-to-short-range': {
     disposition: 'scale-to-short-range',
-    label: 'Mettre à l’échelle dans [-32768, 32767]',
+    label: 'graph:diagnostics.position.scale',
   },
   'omit-position': {
     disposition: 'omit-explicitly',
-    label: 'Omettre cette position à l’export',
+    label: 'graph:diagnostics.position.omit',
   },
   'preserve-raw-accept-dantsu-loss': {
     disposition: 'preserve-raw-accept-dantsu-loss',
-    label: 'Préserver la valeur brute et accepter la perte d’affichage STUdio',
+    label: 'graph:diagnostics.position.preserve',
   },
 });
 
 const OPAQUE_DISPOSITIONS = Object.freeze({
   'preserve-opaque-untested': {
     disposition: 'preserve-untested',
-    label: 'Préserver la valeur, dimension UNTESTED',
+    label: 'graph:diagnostics.opaque.preserve',
   },
   'remove-opaque-explicitly': {
     disposition: 'remove-explicitly',
-    label: 'Supprimer explicitement à l’export',
+    label: 'graph:diagnostics.opaque.remove',
   },
   'promote-opaque-after-proof': {
     disposition: 'promote-after-proof',
-    label: 'Promouvoir après preuve',
+    label: 'graph:diagnostics.opaque.promote',
   },
 });
 
@@ -176,7 +179,7 @@ function nodeRefOf(index, nodePath) {
 // `diagnose_opaque_members`. Le `path` du DTO, lui, ne désigne que le porteur.
 function opaqueMemberDiagnosticPath(member) {
   const segment = String(member?.key ?? '').replaceAll('~', '~0').replaceAll('/', '~1');
-  return `${String(member?.path ?? '').replace(/\/+$/, '')}/${segment}`;
+  return `${member.path}/${segment}`;
 }
 
 function opaqueMemberOf(view, path) {
@@ -211,7 +214,7 @@ export function resolutionsForDiagnostic({ diagnostic, view, index }) {
       offered.push({
         id: 'choose-square-one',
         nature: RESOLUTION_FORM,
-        label: 'Choisir l’Écran racine…',
+        get label() { return t('graph:diagnostics.entry.choose'); },
         form: 'square-one',
         path: null,
       });
@@ -225,7 +228,7 @@ export function resolutionsForDiagnostic({ diagnostic, view, index }) {
       offered.push({
         id: resolution,
         nature: RESOLUTION_GESTURE,
-        label: position.label,
+        get label() { return t(position.label); },
         gesture: advancedGestures.setPositionExportDisposition(node, position.disposition),
       });
       continue;
@@ -238,9 +241,9 @@ export function resolutionsForDiagnostic({ diagnostic, view, index }) {
         offered.push({
           id: `${resolution}#${member.sourceOccurrence}`,
           nature: RESOLUTION_GESTURE,
-          label: members.length > 1
-            ? `${opaque.label} — ${member.key} (occurrence ${member.sourceOccurrence})`
-            : `${opaque.label} — ${member.key}`,
+          get label() { return members.length > 1
+            ? t('graph:diagnostics.opaque.occurrence', { decision: t(opaque.label), member: member.key, ordinal: member.sourceOccurrence })
+            : t('graph:diagnostics.opaque.member', { decision: t(opaque.label), member: member.key }); },
           gesture: advancedGestures.setOpaqueExportDisposition(member, opaque.disposition),
         });
       }
@@ -253,7 +256,7 @@ export function resolutionsForDiagnostic({ diagnostic, view, index }) {
       offered.push({
         id: resolution,
         nature: RESOLUTION_GESTURE,
-        label: `Aplatir le groupe « ${group.groupId} » (perte définitive de ses marqueurs)`,
+        get label() { return t('graph:diagnostics.group.flatten', { name: group.groupId }); },
         destructive: true,
         gesture: advancedGestures.flattenKnownGroup(group.groupId),
       });
@@ -268,7 +271,7 @@ export function resolutionsForDiagnostic({ diagnostic, view, index }) {
         // Réparer un groupe, c'est en rétablir la forme avec les gestes
         // ordinaires : aucun geste ne le fait d'un coup, et prétendre
         // le contraire serait inventer une commande.
-        label: 'Montrer les nœuds du groupe à réparer',
+        get label() { return t('graph:diagnostics.group.reveal'); },
         paths: group ? [...group.stagePaths, ...group.actionPaths] : [diagnostic.nodePath],
       });
       continue;
@@ -282,7 +285,7 @@ export function resolutionsForDiagnostic({ diagnostic, view, index }) {
         nature: RESOLUTION_FORM,
         // Compléter est un choix explicite des cinq valeurs. Les déduire ici
         // reviendrait à écrire `false` à la place de l'auteur.
-        label: 'Compléter les cinq contrôles',
+        get label() { return t('graph:diagnostics.controls.complete'); },
         form: 'controls',
         path: diagnostic.nodePath,
       });
@@ -298,13 +301,13 @@ export function resolutionsForDiagnostic({ diagnostic, view, index }) {
           nature: RESOLUTION_GESTURE,
           // Sans destination, Accueil revient au début du pack : le retour
           // Lunii par défaut.
-          label: 'Retirer la destination Accueil (retour au début du pack)',
+          get label() { return t('graph:diagnostics.home.clear'); },
           gesture: advancedGestures.setStageTransition(entry.node.uuid, 'home', presence.null()),
         }
         : {
           id: resolution,
           nature: RESOLUTION_GESTURE,
-          label: 'Désactiver le bouton Accueil sur l’Écran d’entrée',
+          get label() { return t('graph:diagnostics.home.disable'); },
           gesture: advancedGestures.setStageControls(entry.node.uuid, { home: presence.value(false) }),
         });
       continue;
@@ -319,7 +322,7 @@ export function resolutionsForDiagnostic({ diagnostic, view, index }) {
         ? {
           id: resolution,
           nature: RESOLUTION_GESTURE,
-          label: 'En faire une fin',
+          get label() { return t('graph:diagnostics.ending.make'); },
           gesture: advancedGestures.setStageControls(entry.node.uuid, {
             ok: presence.value(false),
             autoplay: presence.value(false),
@@ -329,7 +332,7 @@ export function resolutionsForDiagnostic({ diagnostic, view, index }) {
         : {
           id: resolution,
           nature: RESOLUTION_GESTURE,
-          label: 'Activer Accueil',
+          get label() { return t('graph:diagnostics.home.enable'); },
           gesture: advancedGestures.setStageControls(entry.node.uuid, { home: presence.value(true) }),
         });
       continue;
@@ -341,7 +344,7 @@ export function resolutionsForDiagnostic({ diagnostic, view, index }) {
       offered.push({
         id: resolution,
         nature: RESOLUTION_FORM,
-        label: 'Relier un Écran à cette liste de choix, ou la retirer',
+        get label() { return t('graph:diagnostics.action.connect'); },
         form: 'orphan-action',
         path: diagnostic.nodePath,
       });

@@ -1,7 +1,12 @@
+import { presentUserMessage } from '../../i18n/userMessage.js';
+import { translateHome as t } from '../../i18n/homePresentation.js';
+import { useHomeTranslation } from '../../i18n/useHomeTranslation.js';
+import { getIntlLocale } from '../../i18n/language.js';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
-import { BookOpenText, FilePen, FolderOpen, Layers, Package, Rss, ShieldCheck, SlidersHorizontal, SwatchBook, Waypoints, X, Youtube } from '../icons/LucideLocal';
+import { LanguageAnnouncement } from './LanguageAnnouncement.jsx';
+import { BookOpenText, FilePen, FolderOpen, Layers, Rss, ShieldCheck, SlidersHorizontal, SquarePen, SwatchBook, Waypoints, X, Youtube } from '../icons/LucideLocal';
 import { useErrorDialog } from '../common/Dialog';
 import { Tooltip } from '../common/Tooltip';
 import { useLocalFile } from '../../hooks/useLocalFile';
@@ -17,24 +22,24 @@ function formatRecentDate(updatedAt) {
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return 'Aujourd’hui';
-  if (date.toDateString() === yesterday.toDateString()) return 'Hier';
-  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  if (date.toDateString() === today.toDateString()) return t('home:modeSelector.date.today');
+  if (date.toDateString() === yesterday.toDateString()) return t('home:modeSelector.date.yesterday');
+  return date.toLocaleDateString(getIntlLocale(), { day: 'numeric', month: 'short' });
 }
 
 // Le nom exact de l'éditeur qui rouvrira le projet, comme sur ses cartes.
 // Un type inconnu ne se devine pas : aucun libellé plutôt qu'un faux.
 function projectTypeLabel(type) {
-  if (type === 'advanced') return 'Éditeur graphe';
-  if (type === 'simple') return 'Éditeur simplifié';
-  if (type === 'pack') return 'Éditeur par menus';
+  if (type === 'advanced') return t('home:modeSelector.graph.label');
+  if (type === 'simple') return t('home:modeSelector.simple.label');
+  if (type === 'pack') return t('home:modeSelector.menu.label');
   return null;
 }
 
 function recoverySubtitle(recovery) {
   return [
     projectTypeLabel(recovery.projectType),
-    'Non enregistré',
+    t('home:modeSelector.recovery.unsaved'),
     formatRecentDate(recovery.modifiedAtMs),
   ].filter(Boolean).join(' · ');
 }
@@ -67,6 +72,7 @@ export function ModeSelector({
   onYoutubeFunnel,
   onAggregatePacks,
   onCheckPack,
+  onOpenCatalogue,
   onOpen,
   onOpenPreferences,
   recentProjects = [],
@@ -75,6 +81,7 @@ export function ModeSelector({
   onRecoverSession,
   onIgnoreSessionRecovery,
 }) {
+  const { t } = useHomeTranslation();
   const { showErrorDialog } = useErrorDialog();
   const [loadedThumbnails, setLoadedThumbnails] = useState({});
   const visibleRecentProjects = useMemo(() => recentProjects.slice(0, 6), [recentProjects]);
@@ -89,8 +96,9 @@ export function ModeSelector({
       await openUrl(DOCUMENTATION_URL);
     } catch (error) {
       showErrorDialog({
-        title: 'Documentation inaccessible',
-        message: `Impossible d’ouvrir la documentation dans le navigateur : ${error}`,
+        get title() { return t('home:modeSelector.documentation.errorTitle'); },
+        message: { key: 'home:modeSelector.documentation.errorMessage', params: { error: { userMessage: error, codedOnly: true } } },
+        technicalDetail: presentUserMessage(error).technicalDetail,
       });
     }
   }
@@ -99,9 +107,9 @@ export function ModeSelector({
     {
       key: 'pack',
       Icon: SwatchBook,
-      name: 'Éditeur par menus',
-      desc: 'Menus et dossiers imbriqués, agrégation de ZIP',
-      note: 'Anciennement Éditeur libre',
+      name: t('home:modeSelector.menu.label'),
+      desc: t('home:modeSelector.menu.description'),
+      note: t('home:modeSelector.menu.previousName'),
       onClick: () => onSelect('pack'),
     },
     {
@@ -109,60 +117,67 @@ export function ModeSelector({
       // L'Action est la notion propre à cet éditeur ; `Network` désigne déjà
       // les vues de diagramme et la structure d'un pack.
       Icon: Waypoints,
-      name: 'Éditeur graphe',
-      desc: 'Navigation libre : Écrans, listes de choix et raccords avancés',
+      name: t('home:modeSelector.graph.label'),
+      desc: t('home:modeSelector.graph.description'),
       onClick: onSelectGraph,
     },
     {
       key: 'simple',
       Icon: FilePen,
-      name: 'Éditeur simplifié',
-      desc: 'Un menu, une histoire',
+      name: t('home:modeSelector.simple.label'),
+      desc: t('home:modeSelector.simple.description'),
       onClick: () => onSelect('simple'),
     },
   ];
 
   const actions = [
+    onOpenCatalogue && {
+      key: 'catalogue',
+      Icon: BookOpenText,
+      name: t('catalogue:screen.home.label'),
+      desc: t('catalogue:screen.home.description'),
+      onClick: onOpenCatalogue,
+    },
     onEditPack && {
       key: 'edit',
-      Icon: Package,
-      name: 'Modifier un pack existant',
-      desc: 'Modifie un .zip / .7z ou un dossier d’histoire',
+      Icon: SquarePen,
+      name: t('home:modeSelector.edit.label'),
+      desc: t('home:modeSelector.edit.description'),
       onClick: onEditPack,
     },
     onPodcastFunnel && {
       key: 'podcast',
       Icon: Rss,
-      name: 'Créer un pack depuis un podcast',
-      desc: 'Importe les épisodes d’un flux RSS',
+      name: t('home:modeSelector.podcast.label'),
+      desc: t('home:modeSelector.podcast.description'),
       onClick: onPodcastFunnel,
     },
     onYoutubeFunnel && {
       key: 'youtube',
       Icon: Youtube,
-      name: 'Créer un pack depuis YouTube',
-      desc: 'Importe l’audio d’une URL, playlist ou chaîne',
+      name: t('home:modeSelector.youtube.label'),
+      desc: t('home:modeSelector.youtube.description'),
       onClick: onYoutubeFunnel,
     },
     onAggregatePacks && {
       key: 'aggregate',
       Icon: Layers,
-      name: 'Agréger des packs',
-      desc: 'Fusionne plusieurs .zip ou .7z',
+      name: t('home:modeSelector.aggregate.label'),
+      desc: t('home:modeSelector.aggregate.description'),
       onClick: onAggregatePacks,
     },
     onCheckPack && {
       key: 'check',
       Icon: ShieldCheck,
-      name: 'Vérifier un pack',
-      desc: 'Repère et corrige les erreurs d’un pack existant.',
+      name: t('home:modeSelector.checker.entryLabel'),
+      desc: t('home:modeSelector.checker.description'),
       onClick: onCheckPack,
     },
     {
       key: 'open',
       Icon: FolderOpen,
-      name: 'Ouvrir un projet',
-      desc: 'Reprends un projet enregistré',
+      name: t('home:modeSelector.open.label'),
+      desc: t('home:modeSelector.open.description'),
       onClick: onOpen,
     },
   ].filter(Boolean);
@@ -197,17 +212,16 @@ export function ModeSelector({
     <div className="mode-selector">
       <div className="mode-home">
         <header className="mode-home-header">
-          <Tooltip text="Créé pour Armand, pour que les histoires prennent vie." placement="below">
+          <Tooltip text={t('home:modeSelector.brand.dedication')} placement="below">
             <span className="mode-home-mark" role="img" aria-label="Story Studio" />
           </Tooltip>
           <div className="mode-home-brand">
             <div className="mode-home-wordmark">Story Studio</div>
-            <div className="mode-home-tagline">
-              Crée, organise et génère des histoires audio pour ta Boîte à Histoires Lunii.
-            </div>
+            <div className="mode-home-tagline">{t('home:modeSelector.brand.tagline')}</div>
           </div>
         </header>
 
+        <LanguageAnnouncement onOpenPreferences={onOpenPreferences} />
         <div className="mode-home-body">
           <div className="mode-home-create">
             <div className="mode-editor-grid">
@@ -234,6 +248,7 @@ export function ModeSelector({
                   key={tile.key}
                   type="button"
                   className="mode-tile"
+                  id={tile.key === 'catalogue' ? 'mode-open-catalogue' : undefined}
                   onClick={tile.onClick}
                 >
                   <span className="mode-tile-icon"><tile.Icon className="mode-tile-icon-svg" strokeWidth={1.9} /></span>
@@ -246,7 +261,7 @@ export function ModeSelector({
             <div className="mode-home-links">
               <button type="button" className="mode-ghost-button" onClick={onOpenPreferences}>
                 <SlidersHorizontal className="mode-ghost-icon" strokeWidth={1.9} />
-                <span>Préférences</span>
+                <span>{t('common:toolbar.preferences.label')}</span>
               </button>
               <a
                 className="mode-ghost-button"
@@ -256,14 +271,14 @@ export function ModeSelector({
                 onClick={handleDocumentationClick}
               >
                 <BookOpenText className="mode-ghost-icon" strokeWidth={1.9} />
-                <span>Documentation</span>
+                <span>{t('home:modeSelector.documentation.label')}</span>
               </a>
             </div>
           </div>
 
           {hasProjects && (
             <aside className="mode-projects-pane">
-              <div className="mode-projects-eyebrow">Projets récents</div>
+              <div className="mode-projects-eyebrow">{t('home:modeSelector.recent.title')}</div>
               <div className="mode-projects-list">
                 {visibleRecoveries.map((recovery, index) => (
                   <div
@@ -280,19 +295,19 @@ export function ModeSelector({
                         index={index}
                       />
                       <span className="mode-proj-copy">
-                        <span className="mode-proj-name">{recovery.projectName || 'Projet récupérable'}</span>
+                        <span className="mode-proj-name">{recovery.projectName || t('home:modeSelector.recovery.fallbackName')}</span>
                         <span className="mode-proj-sub">{recoverySubtitle(recovery)}</span>
                       </span>
                     </button>
                     <Tooltip
-                      text="Ignorer cette reprise"
+                      text={t('home:modeSelector.recovery.dismiss')}
                       placement="above"
                       className="mode-proj-dismiss-tooltip"
                     >
                       <button
                         type="button"
                         className="mode-proj-dismiss"
-                        aria-label="Ignorer cette reprise"
+                        aria-label={t('home:modeSelector.recovery.dismiss')}
                         onClick={() => onIgnoreSessionRecovery?.(recovery)}
                       >
                         <X className="mode-proj-dismiss-icon" strokeWidth={2} />

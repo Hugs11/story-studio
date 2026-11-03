@@ -1,14 +1,19 @@
+import { useCommonTranslation } from '../../i18n/commonPresentation.js';
+import { presentTree } from '../../i18n/treePresentation.js';
+import { presentStoredError } from '../../i18n/userMessage.js';
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from './Button';
 import { TriangleAlert } from '../icons/LucideLocal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import './Dialog.css';
+import { TechnicalDetail } from './UserMessage';
 
 const ErrorDialogContext = createContext(null);
 
 function actionVariant(kind) {
   if (kind === 'primary') return 'primary';
+  if (kind === 'primary-violet') return kind;
   if (kind === 'danger') return 'danger';
   if (kind === 'danger-outline') return 'danger-outline';
   if (kind === 'ghost') return 'ghost';
@@ -16,14 +21,15 @@ function actionVariant(kind) {
 }
 
 function Dialog({ dialog, onClose, onConfirm, onAction }) {
+  const { t } = useCommonTranslation();
   const closeButtonRef = useRef(null);
   useEscapeKey(Boolean(dialog), onClose);
 
   if (!dialog) return null;
 
   const variant = dialog.variant || 'error';
-  const title = dialog.title || 'Erreur';
-  const closeLabel = dialog.okLabel || 'Fermer';
+  const title = presentTree(dialog.title) || t('common:dialog.error.title');
+  const closeLabel = dialog.okLabel || t('common:dialog.close.label');
   const hasConfirm = typeof dialog.onConfirm === 'function';
   const actions = Array.isArray(dialog.actions) ? dialog.actions : null;
 
@@ -41,7 +47,7 @@ function Dialog({ dialog, onClose, onConfirm, onAction }) {
           </span>
           <h2 id="app-dialog-title">{title}</h2>
         </div>
-        <div className="dialog-message">{dialog.message}</div>
+        <div className="dialog-message">{presentStoredError(dialog.message)}<TechnicalDetail value={dialog.technicalDetail} /></div>
         <div className="dialog-actions">
           {actions ? actions.map((action) => (
             <Button
@@ -54,7 +60,7 @@ function Dialog({ dialog, onClose, onConfirm, onAction }) {
             </Button>
           )) : hasConfirm && (
             <Button ref={closeButtonRef} onClick={onClose} autoFocus>
-              {dialog.cancelLabel || 'Annuler'}
+              {dialog.cancelLabel || t('common:dialog.cancel.label')}
             </Button>
           )}
           {!actions ? (
@@ -75,6 +81,7 @@ function Dialog({ dialog, onClose, onConfirm, onAction }) {
 }
 
 export function ErrorDialogProvider({ children }) {
+  const { t } = useCommonTranslation();
   const [dialog, setDialog] = useState(null);
   const previousFocusRef = useRef(null);
 
@@ -117,10 +124,11 @@ export function ErrorDialogProvider({ children }) {
   const showErrorDialog = useCallback((nextDialog) => {
     rememberFocus();
     setDialog({
-      title: nextDialog?.title || 'Erreur',
-      message: String(nextDialog?.message ?? ''),
+      get title() { return nextDialog?.title || t('common:dialog.error.title'); },
+      get message() { return nextDialog?.message ?? ''; },
+      technicalDetail: nextDialog?.technicalDetail,
       variant: nextDialog?.variant || 'error',
-      okLabel: nextDialog?.okLabel,
+      get okLabel() { return nextDialog?.okLabel; },
       okKind: nextDialog?.okKind,
       onClose: nextDialog?.onClose,
     });
@@ -129,12 +137,13 @@ export function ErrorDialogProvider({ children }) {
   const showConfirmDialog = useCallback((nextDialog) => new Promise((resolve) => {
     rememberFocus();
     setDialog({
-      title: nextDialog?.title || 'Confirmer',
-      message: String(nextDialog?.message ?? ''),
+      get title() { return nextDialog?.title || t('common:dialog.confirmation.fallbackTitle'); },
+      get message() { return nextDialog?.message ?? ''; },
+      technicalDetail: nextDialog?.technicalDetail,
       variant: nextDialog?.variant || 'warning',
-      okLabel: nextDialog?.okLabel || 'OK',
+      get okLabel() { return nextDialog?.okLabel || t('common:dialog.confirm.label'); },
       okKind: nextDialog?.okKind,
-      cancelLabel: nextDialog?.cancelLabel || 'Annuler',
+      get cancelLabel() { return nextDialog?.cancelLabel || t('common:dialog.cancel.label'); },
       onConfirm: () => resolve(true),
       onClose: () => resolve(false),
     });
@@ -144,8 +153,9 @@ export function ErrorDialogProvider({ children }) {
     rememberFocus();
     const cancelValue = nextDialog?.cancelValue ?? null;
     setDialog({
-      title: nextDialog?.title || 'Choisir',
-      message: String(nextDialog?.message ?? ''),
+      get title() { return nextDialog?.title || t('common:dialog.choice.title'); },
+      get message() { return nextDialog?.message ?? ''; },
+      technicalDetail: nextDialog?.technicalDetail,
       variant: nextDialog?.variant || 'warning',
       actions: nextDialog?.actions ?? [],
       onAction: (value) => resolve(value),
@@ -170,7 +180,10 @@ export function ErrorDialogProvider({ children }) {
 export function useErrorDialog() {
   const context = useContext(ErrorDialogContext);
   if (!context) {
+    // eslint-disable-next-line i18next/no-literal-string -- Diagnostic développeur : contrat du Provider, jamais affiché.
     throw new Error('useErrorDialog must be used inside ErrorDialogProvider');
   }
   return context;
 }
+
+export { ContentDialog } from './ContentDialog.jsx';

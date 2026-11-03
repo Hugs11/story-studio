@@ -1,0 +1,6 @@
+[
+  {"name":"5+]Maison-Titre_(Bonus)[by_Auteur_V4.zip","min":5,"max":null,"title":"Titre","author":"Auteur","producer":"Maison","bonus":"Bonus","version":4},
+  {"name":"5-8+]Maison-Titre_(Bonus)[by_Auteur_V4.zip","min":5,"max":8,"title":"Titre","author":"Auteur","producer":"Maison","bonus":"Bonus","version":4},
+  {"name":"-8+]Titre.zip","min":null,"max":8,"title":"Titre","author":"","producer":"","bonus":"","version":1},
+  {"name":"0-3+]Titre.zip","min":0,"max":3,"title":"Titre","author":"","producer":"","bonus":"","version":1}
+]

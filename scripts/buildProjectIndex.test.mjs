@@ -99,7 +99,7 @@ test('buildProjectIndex ignores stale sharedEntries outside the visible tree', (
   const sharedMenu = menu('shared-menu', [story('shared-story')]);
   const project = {
     schemaVersion: 3,
-    rootEntries: [{ id: 'ref-to-shared', type: 'ref', target: 'story:shared-story' }],
+    rootEntries: [{ id: 'story-to-shared', type: 'story', returnAfterPlay: 'story:shared-story' }],
     sharedEntries: [sharedMenu],
   };
 

@@ -1,9 +1,13 @@
+use crate::support::user_message::{self, codes};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use super::after_playback::{candidate_prompt_stage_id, detect_story_return_stage_id};
 use super::chaining::{chain_intro_entries_before_content, chase_single_chain};
-use super::graph_import::{project_story_graph_values, promote_autonomous_root_ref_values};
+use super::graph_import::{
+    live_out_of_tree_edge_count, project_story_graph_values, promote_autonomous_root_target_values,
+    OutOfTreeEdge,
+};
 use super::navigation_targets::{
     assign_return_targets, build_story_stage_map, extract_auto_next_return_overrides,
     remove_night_mode_return_overrides,
@@ -33,14 +37,37 @@ pub(super) fn walk_story_doc_to_entries(
     doc: &serde_json::Value,
     assets: &HashMap<String, PathBuf>,
 ) -> Result<serde_json::Value, String> {
+    walk_story_doc_to_entries_named(doc, assets, None)
+}
+
+pub(super) fn walk_story_doc_to_entries_named(
+    doc: &serde_json::Value,
+    assets: &HashMap<String, PathBuf>,
+    proposed_pack_name: Option<&str>,
+) -> Result<serde_json::Value, String> {
     std::thread::scope(|scope| {
         let worker = std::thread::Builder::new()
             .name("story-studio-pack-projection".to_string())
             .stack_size(IMPORT_PROJECTION_STACK_BYTES)
-            .spawn_scoped(scope, || walk_story_doc_to_entries_inner(doc, assets))
-            .map_err(|error| format!("Impossible de démarrer la projection du pack : {error}"))?;
+            .spawn_scoped(scope, || {
+                walk_story_doc_to_entries_inner(doc, assets, proposed_pack_name)
+            })
+            .map_err(|error| {
+                let _msg_error = (error).to_string();
+                user_message::UserMessage::new(codes::IMPORT_PROJECTION_START_FAILED)
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Impossible de démarrer la projection du pack : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                    ))
+                    .into_transport()
+            })?;
         worker.join().map_err(|_| {
-            "La projection du pack s'est interrompue de façon inattendue.".to_string()
+            user_message::UserMessage::new(codes::IMPORT_PACK_PROJECTION_INTERRUPTED)
+                .with_detail(
+                    "La projection du pack s'est interrompue de façon inattendue.".to_string(),
+                )
+                .into_transport()
         })?
     })
 }
@@ -48,12 +75,13 @@ pub(super) fn walk_story_doc_to_entries(
 fn walk_story_doc_to_entries_inner(
     doc: &serde_json::Value,
     assets: &HashMap<String, PathBuf>,
+    proposed_pack_name: Option<&str>,
 ) -> Result<serde_json::Value, String> {
     let pack_title = doc
         .get("title")
         .and_then(|v| v.as_str())
         .filter(|s| !s.trim().is_empty())
-        .unwrap_or("Pack importé")
+        .unwrap_or(proposed_pack_name.unwrap_or("Pack importé"))
         .to_string();
 
     let stages: HashMap<&str, &serde_json::Value> = doc
@@ -86,7 +114,11 @@ fn walk_story_doc_to_entries_inner(
                     .unwrap_or(false)
             })
         })
-        .ok_or_else(|| "Aucun stage squareOne dans le ZIP".to_string())?;
+        .ok_or_else(|| {
+            user_message::UserMessage::new(codes::IMPORT_ZIP_ENTRY_STAGE_ABSENT)
+                .with_detail("Aucun stage squareOne dans le ZIP".to_string())
+                .into_transport()
+        })?;
 
     let sq_id = sq.get("uuid").and_then(|v| v.as_str()).unwrap_or("");
     let root_audio = resolve_asset(sq.get("audio").and_then(|v| v.as_str()), assets);
@@ -96,11 +128,25 @@ fn walk_story_doc_to_entries_inner(
         .get("okTransition")
         .and_then(|t| t.get("actionNode"))
         .and_then(|v| v.as_str())
-        .ok_or_else(|| "squareOne sans okTransition".to_string())?;
+        .ok_or_else(|| {
+            user_message::UserMessage::new(codes::IMPORT_ENTRY_OK_TRANSITION_ABSENT)
+                .with_detail("squareOne sans okTransition".to_string())
+                .into_transport()
+        })?;
 
-    let root_action = actions
-        .get(root_action_id)
-        .ok_or_else(|| format!("Action racine introuvable : {}", root_action_id))?;
+    let root_action = actions.get(root_action_id).ok_or_else(|| {
+        let _msg_root_action_id = (root_action_id).to_string();
+        user_message::UserMessage::new(codes::IMPORT_PROJECTION_ROOT_ACTION_MISSING)
+            .param(
+                "rootActionId",
+                user_message::transport_param(_msg_root_action_id.clone()),
+            )
+            .with_detail(format!(
+                "Action racine introuvable : {_msg_root_action_id}",
+                _msg_root_action_id = user_message::transport_detail(&_msg_root_action_id)
+            ))
+            .into_transport()
+    })?;
 
     let root_opts = action_options(root_action);
     let night_mode_available = doc
@@ -155,7 +201,13 @@ fn walk_story_doc_to_entries_inner(
     let mut effective_root_image = root_image.clone();
 
     let mut entries: Vec<serde_json::Value> = match root_opts.len() {
-        0 => return Err("Le pack ne contient aucune entrée".to_string()),
+        0 => {
+            return Err(
+                user_message::UserMessage::new(codes::IMPORT_PACK_ENTRIES_EMPTY)
+                    .with_detail("Le pack ne contient aucune entrée".to_string())
+                    .into_transport(),
+            )
+        }
         1 => {
             let first_id = root_opts[0];
             visited.insert(first_id.to_string());
@@ -218,9 +270,11 @@ fn walk_story_doc_to_entries_inner(
             };
             let title_stage_id = has_distinct_title_stage.then(|| eff_first_id.to_string());
 
-            let terminal = stages
-                .get(terminal_id.as_str())
-                .ok_or_else(|| "Stage terminal introuvable depuis squareOne".to_string())?;
+            let terminal = stages.get(terminal_id.as_str()).ok_or_else(|| {
+                user_message::UserMessage::new(codes::IMPORT_ENTRY_TERMINAL_MISSING)
+                    .with_detail("Stage terminal introuvable depuis squareOne".to_string())
+                    .into_transport()
+            })?;
             let term_opts = stage_action_options(terminal, &actions);
 
             let content_entries: Vec<serde_json::Value> = match term_opts.len() {
@@ -443,16 +497,23 @@ fn walk_story_doc_to_entries_inner(
             .ok()
             .and_then(|document| project_story_graph_values(&document, assets).ok())
             .filter(|projection| {
-                projection.diagnostics.is_empty() && !projection.root_entries.is_empty()
+                projection.diagnostics.is_empty()
+                    && (!projection.root_entries.is_empty()
+                        || projection
+                            .out_of_tree_edges
+                            .iter()
+                            .any(|edge| edge.source_entry_id.is_none()))
             })
     } else {
         None
     };
     let uses_graph_import_projection = graph_import_projection.is_some();
     let mut shared_entries = Vec::new();
+    let mut out_of_tree_edges: Vec<OutOfTreeEdge> = Vec::new();
     if let Some(graph_projection) = graph_import_projection {
         entries = graph_projection.root_entries;
         shared_entries = graph_projection.shared_entries;
+        out_of_tree_edges = graph_projection.out_of_tree_edges;
     }
     let night_mode_detection = if uses_graph_import_projection {
         detect_imported_night_mode(sq_id, &entries, &stages, &actions, assets)
@@ -482,8 +543,15 @@ fn walk_story_doc_to_entries_inner(
         apply_night_fallback_overrides(&mut entries, detection);
     }
     if uses_graph_import_projection {
-        promote_autonomous_root_ref_values(&mut entries, &mut shared_entries);
+        promote_autonomous_root_target_values(
+            &mut entries,
+            &mut shared_entries,
+            &mut out_of_tree_edges,
+        );
     }
+    // Arêtes que l'arbre ne porte pas : le verdict d'éditabilité les compte.
+    let out_of_tree_edge_count =
+        live_out_of_tree_edge_count(&out_of_tree_edges, &entries, &shared_entries);
     let auto_next_detected =
         !uses_graph_import_projection && extract_auto_next_return_overrides(&mut entries);
     if uses_graph_import_projection {
@@ -527,6 +595,7 @@ fn walk_story_doc_to_entries_inner(
         "advancedTransitionsDetected": reported_unresolved_transitions_detected,
         "unresolvedTransitions": reported_unresolved_transitions,
         "usesGraphProjection": uses_graph_import_projection,
+        "outOfTreeEdgeCount": out_of_tree_edge_count,
         "sharedEntries": shared_entries,
         "entries": entries
     }))
@@ -995,9 +1064,19 @@ pub(super) fn walk_entry(
             visited.insert(next_id.to_string());
             // Suivre la chaîne single-option jusqu'à la décision (feuille ou sélection N≥2)
             let terminal_id = chase_single_chain(next_id, stages, actions, visited);
-            let terminal = stages
-                .get(terminal_id.as_str())
-                .ok_or_else(|| format!("Stage terminal introuvable : {}", terminal_id))?;
+            let terminal = stages.get(terminal_id.as_str()).ok_or_else(|| {
+                let _msg_terminal_id = (terminal_id).to_string();
+                user_message::UserMessage::new(codes::IMPORT_STAGE_TERMINAL_MISSING)
+                    .param(
+                        "terminalId",
+                        user_message::transport_param(_msg_terminal_id.clone()),
+                    )
+                    .with_detail(format!(
+                        "Stage terminal introuvable : {_msg_terminal_id}",
+                        _msg_terminal_id = user_message::transport_detail(&_msg_terminal_id)
+                    ))
+                    .into_transport()
+            })?;
             let term_opts = stage_action_options(terminal, actions);
 
             match term_opts.len() {
@@ -1186,7 +1265,9 @@ pub(super) fn walk_entry(
                         "returnOnHomeStageId": detection
                             .home_stage_id
                             .clone()
-                            .filter(|target| Some(target.as_str()) != detection.target_stage_id.as_deref()),
+                            .filter(
+                                |target| Some(target.as_str()) != detection.target_stage_id.as_deref(),
+                            ),
                         "returnOnHomeNone": detection.home_stage_id.is_none(),
                         "homeStoryStageId": detection.home_story_stage_id,
                         "afterPlaybackPromptAudio": after_playback_prompt_audio,
@@ -1194,8 +1275,13 @@ pub(super) fn walk_entry(
                         "afterPlaybackPromptOkStageId": detection.prompt_ok_stage_id,
                         "afterPlaybackPromptHomeStageId": detection.prompt_home_stage_id,
                         "afterPlaybackPromptHomeNone": detection.prompt_home_transition_none,
-                        "afterPlaybackSequence": resolve_after_playback_sequence_assets(&detection.after_playback_sequence, assets),
-                        "afterPlaybackHomeStep": detection.home_step.as_ref().map(|step| resolve_after_playback_step_assets(step, assets)),
+                        "afterPlaybackSequence": resolve_after_playback_sequence_assets(
+                            &detection.after_playback_sequence,
+                            assets,
+                        ),
+                        "afterPlaybackHomeStep": detection.home_step.as_ref().map(
+                            |step| resolve_after_playback_step_assets(step, assets),
+                        ),
                         "controlSettings": play_controls,
                     }))
                 }
@@ -1247,7 +1333,9 @@ pub(super) fn walk_entry(
                                 "returnOnHomeStageId": detection
                                     .home_stage_id
                                     .clone()
-                                    .filter(|target| Some(target.as_str()) != detection.target_stage_id.as_deref()),
+                                    .filter(
+                                        |target| Some(target.as_str()) != detection.target_stage_id.as_deref(),
+                                    ),
                                 "returnOnHomeNone": detection.home_stage_id.is_none(),
                                 "homeStoryStageId": detection.home_story_stage_id,
                                 "afterPlaybackPromptAudio": after_playback_prompt_audio,
@@ -1255,8 +1343,13 @@ pub(super) fn walk_entry(
                                 "afterPlaybackPromptOkStageId": detection.prompt_ok_stage_id,
                                 "afterPlaybackPromptHomeStageId": detection.prompt_home_stage_id,
                                 "afterPlaybackPromptHomeNone": detection.prompt_home_transition_none,
-                                "afterPlaybackSequence": resolve_after_playback_sequence_assets(&detection.after_playback_sequence, assets),
-                                "afterPlaybackHomeStep": detection.home_step.as_ref().map(|step| resolve_after_playback_step_assets(step, assets)),
+                                "afterPlaybackSequence": resolve_after_playback_sequence_assets(
+                                    &detection.after_playback_sequence,
+                                    assets,
+                                ),
+                                "afterPlaybackHomeStep": detection.home_step.as_ref().map(
+                                    |step| resolve_after_playback_step_assets(step, assets),
+                                ),
                                 "controlSettings": stage_controls(terminal),
                             }));
                         }
@@ -1349,19 +1442,12 @@ mod tests {
     use serde_json::json;
     use std::collections::HashSet;
 
-    use super::super::graph_import::promote_autonomous_root_ref_values;
+    use super::super::graph_import::{promote_autonomous_root_target_values, OutOfTreeEdge};
     use super::remove_projected_night_bridge;
 
     #[test]
-    fn night_bridge_returns_are_cleaned_before_root_ref_promotion() {
-        let mut roots = vec![json!({
-            "id": "root-ref",
-            "type": "ref",
-            "name": "Root reference",
-            "target": "menu:shared-menu",
-            "refKind": "continue",
-            "returnAfterPlay": "story:night-bridge"
-        })];
+    fn night_bridge_returns_are_cleaned_before_root_target_promotion() {
+        let mut roots = Vec::new();
         let mut shared = vec![
             json!({
                 "id": "night-bridge",
@@ -1382,18 +1468,77 @@ mod tests {
                 }]
             }),
         ];
+        let mut edges = vec![OutOfTreeEdge {
+            source_entry_id: None,
+            target: "menu:shared-menu".to_string(),
+        }];
         let night_stage_ids = HashSet::from(["night-bridge".to_string()]);
 
+        assert!(!promote_autonomous_root_target_values(
+            &mut roots,
+            &mut shared.clone(),
+            &mut edges.clone()
+        ));
         remove_projected_night_bridge(&mut roots, &mut shared, &night_stage_ids);
 
         assert_eq!(shared.len(), 1);
         assert_eq!(shared[0]["id"], "shared-menu");
-        assert!(roots[0].get("returnAfterPlay").is_none());
         assert!(shared[0]["children"][0].get("returnAfterPlay").is_none());
 
-        assert!(promote_autonomous_root_ref_values(&mut roots, &mut shared));
+        assert!(promote_autonomous_root_target_values(
+            &mut roots,
+            &mut shared,
+            &mut edges
+        ));
+        assert_eq!(roots.len(), 1);
         assert_eq!(roots[0]["type"], "menu");
         assert_eq!(roots[0]["id"], "shared-menu");
         assert!(shared.is_empty());
+        assert!(edges.is_empty());
+    }
+
+    /// Une arête portée par une entrée que le pont de nuit retire disparaît
+    /// avec elle ; celle d'une entrée restante empêche la promotion.
+    #[test]
+    fn out_of_tree_edges_follow_the_entry_that_carries_them() {
+        let roots = Vec::new();
+        let shared = vec![json!({
+            "id": "shared-menu",
+            "type": "menu",
+            "name": "Shared menu",
+            "children": [{ "id": "inner", "type": "menu", "name": "Inner", "children": [] }]
+        })];
+        let root_edge = OutOfTreeEdge {
+            source_entry_id: None,
+            target: "menu:shared-menu".to_string(),
+        };
+        let removed_source = OutOfTreeEdge {
+            source_entry_id: Some("night-bridge".to_string()),
+            target: "menu:shared-menu".to_string(),
+        };
+        let kept_source = OutOfTreeEdge {
+            source_entry_id: Some("inner".to_string()),
+            target: "menu:shared-menu".to_string(),
+        };
+
+        let mut promoted_roots = roots.clone();
+        let mut promoted_shared = shared.clone();
+        let mut edges = vec![root_edge.clone(), removed_source];
+        assert!(promote_autonomous_root_target_values(
+            &mut promoted_roots,
+            &mut promoted_shared,
+            &mut edges
+        ));
+
+        let mut kept_roots = roots;
+        let mut kept_shared = shared;
+        let mut edges = vec![root_edge, kept_source];
+        assert!(!promote_autonomous_root_target_values(
+            &mut kept_roots,
+            &mut kept_shared,
+            &mut edges
+        ));
+        assert!(kept_roots.is_empty());
+        assert_eq!(edges.len(), 2);
     }
 }

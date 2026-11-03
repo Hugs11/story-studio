@@ -1,0 +1,9 @@
+@import '../../styles/keyboard.css';
+
+/* Titres communs ; les classes sémantiques conservent les variantes.
+   :where limite les usages : les titres Étiquettes/Exemplaires de la grande
+   fiche gardent leur typographie héritée, comme avant. */
+.catalogue-section-title:where(.catalogue-palette-heading, .catalogue-column-heading, .catalogue-fiche-modal-section-title, .catalogue-selection-panel h3, .catalogue-fiche-content:not(.catalogue-selection-panel) > section > h3, .catalogue-fiche-content:not(.catalogue-selection-panel) .catalogue-fiche-section-heading h3, .catalogue-fiche-modal-main .catalogue-fiche-section-heading h3) { text-transform: uppercase; letter-spacing: var(--section-title-tracking, 0.05em); font-size: var(--section-title-size, var(--text-caption)); color: var(--section-title-color, var(--muted)); }
+
+/* Pastille d’âge commune au panneau et à la grande fiche. */
+.catalogue-fiche-age dd { display: inline-flex; align-items: center; max-width: 100%; padding-inline: var(--space-2); border: 1px solid var(--accent-border); border-radius: var(--radius-pill); background: var(--accent-dim); color: var(--accent-text); font-size: var(--text-control); margin: 0; min-height: 28px; overflow-wrap: anywhere; }

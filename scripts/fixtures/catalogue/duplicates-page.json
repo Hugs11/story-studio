@@ -1,0 +1,6 @@
+{
+  "exactGroups": [{ "digest": "0123456789abcdef", "exemplarIds": ["pack-a", "pack-b"] }],
+  "olderVersions": [{ "uuid": "bda17862-0d71-41f6-974a-111111111111", "format": "zip", "exemplarIds": ["pack-c"] }],
+  "issues": [{ "exemplarId": "pack-d", "code": "CATALOG_DUPLICATE_HASH_FAILED", "detail": "read failed" }],
+  "cursor": null
+}

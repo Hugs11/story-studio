@@ -52,16 +52,6 @@ pub(crate) enum CanonicalEntry {
     Menu(CanonicalMenu),
     Story(CanonicalStory),
     Zip(CanonicalZip),
-    Ref(CanonicalRef),
-}
-
-/// Nœud de référence : ne produit PAS de sous-arbre, mais une arête vers un nœud
-/// existant (`target` typé). Résolu à l'export en une transition native réelle.
-#[derive(Debug, Clone, Serialize)]
-pub(crate) struct CanonicalRef {
-    pub(crate) id: String,
-    pub(crate) target: String,
-    pub(crate) ref_kind: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -283,7 +273,7 @@ pub(crate) fn global_end_message_is_reached(project: &CanonicalProject) -> bool 
         entries.iter().any(|entry| match entry {
             CanonicalEntry::Story(story) => story_reaches_global_end_message(story, auto_next),
             CanonicalEntry::Menu(menu) => reached(&menu.children, auto_next),
-            CanonicalEntry::Zip(_) | CanonicalEntry::Ref(_) => false,
+            CanonicalEntry::Zip(_) => false,
         })
     }
     let auto_next = project.options.auto_next;
@@ -306,7 +296,7 @@ pub(crate) fn canonicalize_project(project: &Project) -> CanonicalProject {
     let root_entries = project_root_entries(project);
     let shared_entries: Vec<CanonicalEntry> = project_shared_entries(project)
         .iter()
-        .filter(|entry| matches!(entry.entry_type.as_str(), "menu" | "story" | "ref"))
+        .filter(|entry| matches!(entry.entry_type.as_str(), "menu" | "story"))
         .map(canonicalize_project_entry)
         .collect();
     if project_type == "simple" {
@@ -317,9 +307,6 @@ pub(crate) fn canonicalize_project(project: &Project) -> CanonicalProject {
             entries.push(canonicalize_project_entry(story));
         }
     } else {
-        // Les `ref` deviennent `CanonicalEntry::Ref` (résolus en transitions natives à
-        // l'export, cf. `resolve_pending_ref_options`) — plus de filtre anti-story-fantôme :
-        // le bras `"ref"` de `canonicalize_project_entry` empêche désormais le repli `_ => Story`.
         entries.extend(root_entries.iter().map(canonicalize_project_entry));
     }
 
@@ -409,11 +396,6 @@ fn canonicalize_project_entry(entry: &ProjectEntry) -> CanonicalEntry {
                 .map(canonicalize_project_entry)
                 .collect(),
         }),
-        "ref" => CanonicalEntry::Ref(CanonicalRef {
-            id: entry.id.clone(),
-            target: entry.target.clone().unwrap_or_default(),
-            ref_kind: entry.ref_kind.clone(),
-        }),
         "zip" => CanonicalEntry::Zip(CanonicalZip {
             id: entry.id.clone(),
             name: entry.name.clone(),
@@ -474,47 +456,5 @@ fn canonicalize_project_entry(entry: &ProjectEntry) -> CanonicalEntry {
             title_return_on_home_none: entry.title_return_on_home_none,
             title_control_settings: entry.title_control_settings.clone(),
         }),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::domain::project::ProjectEntry;
-
-    fn entry(id: &str, entry_type: &str) -> ProjectEntry {
-        ProjectEntry {
-            id: id.to_string(),
-            entry_type: entry_type.to_string(),
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn ref_children_become_ref_not_storified() {
-        let mut reference = entry("r", "ref");
-        reference.target = Some("story:s".to_string());
-        reference.ref_kind = Some("continue".to_string());
-        let menu = ProjectEntry {
-            id: "m".to_string(),
-            entry_type: "menu".to_string(),
-            name: "Menu".to_string(),
-            children: vec![entry("s", "story"), reference],
-            ..Default::default()
-        };
-        let CanonicalEntry::Menu(canonical) = canonicalize_project_entry(&menu) else {
-            panic!("expected a menu");
-        };
-        assert_eq!(
-            canonical.children.len(),
-            2,
-            "la ref doit etre conservee comme arete, pas transformee en story fantome",
-        );
-        assert!(matches!(canonical.children[0], CanonicalEntry::Story(_)));
-        let CanonicalEntry::Ref(reference) = &canonical.children[1] else {
-            panic!("le second enfant doit etre une ref");
-        };
-        assert_eq!(reference.target, "story:s");
-        assert_eq!(reference.ref_kind.as_deref(), Some("continue"));
     }
 }

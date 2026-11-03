@@ -6,17 +6,23 @@ import { isOriginalBackup } from '../utils/mediaConventions.js';
 import { pathKey } from '../utils/fileUtils.js';
 import { reconcileMediaLibraryPaths } from './mediaLibrary.js';
 
-export function classifyOsDroppedFiles(paths) {
+// `kinds` (chemin -> 'folder' | 'file' | 'other', lu sur le système de fichiers)
+// départage dossiers et fichiers : un dossier nommé `x.mp3` n'est pas de l'audio.
+// Sans `kinds` (aperçu web), seul le classement par extension s'applique.
+export function classifyOsDroppedFiles(paths, kinds = null) {
   const ext = (p) => (String(p).split('.').pop() || '').toLowerCase();
   const AUDIO = new Set(['mp3', 'wav', 'ogg', 'm4a', 'flac', 'webm']);
   const IMAGES = new Set(['png', 'jpg', 'jpeg', 'webp']);
   const ARCHIVES = new Set(['zip', '7z']);
+  const isFolder = (p) => kinds?.get(p) === 'folder';
   // Backups d'édition audio (`*.original.{ext}`) ignorés silencieusement.
   const filtered = paths.filter((p) => !isOriginalBackup(p));
+  const files = filtered.filter((p) => !isFolder(p));
   return {
-    audio: filtered.filter((p) => AUDIO.has(ext(p))),
-    images: filtered.filter((p) => IMAGES.has(ext(p))),
-    archives: filtered.filter((p) => ARCHIVES.has(ext(p))),
+    audio: files.filter((p) => AUDIO.has(ext(p))),
+    images: files.filter((p) => IMAGES.has(ext(p))),
+    archives: files.filter((p) => ARCHIVES.has(ext(p))),
+    folders: filtered.filter(isFolder),
   };
 }
 
@@ -101,7 +107,7 @@ function canonicalValue(value) {
 // payload : une mutation d'auteur, si petite soit-elle, change cette chaîne.
 export function createWorkSnapshot(project, mediaLibraryPaths = [], mediaTags = {}) {
   return JSON.stringify({
-    project: isAdvancedProject(project) ? canonicalValue(advancedWorkBody(project)) : project,
+    project: canonicalValue(isAdvancedProject(project) ? advancedWorkBody(project) : project),
     mediaLibraryPaths: canonicalMediaLibraryPaths(mediaLibraryPaths),
     mediaTags: canonicalMediaTags(mediaTags),
   });

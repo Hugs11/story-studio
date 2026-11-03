@@ -121,7 +121,10 @@ fn without_identity_the_document_builds_but_is_never_written() {
     let document = build_story_document(&story_report("")).expect("document d'écoute");
     assert!(classify_stage_id(&entry_stage(&document).uuid).bridge_compatible);
     let error = serialize_story_with_pack_uuid(&document, "").expect_err("identité absente");
-    assert!(error.contains("Identité de pack absente"), "{error}");
+    assert!(
+        crate::support::user_message::contains_code(&error, "EXPORT_PACK_IDENTITY_REQUIRED"),
+        "{error}"
+    );
 }
 
 /// Seule une graphie que les passerelles lisent de la même façon est livrée.
@@ -130,9 +133,10 @@ fn only_an_identity_both_bridges_read_alike_is_accepted() {
     for accepted in [IDENTITY, "0A1B2C3D4E5F4A6B8C7D9E0F1A2B3C4D"] {
         assert_eq!(libre_pack_identity(accepted), Ok(accepted), "{accepted}");
     }
-    assert!(libre_pack_identity("  ")
-        .expect_err("vide")
-        .contains("Identité de pack absente"));
+    assert!(crate::support::user_message::contains_code(
+        &libre_pack_identity("  ").expect_err("vide"),
+        "EXPORT_PACK_IDENTITY_REQUIRED"
+    ));
     for refused in [
         "mon pack",
         "{11111111-2222-4333-8444-555566667777}",
@@ -342,4 +346,100 @@ fn the_shared_rule_accepts_what_both_bridges_read_alike() {
         let refusal = pack_identity_refusal(refused).expect(refused);
         assert!(refusal.contains("n'est pas lisible"), "{refusal}");
     }
+}
+
+#[test]
+fn modified_official_libre_archive_retains_origin_and_emits_official() {
+    use crate::domain::official_provenance::OfficialProvenance;
+    use crate::native_pack::output_identity::{decide, ContentIdentity, OutputForm};
+    let base = std::env::temp_dir().join(format!("official-libre-{}", uuid::Uuid::new_v4()));
+    let mut report = story_report(IDENTITY);
+    report.project.name = "Modified official fixture".into();
+    report.project.root_image = None;
+    std::fs::create_dir_all(&base).unwrap();
+    for asset in &mut report.assets {
+        let path = base.join(&asset.staged_asset_name);
+        std::fs::write(&path, b"synthetic prepared asset").unwrap();
+        asset.staged_asset_path = path.to_string_lossy().into_owned();
+    }
+    let document = build_story_document(&report).unwrap();
+    let identity = decide(
+        ContentIdentity {
+            provenance: OfficialProvenance::Official,
+            uuid: IDENTITY,
+            origin_uuid: Some(IDENTITY),
+        },
+        OutputForm::Rewritten,
+        &[],
+        false,
+        None::<&crate::services::catalogue::CatalogueState>,
+    )
+    .unwrap();
+    let written = crate::native_pack::writer::write_native_pack_archive_authorized(
+        &report, &document, &base, &identity,
+    )
+    .unwrap();
+    let mut zip = zip::ZipArchive::new(std::fs::File::open(written.zip_path).unwrap()).unwrap();
+    let story: serde_json::Value =
+        serde_json::from_reader(zip.by_name("story.json").unwrap()).unwrap();
+    assert_eq!(story["uuid"], IDENTITY);
+    assert_eq!(written_entry_uuid(&story), IDENTITY);
+    assert_eq!(story["official"], true);
+    std::fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
+fn official_libre_for_project_then_generate_with_identity_preserves_identity() {
+    let base = std::env::temp_dir().join(format!("official-libre-e2e-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&base).unwrap();
+    let image = base.join("cover.png");
+    write_test_png(&image);
+    // A real audible WAV exercises preparation, generation, archive review and publication.
+    let audio = base.join("audio.wav");
+    let samples: Vec<u8> = (0..44100)
+        .flat_map(|i| {
+            (((i as f64 * 440.0 * std::f64::consts::TAU / 44100.0).sin() * 8000.0) as i16)
+                .to_le_bytes()
+        })
+        .collect();
+    let mut wav = Vec::new();
+    wav.extend_from_slice(b"RIFF");
+    wav.extend_from_slice(&(36 + samples.len() as u32).to_le_bytes());
+    wav.extend_from_slice(b"WAVEfmt ");
+    wav.extend_from_slice(&16_u32.to_le_bytes());
+    wav.extend_from_slice(&1_u16.to_le_bytes());
+    wav.extend_from_slice(&1_u16.to_le_bytes());
+    wav.extend_from_slice(&44100_u32.to_le_bytes());
+    wav.extend_from_slice(&88200_u32.to_le_bytes());
+    wav.extend_from_slice(&2_u16.to_le_bytes());
+    wav.extend_from_slice(&16_u16.to_le_bytes());
+    wav.extend_from_slice(b"data");
+    wav.extend_from_slice(&(samples.len() as u32).to_le_bytes());
+    wav.extend_from_slice(&samples);
+    std::fs::write(&audio, wav).unwrap();
+    let project: crate::domain::project::Project = serde_json::from_value(serde_json::json!({
+        "name":"Modified official", "projectType":"pack", "packUuid":IDENTITY,
+        "officialProvenance":"official", "officialOriginUuid":IDENTITY,
+        "rootAudio":audio, "rootImage":image,
+        "globalOptions":{"autoNext":false,"nightMode":false,"silenceMode":"off","harmonizeLoudness":false},
+        "rootEntries":[{"id":"story","type":"story","name":"Modified story", "audio":audio,
+            "officialProvenance":"official", "officialOriginUuid":IDENTITY}]
+    })).unwrap();
+    let identity = crate::native_pack::output_identity::for_project(&project, None).unwrap();
+    let result = crate::native_pack::generate_with_identity(
+        &project,
+        base.join("out").to_str().unwrap(),
+        &|_| {},
+        &|| false,
+        &identity,
+    )
+    .unwrap();
+    let mut zip = zip::ZipArchive::new(std::fs::File::open(result.zip_path).unwrap()).unwrap();
+    let story: serde_json::Value =
+        serde_json::from_reader(zip.by_name("story.json").unwrap()).unwrap();
+    assert_eq!(story["uuid"], IDENTITY);
+    assert_eq!(written_entry_uuid(&story), IDENTITY);
+    assert_eq!(story["official"], true);
+    assert!(result.gate_observations.iter().all(|gate| !gate.refuses()));
+    std::fs::remove_dir_all(base).unwrap();
 }

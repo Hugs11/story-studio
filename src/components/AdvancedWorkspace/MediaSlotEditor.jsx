@@ -1,3 +1,5 @@
+import { graphTranslationEngine } from '../../i18n/graphPresentation.js';
+import { useTranslation } from 'react-i18next';
 // Adaptateur entre les champs média du Libre et les gestes du graphe.
 // L'apparence, le choix de fichier, le glisser-déposer, l'édition, la lecture,
 // l'enregistrement et la génération restent ceux des composants communs. La
@@ -19,6 +21,7 @@ import { advancedGestures, presence } from '../../store/projectModel/advancedGes
 export function MediaSlotEditor({
   stage, field, usage, disabled, onGesture, onAssignMedia = null, projectEpoch = null,
 }) {
+  const { t } = useTranslation('graph', { i18n: graphTranslationEngine() });
   const slot = field === 'audio' ? stage.audio : stage.image;
   const assetRef = slot?.assetRef ?? null;
   const entry = assetRef ? usage?.get(assetRef) ?? null : null;
@@ -45,17 +48,18 @@ export function MediaSlotEditor({
           file={file}
           extraActions={[{
             key: 'generate-text',
-            label: 'Générer une image-titre',
+            label: t("graph:media.title.generate"),
             onClick: () => setTextImageOpen(true),
-            title: 'Créer une image-titre à partir du nom de l’Écran',
+            title: t("graph:media.title.help"),
           }]}
           onPick={assign}
           onClear={clear}
         />
       ) : (
         <AudioField
-          label="Audio de l’Écran"
-          description="Joué lorsque cet Écran s’affiche"
+          label={t("graph:media.audio.label")}
+          labelRef={{ key: "graph:media.audio.label" }}
+          description={t("graph:media.audio.description")}
           file={file}
           required={false}
           ttsTextSuggestion={stageName}

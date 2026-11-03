@@ -1,4 +1,5 @@
-import { decodeNavigationStoryId, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget, refTargetEntryId } from '../../store/navigationTargets.js';
+import { translateTree as t } from '../../i18n/treePresentation.js';
+import { decodeNavigationStoryId, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget } from '../../store/navigationTargets.js';
 import {
   CONTEXTUAL_NEXT_STORY_TARGET,
   getPresentedEndNodeReturnNavigation,
@@ -8,7 +9,11 @@ import {
 import { canMoveEntryToContainer } from '../tree/treeOperations.js';
 import { compactNavigationPresentation } from './diagram/navigationPresentation.js';
 
-export const TYPE_LABELS = { root: 'Racine', menu: 'Dossier', story: 'Histoire', zip: 'ZIP', ref: 'Lien', 'end-node': 'Message de fin' };
+export const TYPE_LABEL_KEYS = { root: "tree:navigation.root.short", menu: "tree:menu.card.title", story: "tree:story.type.label", zip: 'tree:nodeType.zip', 'end-node': "common:status.end.fallback" };
+export const TYPE_LABELS = Object.fromEntries(Object.keys(TYPE_LABEL_KEYS).map((type) => [type, null]));
+for (const type of Object.keys(TYPE_LABEL_KEYS)) {
+  Object.defineProperty(TYPE_LABELS, type, { enumerable: true, get: () => t(TYPE_LABEL_KEYS[type]) });
+}
 // Re-exporte depuis la source unique (useZipCover importe MIME d'ici).
 export { MIME } from '../../utils/mimeTypes.js';
 const ZOOM_MIN = 0.08;
@@ -98,11 +103,11 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
             to: effectiveReturnTarget,
             kind: 'after-end',
             source: 'sequence',
-            label: mode === 'story_home_step' ? 'Fin -> retour' : mode === 'story_play' ? 'Fin -> lecture' : mode === 'story' ? 'Fin -> titre' : 'Fin',
+            label: mode === 'story_home_step' ? t("tree:diagram.end.return") : mode === 'story_play' ? t("tree:diagram.end.play") : mode === 'story' ? t("tree:diagram.end.title") : t("tree:diagram.search.endType"),
             localEnd: {
               kind: 'sequence',
               stepCount: sequence.length,
-              label: `Scénario de fin · ${sequence.length} étape${sequence.length > 1 ? 's' : ''}`,
+              label: t("tree:diagram.sequence.stepCount", { count: sequence.length }),
             },
           });
         }
@@ -140,7 +145,7 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
             localEnd: {
               kind: 'prompt',
               stepCount: 1,
-              label: 'Message de fin personnalisé',
+              label: t("tree:story.endAudio.customTitle"),
             },
           });
         }
@@ -191,15 +196,6 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
       // dessiner une boucle suggérerait à tort une navigation ou une fin locale.
       if (homeTarget && homeTarget !== entry.id && homeTarget !== effectiveReturnTarget) {
         transitions.push({ from: entry.id, to: homeTarget, kind: 'home', source: 'configured' });
-      }
-      continue;
-    }
-
-    if (entry.type === 'ref') {
-      // Un nœud `ref` est une arête vers un nœud existant : on relie la feuille ref à sa cible.
-      const to = refTargetEntryId(entry.target);
-      if (to) {
-        transitions.push({ from: entry.id, to, kind: 'reference', source: 'reference' });
       }
       continue;
     }
@@ -286,6 +282,7 @@ export function getCompleteNavigationEdges(project, layout) {
 
       const seenEndNodeTargets = new Set();
       for (const edge of endNodeEdges) {
+    // eslint-disable-next-line i18next/no-literal-string -- séparateur NUL de la clé technique de regroupement, jamais affiché
         const routeKey = edge.contextualStoryId ? `${edge.contextualStoryId}\u0000${edge.to}` : edge.to;
         if (seenEndNodeTargets.has(routeKey)) continue;
         seenEndNodeTargets.add(routeKey);

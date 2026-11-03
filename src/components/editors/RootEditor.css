@@ -134,6 +134,40 @@
   white-space: nowrap;
 }
 
+.root-story-settings-card {
+  scroll-margin-block: 20px;
+}
+
+.root-auto-next-control {
+  align-items: flex-start;
+  transition:
+    background 0.15s cubic-bezier(0.2, 0, 0, 1),
+    border-color 0.15s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.root-auto-next-control.is-highlighted {
+  background: var(--accent-dim);
+  border-color: var(--accent-border);
+}
+
+.root-auto-next-copy {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.root-auto-next-copy .during-play-control-title {
+  flex: 0 1 auto;
+}
+
+.root-auto-next-description {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 /* Le bloc son du menu racine porte son propre en-tête. `display: contents` le
    fait disparaître de la mise en page pour que cet en-tête devienne l'enfant
    direct de la colonne, et entre donc dans la rangée partagée avec celui de

@@ -1,5 +1,6 @@
 import { tagStyle } from './helpers';
 import { Button } from '../common/Button';
+import { useMediaTranslation } from '../../i18n/useMediaTranslation.js';
 
 export function MediaSelectionBar({
   selectedCount,
@@ -18,6 +19,7 @@ export function MediaSelectionBar({
   visibleSelectedItems,
   onClear,
 }) {
+  const { t } = useMediaTranslation();
   const multiple = selectedCount > 1;
   if (!multiple && !(selectedCount === 1 && graphMediaTarget)) return null;
 
@@ -33,23 +35,23 @@ export function MediaSelectionBar({
 
   return (
     <div className="media-selection-bar">
-      <span className="media-selection-count">{selectedCount} sélectionné{selectedCount > 1 ? 's' : ''}</span>
+      <span className="media-selection-count">{t('media:selection.count', { count: selectedCount })}</span>
       {graphMediaTarget && (
         <Button variant="primary" className="media-selection-btn" onClick={onAssignToGraph}>
-          Utiliser sur « {graphMediaTarget.label} »
+          {t('media:selection.graph.assign', { target: graphMediaTarget.label })}
         </Button>
       )}
       {multiple && selectedAudioItems.length > 0 ? (
         <>
           <Button className="media-selection-btn" onClick={onCopyAudio}>
-            Copier {selectedAudioItems.length} son{selectedAudioItems.length > 1 ? 's' : ''}
+            {t('media:selection.audio.copy', { count: selectedAudioItems.length })}
           </Button>
           <Button className="media-selection-btn" onClick={onCutAudio}>
-            Couper {selectedAudioItems.length} son{selectedAudioItems.length > 1 ? 's' : ''}
+            {t('media:selection.audio.cut', { count: selectedAudioItems.length })}
           </Button>
           {selectedAudioItems.length >= 2 && (
             <Button variant="primary" className="media-selection-btn" onClick={onOpenAssembly}>
-              Assembler les audios
+              {t('media:selection.audio.assemble')}
             </Button>
           )}
         </>
@@ -63,16 +65,16 @@ export function MediaSelectionBar({
               onChange={(e) => onBulkTagChange(e.target.value)}
               onFocus={() => onBulkTagOpenChange(true)}
               onBlur={() => setTimeout(() => onBulkTagOpenChange(false), 150)}
-              placeholder="+ Tag commun"
+              placeholder={t('media:explorer.tags.common')}
             />
             <Button type="submit" className="media-selection-btn" disabled={!bulkTag.trim()}>
-              Appliquer
+              {t('media:selection.tag.apply')}
             </Button>
           </form>
           {bulkTagOpen && allTags.length > 0 && (
             <div className="media-tag-suggestions">
               {allTags
-                .filter((t) => !bulkTag || t.toLowerCase().includes(bulkTag.toLowerCase()))
+                .filter((tag) => !bulkTag || tag.toLowerCase().includes(bulkTag.toLowerCase()))
                 .map((tag) => (
                   <button
                     key={tag}
@@ -92,7 +94,7 @@ export function MediaSelectionBar({
           )}
         </div>
       ) : null}
-      {multiple && <Button className="media-selection-btn" onClick={onClear}>Effacer</Button>}
+      {multiple && <Button className="media-selection-btn" onClick={onClear}>{t('media:selection.clear.action')}</Button>}
     </div>
   );
 }

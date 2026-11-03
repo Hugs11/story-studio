@@ -19,7 +19,7 @@ export function navigationEdgeTouchesNode(edge, nodeId) {
 
 export function findPrimaryStoryNavigationEdge(storyId, edges = []) {
   if (!storyId) return null;
-  const priority = { 'after-end': 0, sequence: 0, return: 1, reference: 1, home: 2 };
+  const priority = { 'after-end': 0, sequence: 0, return: 1, home: 2 };
   return edges
     .filter((edge) => edge.from === storyId)
     .sort((left, right) => (priority[left.kind] ?? 9) - (priority[right.kind] ?? 9))[0]

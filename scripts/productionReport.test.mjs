@@ -82,7 +82,7 @@ test('la progression est en cours des deux côtés, et l’annulation y est offe
     assert.equal(report.busy, true);
     assert.equal(report.cancel.available, true);
     assert.deepEqual(report.progress.lines, ['▶ Démarrage']);
-    assert.equal(report.progress.note, "Le pack apparaîtra ici dès qu'il sera prêt.");
+    assert.equal(report.progress.note, 'Le pack apparaîtra ici dès qu’il sera prêt.');
     assert.doesNotMatch(report.progress.note, /moteur|journal/i);
   }
 });

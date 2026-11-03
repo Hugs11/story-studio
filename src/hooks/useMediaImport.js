@@ -1,12 +1,13 @@
+import { presentUserMessage } from '../i18n/userMessage.js';
+import { translateImport as t, importPresentationError } from '../i18n/importPresentation.js';
 import { useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { sanitizeImportedName } from '../store/projectStore';
 import { MEDIA_LANDING_TREE } from '../store/mediaToolSurface';
 import { isFallbackProjectName } from '../store/projectSaveName.js';
 import { basename } from '../utils/fileUtils';
-import { formatFrenchCount } from '../utils/frenchText.js';
 import { logger } from '../utils/logger';
-import { youtubeBlockedNotice, youtubeImportFailure } from '../utils/youtubeErrors.js';
+import { youtubeBlockedNoticeRef, youtubeImportFailureRef } from '../utils/youtubeErrors.js';
 import { useImportSession } from './useImportSession';
 import { useOsFileDrop } from './useOsFileDrop';
 
@@ -16,7 +17,7 @@ function isImportedPackPath(filePath) {
 
 function getImportDisplayName(filePath) {
   const fileName = basename(filePath);
-  return sanitizeImportedName(fileName, fileName || 'Import en cours');
+  return sanitizeImportedName(fileName, fileName || t('import:media.current.label'));
 }
 
 // Textes des funnels média d'accueil (podcast/YouTube) : flux identiques,
@@ -27,20 +28,20 @@ const MEDIA_FUNNEL_COPY = {
     defaultTitle: 'Podcast',
     coverFilePrefix: 'podcast',
     logPrefix: 'podcast-funnel',
-    allFailedMessage: "Aucun épisode n'a pu être importé. Vérifie ta connexion ou l'adresse du flux RSS.",
-    someFailedNotice: (failures, total) => `${formatFrenchCount(failures, 'épisode', 'épisodes')} sur ${total} n'ont pas pu être importés. Les autres ont bien été ajoutés.`,
+    allFailedRef: { key: 'import:podcast.import.failure' },
+    someFailedNotice: (failures, total) => ({ key: 'import:podcast.batch.partial', params: { count: failures, total } }),
   },
   youtube: {
     defaultTitle: 'YouTube',
     coverFilePrefix: 'youtube',
     logPrefix: 'youtube-funnel',
-    allFailedMessage: "Aucune vidéo n'a pu être importée.",
-    someFailedNotice: (failures, total) => `${formatFrenchCount(failures, 'vidéo', 'vidéos')} sur ${total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`,
+    allFailedRef: { key: 'import:youtube.import.failure' },
+    someFailedNotice: (failures, total) => ({ key: 'import:youtube.batch.partial', params: { count: failures, total } }),
   },
 };
 
 function partialFailureNotice(source, copy, result) {
-  return (source === 'youtube' && youtubeBlockedNotice(result))
+  return (source === 'youtube' && youtubeBlockedNoticeRef(result))
     || copy.someFailedNotice(result.failures, result.total);
 }
 
@@ -58,6 +59,9 @@ function partialFailureNotice(source, copy, result) {
 // (useSaveProgress, useSessionMediaTriage) — ce n'est pas de l'import.
 export function useMediaImport({
   store,
+  mediaStorageRef,
+  sessionModeRef,
+  subscriptions,
   projectIndex,
   maybeCopyToProject,
   copyGeneratedMediaToProject,
@@ -89,6 +93,8 @@ export function useMediaImport({
     addPathsToMediaLibrary,
     persistProjectSnapshot,
     workspaceDirRef,
+    mediaStorageRef,
+    sessionModeRef,
     showErrorDialog,
     getImportDisplayName,
     isImportedPackPath,
@@ -101,67 +107,80 @@ export function useMediaImport({
   // session éphémère, pré-remplit titre + vignette depuis la source (flux RSS ou
   // liste yt-dlp), puis importe les épisodes/vidéos en histoires avant
   // l'atterrissage éditeur. Vocabulaire par source dans MEDIA_FUNNEL_COPY.
-  async function landMediaFunnel(source, items, list, onProgress) {
+  async function landMediaFunnel(source, items, list, onProgress, subscriptionRequest) {
+    const request = subscriptionRequest && subscriptions
+      ? await subscriptions.prepareRequest(subscriptionRequest) : subscriptionRequest;
     const copy = MEDIA_FUNNEL_COPY[source];
     await runFunnelLanding('pack', async () => {
-      const listTitle = String(list?.title || '').trim();
-      onProgress?.({ name: listTitle || copy.defaultTitle, index: 0, total: items.length, phase: 'Préparation de la session…' });
-      let listCover = null;
-      if (list?.imageUrl) {
-        try {
-          const tmpImage = await invoke('download_podcast_media', {
-            url: list.imageUrl,
-            fileName: `${listTitle || copy.coverFilePrefix}-couverture`,
-          });
-          listCover = await copyGeneratedMediaToProject(tmpImage);
-        } catch (coverError) {
-          logger.warn(`${copy.logPrefix}:cover-error title='${listTitle || copy.defaultTitle}' error=${coverError}`);
+      const mediaRequest = importSession.captureImport();
+      try {
+        const listTitle = String(list?.title || '').trim();
+        onProgress?.({ name: listTitle || copy.defaultTitle, index: 0, total: items.length, get phase() { return t('import:media.session.progress'); } });
+        let listCover = null;
+        if (items.length > 0 && list?.imageUrl) {
+          try {
+            const tmpImage = await invoke('download_podcast_media', {
+              url: list.imageUrl,
+              fileName: `${listTitle || copy.coverFilePrefix}-couverture`,
+            });
+            listCover = await copyGeneratedMediaToProject(tmpImage, mediaRequest.copies);
+          } catch (coverError) {
+            logger.warn(`${copy.logPrefix}:cover-error title='${listTitle || copy.defaultTitle}' error=${coverError}`);
+          }
         }
-      }
-      if (listTitle || listCover) {
-        store.setProject((project) => ({
-          ...project,
-          ...(listTitle ? { projectName: listTitle, rootName: listTitle } : {}),
-          ...(listCover ? { rootImage: listCover, thumbnailImage: listCover } : {}),
-          packMetadata: {
-            ...(project.packMetadata ?? {}),
-            ...(listTitle ? { title: listTitle } : {}),
-          },
-        }));
-      }
-      store.setSelectedId('root');
-      const result = await handleImportMediaEpisodes(items, list, {
-        source,
-        targetMenuId: null,
-        // Le funnel d'accueil fabrique une session de pack : son point
-        // d'arrivée est l'arbre, quel que soit l'éditeur ouvert avant lui.
-        // Dit ici plutôt que déduit, pour ne dépendre d'aucun ordre entre
-        // l'installation de la session et cet import.
-        landing: MEDIA_LANDING_TREE,
-        onProgress,
-        suppressDialog: true,
-      });
-      if (result.total > 0 && result.failures >= result.total) {
-        throw new Error(source === 'youtube'
-          ? youtubeImportFailure(result, copy.allFailedMessage)
-          : copy.allFailedMessage);
-      }
-      if (result.failures > 0) {
-        setImportNotice(partialFailureNotice(source, copy, result));
-      }
-      logger.info(`${copy.logPrefix}:landed count=${result.imported}`);
+        if (!mediaRequest.isCurrent()) return;
+        if (listTitle || listCover) {
+          store.setProject((project) => ({
+            ...project,
+            ...(listTitle ? { projectName: listTitle, rootName: listTitle } : {}),
+            ...(listCover ? { rootImage: listCover, thumbnailImage: listCover } : {}),
+            packMetadata: {
+              ...(project.packMetadata ?? {}),
+              ...(listTitle ? { title: listTitle } : {}),
+            },
+          }));
+        }
+        store.setSelectedId('root');
+        const result = await handleImportMediaEpisodes(items, list, {
+          source,
+          targetMenuId: null,
+          // Le funnel d'accueil fabrique une session de pack : son point
+          // d'arrivée est l'arbre, quel que soit l'éditeur ouvert avant lui.
+          // Dit ici plutôt que déduit, pour ne dépendre d'aucun ordre entre
+          // l'installation de la session et cet import.
+          landing: MEDIA_LANDING_TREE,
+          onProgress,
+          suppressDialog: true,
+        });
+        if (!mediaRequest.isCurrent()) return;
+        if (result.total > 0 && result.failures >= result.total) {
+          throw importPresentationError(source === 'youtube'
+            ? youtubeImportFailureRef(result, copy.allFailedRef)
+            : copy.allFailedRef, {}, { code: 'IMPORT_MEDIA_BATCH_FAILED', cause: result.firstError, detail: result.firstError ? presentUserMessage(result.firstError).technicalDetail : '' });
+        }
+        if (result.failures > 0) {
+          setImportNotice(partialFailureNotice(source, copy, result));
+        }
+        if (!mediaRequest.isCurrent()) return;
+        subscriptions?.applyRequest?.(request, result.importedEpisodeIds);
+        logger.info(`${copy.logPrefix}:landed count=${result.imported}`);
+      } finally { mediaRequest.release(); }
+    // eslint-disable-next-line i18next/no-literal-string -- Identifiant technique du journal.
     }, { errorLog: `${copy.logPrefix}:import-error` });
   }
 
-  async function handlePodcastFunnelImport(episodes, feed, onProgress) {
-    await landMediaFunnel('podcast', episodes, feed, onProgress);
+  async function handlePodcastFunnelImport(episodes, feed, onProgress, request) {
+    await landMediaFunnel('podcast', episodes, feed, onProgress, request);
   }
 
   // Dans l'éditeur, podcast et YouTube partagent la même arrivée : histoires
   // côté Libre, audio et jaquettes sélectionnés dans Médias côté graphe.
-  async function importIntoEditor(source, items, list, onProgress = null) {
-    const copy = MEDIA_FUNNEL_COPY[source];
+  async function importIntoEditor(source, items, list, onProgress = null, subscriptionRequest) {
     const projectEpoch = store.workEpochRef.current;
+    const request = subscriptionRequest && subscriptions
+      ? await subscriptions.prepareRequest(subscriptionRequest) : subscriptionRequest;
+    if (projectEpoch !== store.workEpochRef.current) throw importPresentationError('import:media.follow.projectChanged', {}, { code: 'IMPORT_PROJECT_CHANGED' });
+    const copy = MEDIA_FUNNEL_COPY[source];
     const result = await handleImportMediaEpisodes(items, list, {
       source,
       onProgress,
@@ -183,31 +202,33 @@ export function useMediaImport({
       onRevealImportedMedia?.(result.importedPaths);
     }
     if (source === 'youtube' && result.total > 0 && result.failures >= result.total) {
-      throw new Error(youtubeImportFailure(result, copy.allFailedMessage));
+      throw importPresentationError(youtubeImportFailureRef(result, copy.allFailedRef), {}, { code: 'IMPORT_MEDIA_BATCH_FAILED', cause: result.firstError, detail: result.firstError ? presentUserMessage(result.firstError).technicalDetail : '' });
     }
     if (source === 'youtube' && result.failures > 0) {
       setImportNotice(partialFailureNotice(source, copy, result));
     }
+    if (projectEpoch === liveStore.workEpochRef.current) subscriptions?.applyRequest?.(request, result.importedEpisodeIds);
     logger.info(`${source}-editor:imported count=${result.imported}`);
     return result;
   }
 
-  async function handlePodcastEditorImport(episodes, feed) {
-    return importIntoEditor('podcast', episodes, feed);
+  async function handlePodcastEditorImport(episodes, feed, onProgress, request) {
+    return importIntoEditor('podcast', episodes, feed, onProgress, request);
   }
 
-  async function handleYoutubeFunnelImport(videos, list, onProgress) {
-    await landMediaFunnel('youtube', videos, list, onProgress);
+  async function handleYoutubeFunnelImport(videos, list, onProgress, request) {
+    await landMediaFunnel('youtube', videos, list, onProgress, request);
   }
 
   // YouTube depuis l'éditeur réutilise le parcours podcast. Le funnel affiche
   // une erreur dédiée si toutes les vidéos échouent.
-  async function handleYoutubeEditorImport(videos, list, onProgress) {
-    return importIntoEditor('youtube', videos, list, onProgress);
+  async function handleYoutubeEditorImport(videos, list, onProgress, request) {
+    return importIntoEditor('youtube', videos, list, onProgress, request);
   }
 
   useOsFileDrop({
     dispatchFiles,
+    captureImport: importSession.captureImport,
     maybeCopyToProject,
     copyGeneratedMediaToProject,
     extractAudioEmbeddedImage,
@@ -215,6 +236,7 @@ export function useMediaImport({
     setImporting,
     setActiveDropZone,
     getImportDisplayName,
+    showErrorDialog,
   });
 
   return {

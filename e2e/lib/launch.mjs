@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { chromium } from 'playwright-core';
 import { APP_IDENTIFIER, CDP_URL, DEV_ORIGIN, REPO_DIR, appDataDirs } from './config.mjs';
 import { attachCollectors } from './collect.mjs';
+import { registerCampaignProcess, cleanupAppProcesses } from './campaign-processes.mjs';
 import { launchLinux } from './webdriver/launch.mjs';
 
 const sleep = ms => new Promise(done => setTimeout(done, ms));
@@ -56,22 +57,6 @@ function killTree(pid) {
   }
 }
 
-// Filet de sécurité observé en pratique : `cargo run` (lancé par `tauri dev`)
-// laisse parfois échapper `story-studio.exe` du sous-arbre tué par
-// `killTree` (le process persiste bien après la fermeture des ports 1420/9222
-// et fait ensuite échouer `resetAppProfile` avec EPERM, le profil restant
-// verrouillé). On balaie donc, en plus, tout `story-studio.exe` dont
-// l'exécutable est sous ce dépôt (jamais l'application installée de l'auteur,
-// ailleurs sur le disque).
-function killOrphanedAppProcesses() {
-  if (process.platform !== 'win32') return;
-  const root = REPO_DIR.replace(/'/g, "''");
-  const script = `Get-CimInstance Win32_Process -Filter "Name='story-studio.exe'" | `
-    + `Where-Object { $_.ExecutablePath -like '${root}*' } | `
-    + 'ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }';
-  spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], { stdio: 'ignore' });
-}
-
 /**
  * Démarre l'application et renvoie `{ browser, page, events, stop, runDir }`.
  * `fresh` efface d'abord le profil e2e ; `timeoutMs` couvre la première
@@ -90,7 +75,7 @@ async function dismissReleaseNotes(page) {
   const notes = page.locator('.release-notes-box');
   const visible = await notes.waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false);
   if (!visible) return;
-  await notes.getByRole('button', { name: 'C’est parti !', exact: true }).click();
+  await notes.locator('.release-notes-start').click();
   await notes.waitFor({ state: 'hidden', timeout: 5000 });
 }
 
@@ -104,10 +89,10 @@ export async function launchApp({ runDir, fresh = false, workspaceDir = null, ti
   if (await cdpReady() || await devServerUp()) {
     throw new Error('Une instance (port 9222 ou 1420) tourne déjà : la fermer avant de lancer.');
   }
-  killOrphanedAppProcesses(); // avant tout : un profil verrouillé par un orphelin ferait échouer resetAppProfile
   if (fresh) resetAppProfile();
   mkdirSync(runDir, { recursive: true });
-  const appLog = createWriteStream(join(runDir, 'tauri-dev.log'));
+  const appLog = createWriteStream(join(runDir, 'tauri-dev.log'), { flags: 'a' });
+  appLog.write('\n=== Lancement E2E ' + new Date().toISOString() + ' ===\n');
   const child = exePath
     ? spawn(exePath, [], {
       cwd: REPO_DIR,
@@ -121,17 +106,22 @@ export async function launchApp({ runDir, fresh = false, workspaceDir = null, ti
       detached: process.platform !== 'win32',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+  const pidFile = process.env.SS_E2E_PID_FILE || join(runDir, 'processes.json');
+  registerCampaignProcess(pidFile, child.pid);
   child.stdout.pipe(appLog);
   child.stderr.pipe(appLog);
   let exited = null;
   child.on('exit', code => { exited = code; });
 
   const stop = async () => {
+    if (process.platform === 'win32') {
+      await cleanupAppProcesses(pidFile);
+      return;
+    }
     killTree(child.pid);
     // Attendre la libération des ports, pour qu'une relance immédiate passe.
     const deadline = Date.now() + 30_000;
     while (Date.now() < deadline && (await cdpReady() || await devServerUp())) await sleep(500);
-    killOrphanedAppProcesses(); // filet : un `story-studio.exe` peut survivre à killTree (cf. plus haut)
   };
 
   const started = Date.now();

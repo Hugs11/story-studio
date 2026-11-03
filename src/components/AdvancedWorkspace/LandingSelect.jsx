@@ -1,3 +1,5 @@
+import { graphTranslationEngine } from '../../i18n/graphPresentation.js';
+import { useTranslation } from 'react-i18next';
 // « commence sur [choix ▾] » : le choix sur lequel un Écran ouvre une liste,
 // réglable sur place, depuis le panneau de l'Écran comme depuis celui de la
 // liste. La liste garde son ordre ; c'est l'Écran de départ qui dit où l'on
@@ -5,6 +7,7 @@
 // en silence.
 
 import { HelpHint } from '../common/HelpHint';
+import { Select } from '../common/Select';
 import { LANDING_HELP } from './ActionSelectionFields.jsx';
 import { positionText } from './connectionRows.jsx';
 import { RANDOM_OPTION_INDEX, advancedGestures } from '../../store/projectModel/advancedGestures.js';
@@ -21,6 +24,7 @@ export function landingGesture(stageUuid, slot, actionId, value) {
 
 // `choices` : les choix de la liste, dans son ordre — `{ key, rank, label }`.
 export function LandingSelect({ id, landing, choices, disabled, onChange }) {
+  const { t } = useTranslation('graph', { i18n: graphTranslationEngine() });
   const count = choices.length;
   let value = '';
   if (landing.random) value = 'random';
@@ -35,22 +39,24 @@ export function LandingSelect({ id, landing, choices, disabled, onChange }) {
       {/* Le « ? » avant le libellé : entre « commence sur » et le choix, il
           couperait la lecture du réglage. */}
       <span className="advanced-exit__landing-label">
-        <HelpHint text={LANDING_HELP} />
-        <label htmlFor={id} className="advanced-options__verb">commence sur</label>
+        <HelpHint text={t(LANDING_HELP)} />
+        <label htmlFor={id} className="advanced-options__verb">{t("graph:landing.select.start")}</label>
       </span>
-      <select id={id} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
-        {value === '' && (
-          <option value="" disabled>
-            {landing.unknown ? 'choix illisible' : `choix ${positionText(landing.rank, count)} absent`}
-          </option>
-        )}
-        {choices.map((choice) => (
-          <option key={choice.key} value={String(choice.rank)}>
-            {positionText(choice.rank, count)} · {choice.label ?? 'Écran à choisir'}
-          </option>
-        ))}
-        {offersRandom && <option value="random">Au hasard, à chaque fois</option>}
-      </select>
+      <Select
+        id={id}
+        className="advanced-exit__landing-select"
+        value={value}
+        disabled={disabled}
+        onChange={onChange}
+        placeholder={value === '' ? (landing.unknown ? t("graph:landing.select.unknown") : t('graph:landing.select.missing', { position: positionText(landing.rank, count) })) : ''}
+        options={[
+          ...choices.map((choice) => ({
+            value: String(choice.rank),
+            label: `${positionText(choice.rank, count)} · ${choice.label ?? t('graph:landing.target.fallback')}`,
+          })),
+          ...(offersRandom ? [{ value: 'random', label: t("graph:landing.select.random") }] : []),
+        ]}
+      />
     </div>
   );
 }

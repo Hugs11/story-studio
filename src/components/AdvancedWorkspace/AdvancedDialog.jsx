@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import { translateGraph as t, graphTranslationEngine } from '../../i18n/graphPresentation.js';
 // Le châssis de dialogue de l'Éditeur avancé.
 //
 // Il porte la classe `app-modal-overlay` du portail commun, et c'est ce qui
@@ -23,13 +25,17 @@ export function AdvancedDialog({
   children,
   onCancel,
   onConfirm = null,
-  confirmLabel = 'Appliquer',
-  cancelLabel = 'Annuler',
+  confirmLabel = null,
+  cancelLabel = null,
   confirmDisabled = false,
   confirmKind = 'primary',
   busy = false,
   footer = null,
+  // Facultatif : l'appelant qui doit rendre le focus au bouton d'annulation
+  // (un bouton du pied qui disparaît, par exemple) le tient par cette ref.
+  cancelRef = null,
 }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const panelRef = useRef(null);
   const restoreFocusRef = useRef(null);
   useEscapeKey(true, () => { if (!busy) onCancel(); });
@@ -84,10 +90,10 @@ export function AdvancedDialog({
         <footer className="advanced-dialog__footer">
           {footer}
           <span className="advanced-dialog__spacer" />
-          <Button onClick={onCancel} disabled={busy}>{cancelLabel}</Button>
+          <Button ref={cancelRef} onClick={onCancel} disabled={busy}>{cancelLabel ?? t("common:dialog.cancel.label")}</Button>
           {onConfirm && (
             <Button variant={confirmKind} onClick={onConfirm} disabled={confirmDisabled || busy}>
-              {confirmLabel}
+              {confirmLabel ?? t("graph:dialog.appliquer.label")}
             </Button>
           )}
         </footer>

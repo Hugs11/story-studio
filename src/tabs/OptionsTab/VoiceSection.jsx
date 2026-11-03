@@ -1,9 +1,12 @@
+import { Select } from '../../components/common/Select.jsx';
+import { Trans, useTranslation } from 'react-i18next';
 import { PiperVoiceSettings } from './PiperVoiceSettings';
 import { XttsVoiceSettings } from './XttsVoiceSettings';
 import { usePiperVoiceOptions } from './usePiperVoiceOptions';
 import { useXttsVoiceOptions } from './useXttsVoiceOptions';
 
 export function VoiceSection({ className, sectionRef, xttsSettings, onUpdateXttsSettings }) {
+  const { t } = useTranslation('settings');
   const ttsBackend = xttsSettings.backend || 'piper';
   const piperOptions = usePiperVoiceOptions({ xttsSettings, onUpdateXttsSettings });
   const xttsOptions = useXttsVoiceOptions({ xttsSettings, onUpdateXttsSettings });
@@ -15,23 +18,24 @@ export function VoiceSection({ className, sectionRef, xttsSettings, onUpdateXtts
 
   return (
     <section id="xtts" className={className} ref={sectionRef}>
-      <div className="opts-card-title">Génération de voix locale</div>
+      <div className="opts-card-title">{t('settings:voice.section.title')}</div>
       <div className="opts-row">
         <div className="opts-row-info">
-          <div className="opts-row-label">Moteur de voix</div>
+          <div className="opts-row-label">{t('settings:voice.backend.label')}</div>
           <div className="opts-row-sub">
-            <strong>Piper</strong> fonctionne sans configuration (recommandé). <strong>XTTS</strong> est destiné
-            aux utilisateurs avancés (clonage de voix, serveur local).
+            <Trans i18nKey="settings:voice.backend.description" components={{ piper: <strong />, xtts: <strong /> }} />
           </div>
         </div>
-        <select
+        <Select
           className="xtts-input opts-select"
           value={ttsBackend}
-          onChange={(e) => handleTtsBackendChange(e.target.value)}
-        >
-          <option value="piper">Piper (défaut)</option>
-          <option value="xtts">XTTS (avancé)</option>
-        </select>
+          onChange={handleTtsBackendChange}
+          aria-label={t('settings:voice.backend.label')}
+          options={[
+            { value: 'piper', label: t('settings:voice.backend.piper') },
+            { value: 'xtts', label: t('settings:voice.backend.xtts') },
+          ]}
+        />
       </div>
 
       {ttsBackend === 'piper' && (

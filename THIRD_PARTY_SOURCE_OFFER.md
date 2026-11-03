@@ -2,15 +2,22 @@
 
 Story Studio is MIT-licensed, but its desktop bundles also redistribute
 standalone third-party programs under their own licenses. This document covers
-the binaries shipped with Story Studio 0.9.9. They are the same programs,
-with the same versions and SHA-256 values, as in Story Studio 0.9.8.
+the third-party binaries configured for Story Studio 0.9.10. Their versions,
+provenance and source references are recorded below.
 
-The `v0.9.9` GitHub release includes a
-`story-studio-v0.9.9-corresponding-sources.zip` asset. It contains the pinned
+The existing `v0.9.9` GitHub release includes a
+`story-studio-v0.9.9-corresponding-sources.zip` asset. This earlier archive contains the pinned
 Piper and eSpeak NG sources, the Story Studio Piper patch and build recipe,
 the FFmpeg source releases matching each bundled major/minor version, the
 embedded FFmpeg build configurations, the 7-Zip 25.01 source, the AppImage
-type2 runtime source, the imageio-ffmpeg 0.6.0 source, and this offer.
+type2 runtime source, the imageio-ffmpeg 0.6.0 source, and the earlier offer.
+
+## 0.9.10 release
+
+Story Studio 0.9.10 redistributes the same third-party binaries as 0.9.9:
+the pinned versions and checksums below are unchanged. The `v0.9.10` GitHub
+release includes a `story-studio-v0.9.10-corresponding-sources.zip` asset
+with the same corresponding sources as the 0.9.9 archive.
 
 ## Piper 1.6
 
@@ -54,13 +61,15 @@ squashfuse, zstd and zlib projects and their source locations.
 
 ## Source request
 
-For at least three years after the publication of Story Studio 0.9.9, the
+For at least three years after the publication of Story Studio 0.9.10, the
 maintainer will provide the corresponding source and the available build
 information for these redistributed binaries at no charge other than the
 reasonable cost of physical transfer. Requests can be opened on the public
 GitHub repository with the title `Corresponding source request`; private
 contact is also available through GitHub Private Vulnerability Reporting when
 the request must contain non-public contact information.
+
+The source offer accompanying Story Studio 0.9.9 remains in effect.
 
 This offer applies only to third-party binaries redistributed by Story Studio.
 Voice models downloaded separately keep the licenses stated in

@@ -438,7 +438,8 @@ impl CancelOnTransfer {
     }
 
     pub(super) fn watch(&self, message: &str) {
-        if message.contains("Transfert") {
+        if crate::support::user_message::contains_code(message, "GENERATION_ARCHIVE_TRANSFER_START")
+        {
             self.armed.store(true, std::sync::atomic::Ordering::SeqCst);
         }
     }

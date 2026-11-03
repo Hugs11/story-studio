@@ -1,3 +1,5 @@
+import { useTreeTranslation } from "../../../i18n/useTreeTranslation.jsx";
+import { translateTree as t } from "../../../i18n/treePresentation.js";
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   NAV_TARGET_NEXT_STORY,
@@ -15,7 +17,7 @@ import {
 } from '../../../store/navigationTargets';
 import { CircleX, FolderOpen, Link2, Music, Play } from '../../icons/LucideLocal';
 
-export const NAV_ROOT_LABEL = 'Menu racine';
+export const NAV_ROOT_LABEL = "tree:navigation.root.label";
 
 export function generatedTargetIdToSelectValue(targetId) {
   if (!targetId || isRootNavigationTarget(targetId)) return '';
@@ -44,8 +46,9 @@ function buildNavigationTargetOptions({
   currentStoryId = null,
   allowCurrentStory = false,
   includeNone = false,
-  noneLabel = 'Retour à la couverture du pack',
-  emptyLabel = 'Choisir une destination',
+  noneLabel = t("tree:navigation.start.return"),
+  emptyLabel = t("tree:navigation.destination.choose"),
+  emptyKind = 'default',
   includeDefault = true,
   includeNextStory = true,
   includeStoryPlay = true,
@@ -55,22 +58,22 @@ function buildNavigationTargetOptions({
   if (value === '__mixed__') {
     options.push({
       value: '__mixed__',
-      label: 'Valeurs mixtes — ne pas modifier',
+      label: t("tree:navigation.mixed.label"),
       kind: 'default',
       disabled: true,
     });
   }
   if (includeDefault) {
-    options.push({ value: '', label: emptyLabel, kind: 'default' });
+    options.push({ value: '', label: emptyLabel, kind: emptyKind || 'default' });
   }
   if (includeNone) options.push({ value: '__none__', label: noneLabel, kind: 'none' });
   if (includeNextStory) {
-    options.push({ value: NAV_TARGET_NEXT_STORY, label: 'Histoire suivante', kind: 'story' });
+    options.push({ value: NAV_TARGET_NEXT_STORY, label: t("tree:navigation.nextStory.label"), kind: 'story' });
   }
   for (const menu of allMenus) {
     options.push({
       value: encodeMenuNavigationTarget(menu.id),
-      label: menu.name || '(sans nom)',
+      label: menu.name || t("tree:navigation.name.fallback"),
       kind: 'menu',
     });
   }
@@ -78,7 +81,7 @@ function buildNavigationTargetOptions({
   for (const story of selectableStories) {
     options.push({
       value: encodeStoryNavigationTarget(story.id),
-      label: story.name || '(sans nom)',
+      label: story.name || t("tree:navigation.name.fallback"),
       kind: 'story',
     });
   }
@@ -86,7 +89,7 @@ function buildNavigationTargetOptions({
     for (const story of selectableStories) {
       options.push({
         value: encodeStoryPlayNavigationTarget(story.id),
-        label: `Lecture directe - ${story.name || '(sans nom)'}`,
+        label: t("tree:navigation.story.direct", { name: story.name || t("tree:navigation.name.fallback") }),
         kind: 'story_play',
       });
     }
@@ -94,14 +97,14 @@ function buildNavigationTargetOptions({
   for (const story of allStories.filter((s) => s.id !== currentStoryId && s.hasAfterPlaybackHomeStep)) {
     options.push({
       value: encodeStoryHomeStepNavigationTarget(story.id),
-      label: `Retour de fin - ${story.name || '(sans nom)'}`,
+      label: t("tree:navigation.story.endReturn", { name: story.name || t("tree:navigation.name.fallback") }),
       kind: 'story_home_step',
     });
   }
   // Une destination dont l'histoire ou le dossier a été supprimé reste affichée
   // comme telle, jamais confondue avec le choix par défaut de la ligne vide.
   if (flagMissingValue && isMissingNavigationValue(value, allMenus, allStories)) {
-    options.unshift({ value, label: 'Destination supprimée — à choisir', kind: 'none', disabled: true });
+    options.unshift({ value, label: t("tree:navigation.deleted.label"), kind: 'none', disabled: true });
   }
   return options;
 }
@@ -120,11 +123,11 @@ function isMissingNavigationValue(value, allMenus, allStories) {
 }
 
 export const CONTROL_DEFS = [
-  { key: 'autoplay', label: 'Lecture automatique', def: true },
-  { key: 'ok',       label: 'Bouton OK',            def: true },
-  { key: 'home',     label: 'Bouton Accueil',        def: true },
-  { key: 'pause',    label: 'Bouton pause',          def: false },
-  { key: 'wheel',    label: 'Molette',               def: false },
+  { key: 'autoplay', label: "tree:control.autoplay.label", def: true },
+  { key: 'ok',       label: "tree:control.ok.label",            def: true },
+  { key: 'home',     label: "tree:control.home.label",        def: true },
+  { key: 'pause',    label: "tree:control.pause.label",          def: false },
+  { key: 'wheel',    label: "tree:control.wheel.label",               def: false },
 ];
 
 export const SEQUENCE_CONTROL_DEFAULTS = {
@@ -135,11 +138,11 @@ export const SEQUENCE_CONTROL_DEFAULTS = {
   wheel: false,
 };
 
-export function normalizeSequenceStep(step = {}, index = 0) {
+export function normalizeSequenceStep(step = {}, _index = 0) {
   const controls = step.controlSettings ?? {};
   return {
     id: step.id || crypto.randomUUID(),
-    name: step.name || `Étape ${index + 1}`,
+    name: step.name || '',
     audio: step.audio ?? null,
     image: step.image ?? null,
     controlSettings: { ...SEQUENCE_CONTROL_DEFAULTS, ...controls },
@@ -181,17 +184,17 @@ export function getNavigationSelectHint({
   if (!normalized) return emptyResolvedLabel;
   if (isRootNavigationTarget(normalized)) {
     const def = project?.rootEntries?.[0];
-    if (!def) return 'Aucune entrée dans le pack';
-    return `${def.name || '(sans nom)'} (premier élément du pack)`;
+    if (!def) return t("tree:navigation.empty.label");
+    return t("tree:navigation.first.label", { name: def.name || t("tree:navigation.name.fallback") });
   }
   if (isNextStoryNavigationTarget(normalized)) {
-    if (!entry) return 'Histoire suivante selon l\'histoire source';
+    if (!entry) return t("tree:navigation.nextStory.context");
     const siblings = parentMenu ? (parentMenu.children ?? []) : (project?.rootEntries ?? []);
     const idx = siblings.findIndex((s) => s.id === entry.id);
     const next = idx >= 0 ? siblings.slice(idx + 1).find((s) => s.type === 'story') : null;
-    if (next) return next.name || '(sans nom)';
+    if (next) return next.name || t("tree:navigation.name.fallback");
     // Fallback Rust : si pas d'histoire suivante, retour vers le parent
-    return parentMenu ? `${parentMenu.name || '(sans nom)'} (parent)` : NAV_ROOT_LABEL;
+    return parentMenu ? t("tree:navigation.parent.label", { name: parentMenu.name || t("tree:navigation.name.fallback") }) : t(NAV_ROOT_LABEL);
   }
   // Explicite — la valeur affichée dans le select est déjà la destination
   return null;
@@ -205,8 +208,9 @@ export function NavigationTargetSelect({
   currentStoryId,
   allowCurrentStory = false,
   includeNone = false,
-  noneLabel = 'Retour à la couverture du pack',
-  emptyLabel = 'Choisir une destination',
+  noneLabel = t("tree:navigation.start.return"),
+  emptyLabel = t("tree:navigation.destination.choose"),
+  emptyKind = 'default',
   includeDefault = true,
   resolvedDefaultValue = null,
   resolvedDefaultLabel = null,
@@ -218,6 +222,7 @@ export function NavigationTargetSelect({
   flagMissingValue = false,
   size = 'default',
 }) {
+  useTreeTranslation();
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const rootRef = useRef(null);
@@ -236,6 +241,7 @@ export function NavigationTargetSelect({
       includeNone,
       noneLabel,
       emptyLabel,
+      emptyKind,
       includeDefault,
       includeNextStory,
       includeStoryPlay,
@@ -250,10 +256,12 @@ export function NavigationTargetSelect({
       includeNone,
       noneLabel,
       emptyLabel,
+      emptyKind,
       includeDefault,
       includeNextStory,
       includeStoryPlay,
       flagMissingValue,
+      t("tree:navigation.destination.choose"),
     ],
   );
   // Un « vrai » choix correspond à une ligne concrète de la liste (menu, histoire,
@@ -349,7 +357,9 @@ export function NavigationTargetSelect({
     }
   };
 
+  // eslint-disable-next-line i18next/no-literal-string -- identifiant DOM du listbox
   const activeOptionId = open && selectableOptions[activeIndex]
+    // eslint-disable-next-line i18next/no-literal-string -- identifiant DOM, sans texte visible
     ? `${listboxId}-option-${activeIndex}`
     : undefined;
 
@@ -406,4 +416,20 @@ export function NavigationTargetSelect({
       </div>
     </div>
   );
+}
+
+// Présentation des descripteurs existants ; aucune règle de navigation ajoutée.
+export function packStartReturnLabel(project) {
+  const entry = project?.rootEntries?.[0];
+  return entry?.id ? t('tree:navigation.start.named', { name: entry.name || t('tree:navigation.name.fallback') }) : t('tree:navigation.start.return');
+}
+export function navigationTargetLabel(targetId, index) {
+  if (targetId === 'root') return t('tree:navigation.root.short');
+  if (targetId === 'next_story') return t('tree:navigation.nextStory.label');
+  if (targetId === '__contextual_next_story__') return t('tree:navigation.nextStory.context');
+  if (isStoryNavigationTarget(targetId)) {
+    const name = index?.entryById?.get(decodeNavigationStoryId(targetId))?.name || t('tree:navigation.destination.missing');
+    return targetId.startsWith('story_play:') ? t('tree:navigation.story.direct', { name }) : targetId.startsWith('story_home_step:') ? t('tree:navigation.story.endReturn', { name }) : name;
+  }
+  return index?.entryById?.get(targetId)?.name || t('tree:navigation.destination.missing');
 }

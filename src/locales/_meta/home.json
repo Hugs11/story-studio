@@ -1,0 +1,2470 @@
+{
+  "modeSelector.graph.label": {
+    "context": "components/ModeSelector/ModeSelector.jsx > graph ; Literal « Éditeur graphe ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 39,
+    "en": {
+      "sourceHash": "ba1f144e22f9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ba1f144e22f9",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.simple.label": {
+    "context": "components/ModeSelector/ModeSelector.jsx > simple ; Literal « Éditeur simplifié ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 42,
+    "en": {
+      "sourceHash": "4884ae8c98b5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4884ae8c98b5",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.menu.label": {
+    "context": "components/ModeSelector/ModeSelector.jsx > menu ; Literal « Éditeur par menus ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 42,
+    "en": {
+      "sourceHash": "5e8465716136",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5e8465716136",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.recovery.unsaved": {
+    "context": "components/ModeSelector/ModeSelector.jsx > recovery ; Literal « Non enregistré ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 39,
+    "en": {
+      "sourceHash": "89e86283c85f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "89e86283c85f",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.documentation.errorTitle": {
+    "context": "components/ModeSelector/ModeSelector.jsx > documentation ; title « Documentation inaccessible ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 51,
+    "en": {
+      "sourceHash": "62127c61d1f8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "62127c61d1f8",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.menu.description": {
+    "context": "components/ModeSelector/ModeSelector.jsx > menu ; desc « Menus et dossiers imbriqués, agrégation de ZIP ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 71,
+    "en": {
+      "sourceHash": "e87d8bca7e2d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e87d8bca7e2d",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.menu.previousName": {
+    "context": "components/ModeSelector/ModeSelector.jsx > menu ; note « Anciennement Éditeur libre ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 51,
+    "en": {
+      "sourceHash": "dba8cabb7766",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dba8cabb7766",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.graph.description": {
+    "context": "components/ModeSelector/ModeSelector.jsx > graph ; desc « Navigation libre : Écrans, listes de choix et raccords avancés ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 87,
+    "en": {
+      "sourceHash": "3c209a3a942f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3c209a3a942f",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.simple.description": {
+    "context": "components/ModeSelector/ModeSelector.jsx > simple ; desc « Un menu, une histoire ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 46,
+    "en": {
+      "sourceHash": "0074791589a0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0074791589a0",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.edit.label": {
+    "context": "components/ModeSelector/ModeSelector.jsx > edit ; name « Modifier un pack existant ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 50,
+    "en": {
+      "sourceHash": "4125d324cdcb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4125d324cdcb",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.edit.description": {
+    "context": "components/ModeSelector/ModeSelector.jsx > edit ; desc « Modifie un .zip / .7z ou un dossier d’histoire ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 71,
+    "en": {
+      "sourceHash": "5c0e64a3cedb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5c0e64a3cedb",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.podcast.label": {
+    "context": "components/ModeSelector/ModeSelector.jsx > podcast ; name « Créer un pack depuis un podcast ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 56,
+    "en": {
+      "sourceHash": "35d5fa305663",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "35d5fa305663",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.podcast.description": {
+    "context": "components/ModeSelector/ModeSelector.jsx > podcast ; desc « Importe les épisodes d’un flux RSS ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 59,
+    "en": {
+      "sourceHash": "12d9ff479bfb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "12d9ff479bfb",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.youtube.label": {
+    "context": "components/ModeSelector/ModeSelector.jsx > youtube ; name « Créer un pack depuis YouTube ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 53,
+    "en": {
+      "sourceHash": "85095bbd5b20",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "85095bbd5b20",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.youtube.description": {
+    "context": "components/ModeSelector/ModeSelector.jsx > youtube ; desc « Importe l’audio d’une URL, playlist ou chaîne ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 70,
+    "en": {
+      "sourceHash": "f72f8624b883",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f72f8624b883",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.aggregate.label": {
+    "context": "components/ModeSelector/ModeSelector.jsx > aggregate ; name « Agréger des packs ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 42,
+    "en": {
+      "sourceHash": "18578066cca2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "18578066cca2",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.aggregate.description": {
+    "context": "components/ModeSelector/ModeSelector.jsx > aggregate ; desc « Fusionne plusieurs .zip ou .7z ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 55,
+    "en": {
+      "sourceHash": "e6cb427605bb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e6cb427605bb",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.checker.entryLabel": {
+    "context": "components/ModeSelector/ModeSelector.jsx > checker ; name « Vérifier un pack ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 41,
+    "en": {
+      "sourceHash": "73f3a2380e5f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "73f3a2380e5f",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.checker.description": {
+    "context": "components/ModeSelector/ModeSelector.jsx > checker ; desc « Repère et corrige les erreurs d’un pack existant. ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 74,
+    "en": {
+      "sourceHash": "980d9e15d661",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "980d9e15d661",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.open.label": {
+    "context": "components/ModeSelector/ModeSelector.jsx > open ; name « Ouvrir un projet ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 41,
+    "en": {
+      "sourceHash": "d7c0e88a062c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d7c0e88a062c",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.open.description": {
+    "context": "components/ModeSelector/ModeSelector.jsx > open ; desc « Reprends un projet enregistré ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 54,
+    "en": {
+      "sourceHash": "fe31aa5dc943",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fe31aa5dc943",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.brand.dedication": {
+    "context": "components/ModeSelector/ModeSelector.jsx > brand ; text « Créé pour Armand, pour que les histoires prennent vie. ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 79,
+    "en": {
+      "sourceHash": "49f7ca83cc3e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "49f7ca83cc3e",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.brand.tagline": {
+    "context": "components/ModeSelector/ModeSelector.jsx > brand ; JSXText « Crée, organise et génère des histoires audio pour ta Lunii. ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 84,
+    "en": {
+      "sourceHash": "e8bfceef3ad6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e8bfceef3ad6",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.documentation.label": {
+    "context": "components/ModeSelector/ModeSelector.jsx > documentation ; JSXText « Documentation ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 38,
+    "en": {
+      "sourceHash": "c205924de0fe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c205924de0fe",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.recent.title": {
+    "context": "components/ModeSelector/ModeSelector.jsx > recent ; JSXText « Projets récents ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "76227a7c745c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "76227a7c745c",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.recovery.fallbackName": {
+    "context": "components/ModeSelector/ModeSelector.jsx > recovery ; Literal « Projet récupérable ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 43,
+    "en": {
+      "sourceHash": "f970f70a03e1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f970f70a03e1",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.recovery.dismiss": {
+    "context": "components/ModeSelector/ModeSelector.jsx > recovery ; text « Ignorer cette reprise ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 46,
+    "en": {
+      "sourceHash": "8d076f4aadcd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8d076f4aadcd",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.step.packs": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > step ; label « Packs ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "3e784fc40cfb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3e784fc40cfb",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.step.audio": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > step ; label « Audio ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.step.image": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > step ; label « Image ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "1aa4cb0bcca7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1aa4cb0bcca7",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.step.metadata": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > step ; label « Métadonnées ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 36,
+    "en": {
+      "sourceHash": "32febdfc98c8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "32febdfc98c8",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.creation.title": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > creation ; Literal « Mes histoires du soir ». Nom proposé à la création, enregistré ensuite comme donnée auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 46,
+    "en": {
+      "sourceHash": "7f2b67bd59d8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7f2b67bd59d8",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.output.dialogTitle": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > output ; title « Dossier de sortie du pack ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 50,
+    "en": {
+      "sourceHash": "0915f862e9e8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0915f862e9e8",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.generation.missingPath": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > generation ; Literal « Le moteur n’a renvoyé aucun chemin de ZIP. ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 67,
+    "en": {
+      "sourceHash": "197815c2e360",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "197815c2e360",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.generation.errorPrefix": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > generation ; prefix « La génération a échoué : ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 50,
+    "en": {
+      "sourceHash": "9630909fbced",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9630909fbced",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.phase.combine": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > phase ; label « Agrégation des packs ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 45,
+    "en": {
+      "sourceHash": "fd4060f4c91c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fd4060f4c91c",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.phase.volume": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > phase ; label « Harmonisation du volume ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "94aa64112e94",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "94aa64112e94",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.phase.images": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > phase ; label « Encodage des images 320x240 ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 52,
+    "en": {
+      "sourceHash": "e7737d779a50",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e7737d779a50",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.phase.archive": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > phase ; label « Construction du ZIP ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 44,
+    "en": {
+      "sourceHash": "ce892725a518",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ce892725a518",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.header.description": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > header ; subtitle « Génère un nouveau pack à partir de plusieurs archives. ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 79,
+    "en": {
+      "sourceHash": "da55fdf62f6c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "da55fdf62f6c",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.generation.action": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > generation ; Literal « Générer le pack ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "dd84571aee34",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd84571aee34",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.generation.title": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > generation ; title « Génération du pack… ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 44,
+    "en": {
+      "sourceHash": "dfe409a8d653",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dfe409a8d653",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.generation.hint": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > generation ; hint « Ne ferme pas la fenêtre. ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 49,
+    "en": {
+      "sourceHash": "5c9f514bf54e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5c9f514bf54e",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.done.title": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > done ; title « Pack généré ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 36,
+    "en": {
+      "sourceHash": "9eb81a2b1806",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9eb81a2b1806",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.done.warningHint": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > done ; JSXText « Le ZIP est utilisable ; vérifie de préférence ces passages sur la Lunii. ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : phrase complète, longueur souple.",
+    "maxLength": 97,
+    "en": {
+      "sourceHash": "badc1ddf2806",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "badc1ddf2806",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.done.openFolder": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > done ; JSXText « Ouvrir le dossier ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 42,
+    "en": {
+      "sourceHash": "db51a60ea6da",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "db51a60ea6da",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.done.finish": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > done ; JSXText « Terminer ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 33,
+    "en": {
+      "sourceHash": "b4d92528f877",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b4d92528f877",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.packs.title": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > packs ; title « Sélection des packs ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 44,
+    "en": {
+      "sourceHash": "f6efc2b2e3c9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f6efc2b2e3c9",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.packs.description": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > packs ; description « Glisse plusieurs .zip ou .7z — l'ordre définit le menu agrégé. ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 87,
+    "en": {
+      "sourceHash": "9436ea652def",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9436ea652def",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.packs.dropTitle": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > packs ; title « Dépose tes archives ici ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "24c9db782458",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "24c9db782458",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.packs.formats": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > packs ; hint « Formats acceptés : .zip, .7z · plusieurs à la fois ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 75,
+    "en": {
+      "sourceHash": "d3ab334e24a7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d3ab334e24a7",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.packs.browse": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > packs ; JSXText « Parcourir… ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 35,
+    "en": {
+      "sourceHash": "bfebc8424868",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bfebc8424868",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.packs.moveUp": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > packs ; aria-label « Monter ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "37b60293a81c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "37b60293a81c",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.packs.moveDown": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > packs ; aria-label « Descendre ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 34,
+    "en": {
+      "sourceHash": "21cbc06983ec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "21cbc06983ec",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.packs.remove": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > packs ; aria-label « Retirer ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "41e22ed93372",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "41e22ed93372",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.packs.loading": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > packs ; JSXText « Lecture des métadonnées… ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 49,
+    "en": {
+      "sourceHash": "52608f26439f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "52608f26439f",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.audio.title": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > audio ; title « Audio du menu ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 38,
+    "en": {
+      "sourceHash": "ec41a39b93cf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ec41a39b93cf",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.audio.description": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > audio ; description « La voix qui annonce le menu agrégé sur la Lunii. ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 73,
+    "en": {
+      "sourceHash": "a882e96e3fde",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a882e96e3fde",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.audio.pause": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > audio ; Literal « Mettre l'audio en pause ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "a2d198d972cd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a2d198d972cd",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.audio.play": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > audio ; Literal « Lire l'audio ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 37,
+    "en": {
+      "sourceHash": "e99552f2ac60",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e99552f2ac60",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.audio.empty": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > audio ; Literal « Aucun audio choisi ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 43,
+    "en": {
+      "sourceHash": "e47fcbd29f78",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e47fcbd29f78",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.audio.choose": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > audio ; JSXText « Choisir un audio ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 41,
+    "en": {
+      "sourceHash": "776c91005ef2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "776c91005ef2",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.audio.record": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > audio ; JSXText « Enregistrer au micro ». Action qui enregistre le microphone (record, pas save). Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 45,
+    "en": {
+      "sourceHash": "d26103eba44e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d26103eba44e",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.audio.voice": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > audio ; JSXText « Générer une voix ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 41,
+    "en": {
+      "sourceHash": "4cbed9f96ff1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4cbed9f96ff1",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.audio.edit": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > audio ; JSXText « Édition audio ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 38,
+    "en": {
+      "sourceHash": "8f7b2d725741",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8f7b2d725741",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.image.title": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > image ; title « Image de couverture ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 44,
+    "en": {
+      "sourceHash": "cf88714d983f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cf88714d983f",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.image.description": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > image ; description « Image affichée sur l'écran de la Lunii. ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 64,
+    "en": {
+      "sourceHash": "5451a615f5e2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5451a615f5e2",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.image.choose": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > image ; JSXText « Choisir une image ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 42,
+    "en": {
+      "sourceHash": "cc028fbfe4e1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cc028fbfe4e1",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.session.errorPrefix": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > session ; prefix « Impossible de préparer la session : ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 61,
+    "en": {
+      "sourceHash": "ee72eb41b611",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ee72eb41b611",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.image.generate": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > image ; JSXText « Générer une image-titre ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "a8917ce823f3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a8917ce823f3",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.image.edit": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > image ; JSXText « Retouche image ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 39,
+    "en": {
+      "sourceHash": "fe92fce69157",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fe92fce69157",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.image.dimensionsHint": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > image ; JSXText « 320 × 240 · recadrage automatique à la génération. ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 75,
+    "en": {
+      "sourceHash": "dabcd97c4543",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dabcd97c4543",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.metadata.description": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > metadata ; description « Fiche du pack pré-remplie, comme pour modifier un pack existant. ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 90,
+    "en": {
+      "sourceHash": "2dc28e7da012",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2dc28e7da012",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.metadata.badge": {
+    "context": "components/AggregatePacks/AggregatePacksFunnel.jsx > metadata ; JSXText « Pré-rempli ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 35,
+    "en": {
+      "sourceHash": "f09b83adfa6c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f09b83adfa6c",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.creation.fallbackName": {
+    "context": "components/AggregatePacks/aggregateProject.js > creation ; Literal « Pack agrégé ». Nom proposé à la création, enregistré ensuite comme donnée auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 36,
+    "en": {
+      "sourceHash": "edea6c3cfd65",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "edea6c3cfd65",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.creation.rootName": {
+    "context": "components/AggregatePacks/aggregateProject.js > creation ; Literal « Menu racine ». Nom proposé à la création, enregistré ensuite comme donnée auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 36,
+    "en": {
+      "sourceHash": "128d80d87740",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "128d80d87740",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.done.title": {
+    "context": "components/funnels/FunnelDoneState.jsx > done ; Literal « Terminé ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "f28acc85bfcb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f28acc85bfcb",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.footer.back": {
+    "context": "components/funnels/FunnelFooter.jsx > footer ; JSXText « Précédent ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 34,
+    "en": {
+      "sourceHash": "30b0e9a45aba",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "30b0e9a45aba",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.generation.title": {
+    "context": "components/funnels/FunnelGenerationState.jsx > generation ; Literal « Génération… ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 36,
+    "en": {
+      "sourceHash": "1dfc6d677f67",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1dfc6d677f67",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.filename.required": {
+    "context": "components/layout/PackNameModal.jsx > filename ; text « Titre requis pour générer le nom exporté ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 65,
+    "en": {
+      "sourceHash": "84a4e64b7ff6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "84a4e64b7ff6",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.filename.collision": {
+    "context": "components/layout/PackNameModal.jsx > filename ; Literal « Un ZIP du même nom existe déjà dans le dossier d’export ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 80,
+    "en": {
+      "sourceHash": "ca9278062252",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ca9278062252",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.filename.available": {
+    "context": "components/layout/PackNameModal.jsx > filename ; Literal « Nom disponible dans le dossier d’export ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 64,
+    "en": {
+      "sourceHash": "fbc1292c8221",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fbc1292c8221",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.filename.checking": {
+    "context": "components/layout/PackNameModal.jsx > filename ; Literal « Statut du nom en cours de vérification ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 63,
+    "en": {
+      "sourceHash": "827a34e09838",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "827a34e09838",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.filename.noFolder": {
+    "context": "components/layout/PackNameModal.jsx > filename ; Literal « Aucun dossier d'export disponible ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 58,
+    "en": {
+      "sourceHash": "59ff11c16cea",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "59ff11c16cea",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.generate.invalidSilence": {
+    "context": "components/layout/PackNameModal.jsx > generate ; Literal « Saisis des durées de silence valides, en secondes (0 ou plus). ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 87,
+    "en": {
+      "sourceHash": "a11c10b1209b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a11c10b1209b",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.generate.busy": {
+    "context": "components/layout/PackNameModal.jsx > generate ; Literal « Une action est déjà en cours. ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 54,
+    "en": {
+      "sourceHash": "caaece0bea15",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "caaece0bea15",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.generate.missingTitle": {
+    "context": "components/layout/PackNameModal.jsx > generate ; Literal « Renseigne le titre du pack avant de générer. ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 69,
+    "en": {
+      "sourceHash": "0589d414f824",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0589d414f824",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.generate.blocked": {
+    "context": "components/layout/PackNameModal.jsx > generate ; Literal « Passe par « à corriger » avant de pouvoir générer le pack. ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 83,
+    "en": {
+      "sourceHash": "7377c6977c77",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7377c6977c77",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.generate.graphHint": {
+    "context": "components/layout/PackNameModal.jsx > generate ; Literal « Appliquer la fiche du pack, vérifier ce qui bloque, puis générer le pack. ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : phrase complète, longueur souple.",
+    "maxLength": 98,
+    "en": {
+      "sourceHash": "402dd14d1611",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "402dd14d1611",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.generate.menuHint": {
+    "context": "components/layout/PackNameModal.jsx > generate ; Literal « Appliquer la fiche du pack et générer le pack. ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 71,
+    "en": {
+      "sourceHash": "db41ddcf6f97",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "db41ddcf6f97",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.header.title": {
+    "context": "components/layout/PackNameModal.jsx > header ; JSXText « Fiche du pack ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 38,
+    "en": {
+      "sourceHash": "0584a85b5eb9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0584a85b5eb9",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.cover.catalogLabel": {
+    "context": "components/layout/PackNameModal.jsx > cover ; JSXText « Vignette catalogue ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 43,
+    "en": {
+      "sourceHash": "c0ac2d6e79ab",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c0ac2d6e79ab",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.cover.catalogBadge": {
+    "context": "components/layout/PackNameModal.jsx > cover ; badge « Catalogue · taille libre ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 49,
+    "en": {
+      "sourceHash": "844f73c9a5a5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "844f73c9a5a5",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.cover.catalogHint": {
+    "context": "components/layout/PackNameModal.jsx > couverture (catalogue) ; aide de format sous l’image. « Les bibliothèques » désigne les applications de bibliothèque de packs (STUdio, LuniiQt…), pas le panneau Médias du projet. Libellé concis, une ligne si possible.",
+    "maxLength": 89,
+    "en": {
+      "sourceHash": "d043f031e660",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d043f031e660",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.cover.custom": {
+    "context": "components/layout/PackNameModal.jsx > cover ; Literal « Image propre au catalogue ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 50,
+    "en": {
+      "sourceHash": "360255054962",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "360255054962",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.cover.entryFallback": {
+    "context": "components/layout/PackNameModal.jsx > cover ; Literal « Reprend l'image de l'Écran d'entrée ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 60,
+    "en": {
+      "sourceHash": "0fdab0fc138a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0fdab0fc138a",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.cover.menuFallback": {
+    "context": "components/layout/PackNameModal.jsx > cover ; Literal « Reprend l’image du Menu racine ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 55,
+    "en": {
+      "sourceHash": "df6baf9a662d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "df6baf9a662d",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.cover.emptyHint": {
+    "context": "components/layout/PackNameModal.jsx > cover ; Literal « Aucune image : choisis-en une, ou définis l’image d’accueil ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 81,
+    "en": {
+      "sourceHash": "ea929868ad8c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ea929868ad8c",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.cover.label": {
+    "context": "components/layout/PackNameModal.jsx > cover ; JSXText « Couverture ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 35,
+    "en": {
+      "sourceHash": "3e78d201ade8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3e78d201ade8",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.cover.library": {
+    "context": "components/layout/PackNameModal.jsx > couverture en lecture seule (pack dont le catalogue n’est pas modifiable ici). « Bibliothèque » désigne la bibliothèque de packs (applications type STUdio, LuniiQt), pas le panneau Médias du projet. Libellé concis, une ligne si possible.",
+    "maxLength": 53,
+    "en": {
+      "sourceHash": "cedde63ba9c4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cedde63ba9c4",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.cover.missing": {
+    "context": "components/layout/PackNameModal.jsx > cover ; Literal « Aucune image d’accueil définie ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 52,
+    "en": {
+      "sourceHash": "5abcce66ffb0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5abcce66ffb0",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.cover.readOnly": {
+    "context": "components/layout/PackNameModal.jsx > cover ; JSXText « non éditable ici ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 41,
+    "en": {
+      "sourceHash": "594cadba59ac",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "594cadba59ac",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.title.label": {
+    "context": "components/layout/PackNameModal.jsx > title ; JSXText « Titre du pack ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 38,
+    "en": {
+      "sourceHash": "09507b0bee39",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "09507b0bee39",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.title.placeholder": {
+    "context": "components/layout/PackNameModal.jsx > title ; placeholder « Titre de mon pack ». Exemple dans un champ vide, ne remplace pas la saisie. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 42,
+    "en": {
+      "sourceHash": "1857ce4f0939",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1857ce4f0939",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.filename.label": {
+    "context": "components/layout/PackNameModal.jsx > filename ; JSXText « Nom du fichier ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 39,
+    "en": {
+      "sourceHash": "1887084a783d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1887084a783d",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.filename.modeLabel": {
+    "context": "components/layout/PackNameModal.jsx > filename ; aria-label « Mode de nommage du fichier exporté ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 59,
+    "en": {
+      "sourceHash": "c980a8c3963c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c980a8c3963c",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.filename.convention": {
+    "context": "components/layout/PackNameModal.jsx > filename ; JSXText « Convention ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 35,
+    "en": {
+      "sourceHash": "14be4f1ac096",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "14be4f1ac096",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.filename.free": {
+    "context": "components/layout/PackNameModal.jsx > filename ; JSXText « Nom libre ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 34,
+    "en": {
+      "sourceHash": "1fd1286b8d2b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1fd1286b8d2b",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.filename.placeholder": {
+    "context": "components/layout/PackNameModal.jsx > filename ; Literal « Laisse vide pour utiliser le titre ». Exemple dans un champ vide, ne remplace pas la saisie. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 59,
+    "en": {
+      "sourceHash": "92a2f9220313",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "92a2f9220313",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.age.label": {
+    "context": "components/layout/PackNameModal.jsx > age ; JSXText « Âge minimum ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 36,
+    "en": {
+      "sourceHash": "abc7ada676dd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "abc7ada676dd",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.age.presets": {
+    "context": "components/layout/PackNameModal.jsx > age ; aria-label « Âges minimum prédéfinis ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "2cba629d171c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2cba629d171c",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.age.other": {
+    "context": "components/layout/PackNameModal.jsx > age ; JSXText « Autre : ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "0190ddc56406",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0190ddc56406",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.age.custom": {
+    "context": "components/layout/PackNameModal.jsx > age ; aria-label « Âge minimum personnalisé ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 49,
+    "en": {
+      "sourceHash": "68613ae05448",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "68613ae05448",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.author.label": {
+    "context": "components/layout/PackNameModal.jsx > author ; JSXText « Auteur ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "5880e59e0c06",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5880e59e0c06",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.author.placeholder": {
+    "context": "components/layout/PackNameModal.jsx > author ; placeholder « Nom de l’auteur ». Exemple dans un champ vide, ne remplace pas la saisie. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "4cbe25d61c96",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4cbe25d61c96",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.producer.label": {
+    "context": "components/layout/PackNameModal.jsx > producer ; JSXText « Producteur ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 35,
+    "en": {
+      "sourceHash": "e51ec359c8ec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e51ec359c8ec",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.field.optional": {
+    "context": "components/layout/PackNameModal.jsx > field ; JSXText « facultatif ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 35,
+    "en": {
+      "sourceHash": "ffc83cb0f7c9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ffc83cb0f7c9",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.producer.placeholder": {
+    "context": "components/layout/PackNameModal.jsx > producer ; placeholder « Ex. producteur... ». Exemple dans un champ vide, ne remplace pas la saisie. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 42,
+    "en": {
+      "sourceHash": "557740612ef2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "557740612ef2",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.bonus.placeholder": {
+    "context": "components/layout/PackNameModal.jsx > bonus ; placeholder « ex. 8 chapitres ». Exemple dans un champ vide, ne remplace pas la saisie. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "c0d950c17d9a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c0d950c17d9a",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.version.placeholder": {
+    "context": "components/layout/PackNameModal.jsx > version ; placeholder « Non renseignée ». Exemple dans un champ vide, ne remplace pas la saisie. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 39,
+    "en": {
+      "sourceHash": "831460cb0225",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "831460cb0225",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.description.annotation": {
+    "context": "components/layout/PackNameModal.jsx > description ; JSXText « notes de version ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 80,
+    "en": {
+      "sourceHash": "ce566a014dd6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ce566a014dd6",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.description.placeholder": {
+    "context": "components/layout/PackNameModal.jsx > description ; placeholder « Public visé, contenu, changements depuis la version précédente... ». Exemple dans un champ vide, ne remplace pas la saisie. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 90,
+    "en": {
+      "sourceHash": "41fe00396d2f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "41fe00396d2f",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.uuid.label": {
+    "context": "components/layout/PackNameModal.jsx > uuid ; JSXText « UUID du pack ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 37,
+    "en": {
+      "sourceHash": "6da63eeb9ad3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6da63eeb9ad3",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.uuid.regenerate": {
+    "context": "components/layout/PackNameModal.jsx > uuid ; text « Générer un nouvel UUID de pack ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 55,
+    "en": {
+      "sourceHash": "827a90d40a12",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "827a90d40a12",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.uuid.help": {
+    "context": "components/layout/PackNameModal.jsx > uuid ; JSXText « Un nouvel UUID permet de conserver ce pack et l'ancien comme deux packs distincts. ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : phrase complète, longueur souple.",
+    "maxLength": 107,
+    "en": {
+      "sourceHash": "6407c6171efe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6407c6171efe",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.uuid.importedHint": {
+    "context": "components/layout/PackNameModal.jsx > uuid ; JSXText « UUID importé du pack. Tu peux le régénérer si tu le souhaites. ». Aide explicative de la surface, conserver le sens et les termes métier. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 87,
+    "en": {
+      "sourceHash": "c7ebec1120db",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c7ebec1120db",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.filename.previewLabel": {
+    "context": "components/layout/PackNameModal.jsx > filename ; JSXText « Nom exporté ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 36,
+    "en": {
+      "sourceHash": "6ee3ea677652",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6ee3ea677652",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.structure.loading": {
+    "context": "components/layout/PackNameModal.jsx > structure ; JSXText « Structure en cours de lecture ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 54,
+    "en": {
+      "sourceHash": "65398fce56b9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "65398fce56b9",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.generate.action": {
+    "context": "components/layout/PackNameModal.jsx > generate ; Literal « Appliquer & générer ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 44,
+    "en": {
+      "sourceHash": "4dc665d91543",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4dc665d91543",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.creation.title": {
+    "context": "hooks/useProjectLifecycle.js > creation ; title « Nouveau projet ». Nom proposé à la création, enregistré ensuite comme donnée auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 39,
+    "en": {
+      "sourceHash": "3aeb69c18667",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3aeb69c18667",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.landing.noStories": {
+    "context": "hooks/useProjectLifecycle.js > landing ; Literal « Aucune histoire éditable trouvée dans ce pack. ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 71,
+    "en": {
+      "sourceHash": "0392d3aad737",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0392d3aad737",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.landing.depthLimit": {
+    "context": "hooks/useProjectLifecycle.js > landing ; Literal « Limite d’imbrication des Dossiers atteinte. ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 68,
+    "en": {
+      "sourceHash": "28ca60f70899",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "28ca60f70899",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.storage.invalid": {
+    "context": "store/projectStorage.js > storage ; Literal « Descripteur de rangement du projet invalide. ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 69,
+    "en": {
+      "sourceHash": "fae840273870",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fae840273870",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.storage.duplicate": {
+    "context": "store/projectStorage.js > storage ; Literal « Plusieurs dossiers ont le même nom normalisé. ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 70,
+    "en": {
+      "sourceHash": "898b04210d35",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "898b04210d35",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.storage.exhausted": {
+    "context": "store/projectStorage.js > storage ; Literal « Impossible de réserver un dossier de projet unique. ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 76,
+    "en": {
+      "sourceHash": "cff558c56289",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cff558c56289",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.creation.endName": {
+    "context": "store/projectStore.js > creation ; endNodeName « Message de fin ». Nom proposé à la création, enregistré ensuite comme donnée auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 39,
+    "en": {
+      "sourceHash": "cb764ce46b97",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cb764ce46b97",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.audio.errorTitle": {
+    "context": "store/projectStore.js > audio ; title « Audio du récit ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 39,
+    "en": {
+      "sourceHash": "abe09cf05483",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "abe09cf05483",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.creation.storyName": {
+    "context": "store/projectStore.js > creation ; Literal « Nouvelle histoire ». Nom proposé à la création, enregistré ensuite comme donnée auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 42,
+    "en": {
+      "sourceHash": "63f73496b7ec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "63f73496b7ec",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.simple.errorTitle": {
+    "context": "store/projectStore.js > simple ; title « Projet simple ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
+    "maxLength": 38,
+    "en": {
+      "sourceHash": "5d99c013073b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5d99c013073b",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.date.today": {
+    "context": "Accueil > projets récents ; date relative du projet modifié aujourd’hui.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "f2de9e072a83",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f2de9e072a83",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.date.yesterday": {
+    "context": "Accueil > projets récents ; date relative du projet modifié hier.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "477a18d2c0f6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "477a18d2c0f6",
+      "status": "ai-reviewed"
+    }
+  },
+  "modeSelector.documentation.errorMessage": {
+    "context": "Accueil > erreur à l’ouverture du lien Documentation ; error est un diagnostic externe, aucun libellé auteur.",
+    "maxLength": 92,
+    "en": {
+      "sourceHash": "77a5490d0c85",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "77a5490d0c85",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.footer.continue": {
+    "context": "Châssis de parcours guidé > pied ; bouton avance à la prochaine étape validée.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "3bc3807f225b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3bc3807f225b",
+      "status": "ai-reviewed"
+    }
+  },
+  "funnel.footer.stepCount": {
+    "context": "Châssis de parcours guidé > pied ; position dans les étapes, step commence à 1, total est le nombre d’étapes.",
+    "maxLength": 51,
+    "en": {
+      "sourceHash": "4d4fe3f1eaca",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4d4fe3f1eaca",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.packs.ignoredPrefix": {
+    "context": "Agrégation > sélection ; préambule d’erreur pour une archive refusée, name est son nom de fichier ; conserver le saut de ligne.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "07c32e2d5132",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "07c32e2d5132",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.size.megabytes": {
+    "context": "Agrégation > archive et résultat ; taille arrondie en mégaoctets, size numérique.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "f6ee9a6613b4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f6ee9a6613b4",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.size.kilobytes": {
+    "context": "Agrégation > archive et résultat ; taille arrondie en kilooctets, size numérique.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "888840c87134",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "888840c87134",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.filename.defaultPlaceholder": {
+    "context": "Fiche du pack > nom libre ; placeholder qui propose le titre auteur sans écrire de valeur.",
+    "maxLength": 47,
+    "en": {
+      "sourceHash": "2405189515bd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2405189515bd",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.save.applying": {
+    "context": "Fiche du pack > bouton Appliquer pendant l’enregistrement des champs (save) ; progression, garder l’ellipse Unicode.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "f680d4a70e42",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f680d4a70e42",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.save.apply": {
+    "context": "Fiche du pack > bouton qui enregistre les champs saisis sans démarrer la génération.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "b4c8b1dd7acd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b4c8b1dd7acd",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.generate.preparing": {
+    "context": "Fiche du pack > bouton génération durant la préparation ; progression, garder l’ellipse Unicode.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "d038e2acfee3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d038e2acfee3",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.bonus.label": {
+    "context": "Fiche du pack > champ de suffixe bonus du nom de convention ; terme métier neutre dans les trois langues.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "d587622d277c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d587622d277c",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.version.label": {
+    "context": "Fiche du pack > champ numérique de révision de l’audiobook, pas version de Story Studio.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "dd167905de0d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd167905de0d",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.description.label": {
+    "context": "Fiche du pack > champ multiligne destiné à la description auteur.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "526e0087cc3f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "526e0087cc3f",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.saveName.untitled": {
+    "context": "Enregistrement du projet > nom proposé si aucun titre auteur ni nom de fichier ; ne renomme aucun projet existant.",
+    "maxLength": 42,
+    "en": {
+      "sourceHash": "45841050cda6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "45841050cda6",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.audio.alreadySet": {
+    "context": "Éditeur simplifié > refus d’ajout d’un second audio racine ; indique le champ à utiliser pour remplacer l’audio.",
+    "maxLength": 117,
+    "en": {
+      "sourceHash": "784f66e4755e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "784f66e4755e",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.simple.zipRefused": {
+    "context": "Éditeur simplifié > refus d’ajout ZIP ; invite à créer un projet par menus, sans modifier le projet actuel.",
+    "maxLength": 182,
+    "en": {
+      "sourceHash": "ffa01db9d605",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ffa01db9d605",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.landing.preparePrefix": {
+    "context": "Accueil > échec de création de session ; préambule devant UserMessage, détail brut replié.",
+    "maxLength": 72,
+    "en": {
+      "sourceHash": "5576184dbff1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5576184dbff1",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.landing.importNotice": {
+    "context": "Atterrissage depuis Modifier un pack > notice sur transitions non modélisées, sans exemple disponible.",
+    "maxLength": 201,
+    "en": {
+      "sourceHash": "f56386d0d38c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f56386d0d38c",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.landing.importNoticeExample": {
+    "context": "Atterrissage depuis Modifier un pack > notice avec premier avertissement traduit au moment de l’affichage, example est une phrase du présentateur.",
+    "maxLength": 223,
+    "en": {
+      "sourceHash": "a106bde5f253",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a106bde5f253",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.count.stories_one": {
+    "context": "Agrégation > résultat ; nombre d’histoires contenues dans le ZIP généré. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "cf65226aa8cd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cf65226aa8cd",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.count.stories_many": {
+    "context": "Agrégation > résultat ; nombre d’histoires contenues dans le ZIP généré. ; accord selon count, y compris zéro et un million.",
+    "it": {
+      "sourceHash": "74bf29178fba",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.count.stories_other": {
+    "context": "Agrégation > résultat ; nombre d’histoires contenues dans le ZIP généré. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "74bf29178fba",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "74bf29178fba",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.count.scenes_one": {
+    "context": "Agrégation > ligne d’archive et total de sélection ; nombre de scènes détectées. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "a082315b1254",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a082315b1254",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.count.scenes_many": {
+    "context": "Agrégation > ligne d’archive et total de sélection ; nombre de scènes détectées. ; accord selon count, y compris zéro et un million.",
+    "it": {
+      "sourceHash": "1b73561bb2d3",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.count.scenes_other": {
+    "context": "Agrégation > ligne d’archive et total de sélection ; nombre de scènes détectées. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "1b73561bb2d3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1b73561bb2d3",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.count.packs_one": {
+    "context": "Agrégation > sélection ; nombre de packs source. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "dfdfea7e0aa6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dfdfea7e0aa6",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.count.packs_many": {
+    "context": "Agrégation > sélection ; nombre de packs source. ; accord selon count, y compris zéro et un million.",
+    "it": {
+      "sourceHash": "72c73619b964",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.count.packs_other": {
+    "context": "Agrégation > sélection ; nombre de packs source. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "72c73619b964",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "72c73619b964",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.count.combined_one": {
+    "context": "Agrégation > aperçu couverture ; nombre de packs source combinés. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "c98469bde212",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c98469bde212",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.count.combined_many": {
+    "context": "Agrégation > aperçu couverture ; nombre de packs source combinés. ; accord selon count, y compris zéro et un million.",
+    "it": {
+      "sourceHash": "7b19f47ce700",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.count.combined_other": {
+    "context": "Agrégation > aperçu couverture ; nombre de packs source combinés. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "7b19f47ce700",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7b19f47ce700",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.done.audioWarnings_one": {
+    "context": "Agrégation > résultat ; phrase en gras qui annonce les avertissements audio non bloquants. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "07dced84d5f2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "07dced84d5f2",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.done.audioWarnings_many": {
+    "context": "Agrégation > résultat ; phrase en gras qui annonce les avertissements audio non bloquants. ; accord selon count, y compris zéro et un million.",
+    "it": {
+      "sourceHash": "fb0f58e6c04f",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.done.audioWarnings_other": {
+    "context": "Agrégation > résultat ; phrase en gras qui annonce les avertissements audio non bloquants. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "fb0f58e6c04f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fb0f58e6c04f",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.screens_one": {
+    "context": "Fiche du pack > résumé graphe ; count en gras via composant strong nommé, nombre d’Écrans. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "affe8f4277fd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "affe8f4277fd",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.screens_many": {
+    "context": "Fiche du pack > résumé graphe ; count en gras via composant strong nommé, nombre d’Écrans. ; accord selon count, y compris zéro et un million.",
+    "it": {
+      "sourceHash": "fe82529eb5a5",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.screens_other": {
+    "context": "Fiche du pack > résumé graphe ; count en gras via composant strong nommé, nombre d’Écrans. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "fe82529eb5a5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fe82529eb5a5",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.stories_one": {
+    "context": "Fiche du pack > résumé par menus ; count en gras via composant strong nommé, nombre d’histoires. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "6d5efcb36043",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6d5efcb36043",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.stories_many": {
+    "context": "Fiche du pack > résumé par menus ; count en gras via composant strong nommé, nombre d’histoires. ; accord selon count, y compris zéro et un million.",
+    "it": {
+      "sourceHash": "6b223b913bf8",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.stories_other": {
+    "context": "Fiche du pack > résumé par menus ; count en gras via composant strong nommé, nombre d’histoires. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "6b223b913bf8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6b223b913bf8",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.actions_one": {
+    "context": "Fiche du pack > résumé graphe ; nombre de listes de choix. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "553c5ea7e34e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "553c5ea7e34e",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.actions_many": {
+    "context": "Fiche du pack > résumé graphe ; nombre de listes de choix. ; accord selon count, y compris zéro et un million.",
+    "it": {
+      "sourceHash": "a8493d468c54",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.actions_other": {
+    "context": "Fiche du pack > résumé graphe ; nombre de listes de choix. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "a8493d468c54",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a8493d468c54",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.options_one": {
+    "context": "Fiche du pack > résumé graphe ; nombre d’options, conservé FR historique ; choix en traduction. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "98c17b5df9ac",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "98c17b5df9ac",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.options_many": {
+    "context": "Fiche du pack > résumé graphe ; nombre d’options, conservé FR historique ; choix en traduction. ; accord selon count, y compris zéro et un million.",
+    "it": {
+      "sourceHash": "b36e141bc498",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.options_other": {
+    "context": "Fiche du pack > résumé graphe ; nombre d’options, conservé FR historique ; choix en traduction. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "b36e141bc498",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b36e141bc498",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.media_one": {
+    "context": "Fiche du pack > résumé ; nombre de médias liés au projet, pas taille ni fichiers inutilisés. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "44a468443f35",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "44a468443f35",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.media_many": {
+    "context": "Fiche du pack > résumé ; nombre de médias liés au projet, pas taille ni fichiers inutilisés. ; accord selon count, y compris zéro et un million.",
+    "it": {
+      "sourceHash": "12217410b57c",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.count.media_other": {
+    "context": "Fiche du pack > résumé ; nombre de médias liés au projet, pas taille ni fichiers inutilisés. ; accord selon count, y compris zéro et un million.",
+    "en": {
+      "sourceHash": "12217410b57c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "12217410b57c",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.creation.packName": {
+    "context": "Éditeur par menus > promotion racine en dossier ; nom proposé uniquement si tous les titres auteur sont vides.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "80dc21673e55",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "80dc21673e55",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.creation.importedZip": {
+    "context": "Ajout d’une archive sans nom exploitable > nom proposé enregistré à l’import, sans renommer les archives déjà présentes.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "1587ca29bb99",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1587ca29bb99",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.creation.folderName": {
+    "context": "Éditeur par menus > ajout de Dossier ; nom proposé à la création puis donnée auteur.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "426af2f1e0a5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "426af2f1e0a5",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.uuid.refusalSuffix": {
+    "context": "Fiche du pack > refus de check_pack_identity ; conseil après la cause UserMessage, invite à saisir ou régénérer un UUID, conserve un espace de séparation initial.",
+    "en": {
+      "sourceHash": "279edab1cd34",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "279edab1cd34",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.done.packCount_one": {
+    "context": "Agrégation terminée, compteur de packs sources réunis dans le résultat ; catégorie plurielle one, count est le nombre de packs. Le français historique reste invariant même au singulier ; accorder EN/IT. Texte informatif, sans limite de bouton.",
+    "en": {
+      "sourceHash": "c98469bde212",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c98469bde212",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.done.packCount_many": {
+    "context": "Agrégation terminée, compteur de packs sources réunis dans le résultat ; catégorie plurielle many, count est le nombre de packs. Le français historique reste invariant même au singulier ; accorder EN/IT. Texte informatif, sans limite de bouton.",
+    "it": {
+      "sourceHash": "7b19f47ce700",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.done.packCount_other": {
+    "context": "Agrégation terminée, compteur de packs sources réunis dans le résultat ; catégorie plurielle other, count est le nombre de packs. Le français historique reste invariant même au singulier ; accorder EN/IT. Texte informatif, sans limite de bouton.",
+    "en": {
+      "sourceHash": "7b19f47ce700",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7b19f47ce700",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.destination.title": {
+    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
+    "en": {
+      "sourceHash": "324205939b0a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "324205939b0a",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 100
+  },
+  "aggregate.destination.editor": {
+    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
+    "en": {
+      "sourceHash": "86e88378596b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "86e88378596b",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 100
+  },
+  "aggregate.destination.generate": {
+    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
+    "en": {
+      "sourceHash": "d433962c99e5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d433962c99e5",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 100
+  },
+  "aggregate.destination.review": {
+    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
+    "en": {
+      "sourceHash": "b419a56825aa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b419a56825aa",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 100
+  },
+  "aggregate.destination.hint": {
+    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
+    "en": {
+      "sourceHash": "5a07331a621c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5a07331a621c",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.destination.opening": {
+    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
+    "en": {
+      "sourceHash": "8c4b6e6ee643",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8c4b6e6ee643",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.review.title": {
+    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
+    "en": {
+      "sourceHash": "3983887c50a9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3983887c50a9",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 100
+  },
+  "aggregate.review.folder": {
+    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
+    "en": {
+      "sourceHash": "80da466f41de",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "80da466f41de",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.review.file": {
+    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
+    "en": {
+      "sourceHash": "7084e42a84c4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7084e42a84c4",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.review.replace": {
+    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
+    "en": {
+      "sourceHash": "bde3790b4353",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bde3790b4353",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.generation.busy": {
+    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
+    "en": {
+      "sourceHash": "1168433a95bf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1168433a95bf",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.generation.cancelled": {
+    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
+    "en": {
+      "sourceHash": "767a90d03766",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "767a90d03766",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.uuid.officialLocked": {
+    "context": "Identité officielle Lunii verrouillée ; fiche UUID : explication au survol seulement, et refus moteur de changement d’identité.",
+    "en": {
+      "sourceHash": "a5dc1619e8f8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a5dc1619e8f8",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.packs.browseFolder": {
+    "context": "home > aggregate.packs.browseFolder ; Assemblage > bouton à côté de « Parcourir… » : ouvre le sélecteur de dossier d’un pack décompressé. Court.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "b8a3f1035637",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b8a3f1035637",
+      "status": "ai-reviewed"
+    }
+  },
+  "languageAnnouncement.message": {
+    "context": "Accueil > annonce unique des langues pour les installations existantes conservées en français ; message discret.",
+    "en": {
+      "sourceHash": "3fb4782a2e50",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3fb4782a2e50",
+      "status": "ai-reviewed"
+    }
+  },
+  "languageAnnouncement.change": {
+    "context": "Accueil > annonce unique des langues pour les installations existantes conservées en français ; bouton ouvrant Préférences > Interface > Langue.",
+    "en": {
+      "sourceHash": "e93dffab7393",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e93dffab7393",
+      "status": "ai-reviewed"
+    }
+  }
+}

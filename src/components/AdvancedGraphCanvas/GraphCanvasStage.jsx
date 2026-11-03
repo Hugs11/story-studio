@@ -1,3 +1,5 @@
+import { useTranslation, Trans } from 'react-i18next';
+import { translateGraph as t, graphTranslationEngine } from '../../i18n/graphPresentation.js';
 // L'étage de canvas : le moteur, sa caméra, ses avis et rien d'autre.
 //
 // Il reçoit la session de vue au lieu de la créer. C'est ce qui permet au banc
@@ -11,6 +13,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { UserMessage, TechnicalDetail } from '../common/UserMessage.jsx';
+import { presentUserMessage } from '../../i18n/userMessage.js';
 import { ENGINE_IDS } from './engines/index.js';
 import { useGraphCanvasEngine } from './useGraphCanvasEngine.js';
 import {
@@ -34,16 +38,17 @@ import {
 } from '../../store/advancedAuthoring/graphLinkDraft.js';
 
 const NOTICE_TEXT = {
-  'viewport-rejected': () => 'Caméra mémorisée inutilisable : vue recadrée.',
-  'anchors-ignored': (notice) => `${notice.count} ancrage(s) mémorisé(s) ne désignent plus rien : ignorés, non supprimés.`,
-  'cache-unreadable': () => 'Vue précédente illisible : vue reconstruite.',
-  'cache-failure': (notice) => `Mémorisation de la vue indisponible${notice.disarmed ? ' (désarmée pour la session)' : ''}.`,
+  'viewport-rejected': 'graph:canvas.savedCameraPositionCannotBeUsedViewFittedAgain.label',
+  'anchors-ignored': 'graph:canvas.anchors.ignoredCount',
+  'cache-unreadable': 'graph:canvas.previousViewCannotBeReadViewRebuilt.label',
+  'cache-failure': 'graph:canvas.cache.armed',
 };
 
 // L'étiquette d'un lien survolé : « départ → arrivée · sortie ». Un trait droit
 // croise parfois un nœud sur son chemin, et un bout peut être hors de l'écran ;
 // l'étiquette lève le doute sans rien changer au dessin.
 function EdgeHoverLabel({ index, hovered }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const point = hovered.edgePoint;
   const ends = point ? describeEdgeEnds(index, hovered.edgeId) : null;
   if (!ends) return null;
@@ -124,6 +129,7 @@ export default function GraphCanvasStage({
   restoreToken = 0,
   children = null,
 }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const hostRef = useRef(null);
   const dropRef = useRef(null);
   const [clampNotice, setClampNotice] = useState(null);
@@ -149,10 +155,16 @@ export default function GraphCanvasStage({
   const selectLandmark = useCallback((path) => {
     noteSelection?.([path], index);
   }, [noteSelection, index]);
-  const { engineRef, engineError, engineVersion, nodeOverlays, livePositions, hoveredElement } = useGraphCanvasEngine({
+  const { engineRef, engineError, engineVersion, nodeOverlays: publishedOverlays, livePositions, hoveredElement } = useGraphCanvasEngine({
     hostRef, view, engineId, onAuthoredPositionsChange, onClamp: setClampNotice, restoreToken,
     presentation, createEngine,
   });
+  // Les noms de repli se relisent au rendu, sans remonter le moteur.
+  const nodeOverlays = publishedOverlays ? { ...publishedOverlays,
+    nodes: (publishedOverlays.nodes ?? []).map((node) => ({ ...node,
+      label: index?.byPath.get(node.path)?.label.label ?? node.label,
+    })),
+  } : publishedOverlays;
   useEffect(() => {
     let previousScale = 1;
     function onNativePinch(event) {
@@ -322,7 +334,10 @@ export default function GraphCanvasStage({
         runtime.index, dropped, candidate?.path ?? null, dropped.pointer,
       );
       if (intent?.kind === GRAPH_LINK_DROP.INVALID) {
-        setLinkNotice(intent.reason);
+        const target = runtime.index?.byPath.get(intent.targetPath);
+        const entry = target?.kind === 'stage' && target.node.squareOne?.presence === 'value' && target.node.squareOne.value === true;
+        setLinkNotice(entry && dropped.sourceKind === 'action' ? 'graph:canvas.link.entryRefused'
+          : dropped.sourceKind === 'stage' ? 'graph:canvas.link.stageNeedsList' : 'graph:canvas.link.listNeedsStage');
         return;
       }
       if (intent) runtime.onGraphLinkIntent?.(intent);
@@ -670,29 +685,27 @@ export default function GraphCanvasStage({
         overviewOpen={overviewOpen}
         onToggleOverview={onToggleOverview}
       />
-      {view.status === 'loading' && <p className="advanced-canvas__status">Lecture du graphe…</p>}
+      {view.status === 'loading' && <p className="advanced-canvas__status">{t("graph:canvas.readingGraph.label")}</p>}
       {engineError && (
         <p className="advanced-canvas__status" role="alert">
-          Moteur d'affichage indisponible : {String(engineError.message ?? engineError)}
+          <Trans i18n={graphTranslationEngine()} ns="graph" i18nKey="canvas.engine.unavailable" components={{ message: <UserMessage value={engineError} /> }} />
         </p>
       )}
       {clampNotice && (
         // La butée est **visible** : l'auteur doit voir que le nœud a cessé
         // de suivre le pointeur, et pourquoi.
-        <p className="advanced-canvas__status advanced-canvas__status--warning" role="status">
-          Position bornée au domaine sûr [-32768, 32767]
-          {clampNotice.axes.x && ' en X'}
-          {clampNotice.axes.y && ' en Y'}.
+        <p className="advanced-canvas__status advanced-canvas__status--warning" role="status">{clampNotice.axes.x && clampNotice.axes.y ? t('graph:canvas.position.both') : clampNotice.axes.x ? t('graph:canvas.position.x') : t('graph:canvas.position.y')}
         </p>
       )}
       {linkNotice && (
         <p className="advanced-canvas__status advanced-canvas__status--warning" role="status">
-          {linkNotice}
+          {t(linkNotice)}
         </p>
       )}
       {view.notices.map((notice, position) => (
         <p key={`${notice.kind}-${position}`} className="advanced-canvas__status" role="status">
-          {NOTICE_TEXT[notice.kind]?.(notice) ?? notice.kind}
+          {notice.kind === 'cache-failure' && notice.disarmed ? t('graph:canvas.cache.disarmed') : NOTICE_TEXT[notice.kind] ? t(NOTICE_TEXT[notice.kind], { count: notice.count }) : notice.kind}
+          <TechnicalDetail value={presentUserMessage(notice.message).technicalDetail} />
         </p>
       ))}
       {children}

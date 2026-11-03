@@ -11,6 +11,8 @@
 //    seconde migration qui déferait la première, raccourcis toujours corrects) ;
 // 3. blob de raccourcis entièrement invalide (JSON tronqué) sur un profil neuf
 //    → démarrage sans erreur, repli sur les raccourcis par défaut.
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { launchApp } from '../lib/launch.mjs';
 import { createRun } from '../lib/run-context.mjs';
 import { newProject, returnHome } from '../lib/actions.mjs';
@@ -45,6 +47,7 @@ async function treeNodeCount(page) {
 
 export async function run() {
   const ctx = createRun('c6-migration-localstorage');
+  try {
 
   // ── Scénario 1 : profil 0.9.8 valide ──────────────────────────────────────
   let session = await launchApp({ runDir: ctx.dir('scenario-1'), fresh: true, workspaceDir: ctx.dir('workspace') });
@@ -63,6 +66,7 @@ export async function run() {
       'storyStudio.advanced.bottomPanelTab',
       'storyStudio.advanced.bottomPanelHeight',
     ]);
+    writeFileSync(join(ctx.runDir, 'migration-layout-values.json'), JSON.stringify(layoutMigration, null, 2) + '\n');
     ctx.check(
       'ancienne disposition du panneau inférieur dupliquée vers les deux éditeurs',
       layoutMigration['storyStudio.free.bottomPanelOpen'] === 'true'
@@ -91,7 +95,7 @@ export async function run() {
     await openPreferences(session.page, { shortcut: 'Control+Alt+p' });
     const copyOn = await readToggle(session.page, 'Copier les fichiers importés');
     ctx.check('préférence de copie 0.9.8 conservée (ON)', copyOn === true, { copyOn });
-    const workspaceOn = await readToggle(session.page, 'Utiliser un workspace pour les nouveaux projets');
+    const workspaceOn = await readToggle(session.page, 'Utiliser l’emplacement de travail pour les nouveaux projets');
     ctx.check('préférence « workspace pour les nouveaux projets » 0.9.8 conservée (ON)', workspaceOn === true, { workspaceOn });
 
     await openKeyboardShortcutsModal(session.page);
@@ -227,5 +231,8 @@ export async function run() {
     ctx.check('scénario 3 : fermeture propre, rien dans le vrai workspace', stop3.polluted.length === 0 && stop3.closedGracefully === true, stop3);
   }
 
+  } catch (error) {
+    ctx.check('migration interrompue : ' + error.message, false, { stack: error.stack });
+  }
   return ctx.finish();
 }

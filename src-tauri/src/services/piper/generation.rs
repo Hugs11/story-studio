@@ -9,6 +9,8 @@ use super::runtime::{resolve_piper_runtime, PiperRuntime};
 use super::{PiperGenerateRequest, PiperSettings, PiperStatus, PiperVoiceInfo};
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path};
 use crate::support::paths::path_for_frontend;
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::ffi::OsString;
 use std::io::Write;
 use std::path::Path;
@@ -55,14 +57,32 @@ pub(super) fn length_scale_for_speed(speed: f32) -> f32 {
 pub(super) fn validate_text_for_generation(text: &str) -> Result<(), String> {
     let trimmed = text.trim();
     if trimmed.is_empty() {
-        return Err("Le texte a generer est vide.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::PIPER_GENERATION_TEXT_EMPTY)
+                .with_detail("Le texte a generer est vide.".to_string())
+                .into_transport(),
+        );
     }
     let char_count = trimmed.chars().count();
     if char_count > MAX_TEXT_CHARS {
-        return Err(format!(
-            "Le texte est trop long pour une génération Piper en une fois ({} caractères, maximum {}).",
-            char_count, MAX_TEXT_CHARS
-        ));
+        return Err({
+            let _msg_char_count = (char_count).to_string();
+            let _msg_max_text_chars = (MAX_TEXT_CHARS).to_string();
+            user_message::UserMessage::new(
+                codes::PIPER_GENERATION_TEXT_LIMIT,
+            )
+                .param("charCount", user_message::transport_param(_msg_char_count.clone()))
+                .param(
+                    "maxTextLength",
+                    user_message::transport_param(_msg_max_text_chars.clone()),
+                )
+                .with_detail(format!(
+                    "Le texte est trop long pour une génération Piper en une fois ({_msg_char_count} caractères, maximum {_msg_max_text_chars}).",
+                    _msg_char_count = user_message::transport_detail(&_msg_char_count),
+                    _msg_max_text_chars = user_message::transport_detail(&_msg_max_text_chars),
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }
@@ -81,15 +101,27 @@ pub fn generate_audio_sync(
         .filter(|value| !value.trim().is_empty())
         .unwrap_or_else(|| settings.voice.clone());
     if voice_id.trim().is_empty() {
-        return Err("Aucune voix Piper selectionnee.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::PIPER_GENERATION_VOICE_UNSELECTED)
+                .with_detail("Aucune voix Piper selectionnee.".to_string())
+                .into_transport(),
+        );
     }
 
-    emit("Generation Piper demandee.");
+    emit(codes::PIPER_GENERATION_REQUESTED_TRANSPORT);
     let runtime = ensure_piper(home, &voice_id, emit)?;
 
     let output_dir = generated_dir(&request)?;
-    std::fs::create_dir_all(&output_dir)
-        .map_err(|e| format!("Impossible de creer le dossier des voix generees : {}", e))?;
+    std::fs::create_dir_all(&output_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::PIPER_VOICES_FOLDER_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de creer le dossier des voix generees : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     let mp3_name = output_filename(request.filename_hint.as_deref(), "mp3")?;
     let wav_name = output_filename(request.filename_hint.as_deref(), "wav")?;
@@ -116,7 +148,19 @@ pub fn generate_audio_sync(
     let _ = std::fs::remove_file(&wav_tmp);
     result?;
 
-    emit(&format!("Audio Piper genere : {}", dest_mp3.display()));
+    emit(&{
+        let _msg_dest_mp3 = (dest_mp3.display()).to_string();
+        user_message::UserMessage::new(codes::PIPER_AUDIO_GENERATED)
+            .param(
+                "destMp3",
+                user_message::transport_param(_msg_dest_mp3.clone()),
+            )
+            .with_detail(format!(
+                "Audio Piper genere : {_msg_dest_mp3}",
+                _msg_dest_mp3 = user_message::transport_detail(&_msg_dest_mp3)
+            ))
+            .into_transport()
+    });
     Ok(path_for_frontend(&dest_mp3))
 }
 
@@ -147,31 +191,76 @@ fn run_piper(
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
 
-    emit("Synthèse vocale en cours…");
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| format!("Impossible de lancer Piper : {}", e))?;
+    emit(codes::PIPER_SPEECH_SYNTHESIS_IN_PROGRESS_TRANSPORT);
+    let mut child = cmd.spawn().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::PIPER_PROCESS_START_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer Piper : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     // Texte transmis sur stdin (aucune interpolation shell).
     child
         .stdin
         .take()
-        .ok_or_else(|| "Entrée standard Piper indisponible.".to_string())?
+        .ok_or_else(|| {
+            user_message::UserMessage::new(codes::PIPER_PROCESS_STDIN_UNAVAILABLE)
+                .with_detail("Entrée standard Piper indisponible.".to_string())
+                .into_transport()
+        })?
         .write_all(text.as_bytes())
-        .map_err(|e| format!("Écriture du texte vers Piper impossible : {}", e))?;
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::PIPER_PROCESS_TEXT_WRITE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Écriture du texte vers Piper impossible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
 
-    let output = child
-        .wait_with_output()
-        .map_err(|e| format!("Piper s'est interrompu : {}", e))?;
+    let output = child.wait_with_output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::PIPER_PROCESS_STOPPED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Piper s'est interrompu : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!(
-            "Piper a échoué : {}",
-            stderr.trim().lines().last().unwrap_or("erreur inconnue")
-        ));
+        return Err({
+            let piper_stderr_message = (stderr
+                .trim()
+                .lines()
+                .last()
+                .unwrap_or(codes::PIPER_UNKNOWN_ERROR_TRANSPORT))
+            .to_string();
+            user_message::UserMessage::new(codes::PIPER_PROCESS_FAILED)
+                .param(
+                    "error",
+                    user_message::transport_param(piper_stderr_message.clone()),
+                )
+                .with_detail(format!(
+                    "Piper a échoué : {piper_stderr_message}",
+                    piper_stderr_message = user_message::transport_detail(&piper_stderr_message)
+                ))
+                .into_transport()
+        });
     }
     if !wav_out.is_file() {
-        return Err("Piper n'a produit aucun fichier audio.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::PIPER_AUDIO_OUTPUT_MISSING)
+                .with_detail("Piper n'a produit aucun fichier audio.".to_string())
+                .into_transport(),
+        );
     }
     Ok(())
 }
@@ -205,13 +294,29 @@ fn encode_mp3(wav: &Path, mp3: &Path) -> Result<(), String> {
     cmd.args(["-c:a", "libmp3lame", "-q:a", "4"]);
     cmd.arg(mp3.as_os_str());
 
-    let output = cmd
-        .output()
-        .map_err(|e| format!("Conversion MP3 impossible (ffmpeg) : {}", e))?;
+    let output = cmd.output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::PIPER_MP3_FFMPEG_UNAVAILABLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Conversion MP3 impossible (ffmpeg) : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if !output.status.success() {
         let _ = std::fs::remove_file(mp3);
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("Conversion MP3 échouée : {}", stderr.trim()));
+        return Err({
+            let _msg_stderr = (stderr.trim()).to_string();
+            user_message::UserMessage::new(codes::PIPER_MP3_CONVERSION_FAILED)
+                .param("stderr", user_message::transport_param(_msg_stderr.clone()))
+                .with_detail(format!(
+                    "Conversion MP3 échouée : {_msg_stderr}",
+                    _msg_stderr = user_message::transport_detail(&_msg_stderr)
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }

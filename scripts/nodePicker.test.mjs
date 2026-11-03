@@ -22,13 +22,17 @@ function index() {
   return buildGraphIndex(view);
 }
 
-const render = (props) => mountSurface(React.createElement(NodePicker, {
+const { Select } = await import('../src/components/common/Select.jsx');
+
+const mount = (props) => mountSurface(React.createElement(NodePicker, {
   index: index(), kind: 'stage', value: null, onChange: () => {}, id: 'essai', ...props,
-})).html;
+}));
+// Les options d'une liste de l'app n'existent qu'ouverte : on lit les libellés que le sélecteur lui donne.
+const labels = (props) => mount(props).elements.find((element) => element.type === Select).props.options.map((option) => option.label).join('\n');
 
 test('le choix d’une liste ne propose pas l’Écran d’entrée', () => {
-  const forChoice = render({ forChoice: true });
-  assert.doesNotMatch(forChoice, />Racine</);
-  assert.match(forChoice, />Forêt</);
-  assert.match(render({}), />Racine</, 'ailleurs, l’Écran d’entrée reste choisissable');
+  const forChoice = labels({ forChoice: true });
+  assert.doesNotMatch(forChoice, /Racine/);
+  assert.match(forChoice, /Forêt/);
+  assert.match(labels({}), /Racine/, 'ailleurs, l’Écran d’entrée reste choisissable');
 });

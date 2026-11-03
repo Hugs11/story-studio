@@ -14,6 +14,7 @@
   "c3bUserProjects": [
     "Nom du projet 1"
   ],
+  "catalogueDemoDir": "/chemin/vers/le-jeu-demo-quatre-formats",
   "tauriDriver": "/chemin/vers/tauri-driver",
   "webkitWebDriver": "/chemin/vers/WebKitWebDriver",
   "c3aReportDir": "e2e/artifacts/corpus",

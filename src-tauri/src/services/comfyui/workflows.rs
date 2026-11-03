@@ -1,4 +1,6 @@
 use super::*;
+use crate::support::user_message;
+use crate::support::user_message::codes;
 
 pub(super) fn custom_workflows_dir(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("luniipack-workflows")
@@ -138,7 +140,12 @@ pub(super) fn find_workflow_by_id(
             }
         }
     }
-    Err(format!("Workflow '{}' introuvable", workflow_id))
+    Err(
+        user_message::UserMessage::new(codes::COMFYUI_WORKFLOW_NOT_FOUND)
+            .param("workflowId", workflow_id.to_string())
+            .with_detail(format!("Workflow '{}' introuvable", workflow_id))
+            .into_transport(),
+    )
 }
 
 pub fn list_workflows_sync(
@@ -156,53 +163,140 @@ pub fn import_workflow_sync(
     api_json_path: String,
     config_json_path: String,
 ) -> Result<WorkflowManifest, String> {
-    let config_content = fs::read_to_string(&config_json_path)
-        .map_err(|e| format!("Impossible de lire le config : {}", e))?;
-    let mut manifest: WorkflowManifest = serde_json::from_str(&config_content)
-        .map_err(|e| format!("Config JSON invalide : {}", e))?;
+    let config_content = fs::read_to_string(&config_json_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_CONFIG_READ_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lire le config : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    let mut manifest: WorkflowManifest = serde_json::from_str(&config_content).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_INVALID_CONFIG_JSON)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Config JSON invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     if manifest.id.contains('/') || manifest.id.contains('\\') || manifest.id.contains('.') {
-        return Err(format!(
-            "L'ID du workflow contient des caractères invalides : {}",
-            manifest.id
-        ));
+        return Err({
+            let _msg_manifest_id = (manifest.id).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_WORKFLOW_ID_CHARS_INVALID)
+                .param(
+                    "manifestId",
+                    user_message::transport_param(_msg_manifest_id.clone()),
+                )
+                .with_detail(format!(
+                    "L'ID du workflow contient des caractères invalides : {_msg_manifest_id}",
+                    _msg_manifest_id = user_message::transport_detail(&_msg_manifest_id),
+                ))
+                .into_transport()
+        });
     }
 
     let api_filename = Path::new(&manifest.api_file)
         .file_name()
-        .ok_or("api_file invalide dans le config")?
+        .ok_or(codes::COMFYUI_CONFIG_API_FILE_INVALID_TRANSPORT)?
         .to_string_lossy()
         .to_string();
 
     if api_filename.contains('/') || api_filename.contains('\\') {
-        return Err("api_file contient un chemin invalide".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::COMFYUI_API_FILE_PATH_INVALID)
+                .with_detail("api_file contient un chemin invalide".to_string())
+                .into_transport(),
+        );
     }
 
     let custom_dir = custom_workflows_dir(&app_data_dir);
-    fs::create_dir_all(&custom_dir)
-        .map_err(|e| format!("Impossible de créer le dossier workflows : {}", e))?;
+    fs::create_dir_all(&custom_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_WORKFLOWS_FOLDER_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de créer le dossier workflows : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
-    let api_content = fs::read_to_string(&api_json_path)
-        .map_err(|e| format!("Impossible de lire le workflow : {}", e))?;
-    let mut api: serde_json::Value = serde_json::from_str(&api_content)
-        .map_err(|e| format!("Workflow API JSON invalide : {}", e))?;
+    let api_content = fs::read_to_string(&api_json_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_WORKFLOW_READ_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lire le workflow : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    let mut api: serde_json::Value = serde_json::from_str(&api_content).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_INVALID_WORKFLOW_API_JSON)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Workflow API JSON invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     normalize_comfyui_model_names(&mut api);
     fs::write(
         custom_dir.join(&api_filename),
-        serde_json::to_string_pretty(&api)
-            .map_err(|e| format!("Impossible de sérialiser le workflow : {}", e))?,
+        serde_json::to_string_pretty(&api).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_WORKFLOW_ENCODE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de sérialiser le workflow : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?,
     )
-    .map_err(|e| format!("Impossible de copier le workflow : {}", e))?;
+    .map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_WORKFLOW_COPY_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de copier le workflow : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     manifest.api_file = api_filename;
     manifest.is_custom = true;
     let config_dest = custom_dir.join(format!("{}.config.json", manifest.id));
     fs::write(
         &config_dest,
-        serde_json::to_string_pretty(&manifest)
-            .map_err(|e| format!("Impossible de serialiser le config : {}", e))?,
+        serde_json::to_string_pretty(&manifest).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_CONFIG_ENCODE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de serialiser le config : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?,
     )
-    .map_err(|e| format!("Impossible de sauvegarder le config : {}", e))?;
+    .map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_CONFIG_SAVE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de sauvegarder le config : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     Ok(manifest)
 }
@@ -212,36 +306,97 @@ pub fn delete_custom_workflow_sync(
     workflow_id: String,
 ) -> Result<(), String> {
     if workflow_id.contains('/') || workflow_id.contains('\\') || workflow_id.contains('.') {
-        return Err("ID workflow invalide".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::COMFYUI_INVALID_WORKFLOW_ID)
+                .with_detail("ID workflow invalide".to_string())
+                .into_transport(),
+        );
     }
 
     let custom_dir = custom_workflows_dir(&app_data_dir);
     let config_path = custom_dir.join(format!("{}.config.json", workflow_id));
 
     if !config_path.exists() {
-        return Err(format!("Workflow '{}' introuvable", workflow_id));
+        return Err(
+            user_message::UserMessage::new(codes::COMFYUI_WORKFLOW_NOT_FOUND)
+                .param("workflowId", workflow_id.to_string())
+                .with_detail(format!("Workflow '{}' introuvable", workflow_id))
+                .into_transport(),
+        );
     }
 
-    let config_content = fs::read_to_string(&config_path)
-        .map_err(|e| format!("Impossible de lire le config : {}", e))?;
-    let manifest: WorkflowManifest =
-        serde_json::from_str(&config_content).map_err(|e| format!("Config invalide : {}", e))?;
+    let config_content = fs::read_to_string(&config_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_CONFIG_READ_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lire le config : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    let manifest: WorkflowManifest = serde_json::from_str(&config_content).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_INVALID_CONFIG)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Config invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     let api_path = custom_dir.join(&manifest.api_file);
     if api_path.exists() {
-        let canonical_api =
-            fs::canonicalize(&api_path).map_err(|e| format!("Chemin api invalide : {}", e))?;
-        let canonical_dir = fs::canonicalize(&custom_dir)
-            .map_err(|e| format!("Chemin dossier invalide : {}", e))?;
+        let canonical_api = fs::canonicalize(&api_path).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_INVALID_API_PATH)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Chemin api invalide : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
+        let canonical_dir = fs::canonicalize(&custom_dir).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_INVALID_FOLDER_PATH)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Chemin dossier invalide : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
         if !canonical_api.starts_with(&canonical_dir) {
-            return Err("Chemin hors du dossier workflows".to_string());
+            return Err(
+                user_message::UserMessage::new(codes::COMFYUI_WORKFLOW_PATH_OUTSIDE)
+                    .with_detail("Chemin hors du dossier workflows".to_string())
+                    .into_transport(),
+            );
         }
-        fs::remove_file(&api_path)
-            .map_err(|e| format!("Impossible de supprimer le workflow : {}", e))?;
+        fs::remove_file(&api_path).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_WORKFLOW_DELETE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de supprimer le workflow : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
     }
 
-    fs::remove_file(&config_path)
-        .map_err(|e| format!("Impossible de supprimer le config : {}", e))?;
+    fs::remove_file(&config_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_CONFIG_DELETE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de supprimer le config : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     Ok(())
 }

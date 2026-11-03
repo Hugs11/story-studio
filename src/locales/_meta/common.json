@@ -1,0 +1,1853 @@
+{
+  "action.edit.label": {
+    "context": "Action partagée ou compte de sélection",
+    "en": {
+      "sourceHash": "42e37604b638",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "42e37604b638",
+      "status": "ai-reviewed"
+    }
+  },
+  "error.fallback.unexpected": {
+    "context": "Présentation des messages Rust et création de nœuds.",
+    "en": {
+      "sourceHash": "12505c08fd18",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "12505c08fd18",
+      "status": "ai-reviewed"
+    }
+  },
+  "error.technicalDetails.summary": {
+    "context": "Message Rust : diagnostic brut replié.",
+    "en": {
+      "status": "ai-reviewed",
+      "sourceHash": "ed2c29aacdf2"
+    },
+    "it": {
+      "status": "ai-reviewed",
+      "sourceHash": "ed2c29aacdf2"
+    }
+  },
+  "dialog.error.title": {
+    "context": "Dialogue global ; titre de repli pour une erreur sans titre.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "46148e250e72",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "46148e250e72",
+      "status": "ai-reviewed"
+    }
+  },
+  "dialog.close.label": {
+    "context": "Dialogue global ; ferme le message sans autre action.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "711e5f2e198d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "711e5f2e198d",
+      "status": "ai-reviewed"
+    }
+  },
+  "dialog.cancel.label": {
+    "context": "Confirmation ; abandonne l’action et conserve le travail.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "46ad3916f6a0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "46ad3916f6a0",
+      "status": "ai-reviewed"
+    }
+  },
+  "dialog.confirmation.fallbackTitle": {
+    "context": "Dialogue global ; titre de confirmation de repli.",
+    "en": {
+      "sourceHash": "30a8b7846961",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "30a8b7846961",
+      "status": "ai-reviewed"
+    }
+  },
+  "dialog.confirm.label": {
+    "context": "Confirmation ; accepte l’action proposée ; bouton court.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "565339bc4d33",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "565339bc4d33",
+      "status": "ai-reviewed"
+    }
+  },
+  "dialog.choice.title": {
+    "context": "Dialogue global ; titre de repli pour choisir entre plusieurs actions.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "3f2aaae20144",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3f2aaae20144",
+      "status": "ai-reviewed"
+    }
+  },
+  "dialog.delete.label": {
+    "context": "Confirmation de reprise ; supprime définitivement la session non enregistrée.",
+    "maxLength": 21,
+    "en": {
+      "sourceHash": "5e5d0216ce0b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5e5d0216ce0b",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.unsaved.label": {
+    "context": "Barre de titre et garde de départ ; projet sans fichier, repli visuel uniquement.",
+    "maxLength": 33,
+    "en": {
+      "sourceHash": "bb31dbc31cc7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bb31dbc31cc7",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.new.fallback": {
+    "context": "Barre de titre et garde ; nom affiché quand le nom auteur est vide ; ne pas écrire au projet.",
+    "en": {
+      "sourceHash": "3aeb69c18667",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3aeb69c18667",
+      "status": "ai-reviewed"
+    }
+  },
+  "saveBeforeLeave.unsaved.message": {
+    "context": "Départ ou fermeture ; avertit de la perte définitive du travail sans fichier.",
+    "en": {
+      "sourceHash": "d368241105a2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d368241105a2",
+      "status": "ai-reviewed"
+    }
+  },
+  "saveBeforeLeave.discard.label": {
+    "context": "Garde de départ ; jette définitivement le travail sans fichier.",
+    "maxLength": 36,
+    "en": {
+      "sourceHash": "163a80644aff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "163a80644aff",
+      "status": "ai-reviewed"
+    }
+  },
+  "saveBeforeLeave.saveAs.label": {
+    "context": "Garde de départ ; ouvre la sauvegarde vers un fichier projet durable (save, pas micro).",
+    "maxLength": 36,
+    "en": {
+      "sourceHash": "10c58ed977ac",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "10c58ed977ac",
+      "status": "ai-reviewed"
+    }
+  },
+  "saveBeforeLeave.dirty.title": {
+    "context": "Garde et barre de titre ; modifications depuis la dernière sauvegarde.",
+    "maxLength": 42,
+    "en": {
+      "sourceHash": "8fb49010e349",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8fb49010e349",
+      "status": "ai-reviewed"
+    }
+  },
+  "saveBeforeLeave.dirty.message": {
+    "context": "Garde de départ ; name est le nom auteur ou son repli visuel ; avertit avant de jeter les modifications.",
+    "en": {
+      "sourceHash": "0247ecc5d5e1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0247ecc5d5e1",
+      "status": "ai-reviewed"
+    }
+  },
+  "saveBeforeLeave.noSave.label": {
+    "context": "Garde de départ ; quitte en conservant uniquement la dernière sauvegarde.",
+    "maxLength": 30,
+    "en": {
+      "sourceHash": "9a5ca3f46dd9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9a5ca3f46dd9",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.save.label": {
+    "context": "Menu projet et garde ; sauvegarde un fichier projet (save, jamais record).",
+    "maxLength": 23,
+    "en": {
+      "sourceHash": "71dc74873e23",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "71dc74873e23",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.saveAs.label": {
+    "context": "Menu projet ; demande le nom et l’emplacement d’une copie.",
+    "maxLength": 29,
+    "en": {
+      "sourceHash": "d8f8fcae37ff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d8f8fcae37ff",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.saveAs.fallbackLabel": {
+    "context": "Menu projet ; repli historique à trois points pour Enregistrer sous.",
+    "en": {
+      "sourceHash": "d8f8fcae37ff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d8f8fcae37ff",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.home.label": {
+    "context": "Menu projet ; quitte l’éditeur vers l’accueil de l’application, sans lien avec le bouton Home de la Lunii.",
+    "maxLength": 30,
+    "en": {
+      "sourceHash": "61d8da049493",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "61d8da049493",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.open.label": {
+    "context": "Menu projet ; sélectionne un fichier de projet à ouvrir.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "d7c0e88a062c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d7c0e88a062c",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.openPack.label": {
+    "context": "Menu projet ; sélectionne un audiobook existant à importer.",
+    "maxLength": 26,
+    "en": {
+      "sourceHash": "b34ccd8a9c8c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b34ccd8a9c8c",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.continueInGraph.label": {
+    "context": "Menu projet hiérarchique ; demande une copie vers le graphe.",
+    "maxLength": 44,
+    "en": {
+      "sourceHash": "deefb48740df",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "deefb48740df",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.menu.title": {
+    "context": "Menu projet et barre ; ouvre les commandes de fichier et sauvegarde.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "9c466199f8ec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9c466199f8ec",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.project.tooltip": {
+    "context": "Barre d’outils ; infobulle et nom accessible du menu projet.",
+    "en": {
+      "sourceHash": "9203c87cc145",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9203c87cc145",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.export.suspended": {
+    "context": "Barre et commandes graphe ; explique que l’édition attend la fin de la fabrication de l’archive.",
+    "en": {
+      "sourceHash": "81bd6b9716c7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "81bd6b9716c7",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.gesture.suspended": {
+    "context": "Barre ; indisponibilité pendant un geste d’auteur.",
+    "en": {
+      "sourceHash": "ce1369b5347f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ce1369b5347f",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.undo.unavailable": {
+    "context": "Barre ; raison de désactivation de la commande Annuler quand l’historique est vide.",
+    "en": {
+      "sourceHash": "43cbbd173d3a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "43cbbd173d3a",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.redo.unavailable": {
+    "context": "Barre ; raison de désactivation de Rétablir.",
+    "en": {
+      "sourceHash": "e71e5bbe6983",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e71e5bbe6983",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.generate.blocked": {
+    "context": "Barre d’outils > bouton Générer indisponible ; invite à ouvrir le panneau « À corriger » pour résoudre les problèmes bloquants avant de produire le pack. Texte d’aide, largeur souple ; « À corriger » est le nom exact du panneau.",
+    "en": {
+      "sourceHash": "892992802425",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "892992802425",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.generate.checking": {
+    "context": "Bouton Générer ; qualification en cours.",
+    "en": {
+      "sourceHash": "77c576236c02",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "77c576236c02",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.document.loading": {
+    "context": "Bouton Générer ; attend la première lecture du document graphe.",
+    "en": {
+      "sourceHash": "90cf4c465899",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "90cf4c465899",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.undo.label": {
+    "context": "Barre d’outils ; annule la dernière modification (historique, pas fermeture de dialogue).",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "46ad3916f6a0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "46ad3916f6a0",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.redo.label": {
+    "context": "Barre d’outils ; rétablit la modification annulée.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "4cf3fd72da6f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4cf3fd72da6f",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.tree.toggle": {
+    "context": "Barre ; bascule le panneau Arbre.",
+    "en": {
+      "sourceHash": "9183e4a359ec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9183e4a359ec",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.settings.toggle": {
+    "context": "Barre ; bascule les réglages de l’élément sélectionné, pas les préférences application.",
+    "en": {
+      "sourceHash": "93ee3334c887",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "93ee3334c887",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.diagram.toggle": {
+    "context": "Barre ; bascule le diagramme de structure.",
+    "en": {
+      "sourceHash": "fcfde4fbe4a4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fcfde4fbe4a4",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.nodeList.toggle": {
+    "context": "Barre graphe ; bascule la liste latérale des nœuds.",
+    "en": {
+      "sourceHash": "7b592494a592",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7b592494a592",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.issues.label": {
+    "context": "Barre ; ouvre les problèmes et diagnostics du projet.",
+    "maxLength": 31,
+    "en": {
+      "sourceHash": "901afaac3fc8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "901afaac3fc8",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.generate.label": {
+    "context": "Bouton principal commun aux deux éditeurs ; ouvre la fiche puis la génération ZIP.",
+    "maxLength": 27,
+    "en": {
+      "sourceHash": "dd84571aee34",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd84571aee34",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.preferences.label": {
+    "context": "Commande application ; ouvre les préférences globales, distinctes des réglages de l’élément.",
+    "maxLength": 23,
+    "en": {
+      "sourceHash": "203260387103",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "203260387103",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.panels.ariaLabel": {
+    "context": "Barre ; nom accessible du groupe de bascules des panneaux réordonnables.",
+    "en": {
+      "sourceHash": "be569b7604d0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "be569b7604d0",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.graph.tooltip": {
+    "context": "Barre graphe ; explique pourquoi sa vue centrale ne peut être masquée.",
+    "en": {
+      "sourceHash": "7d888db4efb1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7d888db4efb1",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.issues.empty": {
+    "context": "Toast barre ; confirme que le dernier problème vient d’être résolu.",
+    "en": {
+      "sourceHash": "3d642b676168",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3d642b676168",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.command.unavailable": {
+    "context": "Infobulle commande suspendue ; label inclut son raccourci, reason explique l’indisponibilité ; conserver les deux.",
+    "en": {
+      "sourceHash": "490c5ce777df",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "490c5ce777df",
+      "status": "ai-reviewed"
+    }
+  },
+  "titleBar.pack.fallback": {
+    "context": "Barre de titre ; repli visuel sans titre d’audiobook ; ouvre ses métadonnées.",
+    "en": {
+      "sourceHash": "0584a85b5eb9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0584a85b5eb9",
+      "status": "ai-reviewed"
+    }
+  },
+  "titleBar.project.tooltip": {
+    "context": "Barre de titre ; infobulle du nom auteur du projet ou du repli d’affichage.",
+    "en": {
+      "sourceHash": "3da4248a2872",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3da4248a2872",
+      "status": "ai-reviewed"
+    }
+  },
+  "titleBar.pack.namedTooltip": {
+    "context": "Barre de titre ; name est le titre auteur ; ouvre les métadonnées.",
+    "en": {
+      "sourceHash": "7c002843090d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7c002843090d",
+      "status": "ai-reviewed"
+    }
+  },
+  "titleBar.pack.tooltip": {
+    "context": "Barre de titre ; ouvre les métadonnées quand le titre est vide.",
+    "en": {
+      "sourceHash": "fc3e9ba94b24",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fc3e9ba94b24",
+      "status": "ai-reviewed"
+    }
+  },
+  "titleBar.save.neverSaved": {
+    "context": "Barre de titre ; infobulle du témoin d’enregistrement sans fichier.",
+    "en": {
+      "sourceHash": "227f5841c114",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "227f5841c114",
+      "status": "ai-reviewed"
+    }
+  },
+  "titleBar.save.saved": {
+    "context": "Barre de titre et progression ; le fichier projet est enregistré.",
+    "en": {
+      "sourceHash": "4af29982d4cd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4af29982d4cd",
+      "status": "ai-reviewed"
+    }
+  },
+  "titleBar.preferences.tooltip": {
+    "context": "Barre de titre ; bouton ouvrant les préférences globales, raccourci ajouté par le shell.",
+    "en": {
+      "sourceHash": "546527a4dcd7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "546527a4dcd7",
+      "status": "ai-reviewed"
+    }
+  },
+  "titleBar.help.tooltip": {
+    "context": "Barre de titre ; ouvre l’aide et les crédits.",
+    "en": {
+      "sourceHash": "dd5120b1bc27",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd5120b1bc27",
+      "status": "ai-reviewed"
+    }
+  },
+  "window.minimize.label": {
+    "context": "Fenêtre native et panneau inférieur ; réduit la surface correspondante.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "2896a21cf475",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2896a21cf475",
+      "status": "ai-reviewed"
+    }
+  },
+  "window.maximize.label": {
+    "context": "Barre de titre ; alterne fenêtre maximisée et taille précédente.",
+    "maxLength": 33,
+    "en": {
+      "sourceHash": "dd04d83b9aad",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd04d83b9aad",
+      "status": "ai-reviewed"
+    }
+  },
+  "window.close.label": {
+    "context": "Barre de titre ; demande la fermeture de l’application.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "711e5f2e198d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "711e5f2e198d",
+      "status": "ai-reviewed"
+    }
+  },
+  "workspace.media.tab": {
+    "context": "Shell et panneau inférieur ; onglet de bibliothèque médias du projet.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "15405707a271",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "15405707a271",
+      "status": "ai-reviewed"
+    }
+  },
+  "workspace.renderQueue.tab": {
+    "context": "Shell et panneau inférieur ; onglet des fabrications de packs.",
+    "maxLength": 25,
+    "en": {
+      "sourceHash": "ccfbe1ad5a5f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ccfbe1ad5a5f",
+      "status": "ai-reviewed"
+    }
+  },
+  "workspace.aiQueue.tab": {
+    "context": "Shell et panneau inférieur ; onglet des générations image et voix.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "6be39208c565",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6be39208c565",
+      "status": "ai-reviewed"
+    }
+  },
+  "workspace.empty.title": {
+    "context": "Workspace ; titre quand les trois vues de l’éditeur par menus sont masquées.",
+    "maxLength": 33,
+    "en": {
+      "sourceHash": "f20fef918618",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f20fef918618",
+      "status": "ai-reviewed"
+    }
+  },
+  "workspace.empty.description": {
+    "context": "Workspace vide ; invite à réouvrir un panneau.",
+    "en": {
+      "sourceHash": "f019da544d50",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f019da544d50",
+      "status": "ai-reviewed"
+    }
+  },
+  "workspace.tree.label": {
+    "context": "Workspace vide ; bouton qui réactive l’arbre.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "297e0aff1ccd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "297e0aff1ccd",
+      "status": "ai-reviewed"
+    }
+  },
+  "workspace.settings.label": {
+    "context": "Workspace vide ; réactive les réglages de l’élément.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "4ed117e09c53",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4ed117e09c53",
+      "status": "ai-reviewed"
+    }
+  },
+  "workspace.diagram.label": {
+    "context": "Workspace vide ; réactive le diagramme.",
+    "maxLength": 21,
+    "en": {
+      "sourceHash": "55f338a0d1cf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "55f338a0d1cf",
+      "status": "ai-reviewed"
+    }
+  },
+  "workspace.graph.loading": {
+    "context": "Workspace ; état d’attente avant ouverture du graphe.",
+    "en": {
+      "sourceHash": "5a6604aceed4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5a6604aceed4",
+      "status": "ai-reviewed"
+    }
+  },
+  "workspace.settings.resize": {
+    "context": "Séparateur workspace ; nom accessible pour redimensionner les réglages.",
+    "en": {
+      "sourceHash": "16f147c0878d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "16f147c0878d",
+      "status": "ai-reviewed"
+    }
+  },
+  "workspace.tree.resize": {
+    "context": "Séparateur workspace ; nom accessible pour redimensionner l’arbre.",
+    "en": {
+      "sourceHash": "bc9c170feff4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bc9c170feff4",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.search.label": {
+    "context": "En-tête structure ; ouvre la recherche des éléments.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "b20097d93cf7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b20097d93cf7",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.search.tooltip": {
+    "context": "Bouton recherche ; label est la commande complète traduite ; raccourci Ctrl+F affiché.",
+    "en": {
+      "sourceHash": "9468249405d5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9468249405d5",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.add.label": {
+    "context": "Barre structure ; libellé court des commandes d’ajout.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "00f9c5334547",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "00f9c5334547",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.add.ariaLabel": {
+    "context": "Barre structure ; nom accessible du groupe des commandes d’ajout.",
+    "en": {
+      "sourceHash": "34c595226799",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "34c595226799",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.importStory.tooltip": {
+    "context": "Structure ; ouvre un fichier audio ou archive pour ajouter une histoire.",
+    "en": {
+      "sourceHash": "30ea60f6b16a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "30ea60f6b16a",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.folder.create": {
+    "context": "Structure ; ajoute un dossier dans le menu sélectionné.",
+    "en": {
+      "sourceHash": "76cbaa6effe3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "76cbaa6effe3",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.folder.import": {
+    "context": "Structure ; sélectionne un dossier à importer.",
+    "en": {
+      "sourceHash": "b19967c54c7e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b19967c54c7e",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.media.import": {
+    "context": "Structure graphe ; importe des fichiers dans la bibliothèque médias.",
+    "en": {
+      "sourceHash": "1947e13d97a4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1947e13d97a4",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.podcast.add": {
+    "context": "Structure ; ouvre le parcours d’import podcast.",
+    "en": {
+      "sourceHash": "e6204b326028",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e6204b326028",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.youtube.import": {
+    "context": "Structure ; ouvre l’import YouTube.",
+    "en": {
+      "sourceHash": "e592b5f43cca",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e592b5f43cca",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.record.tooltip": {
+    "context": "Structure ; ouvre l’enregistrement micro (record, pas save).",
+    "en": {
+      "sourceHash": "55e74f25dd3b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "55e74f25dd3b",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.tts.create": {
+    "context": "Structure ; ouvre la création d’histoire par synthèse vocale.",
+    "en": {
+      "sourceHash": "f66e9b7445ff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f66e9b7445ff",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.simulator.launch": {
+    "context": "Structure ; ouvre l’écoute et la navigation du projet dans la Lunii virtuelle.",
+    "en": {
+      "sourceHash": "a4f2aafc3ad2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a4f2aafc3ad2",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.overflow.tooltip": {
+    "context": "Barre structure étroite ; ouvre le menu des commandes qui ne tiennent pas en ligne.",
+    "en": {
+      "sourceHash": "2b19df0aa818",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2b19df0aa818",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.overflow.ariaLabel": {
+    "context": "Menu débordant structure ; nom accessible du groupe de commandes supplémentaires.",
+    "en": {
+      "sourceHash": "360619b8b66f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "360619b8b66f",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.notice.close": {
+    "context": "Fenêtre simulateur ; ferme l’état d’attente ou l’erreur.",
+    "en": {
+      "sourceHash": "424b29096845",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "424b29096845",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.playback.preparing": {
+    "context": "Simulateur flottant ; projection du document en cours avant l’écoute.",
+    "en": {
+      "sourceHash": "c88b0001b970",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c88b0001b970",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.playback.unavailable": {
+    "context": "Simulateur flottant ; titre d’un refus de projection ou lecture.",
+    "en": {
+      "sourceHash": "01c13dbf516f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "01c13dbf516f",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.window.resize": {
+    "context": "Poignée simulateur flottant ; nom accessible du redimensionnement.",
+    "en": {
+      "sourceHash": "0996b3c3acda",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0996b3c3acda",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.entry.missing": {
+    "context": "Simulateur ; erreur interne d’archive sans entrée ; squareOne est un identifiant technique.",
+    "en": {
+      "sourceHash": "e289fe0ad532",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e289fe0ad532",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.load.error": {
+    "context": "Simulateur ; titre du refus de chargement de l’archive.",
+    "en": {
+      "sourceHash": "4425569f6357",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4425569f6357",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.pack.loading": {
+    "context": "Simulateur ; lecture de l’archive en cours.",
+    "en": {
+      "sourceHash": "a21ba66e6264",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a21ba66e6264",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.document.noEntry": {
+    "context": "Simulateur du document graphe sans entrée ; explique les deux façons de démarrer.",
+    "en": {
+      "sourceHash": "46eba3a36273",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "46eba3a36273",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.pack.noEntry": {
+    "context": "Simulateur d’archive ; absence d’entrée dans un pack importé.",
+    "en": {
+      "sourceHash": "f6fa2b2ddab2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f6fa2b2ddab2",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.cover.label": {
+    "context": "Sous-titre simulateur ; marque l’Écran de couverture du pack.",
+    "maxLength": 22,
+    "en": {
+      "sourceHash": "3e78d201ade8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3e78d201ade8",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.window.move": {
+    "context": "Simulateur ; poignée qui permet de déplacer la fenêtre.",
+    "en": {
+      "sourceHash": "278f8c54736c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "278f8c54736c",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.auto.disable": {
+    "context": "Simulateur ; suspend l’avance automatique pour examiner un Écran.",
+    "en": {
+      "sourceHash": "6adbe7c15574",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6adbe7c15574",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.auto.enable": {
+    "context": "Simulateur ; restaure les transitions automatiques pendant l’écoute.",
+    "en": {
+      "sourceHash": "1caff2b2adb0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1caff2b2adb0",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.auto.label": {
+    "context": "Simulateur ; badge bouton des transitions automatiques.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "0286249762f7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0286249762f7",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.opacity.opaque": {
+    "context": "Simulateur ; désactive la transparence de l’aperçu.",
+    "en": {
+      "sourceHash": "014b31b06844",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "014b31b06844",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.opacity.transparent": {
+    "context": "Simulateur ; active la transparence de l’aperçu.",
+    "en": {
+      "sourceHash": "e7695d3d5003",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e7695d3d5003",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.opacity.label": {
+    "context": "Simulateur ; bouton qui bascule la transparence de la fenêtre.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "8279371c5848",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8279371c5848",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.window.close": {
+    "context": "Simulateur ; termine l’écoute et ferme sa fenêtre.",
+    "en": {
+      "sourceHash": "cfa0f1bbbfbf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cfa0f1bbbfbf",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.seek.backward": {
+    "context": "Transport simulateur ; recule l’audio de dix secondes.",
+    "en": {
+      "sourceHash": "89ef49addf57",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "89ef49addf57",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.seek.forward": {
+    "context": "Transport simulateur ; avance l’audio de dix secondes.",
+    "en": {
+      "sourceHash": "eb2ab319dad6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "eb2ab319dad6",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.seek.backwardLabel": {
+    "context": "Transport simulateur ; libellé court du saut arrière de dix secondes.",
+    "en": {
+      "sourceHash": "617f1941bb2d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "617f1941bb2d",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.seek.forwardLabel": {
+    "context": "Transport simulateur ; libellé court du saut avant de dix secondes.",
+    "en": {
+      "sourceHash": "71f45c5efe99",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "71f45c5efe99",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.home.label": {
+    "context": "Simulateur ; bouton physique Home de la Lunii ; distinct de l’accueil de l’application.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "533161735639",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "533161735639",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.pause.resume": {
+    "context": "Simulateur ; reprend la lecture audio après pause.",
+    "en": {
+      "sourceHash": "ddd913203fe2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ddd913203fe2",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.pause.label": {
+    "context": "Simulateur ; bouton physique de pause.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "858e4ba7a29f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "858e4ba7a29f",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.ok.label": {
+    "context": "Simulateur ; bouton physique OK pour valider un choix.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "565339bc4d33",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "565339bc4d33",
+      "status": "ai-reviewed"
+    }
+  },
+  "status.end.fallback": {
+    "context": "Statut shell ; repli visuel de l’élément de fin sans nom.",
+    "en": {
+      "sourceHash": "cb764ce46b97",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cb764ce46b97",
+      "status": "ai-reviewed"
+    }
+  },
+  "status.story.fallback": {
+    "context": "Statut shell ; repli visuel pour projet simple sans nom.",
+    "en": {
+      "sourceHash": "21a6c7ffb6e1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "21a6c7ffb6e1",
+      "status": "ai-reviewed"
+    }
+  },
+  "status.root.fallback": {
+    "context": "Statut shell ; repli visuel du menu racine sans nom ; jamais persisté.",
+    "en": {
+      "sourceHash": "128d80d87740",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "128d80d87740",
+      "status": "ai-reviewed"
+    }
+  },
+  "status.node.fallback": {
+    "context": "Statut shell ; élément sélectionné sans nom auteur.",
+    "en": {
+      "sourceHash": "208e5636013c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "208e5636013c",
+      "status": "ai-reviewed"
+    }
+  },
+  "status.tree.label": {
+    "context": "Statut shell ; nom du panneau actif dans la liste.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "5b81c7c3bb69",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5b81c7c3bb69",
+      "status": "ai-reviewed"
+    }
+  },
+  "status.settings.label": {
+    "context": "Statut shell ; nom du panneau de réglages actif.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "24dc123847ed",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "24dc123847ed",
+      "status": "ai-reviewed"
+    }
+  },
+  "status.diagram.label": {
+    "context": "Statut shell ; nom du diagramme actif.",
+    "maxLength": 21,
+    "en": {
+      "sourceHash": "12b096fff9ed",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "12b096fff9ed",
+      "status": "ai-reviewed"
+    }
+  },
+  "status.graph.description": {
+    "context": "Statut shell ; explique le mode graphe.",
+    "en": {
+      "sourceHash": "a6c7f8347cf0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a6c7f8347cf0",
+      "status": "ai-reviewed"
+    }
+  },
+  "status.home.description": {
+    "context": "Statut shell sans projet ; invite à choisir un éditeur.",
+    "en": {
+      "sourceHash": "b61d2533d9d0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b61d2533d9d0",
+      "status": "ai-reviewed"
+    }
+  },
+  "status.selection.description": {
+    "context": "Statut shell ; name est le nom auteur sélectionné ; panels est la liste localisée des panneaux actifs.",
+    "en": {
+      "sourceHash": "b108a6379236",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b108a6379236",
+      "status": "ai-reviewed"
+    }
+  },
+  "session.recovery.fallback": {
+    "context": "Accueil ; repli visuel d’un snapshot de session sans nom, pas une donnée écrite.",
+    "en": {
+      "sourceHash": "f970f70a03e1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f970f70a03e1",
+      "status": "ai-reviewed"
+    }
+  },
+  "session.recovery.errorTitle": {
+    "context": "Dialogue session ; erreur à l’ouverture d’un snapshot après crash.",
+    "en": {
+      "sourceHash": "8609cd43d29b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8609cd43d29b",
+      "status": "ai-reviewed"
+    }
+  },
+  "session.recovery.errorMessage": {
+    "context": "Dialogue session ; error est la cause déjà présentée dans la langue active.",
+    "en": {
+      "sourceHash": "0f9bc347faa3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0f9bc347faa3",
+      "status": "ai-reviewed"
+    }
+  },
+  "session.recovery.ignoreTitle": {
+    "context": "Dialogue session ; confirmation avant suppression définitive du snapshot.",
+    "en": {
+      "sourceHash": "8d076f4aadcd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8d076f4aadcd",
+      "status": "ai-reviewed"
+    }
+  },
+  "session.recovery.ignoreMessage": {
+    "context": "Dialogue session ; confirme la perte du travail et des médias de session.",
+    "en": {
+      "sourceHash": "5fc8b54b848f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5fc8b54b848f",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.imageCache.title": {
+    "context": "Dialogue stockage image ; destination inaccessible, image conservée dans le cache.",
+    "maxLength": 42,
+    "en": {
+      "sourceHash": "e7136f190155",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e7136f190155",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.imageCache.message": {
+    "context": "Dialogue stockage image ; invite à sauvegarder le projet pour préserver l’image.",
+    "en": {
+      "sourceHash": "f7b6047fbaa1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f7b6047fbaa1",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.backgroundWork.title": {
+    "context": "Fermeture application ; titre lorsque des tâches tournent encore.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "49ccc7ad0138",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "49ccc7ad0138",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.backgroundWork.message": {
+    "context": "Fermeture application ; avertit de l’interruption des tâches actives.",
+    "en": {
+      "sourceHash": "87cc75191b6d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "87cc75191b6d",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.backgroundWork.stay": {
+    "context": "Fermeture application ; conserve la fenêtre et laisse les tâches continuer.",
+    "en": {
+      "sourceHash": "859cf65bf5a5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "859cf65bf5a5",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.backgroundWork.quit": {
+    "context": "Fermeture application ; interrompt les tâches et poursuit la fermeture.",
+    "en": {
+      "sourceHash": "62b7a4d91bf9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "62b7a4d91bf9",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.graph.title": {
+    "context": "Dialogue création graphe ; titre en cas d’échec de création du projet.",
+    "maxLength": 26,
+    "en": {
+      "sourceHash": "ba1f144e22f9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ba1f144e22f9",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.graph.createError": {
+    "context": "Dialogue création graphe ; error est une cause présentée séparément dans la langue active.",
+    "en": {
+      "sourceHash": "7014490b1f20",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7014490b1f20",
+      "status": "ai-reviewed"
+    }
+  },
+  "appModals.tts.label": {
+    "context": "Modale de synthèse vocale ouverte par le shell ; libellé de nouvelle histoire.",
+    "maxLength": 29,
+    "en": {
+      "sourceHash": "63f73496b7ec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "63f73496b7ec",
+      "status": "ai-reviewed"
+    }
+  },
+  "appModals.saveAs.progress": {
+    "context": "Progression Enregistrer sous ; copie du projet en cours, save.",
+    "en": {
+      "sourceHash": "233cd80736fd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "233cd80736fd",
+      "status": "ai-reviewed"
+    }
+  },
+  "appModals.saveAs.done": {
+    "context": "Progression Enregistrer sous ; copie du projet terminée.",
+    "en": {
+      "sourceHash": "1a7046bd2af7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1a7046bd2af7",
+      "status": "ai-reviewed"
+    }
+  },
+  "appModals.save.progress": {
+    "context": "Progression sauvegarde projet ; save, pas enregistrement micro.",
+    "en": {
+      "sourceHash": "0f02d9ec0f50",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0f02d9ec0f50",
+      "status": "ai-reviewed"
+    }
+  },
+  "appModals.extraction.title": {
+    "context": "Modale import ; extraction des éléments éditables depuis une archive.",
+    "maxLength": 34,
+    "en": {
+      "sourceHash": "e970253a8df4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e970253a8df4",
+      "status": "ai-reviewed"
+    }
+  },
+  "appModals.extraction.description": {
+    "context": "Modale import ; explique l’extraction du pack.",
+    "en": {
+      "sourceHash": "ff47d0d0538d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ff47d0d0538d",
+      "status": "ai-reviewed"
+    }
+  },
+  "appModals.import.title": {
+    "context": "Modale import ; progression des fichiers sélectionnés.",
+    "maxLength": 30,
+    "en": {
+      "sourceHash": "71fa15b7d0e4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "71fa15b7d0e4",
+      "status": "ai-reviewed"
+    }
+  },
+  "appModals.import.position": {
+    "context": "Modale import multiple ; index commence à 1, total est le nombre de fichiers.",
+    "en": {
+      "sourceHash": "24bbce35cdeb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "24bbce35cdeb",
+      "status": "ai-reviewed"
+    }
+  },
+  "appModals.import.single": {
+    "context": "Modale import d’un seul fichier ; état de traitement.",
+    "en": {
+      "sourceHash": "77289e7a0625",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "77289e7a0625",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.link.error": {
+    "context": "Notes de version ; erreur d’ouverture d’un lien Discord ou changelog.",
+    "en": {
+      "sourceHash": "011a251ee920",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "011a251ee920",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.header.title": {
+    "context": "Notes de version ; titre d’accueil avec version courante, jamais changer le numéro.",
+    "maxLength": 41,
+    "en": {
+      "sourceHash": "8719a8ec7cc9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8719a8ec7cc9",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.header.description": {
+    "context": "Notes de version ; sous-titre d’introduction.",
+    "en": {
+      "sourceHash": "73db795a0cfd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "73db795a0cfd",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.changes.ariaLabel": {
+    "context": "Notes de version ; nom accessible de la liste des nouveautés et corrections.",
+    "en": {
+      "sourceHash": "cd306d5e2724",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cd306d5e2724",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.changes.title": {
+    "context": "Notes de version ; titre de la liste des changements.",
+    "maxLength": 25,
+    "en": {
+      "sourceHash": "832044ffb15d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "832044ffb15d",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.discord.label": {
+    "context": "Notes de version ; lien externe vers le serveur de discussion.",
+    "maxLength": 34,
+    "en": {
+      "sourceHash": "6ef39d59f597",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6ef39d59f597",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.changelog.label": {
+    "context": "Notes de version ; lien externe vers tous les changements.",
+    "maxLength": 39,
+    "en": {
+      "sourceHash": "8f15394aec69",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8f15394aec69",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.footer.thanks": {
+    "context": "Notes de version ; remerciement de pied de fenêtre.",
+    "en": {
+      "sourceHash": "2f2524c80721",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2f2524c80721",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.start.label": {
+    "context": "Notes de version ; ferme la fenêtre et mémorise la version lue.",
+    "maxLength": 25,
+    "en": {
+      "sourceHash": "2ac74c137673",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2ac74c137673",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.badge.new": {
+    "context": "Notes de version ; badge court pour une nouveauté.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "a253ff09c5a8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a253ff09c5a8",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.badge.fix": {
+    "context": "Notes de version ; badge court pour une correction.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "74b313a5c9bc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "74b313a5c9bc",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.badge.chore": {
+    "context": "Notes de version ; badge court pour une maintenance.",
+    "maxLength": 20,
+    "en": {
+      "sourceHash": "72a3d3f08fd1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "72a3d3f08fd1",
+      "status": "ai-reviewed"
+    }
+  },
+  "toolbar.shortcut.tooltip": {
+    "context": "Barre de titre et barre d’outils ; infobulle avec libellé complet traduit et raccourci clavier technique, dont les touches sont déjà formatées pour la plateforme. Les deux paramètres doivent rester visibles.",
+    "en": {
+      "sourceHash": "34bed00fe4a8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "34bed00fe4a8",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.languages.title": {
+    "context": "Notes de version bêta 0.9.10 > languages.title",
+    "en": {
+      "sourceHash": "991ffa151f62",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "991ffa151f62",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.languages.detail": {
+    "context": "Notes de version bêta 0.9.10 > languages.detail",
+    "en": {
+      "sourceHash": "524abfd93ecc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "524abfd93ecc",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.catalogue.title": {
+    "context": "Notes de version bêta 0.9.10 > catalogue.title",
+    "en": {
+      "sourceHash": "103451395067",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "103451395067",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.catalogue.detail": {
+    "context": "Notes de version bêta 0.9.10 > catalogue.detail",
+    "en": {
+      "sourceHash": "8ff59c06880b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8ff59c06880b",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.missing.title": {
+    "context": "Notes de version bêta 0.9.10 > connexion à la Lunii",
+    "en": {
+      "sourceHash": "35ee98844938",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "35ee98844938",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.missing.detail": {
+    "context": "Notes de version bêta 0.9.10 > connexion à la Lunii",
+    "en": {
+      "sourceHash": "519e0798a519",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "519e0798a519",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.open.label": {
+    "context": "About dialog: button reopening the current release notes, even after dismissal.",
+    "en": {
+      "sourceHash": "789201f14f14",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "789201f14f14",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.fixes.label": {
+    "context": "Release notes: single summary line for all bug fixes, next to the FIX badge.",
+    "en": {
+      "sourceHash": "695c503b4256",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "695c503b4256",
+      "status": "ai-reviewed"
+    }
+  }
+}

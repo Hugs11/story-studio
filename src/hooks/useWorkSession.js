@@ -1,5 +1,9 @@
+import { installProjectAccess, releaseActiveProjectAccess, releaseProjectAccess } from '../store/projectSessionAccess.js';
+import { presentStoredError, presentUserMessage } from '../i18n/userMessage.js';
+import { useCommonTranslation } from '../i18n/commonPresentation.js';
 import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { exists, remove } from '@tauri-apps/plugin-fs';
 import {
   autoSaveEphemeralProject,
   collectLiveSessionDependencies,
@@ -9,7 +13,7 @@ import {
   previewProjectFromPath,
 } from '../store/projectIO';
 import { isProjectWorthAutosaving } from '../store/autosaveDecision';
-import { createWorkSnapshot } from '../store/projectHelpers';
+import { createWorkSnapshot, hasUnsavedWork } from '../store/projectHelpers';
 import { collectSessionBoundReferences } from '../store/sessionMediaTriage';
 import {
   acceptEphemeralSnapshotSeed,
@@ -57,6 +61,8 @@ export function useWorkSession({
   currentWorkSnapshot,
   importedPackPendingMetaRef,
 }) {
+  const { t } = useCommonTranslation();
+  useEffect(() => () => { void releaseActiveProjectAccess().catch(() => {}); }, []);
   const [sessionMode, setSessionMode] = useState(null); // null | 'ephemeral' | 'project'
   const [sessionWorkspaceDir, setSessionWorkspaceDir] = useState('');
   const [sessionRecoveries, setSessionRecoveries] = useState([]);
@@ -73,10 +79,20 @@ export function useWorkSession({
   // qu'un enregistrement lancé dans la session A ne promeuve, ne trie ni ne
   // supprime jamais le dossier de la session B devenue courante entre-temps.
   const sessionTicketRef = useRef({});
+  const recoveryNeeded = hasUnsavedWork({
+    project: store.project,
+    mediaLibraryPaths,
+    mediaTags,
+    savedSnapshot: savedSnapshotRef.current,
+    pristine: store.isPristine(),
+  });
+  // La tick périodique relit aussi ce critère avant toute écriture en file.
+  ephemeralSnapshotSeedStateRef.current.recoveryNeeded = recoveryNeeded;
 
   // Toute transition de session passe par ici : le jeton et l'état du filet
   // anti-crash sont périmés ensemble, jamais l'un sans l'autre.
   function beginSessionTransition(seed = undefined) {
+    void releaseActiveProjectAccess().catch(() => {});
     sessionTicketRef.current = {};
     if (seed) resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current, seed);
     else resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
@@ -120,14 +136,14 @@ export function useWorkSession({
             const preview = await previewProjectFromPath(recovery.snapshotPath);
             return {
               ...recovery,
-              projectName: preview.projectName || 'Projet récupérable',
+              get projectName() { return preview.projectName || t('common:session.recovery.fallback'); },
               projectType: preview.projectType || 'pack',
               thumbnailImage: preview.thumbnailImage,
             };
           } catch {
             return {
               ...recovery,
-              projectName: 'Projet récupérable',
+              get projectName() { return t('common:session.recovery.fallback'); },
               // Snapshot illisible : son éditeur est inconnu, l'accueil n'en affiche aucun.
               projectType: null,
               thumbnailImage: null,
@@ -157,11 +173,30 @@ export function useWorkSession({
     if (sessionMode !== 'ephemeral') return;
     const snapshotPath = joinLocalPath(sessionWorkspaceDir, SESSION_RECOVERY_FILE);
     if (!snapshotPath) return;
+    const sessionToken = ephemeralSnapshotSeedStateRef.current.sessionToken;
+    if (!recoveryNeeded) {
+      // Une annulation ou une sauvegarde peut rendre le travail intact après
+      // une écriture : supprimer la reprise dans la même file que les snapshots.
+      enqueueEphemeralSnapshotWrite(ephemeralSnapshotSeedStateRef.current, async () => {
+        const state = ephemeralSnapshotSeedStateRef.current;
+        if (state.sessionToken !== sessionToken || state.recoveryNeeded
+          || ephemeralSnapshotPathRef.current !== snapshotPath) return;
+        try {
+          if (await exists(snapshotPath)) await remove(snapshotPath);
+          if (state.sessionToken === sessionToken) {
+            state.seeded = false;
+            state.savedSnapshot = null;
+          }
+        } catch (error) {
+          logger.error('session:remove-snapshot-error', error);
+        }
+      });
+      return;
+    }
     // Même critère que saveProject(autosave) : n'écrire que si le projet a un
     // contenu réel (sinon saveProject jette « projet vide »).
     if (!isProjectWorthAutosaving(store.project, mediaLibraryPaths, mediaLibraryCountRef.current)
       && Object.keys(mediaTags ?? {}).length === 0) return;
-    const sessionToken = ephemeralSnapshotSeedStateRef.current.sessionToken;
     const capturedProject = store.project;
     const capturedPaths = mediaLibraryPaths;
     const capturedTags = mediaTags;
@@ -192,7 +227,7 @@ export function useWorkSession({
         finishEphemeralSnapshotSeed(state, write);
       }
     });
-  }, [currentWorkSnapshot, mediaLibraryPaths, mediaTags, sessionMode, sessionWorkspaceDir, store.project]);
+  }, [currentWorkSnapshot, mediaLibraryPaths, mediaTags, recoveryNeeded, sessionMode, sessionWorkspaceDir, store.project]);
 
   // Prépare une session de travail (éphémère par défaut, ou workspace réel si
   // l'option correspondante est active), fixe le type de projet et renvoie le dossier cible
@@ -202,10 +237,10 @@ export function useWorkSession({
   // n'a pas de type hiérarchique à poser, et en poser un ferait clignoter
   // l'espace de travail Libre le temps que le pack soit acquis. Le projet est
   // alors installé en une fois par `loadProject`, qui fait avancer l'époque.
-  async function prepareNewWorkSession(type, { applyProjectType = true } = {}) {
+  async function prepareNewWorkSession(type, { applyProjectType = true, forceEphemeral = false } = {}) {
     beginSessionTransition();
     let workspaceDir;
-    if (useWorkspaceForNewProjects) {
+    if (useWorkspaceForNewProjects && !forceEphemeral) {
       const realWorkspace = configuredWorkspaceDir || await ensureWorkspaceDir();
       if (!configuredWorkspaceDir) setConfiguredWorkspaceDir(realWorkspace);
       sessionModeRef.current = 'project';
@@ -234,7 +269,7 @@ export function useWorkSession({
     importedPackPendingMetaRef.current = false;
     store.setSavePath(null);
     if (applyProjectType) store.setProjectType(type);
-    logger.info(`session:start mode=${useWorkspaceForNewProjects ? 'project' : 'ephemeral'} type=${type}`);
+    logger.info(`session:start mode=${sessionModeRef.current} type=${type}`);
     return workspaceDir;
   }
 
@@ -262,7 +297,7 @@ export function useWorkSession({
   // (jamais le workspace réel), vide le projet et revient à l'accueil.
   function abandonWorkSession(sessionDir) {
     beginSessionTransition();
-    if (!useWorkspaceForNewProjects && sessionDir) {
+    if (sessionModeRef.current === 'ephemeral' && sessionDir) {
       invoke('cleanup_session_workspace', { path: sessionDir }).catch(() => {});
     }
     store.resetProject();
@@ -281,13 +316,15 @@ export function useWorkSession({
   async function runFunnelLanding(type, importFn, {
     errorLog = 'funnel:land-error',
     applyProjectType = true,
+    forceEphemeral = false,
   } = {}) {
-    const workspaceDir = await prepareNewWorkSession(type, { applyProjectType });
+    const workspaceDir = await prepareNewWorkSession(type, { applyProjectType, forceEphemeral });
+    const session = captureWorkSession();
     try {
-      return await importFn(workspaceDir);
+      return await importFn(workspaceDir, { mode: sessionModeRef.current, isCurrent: () => isWorkSessionCurrent(session) });
     } catch (error) {
       logger.error(errorLog, error);
-      abandonWorkSession(workspaceDir);
+      if (isWorkSessionCurrent(session)) abandonWorkSession(workspaceDir);
       throw error;
     }
   }
@@ -382,10 +419,13 @@ export function useWorkSession({
   async function handleRecoverSession(recovery) {
     if (!recovery?.snapshotPath || !recovery?.sessionDir) return;
     beginSessionTransition();
+    let claimed = null;
     try {
       const result = await loadProjectFromPath(recovery.snapshotPath, {
         preserveEmptyProjectName: true,
+        editorAccess: true,
       });
+      claimed = result.accessToken;
       store.loadProject(result.data);
       store.setMediaTags(result.mediaTags ?? {});
       store.setSavePath(null);
@@ -412,12 +452,16 @@ export function useWorkSession({
       sdStore.clearDone();
       xttsStore.clearDone();
       setSessionRecoveries((prev) => prev.filter((item) => item.sessionDir !== recovery.sessionDir));
+      await installProjectAccess(result.accessToken, result.data);
       logger.info(`session:recovered path='${recovery.snapshotPath}'`);
+      return true;
     } catch (error) {
+      await releaseProjectAccess(claimed).catch(() => {});
       logger.error('session:recover-error', error);
       showErrorDialog({
-        title: 'Reprise impossible',
-        message: `Impossible de reprendre cette session : ${error}`,
+        get title() { return t('common:session.recovery.errorTitle'); },
+        get message() { return t('common:session.recovery.errorMessage', { error: presentStoredError(error) }); },
+        technicalDetail: presentUserMessage(error).technicalDetail,
       });
     }
   }
@@ -427,13 +471,13 @@ export function useWorkSession({
     // Ignorer supprime définitivement l'instantané et les médias de session :
     // l'auteur le confirme d'abord.
     const choice = await showChoiceDialog({
-      title: 'Ignorer cette reprise',
-      message: 'Supprimer définitivement ce travail non enregistré ?',
+      get title() { return t('common:session.recovery.ignoreTitle'); },
+      get message() { return t('common:session.recovery.ignoreMessage'); },
       variant: 'warning',
       cancelValue: 'cancel',
       actions: [
-        { value: 'cancel', label: 'Annuler', autoFocus: true },
-        { value: 'delete', label: 'Supprimer', kind: 'danger-outline' },
+        { value: 'cancel', get label() { return t('common:dialog.cancel.label'); }, autoFocus: true },
+        { value: 'delete', get label() { return t('common:dialog.delete.label'); }, kind: 'danger-outline' },
       ],
     });
     if (choice !== 'delete') return;

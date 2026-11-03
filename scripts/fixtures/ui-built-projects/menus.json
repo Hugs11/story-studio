@@ -1,6 +1,8 @@
 {
   "schemaVersion": 3,
   "authoringMode": "free",
+  "officialProvenance": "unknown",
+  "containsOfficialContent": false,
   "version": 2,
   "projectName": "",
   "packMetadata": {
@@ -11,7 +13,7 @@
     "producer": "",
     "bonus": "",
     "description": "",
-    "uuid": "00000000-0000-4000-8000-000000000001",
+    "uuid": "00000000-0000-4000-8000-000000000003",
     "originalUuid": "",
     "namingMode": "convention",
     "legacyExportName": "",
@@ -46,7 +48,7 @@
   "importWarnings": [],
   "rootEntries": [
     {
-      "id": "00000000-0000-4000-8000-000000000002",
+      "id": "00000000-0000-4000-8000-000000000004",
       "type": "menu",
       "name": "Dossier de test",
       "treeColor": null,
@@ -70,7 +72,7 @@
       "importedContinuation": null,
       "children": [
         {
-          "id": "00000000-0000-4000-8000-000000000003",
+          "id": "00000000-0000-4000-8000-000000000005",
           "type": "story",
           "name": "histoire-1",
           "treeColor": null,
@@ -102,7 +104,7 @@
             "ok": false,
             "home": true
           },
-          "returnAfterPlay": "story:00000000-0000-4000-8000-000000000004",
+          "returnAfterPlay": "story:00000000-0000-4000-8000-000000000006",
           "returnOnHome": null,
           "returnOnHomeNone": false,
           "titleReturnOnHome": null,
@@ -110,7 +112,7 @@
           "titleControlSettings": null
         },
         {
-          "id": "00000000-0000-4000-8000-000000000004",
+          "id": "00000000-0000-4000-8000-000000000006",
           "type": "story",
           "name": "histoire-2",
           "treeColor": null,
@@ -128,7 +130,7 @@
             "ok": true,
             "home": true
           },
-          "afterPlaybackPromptOkTarget": "menu:00000000-0000-4000-8000-000000000002",
+          "afterPlaybackPromptOkTarget": "menu:00000000-0000-4000-8000-000000000004",
           "afterPlaybackPromptHomeTarget": null,
           "afterPlaybackPromptHomeNone": false,
           "afterPlaybackSequence": [],
@@ -155,5 +157,5 @@
   "name": "3+]Pack_de_test[by_Auteur_de_test",
   "packVersion": 1,
   "packDescription": "",
-  "packUuid": "00000000-0000-4000-8000-000000000001"
+  "packUuid": "00000000-0000-4000-8000-000000000003"
 }

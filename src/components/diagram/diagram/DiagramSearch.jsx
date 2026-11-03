@@ -1,3 +1,5 @@
+import { useTreeTranslation } from '../../../i18n/useTreeTranslation.jsx';
+import { translateTree as t } from '../../../i18n/treePresentation.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { hasVisibleEndNode } from '../../../store/generatedNavigation';
 import { Search } from '../../icons/LucideLocal';
@@ -7,13 +9,13 @@ import { END_NODE_ID } from '../flowDiagramLayout';
 import { filterDiagramSearchCandidates } from './diagramSearchFilter.js';
 
 const TYPE_LABELS = {
-  menu: 'Dossier',
-  story: 'Histoire',
-  zip: 'Pack importé',
-  ref: 'Lien',
+  menu: "tree:menu.card.title",
+  story: "tree:story.type.label",
+  zip: "tree:node.imported.label",
 };
 
 export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose, onFilterChange }) {
+  const { language } = useTreeTranslation();
   const [active, setActive] = useState(false);
   const [term, setTerm] = useState('');
   const [selectedColors, setSelectedColors] = useState(new Set());
@@ -25,22 +27,22 @@ export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose, o
   const candidates = useMemo(() => [
     {
       id: 'root',
-      label: project.rootName || project.projectName || 'Menu racine',
-      typeLabel: 'Racine',
+      label: project.rootName || project.projectName || t("common:status.root.fallback"),
+      typeLabel: t("tree:navigation.root.short"),
       treeColor: project.treeColor ?? null,
     },
     ...(projectIndex.flatEntries ?? []).map(({ entry }) => ({
       id: entry.id,
-      label: entry.name || TYPE_LABELS[entry.type] || entry.id,
-      typeLabel: TYPE_LABELS[entry.type] || entry.type,
+      label: entry.name || (TYPE_LABELS[entry.type] ? t(TYPE_LABELS[entry.type]) : entry.id),
+      typeLabel: TYPE_LABELS[entry.type] ? t(TYPE_LABELS[entry.type]) : entry.type,
       treeColor: entry.treeColor ?? null,
     })),
     ...(hasVisibleEndNode(project) ? [{
       id: END_NODE_ID,
-      label: project.endNodeName || 'Message de fin',
-      typeLabel: 'Fin',
+      label: project.endNodeName || t("common:status.end.fallback"),
+      typeLabel: t("tree:diagram.search.endType"),
     }] : []),
-  ], [project, projectIndex.flatEntries]);
+  ], [project, projectIndex.flatEntries, language]);
 
   const usedColors = useMemo(
     () => buildUsedNodeColors(candidates.map(({ treeColor }) => treeColor)),
@@ -126,8 +128,8 @@ export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose, o
           ref={inputRef}
           type="text"
           value={term}
-          placeholder="Rechercher un nœud…"
-          aria-label="Rechercher dans le diagramme"
+          placeholder={t("tree:diagram.search.placeholder")}
+          aria-label={t("tree:diagram.search.aria")}
           onChange={(event) => {
             setTerm(event.target.value);
             setActiveIndex(0);
@@ -152,7 +154,7 @@ export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose, o
         <button
           type="button"
           className="fd-diagram-search-close"
-          aria-label="Fermer la recherche"
+          aria-label={t("tree:diagram.search.close")}
           onClick={() => {
             closeSearch();
           }}
@@ -171,7 +173,7 @@ export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose, o
       />
 
       {filterActive ? (
-        <div className="fd-diagram-search-results" role="listbox" aria-label="Résultats de recherche">
+        <div className="fd-diagram-search-results" role="listbox" aria-label={t("tree:diagram.search.results")}>
           {results.length > 0 ? results.map((candidate, index) => (
             <button
               key={candidate.id}
@@ -198,7 +200,7 @@ export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose, o
               <small>{candidate.typeLabel}</small>
             </button>
           )) : (
-            <div className="fd-diagram-search-empty">Aucun résultat</div>
+            <div className="fd-diagram-search-empty">{t("tree:diagram.search.empty")}</div>
           )}
         </div>
       ) : null}

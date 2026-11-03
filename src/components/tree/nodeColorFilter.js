@@ -1,13 +1,14 @@
+import { translateTree as t } from '../../i18n/treePresentation.js';
 import { TREE_COLOR_PALETTE } from './treeOperations.js';
 
 const COLOR_LABELS = new Map([
-  ['#e24b4a', 'Rouge'],
-  ['#ef9f27', 'Orange'],
-  ['#f0c84b', 'Jaune'],
-  ['#5fbf6b', 'Vert'],
-  ['#3d9be9', 'Bleu'],
-  ['#7c6af7', 'Violet'],
-  ['#d95bb4', 'Rose'],
+  ['#e24b4a', "tree:color.red.label"],
+  ['#ef9f27', "tree:color.orange.label"],
+  ['#f0c84b', "tree:color.yellow.label"],
+  ['#5fbf6b', "tree:color.green.label"],
+  ['#3d9be9', "tree:color.blue.label"],
+  ['#7c6af7', "tree:color.purple.label"],
+  ['#d95bb4', "tree:color.pink.label"],
 ]);
 
 function normalizeNodeColor(color) {
@@ -16,7 +17,8 @@ function normalizeNodeColor(color) {
 
 function getNodeColorLabel(color) {
   const normalized = normalizeNodeColor(color);
-  return COLOR_LABELS.get(normalized) ?? `Couleur ${normalized || 'inconnue'}`;
+  const key = COLOR_LABELS.get(normalized);
+  return key ? t(key) : t('tree:color.custom.label', { color: normalized || t('tree:color.unknown.label') });
 }
 
 export function buildUsedNodeColors(colors) {
@@ -33,7 +35,7 @@ export function buildUsedNodeColors(colors) {
       const rightOrder = paletteOrder.get(right) ?? Number.POSITIVE_INFINITY;
       return leftOrder - rightOrder || left.localeCompare(right);
     })
-    .map(([color, count]) => ({ color, count, label: getNodeColorLabel(color) }));
+    .map(([color, count]) => ({ color, count, get label() { return getNodeColorLabel(color); } }));
 }
 
 export function collectProjectUsedNodeColors(project, projectIndex) {

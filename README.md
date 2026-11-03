@@ -1,41 +1,37 @@
-> 🇬🇧 **English** | [🇫🇷 Français](README.fr.md)
+> 🇬🇧 **English** | 🇫🇷 [Français](README.fr.md) | 🇮🇹 [Italiano](README.it.md)
 
 <p align="center">
   <img src="public/logostory.svg" alt="Story Studio" width="240">
 </p>
 
 <p align="center">
-  A modern desktop editor for creating, aggregating, testing and generating Lunii-compatible story packs.
+  A modern desktop editor for creating, combining, testing and generating Lunii-compatible audiobooks.
 </p>
 
 <p align="center">
   <a href=".github/workflows/ci.yml"><img alt="CI: desktop builds" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platforms: Windows, Linux and macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.9" src="https://img.shields.io/badge/version-0.9.9-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.10" src="https://img.shields.io/badge/version-0.9.10-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
 </p>
 
-## Tu cherches à créer des histoires pour la Lunii ?
+## Looking to create stories for My Fabulous Storyteller?
 
-Story Studio est un logiciel pour créer et modifier des packs pour les boîtes à histoires Lunii.
-Il intègre des outils pour éditer le son et les images, et évite de devoir jongler avec Audacity
-ou d'autres logiciels pour créer son pack d'histoires. La
-[documentation utilisateur en ligne](https://hugs11.github.io/story-studio/docs/)
-est actuellement disponible en français ; ce README reste la présentation anglaise du projet.
+The [online user documentation](https://hugs11.github.io/story-studio/docs/) is currently available in French.
 
-Story Studio lets you create and edit packs for Lunii story boxes. It includes audio and image
-editing tools, so you can build your story pack without switching between Audacity and other
+Story Studio lets you create and edit audiobooks for **My Fabulous Storyteller by Lunii**. It includes audio and image
+editing tools, so you can build your audiobook without switching between Audacity and other
 applications. Everything stays local: images, audio, navigation, simulation and ZIP generation.
 
 Two editors let the workspace adapt to the project:
 
-- the **Menu Editor** organizes Folders and Stories in a straightforward tree;
-- the **Graph Editor** exposes Screens, Choice Lists and all their connections for branching stories, quizzes and intersecting paths. [Read the guide (in French)](https://hugs11.github.io/story-studio/docs/editeur-graphe/).
+- the **Menu editor** organizes folders and stories in a straightforward tree;
+- the **Graph editor** exposes Screens, choice lists and all their connections for branching stories, quizzes and intersecting paths. [Read the guide (in French)](https://hugs11.github.io/story-studio/docs/editeur-graphe/).
 
-For a single story, the **Simplified Editor** offers a more guided starting point.
+For a single story, the **Simple editor** offers a more guided starting point.
 
 Import your media, assemble and trim audio, crop images, organize menus and
 story paths, then generate a Lunii-compatible ZIP without juggling between
@@ -49,7 +45,7 @@ several tools.
 ## Beta Status
 
 Story Studio is currently in beta. The app is usable, but it may still contain
-bugs, edge cases and compatibility issues with some community packs. Please keep
+bugs, edge cases and compatibility issues with some community audiobooks. Please keep
 backup copies of important projects and report reproducible problems through
 GitHub issues.
 
@@ -57,27 +53,29 @@ GitHub issues.
 >
 > Have an idea for Story Studio, a bug to discuss quickly, want access to beta
 > releases, or simply need help?
-> [Join the Story Studio Discord server](https://discord.gg/jztpQz5Ad) to talk
+> [Join the Story Studio Discord server](https://discord.gg/jeC6Qk4NS) to talk
 > directly with users and the people building the project.
 
-## Latest Release
+## Using Story Studio with your Lunii
 
-Story Studio 0.9.9 introduces the **Graph Editor**, which can open and directly
-edit advanced navigation. When a pack works with both editors, Story Studio
-lets you choose; when its structure does not fit into a hierarchical tree, it opens directly
-in the graph. You can also copy a menu-based project into the Graph Editor;
-the original stays unchanged.
+Writing to the device (sending, deleting, reordering and retrieving audiobooks) has been tested on a **Lunii V3 with firmware 3.1.5 and 3.3.4**, on Windows, Linux and macOS. Other models and firmware versions have not been verified on a real device, and a firmware update may change how the device stores audiobooks.
 
-This release adds more checks before ZIP generation and makes importing, the Simulator,
-saving and the shared tools more reliable.
+- Back up your Lunii before writing to it for the first time, and keep copies of your packs.
+- Official Lunii audiobooks are never copied back to your computer.
+- Story Studio is provided "as is", without warranty of any kind (see [LICENSE](LICENSE)). **You use it with your device at your own risk**: the authors cannot be held responsible for data loss or a device malfunction.
 
-- [Download the latest release](https://github.com/Hugs11/story-studio/releases/latest)
-- [Read the v0.9.9 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.9)
+## Version 0.9.10
+
+Story Studio 0.9.10 adds a local audiobook catalogue and direct management of your Lunii: browse, send and retrieve audiobooks, manage the device list and eject it. Optional official titles and covers require your consent.
+
+The interface is available in French, English and Italian. English and Italian translations were produced and reviewed with AI; corrections are welcome. On an existing installation without a language preference, the interface remains in French; change it in Preferences. New installations use the system language when available, otherwise English.
+
+- [Download the latest public release](https://github.com/Hugs11/story-studio/releases/latest)
 - [See the full changelog](CHANGELOG.md)
 
-## Demo packs
+## Demo audiobooks
 
-Discover Story Studio with two ready-to-open packs that you can explore in the
+Discover Story Studio with two ready-to-open audiobooks that you can explore in the
 Simulator and adapt in the editor:
 
 <table>
@@ -95,13 +93,13 @@ Simulator and adapt in the editor:
   </tr>
 </table>
 
-To explore a pack in Story Studio:
+To explore an audiobook in Story Studio:
 
 1. Download its ZIP file from Proton Drive.
-2. Launch Story Studio and click **Modifier un pack existant** (Modify an existing pack).
+2. Launch Story Studio and click **Edit an existing audiobook**.
 3. Select the downloaded `.zip` file.
 
-These packs are distributed separately from the software. Their stories, audio
+These audiobooks are distributed separately from the software. Their stories, audio
 files and illustrations are not covered by Story Studio's MIT license.
 
 ## At a Glance
@@ -110,28 +108,43 @@ files and illustrations are not covered by Story Studio's MIT license.
 |---|---|
 | **Status** | Beta |
 | **Target platforms** | Windows x64, Linux x86_64 and macOS Apple Silicon |
-| **Interface language** | French only for now |
+| **Interface languages** | French, English and Italian |
 | **Project format** | `.mbah` |
-| **Generation format** | Lunii-compatible ZIP packs |
+| **Generation format** | Lunii-compatible ZIP audiobooks |
 | **Main stack** | React 19, Vite, Tauri 2, Rust |
-| **Workflow** | Guided home workflows, Menu Editor, Graph Editor, ZIP pack aggregation, Media Library, Simulator and controlled ZIP generation |
+| **Workflow** | Guided home workflows, Menu editor, Graph editor, combining audiobooks from ZIP files, Media, Simulator and controlled ZIP generation |
 | **Privacy model** | Local app, no hosted backend, no telemetry |
 
-## From first import to finished pack
+## From first import to finished audiobook
 
 Story Studio keeps the complete workflow in one local application: start from
-your own files or an existing pack, prepare the media, build the navigation,
-test the result and generate a pack ready for the story box.
+your own files or an existing audiobook, prepare the media, build the navigation,
+test the result and generate an audiobook ready for your Lunii.
 
 ### 1. Start a project or import existing stories
 
-Start however you like, reopen saved work, edit an existing ZIP/7z pack, or
+Start however you like, reopen saved work, edit an existing ZIP/7z audiobook, or
 start from a podcast or YouTube source. Dedicated guided flows also let you
-aggregate several packs or inspect a community pack.
+combine several audiobooks or inspect a community audiobook.
 
 ![Story Studio home screen with the three editors and guided workflows](docs/public/assets/screenshots/home-dark.png)
 
-### 2. Prepare the audio
+### 2. Manage your collection and transfer audiobooks to your Lunii
+
+Add your source folders, browse audiobooks in grid or list view, and organize
+favorites and tags. Connect your Lunii to browse its stories, send audiobooks,
+retrieve them into your catalogue and safely eject the device.
+
+![Catalogue grid with a connected Lunii and audiobook details](docs/public/assets/screenshots/catalogue-lunii-dark.png)
+
+<details>
+<summary>See the catalogue in list view</summary>
+
+![Catalogue list showing audiobook metadata, formats and copies](docs/public/assets/screenshots/catalogue-lunii-list-dark.png)
+
+</details>
+
+### 3. Prepare the audio
 
 Import or record audio, then adjust it before using it in a story. A long
 recording can be split into reusable clips, while several files can be reordered
@@ -143,7 +156,7 @@ and assembled into a single track without changing the originals.
 |---|---|
 | ![Audio splitter with several prepared clips](docs/public/assets/screenshots/Audio-decoupe-light.png) | ![Audio assembly with reorderable source files](docs/public/assets/screenshots/Audio-assemble-light.png) |
 
-### 3. Create voices, generate artwork and adapt images
+### 4. Create voices, generate artwork and adapt images
 
 Generate voices locally with zero-config Piper or use XTTS for advanced voice
 cloning. ComfyUI can produce illustrations through a local service, with both
@@ -153,60 +166,61 @@ voice and image jobs followed from Story Studio's generation queues.
 |---|---|
 | ![Local voice generation with Piper](docs/public/assets/screenshots/voice-generation-dark.png) | ![Illustration generation with a ComfyUI workflow](docs/public/assets/screenshots/comfyui-generation-dark.png) |
 
-Images can then be cropped, resized and adjusted for the 320x240 story-box
+Images can then be cropped, resized and adjusted for the 320x240 Lunii
 format.
 
-![Cropping and adjusting an image for the story box](docs/public/assets/screenshots/image-editor-dark.png)
+![Cropping and adjusting an image for your Lunii](docs/public/assets/screenshots/image-editor-dark.png)
 
-### 4. Build and test the navigation
+### 5. Build and test the navigation
 
-With the **Menu Editor**, build a tree of Folders and Stories, assign their
+With the **Menu editor**, build a tree of Folders and Stories, assign their
 images and audio, and define what the buttons do during and after playback.
 The Diagram lets you review the resulting path while preserving its
 level-by-level organization.
 
 ![Unified workspace with the tree, story settings and Diagram](docs/public/assets/screenshots/workspace-dark.png)
 
-With the **Graph Editor**, work directly with Screens, Choice Lists and their
+With the **Graph editor**, work directly with Screens, choice lists and their
 connections. It supports branching stories, quizzes, random selection and
 paths that reuse the same Screens in several places.
 
-![Graph Editor overview with the node list and Inspector](docs/public/assets/screenshots/graph-editor-overview-dark.png)
+![Graph editor overview with the node list and Inspector](docs/public/assets/screenshots/graph-editor-overview-dark.png)
 
-Both editors share the Media Library, audio tools, render queue and the same
+Both editors share the Media, audio tools, generation queue and the same
 floating Simulator. You can play through the navigation before ZIP generation as it
-will behave on the story box.
+will behave on your Lunii.
 
 ![Full project Diagram tested with the built-in Simulator](docs/public/assets/screenshots/diagram-simulator-dark.png)
 
-### 5. Review the settings and generate the ZIP
+### 6. Review the settings and generate the ZIP
 
-Review the public metadata, catalog thumbnail, output filename, and the pack's
+Review the public metadata, catalog thumbnail, output filename, and the audiobook's
 audio or navigation settings. Story Studio checks the structure, identity and
 media, then rereads the resulting ZIP before completing ZIP generation.
 
-![Pack metadata with the catalog thumbnail, UUID and ZIP filename](docs/public/assets/screenshots/pack-metadata-dark.png)
+![Audiobook metadata with the catalog thumbnail, UUID and ZIP filename](docs/public/assets/screenshots/pack-metadata-dark.png)
 
-![Pack audio and navigation settings](docs/public/assets/screenshots/Pack-settings.png)
+![Audiobook audio and navigation settings](docs/public/assets/screenshots/Pack-settings.png)
 
-Existing community packs can also be analyzed separately. The checker groups
+Existing community audiobooks can also be analyzed separately. The checker groups
 structural, image and audio findings, proposes safe corrections and can export
 a detailed report.
 
-![Community pack checker with proposed corrections](docs/public/assets/screenshots/pack-checker-dark.png)
+![Community audiobook checker with proposed corrections](docs/public/assets/screenshots/pack-checker-dark.png)
 
 ## Features
 
-- **Menu Editor** with Folders, Stories, nested menus, multi-select, drag-and-drop and a Diagram.
-- **Graph Editor** with Screens, Choice Lists, connections, multi-selection, clipboard operations and automatic layout.
-- **Guided home workflows** to edit an existing pack, create from a podcast or YouTube, aggregate ZIP packs, and check/correct a community pack.
-- **Lunii ZIP pack import**: choose between the two editors when possible, open complex structures in the graph, and select a pack from archives containing several packs.
+- **Pack catalogue & Lunii**: organize local audiobooks, connect your Lunii, send and retrieve audiobooks, and manage its list.
+- **Menu editor** with Folders, Stories, nested menus, multi-select, drag-and-drop and a Diagram.
+- **Graph editor** with Screens, choice lists, connections, multi-selection, clipboard operations and automatic layout.
+- **Guided home workflows** to edit an existing audiobook, create from a podcast or YouTube, combine audiobooks from ZIP files, and check/correct a community audiobook.
+- **Lunii audiobook import (ZIP)**: choose between the two editors when possible, open complex structures in the graph, and select an audiobook from files containing several audiobooks.
 - **Built-in audio workflow**: microphone recording, trimming, cuts, fades, assembly and silence insertion.
 - **Built-in image workflow**: automatic 320×240 cropping, text-image generation from node names.
 - **Local voice generation** with Piper by default and XTTS as an advanced opt-in backend.
-- **Media Library** with tags, filters, usage counters and quick previews.
+- **Media** with tags, filters, usage counters and quick previews.
 - **Built-in Simulator** to test navigation and end nodes before ZIP generation.
-- **Validation and render queue**: compatibility checks and serial generation with log tracking.
+- **Validation and generation queue**: compatibility checks and serial generation with log tracking.
 - **Optional local integrations**: YouTube via yt-dlp, XTTS (voice) and ComfyUI (images).
 - **Project comfort**: optional-save sessions, autosave, recovery snapshots, safety versions, configurable shortcuts, light/dark themes, full Diagram view.
 
@@ -272,7 +286,7 @@ managed workspace folders:
 | `images-generees/` | ComfyUI-generated and edited images |
 | `zips-extraits/` | Unpacked ZIP collections |
 | `sauvegardes/` | Default save folder and safety versions |
-| `exports/` | Suggested output folder for generated packs |
+| `exports/` | Suggested output folder for generated audiobooks |
 
 Files in managed media folders use a `{project-name}__` prefix so multiple
 projects can share the same workspace more safely.
@@ -284,7 +298,7 @@ User-selected files remain accessible outside these folders, including on
 external macOS volumes under `/Volumes`.
 
 When Story Studio offers to delete media from disk, it only deletes files inside
-managed workspace media folders. Files stored elsewhere are only removed from the project or the Media Library,
+managed workspace media folders. Files stored elsewhere are only removed from the project or the Media,
 never deleted from disk.
 
 ## Documentation
@@ -295,6 +309,8 @@ never deleted from disk.
 - [Security model](SECURITY.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 - [Changelog](CHANGELOG.md)
+
+The security model, third-party notices and changelog are currently available only in English.
 
 ## Roadmap
 
@@ -307,13 +323,14 @@ never deleted from disk.
 Contributions are welcome, especially:
 
 - Reproducible bug reports.
-- Compatibility notes for community packs.
+- Compatibility notes for community audiobooks.
 - Documentation improvements.
+- Translation corrections are welcome on GitHub: open an issue or propose a pull request; see [TRANSLATING.md](TRANSLATING.md).
 - Focused pull requests with clear testing notes.
 
 To discuss an idea before opening an issue or quickly share beta-test feedback,
 you can also join the
-[Story Studio Discord server](https://discord.gg/jztpQz5Ad).
+[Story Studio Discord server](https://discord.gg/jeC6Qk4NS).
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 

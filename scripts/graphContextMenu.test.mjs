@@ -122,8 +122,11 @@ test('le dialogue d’une liste de choix emploie lui aussi le vocabulaire de sim
     new URL('../src/components/AdvancedWorkspace/ListenFromActionDialog.jsx', import.meta.url),
     'utf8',
   );
-  assert.match(source, /title=\{`Simuler depuis « \$\{inspected\.label\.label\} »`\}/);
-  assert.match(source, /confirmLabel="Simuler"/);
+  assert.match(source, /title=\{t\('graph:listen\.dialog\.title', \{ name: inspected\.label\.label \}\)\}/);
+  const french = JSON.parse(readFileSync(new URL('../src/locales/fr/graph.json', import.meta.url), 'utf8'));
+  assert.equal(french['listen.dialog.title'], 'Simuler depuis « {{name}} »');
+  assert.match(source, /confirmLabel=\{t\("graph:listen\.dialog\.confirm"\)\}/);
+  assert.equal(french['listen.dialog.confirm'], 'Simuler');
   assert.doesNotMatch(source, /title=\{`Écouter depuis|commencer l’écoute/);
 });
 
@@ -413,7 +416,7 @@ test('« Couper » accompagne Copier, et refuse l’Écran d’entrée avec sa r
     },
     onCut: () => {},
   });
-  assert.match(find(onEntry, 'Couper').disabledReason, /Écran racine/);
+  assert.match(find(onEntry, 'Couper').disabledReason, /Écran d’entrée/);
 });
 
 // Le menu rend `icon` comme enfant React : un composant passé tel quel (`Package`

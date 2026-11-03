@@ -1,3 +1,5 @@
+import { translateProduction } from '../../i18n/productionPresentation.js';
+import { presentUserMessage } from '../../i18n/userMessage.js';
 // Les trois contrôles de l'éditeur avancé, et ce qu'ils disent d'une production.
 //
 // L'éditeur avancé possède trois contrôles : une porte de readiness, une porte
@@ -24,13 +26,13 @@ export const GATE_OUTCOME = Object.freeze({
 // Les libellés de verdict, selon que la porte décide ou observe. « Aurait
 // refusé » n'a de sens que pour une porte qui n'a rien refusé.
 const OUTCOME_LABELS = Object.freeze({
-  [GATE_OUTCOME.PASSED]: { blocking: 'Franchie', observing: 'Rien à signaler' },
-  [GATE_OUTCOME.WOULD_REFUSE]: { blocking: 'Refusée', observing: 'Aurait refusé' },
-  [GATE_OUTCOME.NOT_OBSERVED]: { blocking: 'Non évaluée', observing: 'Non observée' },
+  [GATE_OUTCOME.PASSED]: { blocking: 'production:report.gate.passed', observing: 'production:report.gate.clear' },
+  [GATE_OUTCOME.WOULD_REFUSE]: { blocking: 'production:report.gate.refused', observing: 'production:report.gate.wouldRefuse' },
+  [GATE_OUTCOME.NOT_OBSERVED]: { blocking: 'production:report.gate.notEvaluated', observing: 'production:report.gate.notObserved' },
 });
 
 export const OBSERVATION_NOTICE =
-  "Ces contrôles sont en observation : aucun n'empêche la production.";
+  'production:report.gates.observation';
 
 // Les trois portes de la chaîne avancée, dans l'ordre où elle les exécute.
 // Un succès de cette chaîne les a toutes franchies — elle ne peut pas publier
@@ -38,22 +40,22 @@ export const OBSERVATION_NOTICE =
 // Les nommer n'invente donc aucun contrôle ; les taire ferait lire « la chaîne
 // avancée ne contrôle rien ».
 const ADVANCED_GATES = Object.freeze([
-  Object.freeze({ gate: 'readiness', label: "Readiness d'export" }),
-  Object.freeze({ gate: 'pack-identity', label: 'Identité du pack' }),
-  Object.freeze({ gate: 'archive-review', label: "Relecture de l'archive" }),
+  Object.freeze({ gate: 'readiness', label: { code: 'LABEL_EXPORT_READINESS_VALUE', params: {} } }),
+  Object.freeze({ gate: 'pack-identity', label: { code: 'LABEL_PACK_IDENTITY_VALUE', params: {} } }),
+  Object.freeze({ gate: 'archive-review', label: { code: 'LABEL_ARCHIVE_REVIEW_OPERATION', params: {} } }),
 ]);
 
 function outcomeLabel(outcome, blocking) {
   const labels = OUTCOME_LABELS[outcome];
   if (!labels) return outcome;
-  return blocking ? labels.blocking : labels.observing;
+  return translateProduction(blocking ? labels.blocking : labels.observing);
 }
 
 function normalizeReason(reason) {
   return Object.freeze({
     code: String(reason?.code ?? ''),
     path: String(reason?.path ?? ''),
-    message: String(reason?.message ?? ''),
+    get message() { return presentUserMessage(reason).message; },
   });
 }
 
@@ -65,14 +67,14 @@ function normalizeGate(raw) {
   const reasons = Array.isArray(raw?.reasons) ? raw.reasons.map(normalizeReason) : [];
   return Object.freeze({
     gate: String(raw?.gate ?? ''),
-    label: String(raw?.label ?? ''),
+    get label() { return presentUserMessage(raw?.label ?? '').message; },
     outcome,
     blocking,
-    outcomeLabel: outcomeLabel(outcome, blocking),
+    get outcomeLabel() { return outcomeLabel(outcome, blocking); },
     // Un refus sans motif ne se lit pas : la porte le porte toujours, et
     // l'interface n'a pas à deviner lequel.
     reasons: Object.freeze(reasons),
-    note: String(raw?.note ?? ''),
+    get note() { return presentUserMessage(raw?.note ?? '').message; },
   });
 }
 
@@ -103,7 +105,7 @@ export function advancedProductionGates(succeeded) {
         label,
         outcome: GATE_OUTCOME.PASSED,
         blocking: true,
-        note: 'Contrôle bloquant : la publication lui est postérieure.',
+        note: { code: 'GENERATION_GATE_PUBLICATION_FOLLOWS', params: {} },
       })),
   );
 }

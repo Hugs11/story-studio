@@ -42,3 +42,7 @@
   line-height: 1;
   flex-shrink: 0;
 }
+
+/* The home announcement uses the existing notice in the normal document flow. */
+.import-notice--inline { position: static; transform: none; max-width: none; z-index: auto; box-shadow: none; margin-bottom: var(--space-4); background: var(--info-bg); border-color: var(--info-border); color: var(--info-text); align-items: center; flex-wrap: wrap; }
+.import-notice--inline .import-notice-text { min-width: 0; }

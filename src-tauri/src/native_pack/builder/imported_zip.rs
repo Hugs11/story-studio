@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::HashMap;
 
 use super::super::{
@@ -46,7 +47,11 @@ impl<'a> StoryBuilder<'a> {
                 wrapper_ids
                     .as_ref()
                     .map(|(stage_id, _)| stage_id.clone())
-                    .ok_or_else(|| format!("Wrapper introuvable pour {}", zip.name))?
+                    .ok_or_else(|| {
+                        UserMessage::new(codes::GENERATION_WRAPPER_NODE_MISSING)
+                            .param("zip_name", (zip.name).to_string())
+                            .into_transport()
+                    })?
             } else {
                 self.next_id()
             };
@@ -66,10 +71,11 @@ impl<'a> StoryBuilder<'a> {
             }
 
             let mut cloned = action.clone();
-            cloned.id = action_id_map
-                .get(&action.id)
-                .cloned()
-                .ok_or_else(|| format!("Action importee introuvable : {}", action.id))?;
+            cloned.id = action_id_map.get(&action.id).cloned().ok_or_else(|| {
+                UserMessage::new(codes::IMPORT_IMPORTED_ACTION_MISSING)
+                    .param("action_id", (action.id).to_string())
+                    .into_transport()
+            })?;
             cloned.group_id = remap_group_id(&action.group_id, &group_id_map);
             // Les cibles conservent leur indice : une cible non remappée reste
             // `None` au lieu de décaler les options suivantes.
@@ -91,10 +97,11 @@ impl<'a> StoryBuilder<'a> {
             }
 
             let mut cloned = stage.clone();
-            cloned.uuid = stage_id_map
-                .get(&stage.uuid)
-                .cloned()
-                .ok_or_else(|| format!("Stage importe introuvable : {}", stage.uuid))?;
+            cloned.uuid = stage_id_map.get(&stage.uuid).cloned().ok_or_else(|| {
+                UserMessage::new(codes::IMPORT_IMPORTED_STAGE_MISSING)
+                    .param("stage_uuid", (stage.uuid).to_string())
+                    .into_transport()
+            })?;
             cloned.square_one = Presence::Value(false);
             cloned.group_id = remap_group_id(&stage.group_id, &group_id_map);
             cloned.home_transition =
@@ -112,7 +119,11 @@ impl<'a> StoryBuilder<'a> {
         let imported_entry_stage_id = stage_id_map
             .get(&bundle.entry_stage_id)
             .cloned()
-            .ok_or_else(|| format!("Entree importee introuvable pour {}", zip.name))?;
+            .ok_or_else(|| {
+                UserMessage::new(codes::IMPORT_IMPORTED_ENTRY_MISSING)
+                    .param("zip_name", (zip.name).to_string())
+                    .into_transport()
+            })?;
 
         if !wrap_for_selection {
             return Ok(imported_entry_stage_id);
@@ -124,16 +135,27 @@ impl<'a> StoryBuilder<'a> {
         let imported_post_root_stage_id = stage_id_map
             .get(&bundle.post_root_stage_id)
             .cloned()
-            .ok_or_else(|| format!("Post-root introuvable pour {}", zip.name))?;
+            .ok_or_else(|| {
+                UserMessage::new(codes::GENERATION_POST_ROOT_MISSING)
+                    .param("zip_name", (zip.name).to_string())
+                    .into_transport()
+            })?;
 
-        let (wrapper_stage_id, wrapper_action_id) =
-            wrapper_ids.ok_or_else(|| format!("Wrapper introuvable pour {}", zip.name))?;
+        let (wrapper_stage_id, wrapper_action_id) = wrapper_ids.ok_or_else(|| {
+            UserMessage::new(codes::GENERATION_WRAPPER_NODE_MISSING)
+                .param("zip_name", (zip.name).to_string())
+                .into_transport()
+        })?;
         let cover_stage = bundle
             .document
             .stage_nodes
             .iter()
             .find(|stage| stage.uuid == bundle.square_one_stage_id)
-            .ok_or_else(|| format!("Cover importe introuvable pour {}", zip.name))?;
+            .ok_or_else(|| {
+                UserMessage::new(codes::IMPORT_IMPORTED_COVER_MISSING)
+                    .param("zip_name", (zip.name).to_string())
+                    .into_transport()
+            })?;
 
         self.action_nodes.push(ActionNode {
             id: wrapper_action_id.clone(),
@@ -200,7 +222,11 @@ impl<'a> StoryBuilder<'a> {
             .imported_zips
             .iter()
             .find(|bundle| bundle.role == role)
-            .ok_or_else(|| format!("ZIP importe prepare introuvable pour le role {}", role))
+            .ok_or_else(|| {
+                UserMessage::new(codes::GENERATION_PREPARED_ZIP_MISSING)
+                    .param("role", (role).to_string())
+                    .into_transport()
+            })
     }
 
     /// Remappe une transition importée sans écraser sa forme d'origine :

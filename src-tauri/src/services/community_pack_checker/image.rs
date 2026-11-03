@@ -1,3 +1,5 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::io::Cursor;
 use std::path::Path;
 
@@ -27,7 +29,7 @@ fn format_label(format: ImageFormat) -> &'static str {
         ImageFormat::Gif => "GIF",
         ImageFormat::WebP => "WebP",
         ImageFormat::Tiff => "TIFF",
-        _ => "format inconnu",
+        _ => codes::CHECKER_IMAGE_FORMAT_UNKNOWN_TRANSPORT,
     }
 }
 
@@ -54,8 +56,9 @@ pub(crate) fn analyze_image_bytes(
             PackValidationSeverity::Error,
             "image",
             label,
-            "Cette image est illisible.",
+            codes::CHECKER_IMAGE_UNREADABLE_TRANSPORT,
         );
+        image_issue.code = Some(codes::CHECKER_IMAGE_UNREADABLE.to_string());
         image_issue.file_path = Some(file_path.clone());
         return (
             ImageValidationItem {
@@ -95,42 +98,132 @@ pub(crate) fn analyze_image_bytes(
 
     let (message, fix_summary, fix_description) = match (format_supported, dimensions_ok) {
         (false, false) => (
-            "Cette image n'est pas compatible Lunii (format et dimensions).",
-            format!(
-                "convertir en PNG, redimensionner en {}×{}",
-                IMAGE_TARGET_WIDTH, IMAGE_TARGET_HEIGHT
-            ),
-            format!(
-                "Convertir en PNG et redimensionner en {}×{}.",
-                IMAGE_TARGET_WIDTH, IMAGE_TARGET_HEIGHT
-            ),
+            codes::CHECKER_IMAGE_FORMAT_DIMENSIONS_TRANSPORT,
+            {
+                let _msg_image_target_width = (IMAGE_TARGET_WIDTH).to_string();
+                let _msg_image_target_height = (IMAGE_TARGET_HEIGHT).to_string();
+                user_message::UserMessage::new(
+                codes::CHECKER_IMAGE_CONVERT_RESIZE_TITLE,
+            )
+                .param(
+                    "targetWidth",
+                    user_message::transport_param(_msg_image_target_width.clone()),
+                )
+                .param(
+                    "targetHeight",
+                    user_message::transport_param(_msg_image_target_height.clone()),
+                )
+                .with_detail(format!(
+                    "convertir en PNG, redimensionner en {_msg_image_target_width}×{_msg_image_target_height}",
+                    _msg_image_target_height = user_message::transport_detail(&_msg_image_target_height),
+                    _msg_image_target_width = user_message::transport_detail(&_msg_image_target_width),
+                ))
+                .into_transport()
+            },
+            {
+                let _msg_image_target_width = (IMAGE_TARGET_WIDTH).to_string();
+                let _msg_image_target_height = (IMAGE_TARGET_HEIGHT).to_string();
+                user_message::UserMessage::new(
+                codes::CHECKER_IMAGE_CONVERT_RESIZE_DESCRIPTION,
+            )
+                .param(
+                    "targetWidth",
+                    user_message::transport_param(_msg_image_target_width.clone()),
+                )
+                .param(
+                    "targetHeight",
+                    user_message::transport_param(_msg_image_target_height.clone()),
+                )
+                .with_detail(format!(
+                    "Convertir en PNG et redimensionner en {_msg_image_target_width}×{_msg_image_target_height}.",
+                    _msg_image_target_height = user_message::transport_detail(&_msg_image_target_height),
+                    _msg_image_target_width = user_message::transport_detail(&_msg_image_target_width),
+                ))
+                .into_transport()
+            },
         ),
         (false, true) => (
-            "Cette image utilise un format non pris en charge par la Lunii.",
-            "convertir en PNG".to_string(),
-            "Convertir l'image en PNG.".to_string(),
+            codes::CHECKER_IMAGE_FORMAT_TRANSPORT,
+            user_message::UserMessage::new(codes::CHECKER_PNG_CONVERSION_TITLE)
+                .with_detail("convertir en PNG".to_string())
+                .into_transport(),
+            user_message::UserMessage::new(codes::CHECKER_PNG_CONVERSION_DESCRIPTION)
+                .with_detail("Convertir l'image en PNG.".to_string())
+                .into_transport(),
         ),
         (true, false) => (
-            "Cette image n'a pas les dimensions attendues.",
-            format!(
-                "redimensionner en {}×{}",
-                IMAGE_TARGET_WIDTH, IMAGE_TARGET_HEIGHT
-            ),
-            "Redimensionner l'image au format Lunii attendu.".to_string(),
+            codes::CHECKER_IMAGE_DIMENSIONS_TRANSPORT,
+            {
+                let _msg_image_target_width = (IMAGE_TARGET_WIDTH).to_string();
+                let _msg_image_target_height = (IMAGE_TARGET_HEIGHT).to_string();
+                user_message::UserMessage::new(codes::CHECKER_IMAGE_RESIZE_TITLE)
+                    .param(
+                        "targetWidth",
+                        user_message::transport_param(_msg_image_target_width.clone()),
+                    )
+                    .param(
+                        "targetHeight",
+                        user_message::transport_param(_msg_image_target_height.clone()),
+                    )
+                    .with_detail(format!(
+                        "redimensionner en {_msg_image_target_width}×{_msg_image_target_height}",
+                        _msg_image_target_height =
+                            user_message::transport_detail(&_msg_image_target_height),
+                        _msg_image_target_width =
+                            user_message::transport_detail(&_msg_image_target_width),
+                    ))
+                    .into_transport()
+            },
+            user_message::UserMessage::new(codes::CHECKER_IMAGE_RESIZE_DESCRIPTION)
+                .with_detail("Redimensionner l'image au format Lunii attendu.".to_string())
+                .into_transport(),
         ),
         (true, true) => unreachable!("cas conforme déjà traité"),
     };
 
     let mut image_issue = issue(PackValidationSeverity::Warning, "image", label, message);
+    image_issue.code = Some(
+        match (format_supported, dimensions_ok) {
+            (false, false) => codes::CHECKER_IMAGE_FORMAT_DIMENSIONS,
+            (false, true) => codes::CHECKER_IMAGE_FORMAT,
+            _ => codes::CHECKER_IMAGE_DIMENSIONS,
+        }
+        .to_string(),
+    );
     image_issue.file_path = Some(file_path.clone());
-    image_issue.technical_details = Some(format!(
-        "Détecté : {} {}×{}. Attendu : PNG, BMP ou JPEG en {}×{}.",
-        format.as_deref().unwrap_or("format inconnu"),
-        width,
-        height,
-        IMAGE_TARGET_WIDTH,
-        IMAGE_TARGET_HEIGHT
-    ));
+    image_issue.technical_details = Some({
+        let detected_image_format = (format
+            .as_deref()
+            .unwrap_or(codes::CHECKER_IMAGE_FORMAT_UNKNOWN_TRANSPORT))
+        .to_string();
+        let _msg_width = (width).to_string();
+        let _msg_height = (height).to_string();
+        let _msg_image_target_width = (IMAGE_TARGET_WIDTH).to_string();
+        let _msg_image_target_height = (IMAGE_TARGET_HEIGHT).to_string();
+        user_message::UserMessage::new(
+            codes::CHECKER_IMAGE_FORMAT_UNEXPECTED,
+        )
+            .param("format", user_message::transport_param(detected_image_format.clone()))
+            .param("width", user_message::transport_param(_msg_width.clone()))
+            .param("height", user_message::transport_param(_msg_height.clone()))
+            .param(
+                "targetWidth",
+                user_message::transport_param(_msg_image_target_width.clone()),
+            )
+            .param(
+                "targetHeight",
+                user_message::transport_param(_msg_image_target_height.clone()),
+            )
+            .with_detail(format!(
+                "Détecté : {detected_image_format} {_msg_width}×{_msg_height}. Attendu : PNG, BMP ou JPEG en {_msg_image_target_width}×{_msg_image_target_height}.",
+                _msg_height = user_message::transport_detail(&_msg_height),
+                _msg_image_target_height = user_message::transport_detail(&_msg_image_target_height),
+                _msg_image_target_width = user_message::transport_detail(&_msg_image_target_width),
+                detected_image_format = user_message::transport_detail(&detected_image_format),
+                _msg_width = user_message::transport_detail(&_msg_width),
+            ))
+            .into_transport()
+    });
     image_issue.auto_fix_available = true;
     image_issue.fix_disposition = FixDisposition::Automatic;
     image_issue.auto_fix_description = Some(fix_description);
@@ -151,8 +244,16 @@ pub(crate) fn analyze_image_bytes(
 }
 
 pub(crate) fn fix_image_bytes(bytes: &[u8]) -> Result<Vec<u8>, String> {
-    let img = image::load_from_memory(bytes)
-        .map_err(|e| format!("Image illisible pour correction : {}", e))?;
+    let img = image::load_from_memory(bytes).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::CHECKER_IMAGE_CORRECTION_UNREADABLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Image illisible pour correction : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+            ))
+            .into_transport()
+    })?;
     // Ne redimensionne que si nécessaire (une image déjà au bon format n'a
     // alors qu'à être réencodée en PNG, sans rééchantillonnage inutile).
     let normalized = if img.width() == IMAGE_TARGET_WIDTH && img.height() == IMAGE_TARGET_HEIGHT {
@@ -167,6 +268,15 @@ pub(crate) fn fix_image_bytes(bytes: &[u8]) -> Result<Vec<u8>, String> {
     let mut output = Vec::new();
     normalized
         .write_to(&mut Cursor::new(&mut output), ImageFormat::Png)
-        .map_err(|e| format!("Encodage PNG impossible : {}", e))?;
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::CHECKER_PNG_ENCODE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Encodage PNG impossible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
     Ok(output)
 }

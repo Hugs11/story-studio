@@ -1,0 +1,33 @@
+.catalogue-metadata-fields { display: grid; gap: var(--space-3); }
+.catalogue-field-editor { min-width: 0; border: 0; margin: 0; padding: 0; }
+.catalogue-field-editor label { display: block; }
+.catalogue-field-editor input, .catalogue-field-editor textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+.catalogue-field-editor textarea { min-height: 7rem; }
+.catalogue-field-editor p, .catalogue-field-editor dd { overflow-wrap: anywhere; white-space: pre-wrap; }
+
+
+.catalogue-inline-editor, .catalogue-inline-input { display: flex; align-items: center; gap: var(--space-1); min-width: 0; }
+.catalogue-inline-editor .catalogue-field-editor { flex: 1; }
+/* Un âge est court : ✓ ✕ restent collés au champ au lieu d'être repoussés au bout de la ligne. */
+/* Idem pour la pastille de langue ; les champs texte, eux, restent étirés. */
+.catalogue-inline-editor .catalogue-field-editor--compact { flex: 0 1 auto; }
+/* Deux flex imbriqués : width seul laisse Chromium réduire le champ jusqu'au padding. */
+.catalogue-inline-editor .catalogue-field-editor:has(input[type="number"]) { flex: 0 0 auto; }
+.catalogue-inline-input input[type="number"] { flex: 0 0 4rem; width: 4rem; }
+.catalogue-inline-editor > .btn-icon,
+.catalogue-inline-input > .btn-icon { flex-shrink: 0; }
+/* À côté de la jaquette de 150 px, l'éditeur complet ne tient pas dans une fiche
+   étroite. Pendant cette édition seulement, l'âge occupe une ligne sous la jaquette. */
+@container (max-width: 480px) {
+  .catalogue-fiche-overview:has(.catalogue-inline-input input[type="number"]) .catalogue-fiche-intro { display: contents; }
+  .catalogue-fiche-overview:has(.catalogue-inline-input input[type="number"]) .catalogue-fiche-age,
+  .catalogue-fiche-overview:has(.catalogue-inline-input input[type="number"]) .catalogue-fiche-summary { grid-column: 1 / -1; }
+}
+/* Les boutons − / + du design remplacent le spinner natif (WebView2, WebKitGTK, WKWebView). */
+.catalogue-inline-input input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+.catalogue-inline-input input[type="number"]::-webkit-inner-spin-button,
+.catalogue-inline-input input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; appearance: none; margin: 0; }
+.catalogue-inline-input input { background: transparent; border: 0; border-bottom: 1px solid var(--border); }
+.catalogue-tag-label { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.catalogue-fiche-uuid { font-size: var(--text-caption); user-select: text; overflow-wrap: anywhere; cursor: copy; }
+.catalogue-fiche-uuid:focus-visible { outline: 1px solid var(--focus-ring); }

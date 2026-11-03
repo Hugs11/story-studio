@@ -1,0 +1,5 @@
+{
+  "project": { "kind": "project", "path": "/packs/A.mbah", "projectKind": "pack" },
+  "pack": { "kind": "pack", "path": "/packs/A.zip", "packLabel": "A", "format": "zip", "existingProject": { "exemplarId": "project-a", "path": "/packs/A.mbah", "modifiedAt": 1700000000000 } },
+  "bundleChild": { "kind": "bundleChild", "containerPath": "/packs/All.zip", "containerFingerprint": "fresh", "childId": "catalogue:opaque", "packLabel": "A", "existingProject": null }
+}

@@ -1,3 +1,5 @@
+import { useTreeTranslation } from '../../i18n/useTreeTranslation.jsx';
+import { translateTree as t } from '../../i18n/treePresentation.js';
 import {
   useCallback,
   useEffect,
@@ -15,13 +17,13 @@ import './TreeDisplayPopover.css';
 const OPTIONS = [
   {
     key: 'badges',
-    label: 'Badges de navigation',
-    help: 'Affiche les indications de retour et de parcours sur les lignes.',
+    label: "tree:display.badges.label",
+    help: "tree:display.badges.help",
   },
   {
     key: 'guides',
-    label: 'Rails de guidage',
-    help: "Affiche les lignes d'indentation et de branche active dans l'arbre.",
+    label: "tree:display.guides.label",
+    help: "tree:display.guides.help",
   },
 ];
 
@@ -33,6 +35,7 @@ export function TreeDisplayPopover({
   showGuides,
   onShowGuidesChange,
 }) {
+  useTreeTranslation();
   const wrapRef = useRef(null);
   const triggerRef = useRef(null);
   const popoverRef = useRef(null);
@@ -101,12 +104,12 @@ export function TreeDisplayPopover({
 
   return (
     <div className={`tree-display-wrap${open ? ' is-open' : ''}`} ref={wrapRef}>
-      <Tooltip text="Affichage de l'arbre" placement="below">
+      <Tooltip text={t("tree:display.tree.title")} placement="below">
         <button
           ref={triggerRef}
           type="button"
           className={`tree-display-trigger${open ? ' is-active' : ''}`}
-          aria-label="Affichage de l'arbre"
+          aria-label={t("tree:display.tree.title")}
           aria-haspopup="dialog"
           aria-expanded={open}
           onClick={() => onOpenChange?.(!open)}
@@ -120,7 +123,7 @@ export function TreeDisplayPopover({
           ref={popoverRef}
           className={`tree-display-popover${position?.isAbove ? ' is-above' : ''}`}
           role="dialog"
-          aria-label="Affichage de l'arbre"
+          aria-label={t("tree:display.tree.title")}
           style={position
             ? {
               left: position.left,
@@ -130,19 +133,19 @@ export function TreeDisplayPopover({
             : { left: -9999, top: -9999, visibility: 'hidden' }}
         >
           <div className="tree-display-head">
-            <span className="tree-display-title">Affichage</span>
-            <span className="tree-display-subtitle">Options visibles dans la structure.</span>
+            <span className="tree-display-title">{t("tree:display.options.title")}</span>
+            <span className="tree-display-subtitle">{t("tree:display.options.description")}</span>
           </div>
 
           <div className="tree-display-section">
             {OPTIONS.map(({ key, label, help }) => (
-              <Tooltip key={key} text={help} wrap className="tree-display-row-tip">
+              <Tooltip key={key} text={t(help)} wrap className="tree-display-row-tip">
                 <div className="tree-display-row">
-                  <span className="tree-display-label">{label}</span>
+                  <span className="tree-display-label">{t(label)}</span>
                   <Toggle
                     on={!!getValue(key)}
                     onChange={(value) => updateOption(key, value)}
-                    ariaLabel={`${label}. ${help}`}
+                    ariaLabel={t('tree:display.option.aria', { label: { key: label }, help: { key: help } })}
                   />
                 </div>
               </Tooltip>

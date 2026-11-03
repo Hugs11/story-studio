@@ -92,7 +92,7 @@ export function resolveDropTargetForNode(id, type, dropInfo) {
   const isMyTarget = dropInfo.targetId === id
     || (type === 'root' && dropInfo.targetId === null && dropInfo.isContainer);
   if (!isMyTarget) return null;
-  if (dropInfo.invalidReason === 'menu_depth_limit') return 'forbidden-depth';
+  if (dropInfo.invalidReason === 'VALIDATION_MENU_DEPTH_LIMIT') return 'forbidden-depth';
   if (dropInfo.invalidReason === 'menu_cycle') return 'forbidden-cycle';
   if (dropInfo.position === 'before' && !dropInfo.isContainer) return 'before';
   if (dropInfo.position === 'after' && !dropInfo.isContainer) return 'after';

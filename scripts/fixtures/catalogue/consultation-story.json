@@ -1,0 +1,88 @@
+{
+  "origin": "git show a7a7881:src-tauri/src/services/pack_reader/tests/bundle_inspection.rs (editable_story_json), title fixed to \"Lune\"",
+  "story": {
+    "title": "Lune",
+    "version": 1,
+    "description": "",
+    "format": "v1",
+    "nightModeAvailable": false,
+    "stageNodes": [
+      {
+        "uuid": "cover",
+        "name": "Cover",
+        "type": "stage",
+        "squareOne": true,
+        "audio": "root.mp3",
+        "image": "cover.png",
+        "controlSettings": {
+          "wheel": true,
+          "ok": true,
+          "home": false,
+          "pause": false,
+          "autoplay": false
+        },
+        "okTransition": {
+          "actionNode": "root-action",
+          "optionIndex": 0
+        },
+        "homeTransition": null
+      },
+      {
+        "uuid": "title",
+        "name": "Titre",
+        "type": "stage",
+        "squareOne": false,
+        "audio": "item.mp3",
+        "image": "item.png",
+        "controlSettings": {
+          "wheel": true,
+          "ok": true,
+          "home": true,
+          "pause": false,
+          "autoplay": false
+        },
+        "okTransition": {
+          "actionNode": "play-action",
+          "optionIndex": 0
+        },
+        "homeTransition": null
+      },
+      {
+        "uuid": "play",
+        "name": "Lecture",
+        "type": "stage",
+        "squareOne": false,
+        "audio": "story.mp3",
+        "image": null,
+        "controlSettings": {
+          "wheel": false,
+          "ok": false,
+          "home": true,
+          "pause": true,
+          "autoplay": false
+        },
+        "okTransition": null,
+        "homeTransition": {
+          "actionNode": "root-action",
+          "optionIndex": 0
+        }
+      }
+    ],
+    "actionNodes": [
+      {
+        "id": "root-action",
+        "name": "Root",
+        "options": [
+          "title"
+        ]
+      },
+      {
+        "id": "play-action",
+        "name": "Play",
+        "options": [
+          "play"
+        ]
+      }
+    ]
+  }
+}

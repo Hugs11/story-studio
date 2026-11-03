@@ -1,6 +1,6 @@
+import { userMessageTransport } from '../i18n/userMessage.js';
 import { useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { addProjectPrefix } from '../utils/fileUtils';
 
 export function useXttsJobs(
   xttsStore, onAudioGenerated, workspaceDir = null, onMediaCreated = null, onLibraryAudioReady = null,
@@ -16,20 +16,17 @@ export function useXttsJobs(
     const command = next.settings?.backend === 'piper' ? 'piper_generate_audio' : 'xtts_generate_audio';
     invoke(command, {
       settings: next.settings,
-      request: { ...next.request, workspaceDir },
+      request: { ...next.request, ...(next.mediaOutput ?? { workspaceDir }) },
     })
       .then(async (path) => {
-        let finalPath = path;
-        if (next.projectName) {
-          try { finalPath = await addProjectPrefix(path, next.projectName); } catch { /* au mieux */ }
-        }
+        const finalPath = path;
         xttsStore.updateJob(next.id, { status: 'done', resultPath: finalPath, progress: 1, progressLabel: '100%' });
         onAudioGenerated(next.target, finalPath, next);
-        onMediaCreated?.(finalPath);
+        onMediaCreated?.(finalPath, next);
         if (next.target?.kind === 'mediaLibrary') onLibraryAudioReady?.(finalPath, next);
       })
       .catch((e) => {
-        xttsStore.updateJob(next.id, { status: 'error', errorMessage: String(e) });
+        xttsStore.updateJob(next.id, { status: 'error', errorMessage: userMessageTransport(e) });
       });
   }, [xttsStore.jobs, workspaceDir]);
 }

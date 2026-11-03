@@ -1,3 +1,5 @@
+import { translateProduction } from '../../i18n/productionPresentation.js';
+import { presentUserMessage } from '../../i18n/userMessage.js';
 // Le rapport de production, **un seul**, pour les deux chaînes.
 //
 // Les deux chaînes ne rendent pas la même chose, et ce module ne prétend pas
@@ -53,24 +55,28 @@ export const PRODUCTION_STATUS = Object.freeze({
   FAILED: 'failed',
 });
 
-export const PRODUCTION_STATUS_LABELS = Object.freeze({
-  [PRODUCTION_STATUS.IDLE]: 'Aucune production',
-  [PRODUCTION_STATUS.PENDING]: 'En attente',
-  [PRODUCTION_STATUS.RUNNING]: 'Production en cours',
-  [PRODUCTION_STATUS.SUCCEEDED]: 'Pack produit',
-  [PRODUCTION_STATUS.CANCELLED]: 'Production annulée',
-  [PRODUCTION_STATUS.FAILED]: 'Production interrompue',
+const STATUS_KEYS = Object.freeze({
+  [PRODUCTION_STATUS.IDLE]: 'production:report.status.idle',
+  [PRODUCTION_STATUS.PENDING]: 'production:report.status.pending',
+  [PRODUCTION_STATUS.RUNNING]: 'production:report.status.running',
+  [PRODUCTION_STATUS.SUCCEEDED]: 'production:report.status.succeeded',
+  [PRODUCTION_STATUS.CANCELLED]: 'production:report.status.cancelled',
+  [PRODUCTION_STATUS.FAILED]: 'production:report.status.failed',
 });
+
+export const PRODUCTION_STATUS_LABELS = Object.freeze(Object.defineProperties({}, Object.fromEntries(
+  Object.entries(STATUS_KEYS).map(([status, key]) => [status, { enumerable: true, get: () => translateProduction(key) }]),
+)));
 
 // Une attente utile, dite avec les mots de l'auteur. Une fois le travail fini,
 // il n'y a plus rien à annoncer : le résultat ou le problème est déjà visible.
-const PROGRESS_IN_PROGRESS = "Le pack apparaîtra ici dès qu'il sera prêt.";
+const PROGRESS_IN_PROGRESS = 'production:report.progress.note';
 
 // Une production antérieure au branchement des portes, ou un travail qui n'est
 // pas allé jusqu'à l'archive, n'a rien à en dire. Le dire est le seul moyen de
 // ne pas présenter comme exécuté un contrôle qui ne l'a pas été.
 export const GATES_NOT_REPORTED =
-  "Contrôles d'archive : cette production n'en rapporte aucun.";
+  'production:report.gates.absent';
 
 function asList(value) {
   return Array.isArray(value) ? value : [];
@@ -86,24 +92,23 @@ function report({
   problem = null,
   gates = [],
 }) {
-  const shown = asList(lines).map(String);
+  const shown = () => asList(lines).map((line) => presentUserMessage(line).message);
   return Object.freeze({
     source,
     status,
-    statusLabel: PRODUCTION_STATUS_LABELS[status],
+    get statusLabel() { return PRODUCTION_STATUS_LABELS[status]; },
     // « Préparation » n'est pas un état de production : la capture
     // du document a lieu avant que le travail entre dans la file, et n'a donc
     // pas de ligne à décrire.
     busy: status === PRODUCTION_STATUS.RUNNING,
     progress: Object.freeze({
-      lines: Object.freeze(shown),
+      get lines() { return Object.freeze(shown()); },
       // Le compte est celui des lignes, parce que la file les garde toutes.
       // Le journal vit dans le travail, pour les deux chaînes, et rien n'est
       // coupé.
-      count: shown.length,
-      note: status === PRODUCTION_STATUS.PENDING || status === PRODUCTION_STATUS.RUNNING
-        ? PROGRESS_IN_PROGRESS
-        : null,
+      count: asList(lines).length,
+      get note() { return status === PRODUCTION_STATUS.PENDING || status === PRODUCTION_STATUS.RUNNING
+        ? translateProduction(PROGRESS_IN_PROGRESS) : null; },
     }),
     cancel: Object.freeze({ available: cancelAvailable, requested: cancelRequested }),
     result: result ? Object.freeze(result) : null,
@@ -174,9 +179,9 @@ export function renderJobReport(job) {
     // Une annulation se dit par son état, des deux côtés : ce n'est pas un
     // problème à exposer.
     problem: status === PRODUCTION_STATUS.CANCELLED ? null : advanced
-      ? (refusal && !succeeded ? { title: refusal.title, message: refusal.message } : null)
+      ? (refusal && !succeeded ? { get title() { return refusal.title; }, get message() { return refusal.message; } } : null)
       : (status === PRODUCTION_STATUS.FAILED && job.errorMessage
-        ? { title: PRODUCTION_STATUS_LABELS[PRODUCTION_STATUS.FAILED], message: String(job.errorMessage) }
+        ? { get title() { return PRODUCTION_STATUS_LABELS[PRODUCTION_STATUS.FAILED]; }, get message() { return presentUserMessage(job.errorMessage).message; } }
         : null),
     gates: advanced
       ? advancedProductionGates(succeeded && !!job.resultPath)

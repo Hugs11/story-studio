@@ -74,6 +74,53 @@
   line-height: 1.5;
 }
 
+.youtube-follow-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--accent-2-border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent-2-dim) 48%, var(--bg0));
+  cursor: pointer;
+}
+
+.youtube-follow-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--accent-2);
+  flex: 0 0 auto;
+}
+
+.youtube-follow-toggle span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.youtube-follow-toggle strong {
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: var(--weight-semibold);
+}
+
+.youtube-follow-toggle small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.youtube-follow-toggle input:disabled {
+  cursor: not-allowed;
+}
+
+.youtube-follow-toggle.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.78;
+}
+
 .youtube-funnel-cgu-text {
   margin: 0;
   color: var(--text);
@@ -262,6 +309,17 @@
   background: color-mix(in srgb, var(--accent-2-dim) 72%, var(--bg0));
 }
 
+.youtube-funnel-list-heading {
+  padding: 6px 2px 2px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.youtube-funnel-row.is-new {
+  border-color: var(--accent-2-border);
+}
+
 .youtube-funnel-check {
   width: 24px;
   height: 24px;
@@ -301,9 +359,28 @@
 }
 
 .youtube-funnel-row-name {
+  min-width: 0;
+  flex: 1;
   color: var(--text);
   font-size: 13px;
   font-weight: var(--weight-semibold);
+}
+
+.youtube-funnel-row-title-line {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.youtube-funnel-new-badge {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
+  font-size: 10px;
+  font-weight: var(--weight-bold);
 }
 
 .youtube-funnel-row-meta {

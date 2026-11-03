@@ -12,6 +12,7 @@
 //! ils ne se déclarent jamais verts sans avoir tourné.
 
 mod calibration;
+mod cancellation;
 mod conversion;
 mod inventory;
 mod loudness_parity;
@@ -26,6 +27,20 @@ use super::*;
 use crate::native_pack::persistence::{AdvancedMediaBinding, MediaBindingStatus};
 use crate::native_pack::{decode_story_document, StoryDocument};
 use crate::support::ffmpeg::{get_ffmpeg_path, now_millis};
+
+thread_local! {
+    static AFTER_CONVERSION: std::cell::RefCell<Option<Box<dyn Fn()>>> = const {
+        std::cell::RefCell::new(None)
+    };
+}
+
+pub(super) fn after_conversion() {
+    AFTER_CONVERSION.with(|hook| {
+        if let Some(hook) = hook.borrow().as_ref() {
+            hook();
+        }
+    });
+}
 
 pub(super) const ENTRY: &str = "1f0a5b6c-2d3e-4f50-8a9b-0c1d2e3f4a5b";
 pub(super) const SECOND: &str = "2b7c8d9e-0f11-4223-8455-66778899aabb";

@@ -97,6 +97,12 @@ cargo clippy --all-targets -- -D warnings
 
 That file contains the native pack generation engine. Regressions can produce invalid packs without an obvious UI error, so tests are required.
 
+## Translations
+
+Interface text lives in `src/locales/`. To fix a translation or add a language,
+read [TRANSLATING.md](TRANSLATING.md) and run `npm run check:i18n` before opening
+the pull request.
+
 ## Code Style
 
 - Frontend: no formatter enforced — match the surrounding code.

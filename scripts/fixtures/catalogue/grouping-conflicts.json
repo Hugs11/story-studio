@@ -1,0 +1,10 @@
+[
+  {
+    "field": "title",
+    "language": "fr",
+    "candidates": [
+      { "ficheId": "a", "state": "defined", "value": "French" },
+      { "ficheId": "b", "state": "defined", "value": "Other" }
+    ]
+  }
+]

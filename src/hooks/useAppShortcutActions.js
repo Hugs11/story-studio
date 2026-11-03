@@ -82,11 +82,11 @@ export function buildShortcutActions({
   const availability = (id) => toolbarCommands[id]?.available === true;
   return {
     newProject: commands.newProject,
+    returnToCatalogue: commands.returnToCatalogue,
     openProject: commands.openProject,
     openPack: commands.openPack,
     importStories: handleAddStory,
     addFolder: () => store.addMenu(),
-    openPackOptions: () => modals.open('packOptions'),
     openPreferences: () => modals.open('prefs'),
     toggleTree: workspaceViewState.toggleTree,
     toggleSettings: workspaceViewState.toggleSettings,
@@ -130,11 +130,10 @@ export function buildShortcutActions({
     canUndo: availability('undo'),
     canRedo: availability('redo'),
     canOpenPack: availability('openPack'),
-    canOpenPackOptions: availability('openPackOptions'),
     canToggleTree: availability('toggleTree'),
     canToggleSettings: availability('toggleSettings'),
     canToggleDiagram: availability('toggleDiagram'),
-    canOpenPreferences: availability('openPreferences'),
+    canOpenPreferences: !projectOpen || availability('openPreferences'),
     canToggleValidation: availability('toggleValidation'),
   };
 }

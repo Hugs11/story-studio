@@ -38,8 +38,6 @@ fn walk_entry(entry: &CanonicalEntry, depth: usize, stats: &mut NativePackStats)
         }
         CanonicalEntry::Story(_) => stats.story_count += 1,
         CanonicalEntry::Zip(_) => stats.zip_count += 1,
-        // Une référence n'ajoute aucun nœud propre à l'arbre (arête seulement).
-        CanonicalEntry::Ref(_) => {}
     }
 }
 
@@ -135,126 +133,6 @@ fn builds_story_title_without_item_audio() {
         serde_json::Value::Null,
     );
     assert!(title_stage.ok_transition.is_value());
-}
-
-/// La sentinelle interne « cible non résolue » du constructeur a
-/// disparu au profit d'une absence de repli. Une référence dont la cible n'existe
-/// pas doit toujours produire une **erreur nommée**, jamais une transition
-/// aléatoire ni une arête vers l'option `0`.
-#[test]
-fn an_unresolved_ref_fails_loudly_instead_of_becoming_random() {
-    let project = CanonicalProject {
-        name: "Ref fantôme".to_string(),
-        project_type: "pack".to_string(),
-        pack_version: 1,
-        pack_description: String::new(),
-        root_audio: Some("root.mp3".to_string()),
-        root_image: Some("root.png".to_string()),
-        thumbnail_image: None,
-        night_mode_audio: None,
-        night_mode_return: None,
-        night_mode_home_return: None,
-        native_graph: None,
-        options: CanonicalOptions {
-            silence_mode: crate::domain::project::SilenceMode::Off,
-            harmonize_loudness: true,
-            auto_next: false,
-            night_mode: false,
-            end_message_autoplay: true,
-        },
-        entries: vec![CanonicalEntry::Ref(CanonicalRef {
-            id: "ref-fantome".to_string(),
-            target: "story:inexistante".to_string(),
-            ref_kind: Some("continue".to_string()),
-        })],
-        shared_entries: Vec::new(),
-    };
-
-    let error = build_story_document(&report_for(
-        project,
-        vec![
-            prepared_asset("rootAudio", "root.mp3"),
-            prepared_asset("rootImage", "root.png"),
-        ],
-        Vec::new(),
-    ))
-    .expect_err("une référence non résolue doit échouer");
-
-    assert!(
-        error.contains("Référence non résolue") && error.contains("story:inexistante"),
-        "diagnostic inattendu : {error}"
-    );
-}
-
-#[test]
-fn root_ref_can_target_shared_story() {
-    let shared_label = scoped_label_id("shared", "shared-story", "Shared Story");
-    let project = CanonicalProject {
-        name: "Shared story".to_string(),
-        project_type: "pack".to_string(),
-        pack_version: 1,
-        pack_description: String::new(),
-        root_audio: Some("root.mp3".to_string()),
-        root_image: Some("root.png".to_string()),
-        thumbnail_image: None,
-        night_mode_audio: None,
-        night_mode_return: None,
-        night_mode_home_return: None,
-        native_graph: None,
-        options: CanonicalOptions {
-            silence_mode: crate::domain::project::SilenceMode::Off,
-            harmonize_loudness: true,
-            auto_next: false,
-            night_mode: false,
-            end_message_autoplay: true,
-        },
-        entries: vec![CanonicalEntry::Ref(CanonicalRef {
-            id: "ref-shared".to_string(),
-            target: "story:shared-story".to_string(),
-            ref_kind: Some("continue".to_string()),
-        })],
-        shared_entries: vec![CanonicalEntry::Story(CanonicalStory {
-            id: "shared-story".to_string(),
-            name: "Shared Story".to_string(),
-            audio: Some("shared.mp3".to_string()),
-            item_audio: Some("shared-title.mp3".to_string()),
-            item_image: Some("shared.png".to_string()),
-            ..Default::default()
-        })],
-    };
-    let document = build_story_document(&report_for(
-        project,
-        vec![
-            prepared_asset("rootAudio", "root.mp3"),
-            prepared_asset("rootImage", "root.png"),
-            prepared_asset(&format!("{shared_label}/storyAudio"), "shared.mp3"),
-            prepared_asset(&format!("{shared_label}/itemAudio"), "shared-title.mp3"),
-            prepared_asset(&format!("{shared_label}/itemImage"), "shared.png"),
-        ],
-        Vec::new(),
-    ))
-    .expect("shared ref document");
-
-    let cover = document
-        .stage_nodes
-        .iter()
-        .find(|stage| stage.is_square_one())
-        .expect("cover stage");
-    let root_action = document
-        .action_nodes
-        .iter()
-        .find(|action| {
-            Some(action.id.as_str()) == cover.ok_transition.value().map(|t| t.action_node.as_str())
-        })
-        .expect("root action");
-    let target_stage_id = root_action.options.first().expect("root ref option");
-    let target_stage = document
-        .stage_nodes
-        .iter()
-        .find(|stage| Some(stage.uuid.as_str()) == target_stage_id.as_deref())
-        .expect("shared title stage");
-
-    assert_eq!(target_stage.label(), "Titre - Shared Story");
 }
 
 #[test]
@@ -1223,6 +1101,9 @@ fn canonicalizes_pack_structure() {
         global_options: sample_options(),
         pack_version: 1,
         pack_description: String::new(),
+        official_provenance: Default::default(),
+        official_origin_uuid: None,
+        contains_official_content: false,
         pack_uuid: "11111111-2222-4333-8444-555566667777".to_string(),
 
         shared_entries: Vec::new(),
@@ -1288,6 +1169,9 @@ fn canonicalizes_recursive_root_entries_structure() {
         global_options: sample_options(),
         pack_version: 1,
         pack_description: String::new(),
+        official_provenance: Default::default(),
+        official_origin_uuid: None,
+        contains_official_content: false,
         pack_uuid: "11111111-2222-4333-8444-555566667777".to_string(),
 
         shared_entries: Vec::new(),
@@ -1451,6 +1335,9 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
         },
         pack_version: 1,
         pack_description: String::new(),
+        official_provenance: Default::default(),
+        official_origin_uuid: None,
+        contains_official_content: false,
         pack_uuid: "11111111-2222-4333-8444-555566667777".to_string(),
 
         shared_entries: Vec::new(),
@@ -1622,7 +1509,10 @@ fn builds_simple_story_pack() {
     };
     story.autoplay = true;
     let error = build_story_document(&report).expect_err("automatic playback needs a destination");
-    assert!(error.contains("sans destination utilisable"));
+    assert!(crate::support::user_message::contains_code(
+        &error,
+        "VALIDATION_STAGE_PLAY_TARGET_MISSING"
+    ));
     let CanonicalEntry::Story(story) = &mut report.project.entries[0] else {
         panic!("story");
     };
@@ -1630,7 +1520,10 @@ fn builds_simple_story_pack() {
     story.home = false;
     story.wheel = true;
     let error = build_story_document(&report).expect_err("a singleton wheel is not an exit");
-    assert!(error.contains("sans sortie utilisable"));
+    assert!(crate::support::user_message::contains_code(
+        &error,
+        "VALIDATION_STAGE_EXIT_UNUSABLE"
+    ));
 
     report.project.project_type = "pack".to_string();
     report
@@ -1640,7 +1533,10 @@ fn builds_simple_story_pack() {
         .assets
         .push(prepared_asset("root/Single Story/itemImage", "item.png"));
     let error = build_story_document(&report).expect_err("root menu story uses the same exit rule");
-    assert!(error.contains("sans sortie utilisable"));
+    assert!(crate::support::user_message::contains_code(
+        &error,
+        "VALIDATION_STAGE_EXIT_UNUSABLE"
+    ));
 }
 
 #[test]

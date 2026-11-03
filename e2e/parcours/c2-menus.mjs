@@ -262,13 +262,10 @@ export async function run() {
     const spacesCopyPath = findManagedCopy(workspaceDir, basename(mediaSpaces));
     const displacedMediaDir = ctx.dir('media-deplace-contre-epreuve');
     mkdirSync(displacedMediaDir, { recursive: true });
-    if (spacesCopyPath && existsSync(spacesCopyPath)) {
-      renameSync(spacesCopyPath, join(displacedMediaDir, basename(spacesCopyPath)));
-    } else if (existsSync(mediaSpaces)) {
-      // Repli si le nom de copie réel diffère de ce qui est anticipé ici :
-      // déplace au moins la source d'origine (fait relevé quand même).
-      renameSync(mediaSpaces, join(displacedMediaDir, basename(mediaSpaces)));
-    }
+    if (!spacesCopyPath || !existsSync(spacesCopyPath)) throw new Error('Copie référencée introuvable : contre-épreuve impossible');
+    const displacedPath = join(displacedMediaDir, basename(spacesCopyPath));
+    renameSync(spacesCopyPath, displacedPath);
+    ctx.check('[contre-épreuve] copie réellement déplacée', !existsSync(spacesCopyPath) && existsSync(displacedPath), { spacesCopyPath, displacedPath });
     const closeForCounterProofStop = await app.stop();
     app = await launchApp({ runDir: ctx.dir('relance-contre-epreuve'), fresh: false, workspaceDir });
     ({ page, events } = app);

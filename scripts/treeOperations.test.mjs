@@ -69,7 +69,7 @@ test('move status distinguishes a depth refusal from a menu cycle', () => {
   const index = buildProjectIndex(depthProject);
   assert.equal(
     getMoveEntryToContainerStatus(depthProject, index, 'branch', 'deep-61').reason,
-    'menu_depth_limit',
+    'VALIDATION_MENU_DEPTH_LIMIT',
   );
   assert.equal(
     getMoveEntryToContainerStatus(depthProject, index, 'deep-1', 'deep-2').reason,

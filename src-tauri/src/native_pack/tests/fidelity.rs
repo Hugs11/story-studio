@@ -91,6 +91,9 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
         },
         pack_version: 1,
         pack_description: String::new(),
+        official_provenance: Default::default(),
+        official_origin_uuid: None,
+        contains_official_content: false,
         pack_uuid: String::new(),
         shared_entries,
     }
@@ -843,12 +846,11 @@ fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
     match crate::services::pack_reader::classify_pack_editability(&zip_path) {
         Ok(report) => {
             eprintln!(
-                "[{pack_id}] roundTripFaithful={} | authoringEditable={} | readOnlyInspectable={} | usesGraphProjection={} | rootRefRatio={:.3} | sharedEntryRatio={:.3} | hasUnmodeledWheel={} | reason={}",
+                "[{pack_id}] roundTripFaithful={} | authoringEditable={} | readOnlyInspectable={} | usesGraphProjection={} | sharedEntryRatio={:.3} | hasUnmodeledWheel={} | reason={}",
                 report.round_trip_faithful,
                 report.authoring_editable,
                 report.read_only_inspectable,
                 report.uses_graph_projection,
-                report.root_ref_ratio,
                 report.shared_entry_ratio,
                 report.has_unmodeled_wheel,
                 report.reason,

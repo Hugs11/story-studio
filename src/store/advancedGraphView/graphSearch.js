@@ -16,7 +16,7 @@
 
 import { ACTION_KIND, STAGE_KIND } from './graphViewModel.js';
 import { NODE_ROLES, nodeRoles } from './graphRoles.js';
-import { normalizeFrenchSearchText } from '../../utils/frenchText.js';
+import { normalizeSearchText } from '../../utils/frenchText.js';
 
 export const SEARCH_SCOPES = Object.freeze({
   ALL: 'all',
@@ -55,7 +55,7 @@ export function searchGraph(index, {
   scope = SEARCH_SCOPES.ALL,
   limit = DEFAULT_RESULT_LIMIT,
 } = {}) {
-  const needle = normalizeFrenchSearchText(query).trim();
+  const needle = normalizeSearchText(query).trim();
   const role = SCOPE_ROLES[scope] ?? null;
   const roles = role ? nodeRoles(index) : null;
   const results = [];

@@ -1,3 +1,5 @@
+import { presentTree } from "../../i18n/treePresentation.js";
+import { useTranslation } from 'react-i18next';
 import { lazy, Suspense, useMemo, useRef, useEffect, useState } from 'react';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { imageClipboard } from '../../store/fieldClipboard';
@@ -27,17 +29,19 @@ import './ImageField.css';
 // une ligne, sans toucher au rendu ni au CSS, et le changement porte partout —
 // Libre et graphe, écran, dossier, histoire et menu racine.
 const IMAGE_ACTIONS = Object.freeze({
-  replace: { Icon: ArrowRightLeft, label: 'Remplacer l’image' },
-  edit: { Icon: Pencil, label: 'Éditer l’image' },
+  replace: { Icon: ArrowRightLeft, labelKey: "tree:image.replace.action" },
+  edit: { Icon: Pencil, labelKey: "tree:image.edit.action" },
   // Les actions apportées par un consommateur sont retrouvées **par leur clé**,
   // pour que l'icône vive ici comme les autres plutôt que dans six appels.
-  'generate-text': { Icon: CaseUpper, label: 'Générer une image-titre' },
-  ai: { Icon: Sparkles, label: 'Générer avec l’IA (ComfyUI)' },
-  clear: { Icon: Trash2, label: 'Supprimer l’image' },
+  'generate-text': { Icon: CaseUpper, labelKey: "tree:image.title.generate" },
+  ai: { Icon: Sparkles, labelKey: "tree:image.ai.generate" },
+  clear: { Icon: Trash2, labelKey: "tree:image.clear.action" },
 });
 
 function ToolbarButton({ action, onClick, title = null, disabled = false, tone = null, busy = false }) {
-  const { Icon, label } = IMAGE_ACTIONS[action];
+  const { t } = useTranslation('tree');
+  const { Icon, labelKey } = IMAGE_ACTIONS[action];
+  const label = t(labelKey);
   const text = title || label;
   const button = (
     <button
@@ -57,19 +61,20 @@ function ToolbarButton({ action, onClick, title = null, disabled = false, tone =
 }
 
 function SdResultThumb({ path, onPick, onRemove }) {
+  const { t } = useTranslation('tree');
   const url = useLocalFile(path);
   return (
     <div className="image-sd-thumb-wrap">
-      <Tooltip text="Utiliser cette image">
+      <Tooltip text={t("tree:image.result.use")}>
         <button className="image-sd-thumb" onClick={() => onPick(path)}>
           {url ? <img src={url} alt="" /> : <div className="image-sd-thumb-placeholder" />}
         </button>
       </Tooltip>
-      <Tooltip text="Supprimer" className="image-sd-thumb-remove-wrap">
+      <Tooltip text={t("common:dialog.delete.label")} className="image-sd-thumb-remove-wrap">
         <button
           className="image-sd-thumb-remove"
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          aria-label="Supprimer"
+          aria-label={t("common:dialog.delete.label")}
         >×</button>
       </Tooltip>
     </div>
@@ -85,9 +90,10 @@ export function ImageField({
   compact = false,
   align = 'center',
   fieldId = null,
-  formatHint = 'Format recommandé : 320 × 240 px',
+  formatHint,
   badge = null,
 }) {
+  const { t } = useTranslation('tree');
   const { notifyCutPaste } = useMediaTransfer();
   const {
     pathAudit,
@@ -238,7 +244,7 @@ export function ImageField({
       className={`image-field ${compact ? 'is-compact' : ''} ${align === 'start' ? 'is-align-start' : 'is-align-center'}`}
       onContextMenu={handleContextMenu}
     >
-      {label && <div className="media-label">{label}</div>}
+      {label && <div className="media-label">{presentTree(label)}</div>}
 
       {/* **Le cadre soude l'aperçu et sa barre d'outils.** Un seul contour, un
           filet d'un pixel entre les deux, et la barre prend la hauteur de
@@ -249,7 +255,7 @@ export function ImageField({
           peut pas les compter, on le lui dit. */}
       <div className="image-slot" data-tools={toolCount}>
         <div className="image-slot__frame">
-          <Tooltip text={displayPath || 'Cliquer pour choisir'} wrap={!!displayPath} className="image-drop-wrap">
+          <Tooltip text={displayPath || t("tree:image.file.choose")} wrap={!!displayPath} className="image-drop-wrap">
             <div
               ref={dropRef}
               data-drop-kind="image"
@@ -262,10 +268,10 @@ export function ImageField({
                   <div className="image-placeholder">
                     <span className="image-placeholder-icon"><ImageIcon aria-hidden="true" /></span>
                     <span className="image-placeholder-text image-placeholder-text--strong">
-                      {file && !fileAvailable ? 'Image introuvable' : 'Cliquer pour choisir une image'}
+                      {file && !fileAvailable ? t("tree:image.file.missing") : t("tree:image.file.chooseImage")}
                     </span>
                     <span className="image-placeholder-text">
-                      {file && !fileAvailable ? 'Le fichier lié est inaccessible' : formatHint}
+                      {file && !fileAvailable ? t("tree:image.file.inaccessible") : (formatHint === undefined ? t('tree:image.format.hint') : formatHint)}
                     </span>
                   </div>
                 )
@@ -275,6 +281,7 @@ export function ImageField({
           </Tooltip>
 
           <div className="image-slot__toolbar">
+            {/* eslint-disable-next-line i18next/no-literal-string -- identifiant de la table fermée IMAGE_ACTIONS */}
             <ToolbarButton action="replace" onClick={handlePick} />
             {/* Éditer et Supprimer n'ont pas d'objet sur un emplacement vide ou
                 sur un fichier perdu : ils s'éteignent au lieu de refuser après
@@ -290,20 +297,22 @@ export function ImageField({
             ))}
             {aiEnabled && (
               <ToolbarButton
+                // eslint-disable-next-line i18next/no-literal-string -- identifiant de la table fermée IMAGE_ACTIONS
                 action="ai"
                 tone="ai"
                 busy={isGeneratingForField}
                 disabled={isGeneratingForField}
-                title={isGeneratingForField ? 'Génération en cours…' : null}
+                title={isGeneratingForField ? t("tree:image.ai.progress") : null}
                 onClick={() => onOpenSDGenerate({
                   currentImagePath: fileAvailable ? file : null,
-                  currentImageLabel: label || 'image actuelle',
+                  currentImageLabel: label || { key: "tree:image.current.fallback" },
                   fieldId,
                 })}
               />
             )}
             {onClear && (
               <ToolbarButton
+                // eslint-disable-next-line i18next/no-literal-string -- identifiant de la table fermée IMAGE_ACTIONS
                 action="clear"
                 tone="danger"
                 disabled={!file}
@@ -346,14 +355,15 @@ export function ImageField({
           onClose={() => setCtxMenu(null)}
           actions={[
             ...(file ? [
-              { icon: <Copy />, label: 'Copier', fn: () => imageClipboard.set(file) },
-              { icon: <Scissors />, label: 'Couper', fn: () => imageClipboard.set(file, { mode: 'cut' }) },
-              { icon: <FolderOpen />, label: 'Afficher dans l\'explorateur', fn: () => revealItemInDir(file) },
+              { icon: <Copy />, label: t("tree:media.clipboard.copy"), fn: () => imageClipboard.set(file) },
+              // eslint-disable-next-line i18next/no-literal-string -- enum du presse-papiers
+              { icon: <Scissors />, label: t("tree:media.clipboard.cut"), fn: () => imageClipboard.set(file, { mode: 'cut' }) },
+              { icon: <FolderOpen />, label: t("tree:media.file.reveal"), fn: () => revealItemInDir(file) },
             ] : []),
             ...(imageClipboard.get() && onPick ? [
               {
                 icon: <ClipboardPaste />,
-                label: imageClipboard.getEntry()?.mode === 'cut' ? 'Déplacer ici' : 'Coller',
+                label: imageClipboard.getEntry()?.mode === 'cut' ? t("tree:media.clipboard.move") : t("tree:media.clipboard.paste"),
                 fn: pasteClipboardImage,
               },
             ] : []),

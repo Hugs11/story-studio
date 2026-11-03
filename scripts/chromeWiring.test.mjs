@@ -17,6 +17,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { commandKeyLabel } from '../src/utils/platformKeys.js';
 
 import {
   commandControl,
@@ -29,6 +30,7 @@ import {
 
 const { createElement } = await import('react');
 const { AppShell } = await import('../src/components/AppShell.jsx');
+const { TitleBar } = await import('../src/components/layout/TitleBar.jsx');
 const { ProjectMenuPopover } = await import('../src/components/layout/ProjectMenuPopover.jsx');
 const { ValidationPill } = await import('../src/components/layout/ValidationPill.jsx');
 const { AdvancedIssuesPanel } = await import('../src/components/AdvancedWorkspace/DiagnosticsPanel.jsx');
@@ -56,6 +58,7 @@ const EDITORS = [
 // est la promesse de la barre, écrite une fois : une commande qui perdrait son
 // branchement, ou le prendrait sur le voisin, tombe ici.
 const HANDLER_OF = {
+  returnToCatalogue: 'onReturnToCatalogue',
   newProject: 'onNewProject',
   openProject: 'onOpenProject',
   openPack: 'onOpenPack',
@@ -72,7 +75,6 @@ const HANDLER_OF = {
   createStage: 'onCreateStage',
   createAction: 'onCreateAction',
   createConstruction: 'onCreateConstruction',
-  openPackOptions: 'onPackOptionsOpenChange',
   toggleValidation: 'onValidationOpenChange',
   generate: 'onGenerate',
   openPreferences: 'onOpenPreferences',
@@ -88,7 +90,6 @@ const PAINTED_AS = {
   toggleDiagram: 'toggle-diagram',
   toggleNodeList: 'toggle-node-list',
   toggleInspector: 'toggle-inspector',
-  openPackOptions: 'pack-options',
 };
 
 const paintedId = (id) => PAINTED_AS[id] ?? id;
@@ -97,9 +98,6 @@ const paintedId = (id) => PAINTED_AS[id] ?? id;
 // la barre ouvre par son propre état. Le banc n'a pas de DOM pour le déplier :
 // il monte ce tiroir ouvert, comme surface à part entière, dans son propre test.
 const drawerIds = (inventory) => new Set(toolbarGroup(inventory, TOOLBAR_GROUPS.FILE).map((entry) => entry.id));
-// La commande Préférences est peinte dans le popover Options, pas comme un
-// bouton de premier niveau. Son chemin est exercé séparément, popover ouvert.
-const OPTIONS_POPOVER_COMMAND_IDS = new Set(['openPreferences']);
 
 function witness() {
   const called = [];
@@ -116,6 +114,20 @@ function witnesses(names) {
 
 const TOOLBAR_HANDLERS = [...new Set(Object.values(HANDLER_OF))];
 const BOTTOM_BAR_HANDLERS = ['onOpenMedia', 'onOpenRenderQueue', 'onOpenAiQueue'];
+
+test('les Préférences restent accessibles depuis la barre de titre à l’accueil', () => {
+  const onOpenPreferences = witness();
+  const { elements } = mountSurface(createElement(TitleBar, {
+    projectName: '',
+    showProjectMeta: false,
+    onOpenPreferences,
+  }));
+  const preferences = elementByClass(elements, 'chrome-titlebar-preferences');
+  assert.ok(preferences);
+  assert.match(preferences.props['aria-label'], new RegExp(`Préférences de l’application.*${commandKeyLabel()}\\+,`));
+  preferences.props.onClick();
+  assert.equal(onOpenPreferences.called.length, 1);
+});
 
 // Une seule issue bloquante pour éprouver le compteur et la sélection dans les
 // montages communs. Un autre test couvre l'ouverture honnête à zéro.
@@ -161,6 +173,7 @@ function shellProps(workspaceMode, { titleBar: titleBarOverrides = {}, toolbar: 
         showProjectMeta: true,
         onOpenPackMetadata,
         onOpenCredits: witness(),
+        onOpenPreferences: toolbarHandlers.onOpenPreferences,
         ...titleBarOverrides,
       },
       toolbar: {
@@ -178,9 +191,6 @@ function shellProps(workspaceMode, { titleBar: titleBarOverrides = {}, toolbar: 
           ? { diagnostics: [ADVANCED_DIAGNOSTIC] }
           : null,
         globalOptions: {},
-        // Le montage générique garde les tiroirs fermés ; les commandes qu'ils
-        // contiennent sont éprouvées séparément avec le tiroir concerné ouvert.
-        packOptionsOpen: false,
         validationOpen: false,
         ...toolbarHandlers,
         ...(toolbarOverrides ?? {}),
@@ -213,7 +223,7 @@ function shellProps(workspaceMode, { titleBar: titleBarOverrides = {}, toolbar: 
   };
 }
 
-test('la liste Libre compte exactement ses lignes et nomme leur gravité', () => {
+test('la liste Libre réunit tous les blocages sans filtre de gravité', () => {
   const { html } = mountSurface(createElement(ValidationPill, {
     validationIssues: [
       BLOCKING_ISSUE,
@@ -224,11 +234,10 @@ test('la liste Libre compte exactement ses lignes et nomme leur gravité', () =>
   }));
 
   assert.match(html, /validation-pill-count">2</);
-  assert.match(html, /Tous \(2\)/);
-  assert.match(html, /Erreurs \(1\)/);
-  assert.match(html, /Avertissements \(1\)/);
-  assert.match(html, />Erreur</);
-  assert.match(html, />Avertissement</);
+  assert.match(html, /2 éléments empêchent la génération/);
+  assert.match(html, /Image manquante/);
+  assert.doesNotMatch(html, /Filtrer par gravité|>Erreur<|>Avertissement</);
+  assert.equal((html.match(/class="validation-pill-item /g) ?? []).length, 2);
 });
 
 test('la liste reste ouvrable et explicite quand son compteur vaut zéro', () => {
@@ -239,8 +248,8 @@ test('la liste reste ouvrable et explicite quand son compteur vaut zéro', () =>
   }));
 
   assert.match(html, /validation-pill-count">0</);
-  assert.match(html, /Tous \(0\)/);
-  assert.match(html, /Aucun élément dans ce filtre/);
+  assert.match(html, /Le pack peut être généré/);
+  assert.match(html, /Aucun élément à corriger/);
   assert.doesNotMatch(html, /Pack prêt/);
 });
 
@@ -260,6 +269,72 @@ test('côté graphe, la pastille à corriger reste un popover hors du triptyque'
   assert.match(source, /import\('\.\.\/AdvancedWorkspace\/DiagnosticsPanel\.jsx'\)/);
 });
 
+function issuesContext(blockingIssues, extra = {}) {
+  return {
+    blockingIssues,
+    view: { diagnostics: [], opaqueMembers: [], groups: [] },
+    index: { byPath: new Map() },
+    disabled: false,
+    onFocusPath: witness(),
+    onGesture: witness(),
+    onOpenForm: witness(),
+    readiness: { status: 'idle', summary: null, error: null, stale: false },
+    exportState: null,
+    stagePaths: [],
+    working: false,
+    ...extra,
+  };
+}
+
+test('un problème global et un problème d’Écran au même nodePath ne fusionnent pas', () => {
+  const nodePath = '/stageNodes/@uuid=u1#0';
+  const { html } = mountSurface(createElement(AdvancedIssuesPanel, {
+    context: issuesContext([
+      { id: 'a', category: 'Pack', message: 'Un seul départ.', nodePath, nodeLabel: null, diagnostic: null },
+      { id: 'b', category: 'Écran', message: 'Position.', nodePath, nodeLabel: 'Écran « Début »', diagnostic: null },
+    ]),
+  }));
+
+  assert.match(html, /validation-pill-group-label">Pack<\/span><span class="validation-pill-group-count">· 1</);
+  assert.match(html, /validation-pill-group-label">Écran « Début »<\/span><span class="validation-pill-group-count">· 1</);
+});
+
+test('seule la résolution destructive des éléments à corriger porte btn-danger-outline', () => {
+  const nodePath = '/stageNodes/@uuid=u1#0';
+  const diagnostic = {
+    ...ADVANCED_DIAGNOSTIC,
+    code: 'ENRICHED_GROUP_INCOHERENT',
+    nodePath,
+    resolutions: ['repair-known-group', 'flatten-known-group'],
+  };
+  const { html } = mountSurface(createElement(AdvancedIssuesPanel, {
+    context: issuesContext(
+      [{ id: 'g', category: 'Groupe', message: 'Groupe incohérent.', nodePath, nodeLabel: 'Écran « Début »', diagnostic }],
+      {
+        view: {
+          diagnostics: [diagnostic],
+          opaqueMembers: [],
+          groups: [{ groupId: 'g-1', kind: 'story', stagePaths: [nodePath], actionPaths: [] }],
+        },
+        index: {
+          byPath: new Map([[nodePath, {
+            kind: 'stage',
+            node: { uuid: 'u1', groupId: { presence: 'value', value: 'g-1' } },
+          }]]),
+        },
+      },
+    ),
+  }));
+
+  const buttons = [...html.matchAll(/<button[^>]*class="([^"]*)"[^>]*>(.*?)<\/button>/g)];
+  const flatten = buttons.filter(([, , label]) => label.startsWith('Aplatir'));
+  assert.equal(flatten.length, 1);
+  assert.match(flatten[0][1], /btn-danger-outline/);
+  const others = buttons.filter(([, , label]) => !label.startsWith('Aplatir'));
+  assert.ok(others.length >= 1);
+  for (const [, cls] of others) assert.doesNotMatch(cls, /btn-danger/);
+});
+
 test('la liste graphe ne montre que les blocages et conserve leur réparation', () => {
   const onFocusPath = witness();
   const onGesture = witness();
@@ -269,6 +344,7 @@ test('la liste graphe ne montre que les blocages et conserve leur réparation', 
       category: 'Décision requise',
       message: 'La position de ce nœud doit être adaptée avant la génération.',
       nodePath: '/stageNodes/@uuid=u1#0',
+      nodeLabel: 'Écran « Début »',
       diagnostic: ADVANCED_DIAGNOSTIC,
     }],
     view: { diagnostics: [ADVANCED_DIAGNOSTIC], opaqueMembers: [], groups: [] },
@@ -291,6 +367,9 @@ test('la liste graphe ne montre que les blocages et conserve leur réparation', 
 
   assert.doesNotMatch(html, /Toutes \(1\)/);
   assert.match(html, /Décision requise/);
+  assert.match(html, /Écran « Début »/);
+  assert.match(html, /<details class="validation-pill-details"><summary/);
+  assert.doesNotMatch(html, /data-severity|btn-danger/);
   assert.match(html, /Corriger/);
   assert.match(html, /Mettre à l’échelle/);
 
@@ -358,7 +437,7 @@ for (const [editor, workspaceMode] of EDITORS) {
     const tiroir = drawerIds(inventory);
 
     for (const entry of inventory) {
-      if (tiroir.has(entry.id) || OPTIONS_POPOVER_COMMAND_IDS.has(entry.id)) continue;
+      if (tiroir.has(entry.id) || entry.id === 'openPreferences') continue;
 
       const controle = commandControl(elements, paintedId(entry.id));
       assert.ok(
@@ -382,19 +461,14 @@ for (const [editor, workspaceMode] of EDITORS) {
     }
   });
 
-  test(`${editor} : la carte Préférences du popover Options atteint son gestionnaire`, () => {
+  test(`${editor} : le bouton Préférences de la barre de titre atteint son gestionnaire`, () => {
     const { elements, toolbarHandlers } = mountShell(workspaceMode, {
-      toolbar: { packOptionsOpen: true },
     });
-    const preferences = elementByClass(elements, 'pack-options-gateway--app');
-
-    assert.ok(preferences, 'le popover Options ne peint pas la carte Préférences');
-    assert.equal(preferences.props.type, 'button');
+    const preferences = elementByClass(elements, 'chrome-titlebar-preferences');
+    assert.ok(preferences, 'la barre de titre ne peint pas Préférences');
     assert.equal(typeof preferences.props.onClick, 'function');
-
     preferences.props.onClick();
     assert.equal(toolbarHandlers.onOpenPreferences.called.length, 1);
-    assert.deepEqual(toolbarHandlers.onPackOptionsOpenChange.called, [[false]]);
   });
 
   test(`${editor} : le tiroir du menu Projet branche toutes ses commandes`, () => {
@@ -408,6 +482,7 @@ for (const [editor, workspaceMode] of EDITORS) {
       shortcutLabels: {},
       commands: fileGroup,
       onNewProject: toolbarHandlers.onNewProject,
+      onReturnToCatalogue: toolbarHandlers.onReturnToCatalogue,
       onOpenProject: toolbarHandlers.onOpenProject,
       onOpenPack: toolbarHandlers.onOpenPack,
       onSaveProject: toolbarHandlers.onSaveProject,
@@ -415,6 +490,9 @@ for (const [editor, workspaceMode] of EDITORS) {
       onContinueInGraph: toolbarHandlers.onContinueInGraph,
       trigger: () => null,
     }));
+
+    assert.ok(!elementByClass(elements, 'project-menu-head'), 'le menu commence directement par ses commandes');
+    assert.ok(elementByAttribute(elements, 'role', 'menu').props['aria-label'], 'le menu conserve son nom accessible');
 
     for (const entry of fileGroup) {
       const controle = commandControl(elements, entry.id);
@@ -449,90 +527,6 @@ for (const [editor, workspaceMode] of EDITORS) {
   });
 }
 
-
-// ── Le tiroir d'options du pack, un seul pour les deux éditeurs ──────────────
-//
-// Ces tests montent le tiroir **ouvert** pour lire ce qu'il peint. La liste des
-// options audio gardent les mêmes libellés, ordre et défauts dans les trois
-// projets. Auto-next est propre à l'éditeur par menus. L'ouverture réelle
-// au survol reste à vérifier dans la recette de sortie.
-
-const PACK_OPTION_TITLES = ['Harmoniser le volume', 'Silence début / fin'];
-
-function packOptionRows(elements) {
-  return elements
-    .filter((element) => element.props?.className === 'pack-options-control-title')
-    .map((element) => element.props.children);
-}
-
-function autoNextToggle(elements) {
-  return elements.find((element) => (
-    typeof element.props?.ariaLabel === 'string' && element.props.ariaLabel.startsWith('Auto-next.')
-  )) ?? null;
-}
-
-function silenceSegments(elements) {
-  return elements.filter((element) => (
-    typeof element.props?.className === 'string'
-    && element.props.className.startsWith('pack-options-segment')
-  ));
-}
-
-function mountPackOptions(workspaceMode, { projectType, globalOptions = {} }) {
-  return mountShell(workspaceMode, {
-    toolbar: { packOptionsOpen: true, projectType, globalOptions },
-  });
-}
-
-test('le tiroir réserve Auto-next aux menus et conserve les options audio dans le même ordre', () => {
-  const libre = mountPackOptions(WORKSPACE_MODE_HIERARCHICAL, { projectType: 'pack' });
-  assert.deepEqual(packOptionRows(libre.elements), [...PACK_OPTION_TITLES, 'Auto-next']);
-  for (const projectType of ['advanced', 'simple']) {
-    const mode = projectType === 'advanced' ? WORKSPACE_MODE_ADVANCED : WORKSPACE_MODE_HIERARCHICAL;
-    const { elements } = mountPackOptions(mode, { projectType });
-    assert.deepEqual(packOptionRows(elements), PACK_OPTION_TITLES);
-  }
-});
-
-test('les valeurs pré-cochées sont les mêmes des deux côtés sans réglage d’auteur', () => {
-  // Un projet Libre neuf porte `normalize` et `harmonize` par son schéma ; un
-  // projet graphe ne porte rien du tout. Les deux doivent montrer la même chose.
-  const libre = mountPackOptions(WORKSPACE_MODE_HIERARCHICAL, {
-    projectType: 'pack',
-    globalOptions: { silenceMode: 'normalize', harmonizeLoudness: true },
-  });
-  const graphe = mountPackOptions(WORKSPACE_MODE_ADVANCED, { projectType: 'advanced', globalOptions: {} });
-
-  const actif = (elements) => silenceSegments(elements)
-    .filter((segment) => segment.props['aria-pressed'] === true)
-    .map((segment) => segment.props.children);
-  assert.deepEqual(actif(libre.elements), ['Ajuster']);
-  assert.deepEqual(actif(graphe.elements), ['Ajuster']);
-
-  const harmonise = (elements) => elements.find((element) => (
-    element.props?.ariaLabel === 'Harmoniser le volume des audios vers -14 LUFS à la génération.'
-  ));
-  assert.equal(harmonise(libre.elements).props.on, true);
-  assert.equal(harmonise(graphe.elements).props.on, true);
-});
-
-for (const projectType of ['advanced', 'simple']) {
-  test(`auto-next reste absent du projet ${projectType} même avec une ancienne valeur active`, () => {
-    const mode = projectType === 'advanced' ? WORKSPACE_MODE_ADVANCED : WORKSPACE_MODE_HIERARCHICAL;
-    const { elements } = mountPackOptions(mode, { projectType, globalOptions: { autoNext: true } });
-    assert.equal(autoNextToggle(elements), null);
-    assert.deepEqual(packOptionRows(elements), PACK_OPTION_TITLES);
-    assert.ok(!elements.some((element) => element.props?.className === 'pack-options-well-title'
-      && Array.isArray(element.props.children) && element.props.children.includes('Lecture ')));
-  });
-}
-
-test('auto-next reste offert sur un pack de l’éditeur par menus', () => {
-  const { elements } = mountPackOptions(WORKSPACE_MODE_HIERARCHICAL, { projectType: 'pack' });
-  const toggle = autoNextToggle(elements);
-  assert.ok(toggle);
-  assert.ok(!toggle.props.disabled);
-});
 
 // ── La file de rendu sert les deux natures ───────────────────────────────────
 //
@@ -624,7 +618,7 @@ test('un succès graphe ne redouble pas le compte rendu commun et garde seulemen
     job: queueJob({ nature: WORK_NATURE.ADVANCED, result: ARCHIVE, resultPath: ARCHIVE.zipPath }),
     onReview: () => {},
   }));
-  assert.match(html, /Simuler le pack produit/);
+  assert.match(html, /Simuler le pack généré/);
   assert.doesNotMatch(html, /Archive produite|média\(s\) préparé\(s\)|Détails de diagnostic/);
   assert.doesNotMatch(html, /\/sorties\/graphe\.zip/);
 });
@@ -911,13 +905,39 @@ test('sans écoute possible, le L du graphe garde ses outils', () => {
   assert.equal(bar.props.onRecord, mediaTools.onRecord);
 });
 
-test('la liste du graphe garde sa recherche sans doubler les outils du L', () => {
+test('la liste du graphe ouverte porte les outils média et le simulateur', () => {
+  const tools = {
+    ...witnesses(['onImportMedia', 'onImportPodcast', 'onImportYoutube', 'onRecord', 'onGenerateStoryTts', 'onSimulate']),
+    canRecord: true,
+    canGenerateStoryTts: true,
+  };
   const { elements } = mountSurface(createElement(GraphNodeListActions, {
     onSearch: witness(),
     onClose: witness(),
+    surfaceTools: tools,
   }));
 
-  assert.equal(elementsByAttribute(elements, 'data-media-tool').length, 0);
+  const bar = elements.find((element) => element.props?.variant === 'panel');
+  assert.ok(bar, 'la barre de la liste n’est pas montée');
+  assert.equal(bar.props.onRecord, tools.onRecord);
+  assert.equal(bar.props.onImportMedia, tools.onImportMedia);
+  assert.equal(bar.props.onLaunchSimulator, tools.onSimulate);
+});
+
+test('les outils du graphe vont à la liste quand elle est ouverte, au L sinon', () => {
+  const workspace = readFileSync(
+    new URL('../src/components/AdvancedWorkspace/AdvancedWorkspace.jsx', import.meta.url),
+    'utf8',
+  );
+  assert.match(workspace, /surfaceTools=\{showNodeList \? null : \{/);
+});
+
+test('la barre d’actions du diagramme n’apparaît que sans arbre', () => {
+  const view = readFileSync(
+    new URL('../src/workspace/WorkspaceView.jsx', import.meta.url),
+    'utf8',
+  );
+  assert.match(view, /showActionsBar=\{showDiagram && !showTree\}/);
 });
 
 test('l’espace graphe prend ses outils au contexte, il ne les recopie pas', () => {
@@ -957,6 +977,32 @@ test('un geste qui retire des raccords le dit toujours, même s’il a créé un
     },
     onDismiss: () => {},
   }));
-  assert.match(html, /1 raccord\(s\) ont été retirés/);
+  assert.match(html, /1 raccord a été retiré/);
   assert.doesNotMatch(html, /Créé|Montrer/);
+});
+
+test('le CSS des actions à corriger : mise en page pour tous, couleurs sauf danger et désactivé', () => {
+  const css = readFileSync(
+    new URL('../src/components/layout/ValidationPill.css', import.meta.url),
+    'utf8',
+  );
+  const rule = (selector) => {
+    const start = css.indexOf(`${selector} {`);
+    assert.notEqual(start, -1, `règle absente : ${selector}`);
+    return css.slice(start, css.indexOf('}', start));
+  };
+  const layout = rule('.validation-pill-details-actions .btn-xs');
+  for (const declaration of ['white-space: normal', 'overflow-wrap: anywhere', 'height: auto', 'min-height: 26px', 'text-align: left']) {
+    assert.ok(layout.includes(declaration), `mise en page : ${declaration}`);
+  }
+  assert.doesNotMatch(layout, /color|background/);
+
+  const colors = rule('.validation-pill-details-actions .btn-xs:not(.btn-danger-outline):not(:disabled)');
+  assert.match(colors, /color: var\(--warning-text\)/);
+  assert.match(colors, /border-color: var\(--warning-border\)/);
+  assert.doesNotMatch(colors, /white-space|height/);
+  assert.match(
+    css,
+    /\.validation-pill-details-actions \.btn-xs:not\(\.btn-danger-outline\):not\(:disabled\):hover,\s*\.validation-pill-details-actions \.btn-xs:not\(\.btn-danger-outline\):not\(:disabled\):active \{/,
+  );
 });

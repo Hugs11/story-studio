@@ -1,3 +1,13 @@
+import { landAggregate, prepareAggregateLanding } from '../components/AggregatePacks/aggregateLanding.js';
+import { catalogueAssemblyApi } from '../store/catalogue/catalogueAssemblyApi.js';
+import { copyMediaToWorkspace } from '../store/projectIO.js';
+import { createElement, useEffect, useRef } from 'react';
+import i18next from 'i18next';
+import { translateHome as t } from '../i18n/homePresentation.js';
+import { HomeText } from '../i18n/useHomeTranslation.js';
+import { presentUserMessage } from '../i18n/userMessage.js';
+import { presentImportWarning } from '../i18n/importWarnings.js';
+import { ensureProjectStorage } from '../store/projectStorage';
 import { logger } from '../utils/logger';
 import { bumpPackVersion } from '../utils/packConvention';
 import { DEFAULT_PROJECT } from '../store/projectStore';
@@ -36,12 +46,30 @@ export function useProjectLifecycle({
   setPendingSimulateZip,
   setImportNotice,
   showErrorDialog,
+  onOpenCatalogue = null,
+  confirmBackgroundWork = async () => true,
 }) {
+  const importNoticeRef = useRef(null);
+  useEffect(() => {
+    const refresh = () => {
+      const owned = importNoticeRef.current;
+      if (!owned) return;
+      const example = presentImportWarning(owned.warning);
+      const next = example ? t('home:project.landing.importNoticeExample', { example }) : t('home:project.landing.importNotice');
+      setImportNotice((current) => current === owned.text ? next : current);
+      owned.text = next;
+    };
+    i18next.on('languageChanged', refresh);
+    return () => i18next.off('languageChanged', refresh);
+  }, [setImportNotice]);
+
   // Retour à l'accueil : PAS de nouvelle session, c'est un reset. Nettoyage
   // complet mémoire + session + jobs ; après quoi projectType est null → ModeSelector.
-  async function handleNewProject() {
+  async function leaveProject(beforeReset = null) {
+    if (!await confirmBackgroundWork()) return false;
     const canContinue = await askSaveBeforeLeaveCurrent(handleSave);
-    if (!canContinue) return;
+    if (!canContinue) return false;
+    beforeReset?.();
     store.resetProject();
     setMediaLibraryPaths([]);
     savedSnapshotRef.current = null;
@@ -51,6 +79,13 @@ export function useProjectLifecycle({
     resetWorkSession();
     sdStore.clearDone();
     xttsStore.clearDone();
+    return true;
+  }
+
+  async function handleNewProject() { return leaveProject(); }
+
+  async function handleReturnToCatalogue() {
+    return leaveProject(onOpenCatalogue);
   }
 
   async function handleSelectProjectType(type) {
@@ -61,8 +96,9 @@ export function useProjectLifecycle({
     } catch (error) {
       logger.error('session:start-error', error);
       showErrorDialog({
-        title: 'Nouveau projet',
-        message: `Impossible de préparer le dossier de travail : ${error}`,
+        title: createElement(HomeText, { messageKey: 'home:project.creation.title' }),
+        technicalDetail: presentUserMessage(error, { allowLegacyFrench: false }).technicalDetail,
+        message: { userMessage: error, codedOnly: true, prefix: { key: 'home:project.landing.preparePrefix' }, suffix: `` },
       });
     }
   }
@@ -79,16 +115,17 @@ export function useProjectLifecycle({
   // Lève en cas d'échec ; la session créée est nettoyée pour revenir proprement
   // à l'accueil (le funnel ré-affiche alors la zone de dépôt).
   async function handleLandEditablePack({ zipPath, packLabel }) {
-    await runFunnelLanding('pack', async (workspaceDir) => {
+    await runFunnelLanding('pack', async (workspaceDir, session) => {
       const transformed = await unpackZipIntoBlankProject({
         zipPath,
         zipName: packLabel,
         workspaceDir,
         // Le pack remplace le travail ouvert : il part du projet par défaut,
         // comme depuis l'accueil, jamais du projet encore affiché.
-        baseProject: DEFAULT_PROJECT,
+        baseProject: ensureProjectStorage(DEFAULT_PROJECT),
+        ephemeral: session?.mode !== 'project',
       });
-      if (!transformed) throw new Error('Aucune histoire éditable trouvée dans ce pack.');
+      if (!transformed) throw { key: 'home:project.landing.noStories', params: {} };
       // Suggérer une version incrémentée (_V2 si aucune) et forcer la modal de
       // métadonnées pré-remplie à la première génération du pack importé.
       const landedProject = transformed.project.packMetadata
@@ -103,7 +140,7 @@ export function useProjectLifecycle({
       // Comme l'atterrissage graphe : nouvelle époque, rien de l'ancien projet.
       const depthOutcome = store.loadProject(landedProject);
       if (!depthOutcome.allowed) {
-        throw new Error(depthOutcome.message || 'Limite d’imbrication des Dossiers atteinte.');
+        throw depthOutcome.message || { key: 'home:project.landing.depthLimit', params: {} };
       }
       store.setSelectedId('root');
       // Comme l'atterrissage graphe : ni les étiquettes, ni la médiathèque, ni
@@ -116,15 +153,38 @@ export function useProjectLifecycle({
       store.markPristine();
       importedPackPendingMetaRef.current = true;
       if (transformed.advancedTransitionsDetected) {
-        const firstWarning = transformed.unresolvedTransitions[0]?.message;
-        setImportNotice(
-          "Certaines transitions du pack importé n'ont pas pu être modélisées complètement. "
-          + "Story Studio a conservé la structure reconnue, mais vérifie les retours concernés avant export."
-          + (firstWarning ? ` Exemple : ${firstWarning}` : '')
-        );
+        const firstWarning = presentImportWarning(transformed.unresolvedTransitions[0]);
+        const text = firstWarning ? t('home:project.landing.importNoticeExample', { example: firstWarning }) : t('home:project.landing.importNotice');
+        importNoticeRef.current = { text, warning: transformed.unresolvedTransitions[0] };
+        setImportNotice(text);
       }
       logger.info(`edit-pack:landed zip='${zipPath}'`);
     }, { errorLog: 'edit-pack:land-error' });
+  }
+
+  async function handleLandAggregate({ draft, preparation }) {
+    return landAggregate({
+      confirmBackgroundWork,
+      confirmSave: () => askSaveBeforeLeaveCurrent(handleSave),
+      runLanding: runFunnelLanding,
+      prepare: workspaceDir => prepareAggregateLanding({
+        draft, preparation, workspaceDir,
+        transfer: catalogueAssemblyApi.transfer,
+        requestId: crypto.randomUUID(),
+        copy: (path, dir) => copyMediaToWorkspace(path, dir, undefined, draft.metadata.title),
+      }),
+      install: project => {
+        const outcome = store.loadProject(project);
+        if (!outcome.allowed) throw outcome.message || { key: 'home:project.landing.depthLimit', params: {} };
+        store.setSelectedId('root');
+        store.setMediaTags({});
+        setMediaLibraryPaths([]);
+        savedSnapshotRef.current = null;
+        importedPackPendingMetaRef.current = false;
+        sdStore.clearDone();
+        xttsStore.clearDone();
+      },
+    });
   }
 
   // Pack non éditable : le funnel propose la simulation. Session éphémère
@@ -137,9 +197,11 @@ export function useProjectLifecycle({
 
   return {
     handleNewProject,
+    handleReturnToCatalogue,
     handleSelectProjectType,
     handleEditExistingPack,
     handleLandEditablePack,
+    handleLandAggregate,
     handleSimulatePackReady,
   };
 }

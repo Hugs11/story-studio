@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, UserMessage};
 use serde::Serialize;
 
 // Writer de production du projet avancé : il conduit le payload
@@ -9,6 +10,9 @@ pub(crate) mod advanced_export;
 // seul relecteur, deux appelants qui lui décrivent leurs attentes.
 pub(crate) mod archive_review;
 mod assets;
+#[cfg(test)]
+pub(crate) use assets::advanced::format::parse_mpeg_frame_header;
+pub(crate) use assets::advanced::prepare_storyteller_assets;
 // API headless exercée par sa suite dédiée, mais qui n'a volontairement pas
 // encore de consommateur produit.
 pub(crate) mod authoring;
@@ -36,9 +40,11 @@ mod integrity;
 pub(crate) mod observed_gates;
 mod option_selection;
 // Assemblage du ZIP local, commun au writer Libre et à l'export avancé.
+pub(crate) mod output_identity;
 mod pack_zip;
 pub(crate) mod persistence;
 mod port_rules;
+pub(crate) use port_rules::{port_violations, PortViolation};
 #[allow(dead_code)] // API headless pas encore raccordée au produit.
 pub(crate) mod preparation;
 mod presence;
@@ -149,11 +155,12 @@ fn build_story_document(report: &NativeAssetPreparationReport) -> Result<StoryDo
                 .collect::<Vec<_>>()
                 .join(" | ");
             return Err(if detail.is_empty() {
-                "Génération bloquée : le modèle canonique n'est pas fidèle au graphe natif d'origine.".to_string()
+                UserMessage::new(codes::GENERATION_CANONICAL_GRAPH_UNFAITHFUL).into_transport()
             } else {
-                format!(
-                    "Génération bloquée : le modèle canonique n'est pas fidèle au graphe natif d'origine ({detail})."
-                )
+                UserMessage::new(codes::EXPORT_CANONICAL_GRAPH_DIVERGENCE_DETAIL)
+                    .param("detail", (detail).to_string())
+                    .with_detail(detail)
+                    .into_transport()
             });
         }
     }
@@ -173,9 +180,14 @@ fn build_canonical_story_document(
                 let mut builder = StoryBuilder::new(report);
                 builder.build()
             })
-            .map_err(|error| format!("Impossible de démarrer la génération native : {error}"))?;
+            .map_err(|error| {
+                UserMessage::new(codes::GENERATION_NATIVE_TASK_START_FAILED)
+                    .param("reason", (error).to_string())
+                    .with_detail((error).to_string())
+                    .into_transport()
+            })?;
         worker.join().map_err(|_| {
-            "La construction du document natif s'est interrompue de façon inattendue.".to_string()
+            UserMessage::new(codes::GENERATION_DOCUMENT_TASK_INTERRUPTED).into_transport()
         })?
     })
 }

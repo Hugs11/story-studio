@@ -1,0 +1,7 @@
+{
+  "preparationId": "preparation-a",
+  "zipPath": "/cache/checker/pack.zip",
+  "source": { "exemplarId": "pack-a", "path": "/packs/bundle.7z", "childId": "pack-a" },
+  "temporary": true,
+  "contentToken": "content-and-identity"
+}

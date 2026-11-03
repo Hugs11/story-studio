@@ -1,0 +1,26 @@
+@import '../CatalogueAgeBadges.css';
+
+.catalogue-card-tag-indicator { position: relative; display: flex; flex: 1 1 0; align-items: center; gap: 4px; min-width: 0; }
+.catalogue-card-tag-overflow svg { flex-shrink: 0; }
+.catalogue-card-tag-measure-clip { position: absolute; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
+.catalogue-card-tag-measure { display: flex; width: max-content; gap: 4px; }
+.catalogue-menu.catalogue-card-tags-menu { width: max-content; max-width: min(18rem, calc(100vw - 16px)); max-height: min(60vh, 20rem); padding: 5px; border-radius: var(--radius-md); }
+.catalogue-card-tags-menu button.catalogue-menu-item {
+  appearance: none;
+  display: flex;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+  box-shadow: none;
+}
+.catalogue-card-tags-menu button.catalogue-menu-item:hover,
+.catalogue-card-tags-menu button.catalogue-menu-item:focus-visible { background: var(--control-bg-hover); }

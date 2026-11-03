@@ -107,6 +107,17 @@ const wrenchNode = [
   ['path', { d: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z' }],
 ];
 
+const settingsNode = [
+  ['path', { d: 'M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915' }],
+  ['circle', { cx: '12', cy: '12', r: '3' }],
+];
+
+const circleHelpNode = [
+  ['circle', { cx: '12', cy: '12', r: '10' }],
+  ['path', { d: 'M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3' }],
+  ['path', { d: 'M12 17h.01' }],
+];
+
 const filePlusNode = [
   ['path', { d: 'M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z' }],
   ['path', { d: 'M14 2v5a1 1 0 0 0 1 1h5' }],
@@ -247,8 +258,13 @@ const caseUpperNode = [
   ['path', { d: 'M3.304 13h6.392' }],
 ];
 
-// Lucide « pencil ». `PenLine` existe déjà mais porte un trait de soulignement
-// qui dit « renommer » ; celle-ci dit « retoucher ».
+// Lucide « square-pen » : ouvrir un pack ou un projet dans un éditeur.
+const squarePenNode = [
+  ['path', { d: 'M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' }],
+  ['path', { d: 'M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z' }],
+];
+
+// Lucide « pencil » : retoucher un champ.
 const pencilNode = [
   ['path', { d: 'M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z' }],
   ['path', { d: 'm15 5 4 4' }],
@@ -424,6 +440,44 @@ const checkNode = [
   ['path', { d: 'M20 6 9 17l-5-5' }],
 ];
 
+const starNode = [
+  ['path', { d: 'M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z' }],
+];
+
+const wifiOffNode = [
+  ['path', { d: 'M12 20h.01' }],
+  ['path', { d: 'M8.5 16.429a5 5 0 0 1 7 0' }],
+  ['path', { d: 'M5 12.859a10 10 0 0 1 5.17-2.69' }],
+  ['path', { d: 'M19 12.859a10 10 0 0 0-2.007-1.523' }],
+  ['path', { d: 'M2 8.82a15 15 0 0 1 4.177-2.643' }],
+  ['path', { d: 'M22 8.82a15 15 0 0 0-11.288-3.764' }],
+  ['path', { d: 'm2 2 20 20' }],
+];
+
+// Lucide `arrow-up-narrow-wide` et `arrow-down-wide-narrow` (sens du tri).
+const arrowUpNarrowWideNode = [
+  ['path', { d: 'm3 8 4-4 4 4' }],
+  ['path', { d: 'M7 4v16' }],
+  ['path', { d: 'M11 12h4' }],
+  ['path', { d: 'M11 16h7' }],
+  ['path', { d: 'M11 20h10' }],
+];
+
+const arrowDownWideNarrowNode = [
+  ['path', { d: 'm3 16 4 4 4-4' }],
+  ['path', { d: 'M7 20V4' }],
+  ['path', { d: 'M11 4h10' }],
+  ['path', { d: 'M11 8h7' }],
+  ['path', { d: 'M11 12h4' }],
+];
+
+const fileXNode = [
+  ['path', { d: 'M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z' }],
+  ['path', { d: 'M14 2v5a1 1 0 0 0 1 1h5' }],
+  ['path', { d: 'm14.5 12.5-5 5' }],
+  ['path', { d: 'm9.5 12.5 5 5' }],
+];
+
 const xNode = [
   ['path', { d: 'M18 6 6 18' }],
   ['path', { d: 'm6 6 12 12' }],
@@ -544,6 +598,13 @@ const mapNode = [
 
 // Le rangement du graphe : un balai, parce qu'il remet de l'ordre sans rien
 // changer à l'histoire.
+const broomNode = [
+  ['path', { d: 'M13.5 10.5 22 2' }],
+  ['path', { d: 'M14.734 13.841a2 2 0 00-.314-2.42L12.58 9.58a2 2 0 00-2.421-.314l-7.657 4.461A1 1 0 002.3 15.3l6.403 6.403a1 1 0 001.571-.204z' }],
+  ['path', { d: 'm5 18 2-2' }],
+  ['path', { d: 'm7.699 10.7 5.602 5.601' }],
+];
+
 const broomSparklesNode = [
   ['path', { d: 'M11 2v2' }],
   ['path', { d: 'M12 3h-2' }],
@@ -565,9 +626,12 @@ export const Network = createLocalLucideIcon(networkNode);
 // `MapIcon` et non `Map` : un import nommé `Map` masquerait le `Map` natif
 // dans le module qui l'importe.
 export const MapIcon = createLocalLucideIcon(mapNode);
+export const Broom = createLocalLucideIcon(broomNode);
 export const BroomSparkles = createLocalLucideIcon(broomSparklesNode);
 export const Waypoints = createLocalLucideIcon(waypointsNode);
 export const Wrench = createLocalLucideIcon(wrenchNode);
+export const Settings = createLocalLucideIcon(settingsNode);
+export const CircleHelp = createLocalLucideIcon(circleHelpNode);
 export const FilePlus = createLocalLucideIcon(filePlusNode);
 export const Folder = createLocalLucideIcon(folderNode);
 export const FolderOpen = createLocalLucideIcon(folderOpenNode);
@@ -589,6 +653,7 @@ export const SkipForward = createLocalLucideIcon(skipForwardNode);
 export const Scissors = createLocalLucideIcon(scissorsNode);
 export const Crop = createLocalLucideIcon(cropNode);
 export const ArrowRightLeft = createLocalLucideIcon(arrowRightLeftNode);
+export const SquarePen = createLocalLucideIcon(squarePenNode);
 export const Pencil = createLocalLucideIcon(pencilNode);
 export const CaseUpper = createLocalLucideIcon(caseUpperNode);
 export const RotateCcw = createLocalLucideIcon(rotateCcwNode);
@@ -628,6 +693,8 @@ export const Speech = createLocalLucideIcon(speechNode);
 export const Info = createLocalLucideIcon(infoNode);
 export const BookOpenText = createLocalLucideIcon(bookOpenTextNode);
 export const Search = createLocalLucideIcon(searchNode);
+export const ArrowUpNarrowWide = createLocalLucideIcon(arrowUpNarrowWideNode);
+export const ArrowDownWideNarrow = createLocalLucideIcon(arrowDownWideNarrowNode);
 export const Rss = createLocalLucideIcon(rssNode);
 export const Youtube = createLocalLucideIcon(youtubeNode);
 export const Ellipsis = createLocalLucideIcon(ellipsisNode);
@@ -639,3 +706,92 @@ export const ListTree = createLocalLucideIcon(listTreeNode);
 export const Rows2 = createLocalLucideIcon(rows2Node);
 export const Columns2 = createLocalLucideIcon(columns2Node);
 export const Plus = createLocalLucideIcon(plusNode);
+export const Star = createLocalLucideIcon(starNode);
+export const WifiOff = createLocalLucideIcon(wifiOffNode);
+export const FileX = createLocalLucideIcon(fileXNode);
+
+// Deux vues du catalogue : grille de vignettes et liste à puces.
+export const Grid2X2 = createLocalLucideIcon([
+  ['rect', { x: '3', y: '3', width: '7', height: '7', rx: '1' }],
+  ['rect', { x: '14', y: '3', width: '7', height: '7', rx: '1' }],
+  ['rect', { x: '3', y: '14', width: '7', height: '7', rx: '1' }],
+  ['rect', { x: '14', y: '14', width: '7', height: '7', rx: '1' }],
+]);
+export const List = createLocalLucideIcon([
+  ['path', { d: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01' }],
+]);
+
+export const Tag = createLocalLucideIcon([
+  ['path', { d: 'M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z' }],
+  ['circle', { cx: '7.5', cy: '7.5', r: '.5', fill: 'currentColor' }],
+]);
+
+export const PanelRight = createLocalLucideIcon([['rect', { x: 3, y: 3, width: 18, height: 18, rx: 2 }], ['path', { d: 'M15 3v18' }]]);
+export const ListFilter = createLocalLucideIcon([['path', { d: 'M3 6h18M6 12h12M10 18h4' }]]);
+export const Columns3 = createLocalLucideIcon([['rect', { x: 3, y: 3, width: 18, height: 18, rx: 2 }], ['path', { d: 'M9 3v18M15 3v18' }]]);
+export const SearchX = createLocalLucideIcon([['circle', { cx: 11, cy: 11, r: 8 }], ['path', { d: 'm21 21-4.3-4.3M8 8l6 6m0-6-6 6' }]]);
+export const Library = createLocalLucideIcon([['path', { d: 'M4 4v16M8 4v16m4-16 5-1 4 16-5 1z' }]]);
+export const CircleDashed = createLocalLucideIcon([
+  ['path', { d: 'M10.1 2.182a10 10 0 0 1 3.8 0' }], ['path', { d: 'M13.9 21.818a10 10 0 0 1-3.8 0' }],
+  ['path', { d: 'M17.609 3.721a10 10 0 0 1 2.69 2.7' }], ['path', { d: 'M2.182 13.9a10 10 0 0 1 0-3.8' }],
+  ['path', { d: 'M20.279 17.609a10 10 0 0 1-2.7 2.69' }], ['path', { d: 'M21.818 10.1a10 10 0 0 1 0 3.8' }],
+  ['path', { d: 'M3.721 6.391a10 10 0 0 1 2.7-2.69' }], ['path', { d: 'M6.391 20.279a10 10 0 0 1-2.69-2.7' }],
+]);
+export const Languages = createLocalLucideIcon([
+  ['path', { d: 'm5 8 6 6' }], ['path', { d: 'm4 14 6-6 2-3' }], ['path', { d: 'M2 5h12' }], ['path', { d: 'M7 2h1' }],
+  ['path', { d: 'm22 22-5-10-5 10' }], ['path', { d: 'M14 18h6' }],
+]);
+export const Maximize2 = createLocalLucideIcon([
+  ['path', { d: 'M15 3h6v6' }],
+  ['path', { d: 'm21 3-7 7' }],
+  ['path', { d: 'm3 21 7-7' }],
+  ['path', { d: 'M9 21H3v-6' }],
+]);
+
+export const ArrowUp = createLocalLucideIcon([
+  ['path', { d: 'm5 12 7-7 7 7', key: 'head' }],
+  ['path', { d: 'M12 19V5', key: 'shaft' }],
+]);
+export const ArrowDown = createLocalLucideIcon([
+  ['path', { d: 'M12 5v14', key: 'shaft' }],
+  ['path', { d: 'm19 12-7 7-7-7', key: 'head' }],
+]);
+
+export const Speaker = createLocalLucideIcon([
+  ['rect', { x: 4, y: 2, width: 16, height: 20, rx: 2 }],
+  ['circle', { cx: 12, cy: 14, r: 4 }], ['circle', { cx: 12, cy: 6, r: .5 }],
+]);
+export const Eject = createLocalLucideIcon([
+  ['path', { d: 'M4 13a1 1 0 0 1-.72-1.695l7.257-7.668a2 2 0 0 1 2.926 0l7.256 7.668A1 1 0 0 1 20 13z', key: 'triangle' }],
+  ['rect', { x: 3, y: 17, width: 18, height: 4, rx: 1, key: 'bar' }],
+]);
+export const PanelLeftClose = createLocalLucideIcon([
+  ['rect', { x: 3, y: 3, width: 18, height: 18, rx: 2 }],
+  ['path', { d: 'M9 3v18m7-13-4 4 4 4' }],
+]);
+export const PanelLeftOpen = createLocalLucideIcon([
+  ['rect', { x: 3, y: 3, width: 18, height: 18, rx: 2 }],
+  ['path', { d: 'M9 3v18m4-13 4 4-4 4' }],
+]);
+export const EyeOff = createLocalLucideIcon([
+  ['path', { d: 'm3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.2A10 10 0 0 1 12 5c7 0 10 7 10 7a15 15 0 0 1-3 4M6.6 6.6A17 17 0 0 0 2 12s3 7 10 7a11 11 0 0 0 5.4-1.4' }],
+]);
+export const BadgeCheck = createLocalLucideIcon([
+  ['path', { d: 'm12 2 3 2 4 1 1 4 2 3-2 3-1 4-4 1-3 2-3-2-4-1-1-4-2-3 2-3 1-4 4-1z' }],
+  ['path', { d: 'm8 12 3 3 5-6' }],
+]);
+export const Lock = createLocalLucideIcon([
+  ['rect', { x: 4, y: 10, width: 16, height: 12, rx: 2 }], ['path', { d: 'M8 10V6a4 4 0 0 1 8 0v4' }],
+]);
+export const CircleAlert = createLocalLucideIcon([
+  ['circle', { cx: 12, cy: 12, r: 10 }], ['path', { d: 'M12 8v4m0 4h.01' }],
+]);
+export const History = createLocalLucideIcon([
+  ['path', { d: 'M3 3v6h6M3 9a9 9 0 1 1 0 6m9-9v6l4 2' }],
+]);
+export const Unplug = createLocalLucideIcon([
+  ['path', { d: 'm3 21 4-4m-2-4 6 6m-5-5 3-3 4 4-3 3m5-13 6 6m-5-5-3 3 4 4 3-3m-1-5 2-2M9 3v2m12 10h-2' }],
+]);
+export const Send = createLocalLucideIcon([
+  ['path', { d: 'M22 2 11 13' }], ['path', { d: 'M22 2 15 22l-4-9-9-4z' }],
+]);

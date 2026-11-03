@@ -16,6 +16,7 @@
 //! référencée n'est donc jamais supprimée — pas par prudence, mais parce que la
 //! suppression n'existe pas ici.
 
+use crate::support::user_message::{codes, UserMessage};
 use serde::{Deserialize, Serialize};
 
 use super::structure::unique_stage_index;
@@ -211,7 +212,9 @@ pub(crate) fn repoint_media(
             format!(
                 "Aucun Stage ne référence « {asset_ref} » : un remplacement ne crée pas la référence qu'il remplace."
             ),
-        ));
+        )
+.with_user_message(UserMessage::new(codes::UNKNOWN_ASSET_REF)
+.param("asset_ref", (asset_ref).to_string())));
     }
     match index_of(bindings, asset_ref) {
         Some(index) => {
@@ -259,7 +262,8 @@ pub(crate) fn bind_created_media(
             "INVALID_ASSET_REF",
             path,
             "Une référence de média ne peut pas être vide.".to_string(),
-        ));
+        )
+        .with_user_message(UserMessage::new(codes::INVALID_ASSET_REF)));
     }
     let existing = index_of(bindings, asset_ref);
     match (&media.location, existing) {
@@ -269,12 +273,16 @@ pub(crate) fn bind_created_media(
             format!(
                 "« {asset_ref} » est déjà liée : partager le média se demande sans chemin, la re-pointer est le geste de remplacement."
             ),
-        )),
+        )
+.with_user_message(UserMessage::new(codes::ASSET_REF_ALREADY_BOUND)
+.param("asset_ref", (asset_ref).to_string()))),
         (None, None) => Err(GestureError::new(
             "UNBOUND_ASSET_REF",
             path,
             format!("« {asset_ref} » n'est liée à aucun fichier : donner son emplacement."),
-        )),
+        )
+.with_user_message(UserMessage::new(codes::UNBOUND_ASSET_REF)
+.param("asset_ref", (asset_ref).to_string()))),
         (Some(location), None) => {
             bindings.push(AdvancedMediaBinding {
                 asset_ref: asset_ref.to_string(),
@@ -351,7 +359,8 @@ pub(crate) fn validate_media_bindings(
                 "INVALID_MEDIA_BINDING",
                 &format!("{path}/assetRef"),
                 "Une liaison porte une référence de dialecte vide.".to_string(),
-            ));
+            )
+            .with_user_message(UserMessage::new(codes::INVALID_MEDIA_BINDING)));
         }
         if bindings[..index]
             .iter()
@@ -361,6 +370,10 @@ pub(crate) fn validate_media_bindings(
                 "DUPLICATE_MEDIA_BINDING",
                 &format!("{path}/assetRef"),
                 format!("« {} » est liée deux fois.", binding.asset_ref),
+            )
+            .with_user_message(
+                UserMessage::new(codes::DUPLICATE_MEDIA_BINDING)
+                    .param("assetRef", (binding.asset_ref).to_string()),
             ));
         }
         if binding
@@ -372,6 +385,10 @@ pub(crate) fn validate_media_bindings(
                 "INVALID_MEDIA_BINDING",
                 &format!("{path}/path"),
                 "Un chemin de liaison est vide : utiliser null.".to_string(),
+            )
+            .with_user_message(
+                UserMessage::new(codes::INVALID_MEDIA_BINDING)
+                    .param("context", codes::INVALID_MEDIA_BINDING_EMPTY_PATH),
             ));
         }
         if binding.status == MediaBindingStatus::Resolved && binding.path.is_none() {
@@ -382,7 +399,9 @@ pub(crate) fn validate_media_bindings(
                     "« {} » est résolue sans chemin ; elle reste manquante tant que son fichier est inconnu.",
                     binding.asset_ref
                 ),
-            ));
+            )
+.with_user_message(UserMessage::new(codes::INVALID_MEDIA_BINDING)
+.param("binding_asset_ref", (binding.asset_ref).to_string()).param("context", codes::INVALID_MEDIA_BINDING_RESOLVED_PATH)));
         }
     }
     Ok(())

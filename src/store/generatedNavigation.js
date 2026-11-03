@@ -1,3 +1,4 @@
+import { translateTree as t } from '../i18n/treePresentation.js';
 import {
   NAV_TARGET_NEXT_STORY,
   decodeNavigationMenuId,
@@ -92,7 +93,7 @@ export function getDefaultPackEntryDestination(project) {
   if (!firstEntry?.id) return null;
   return {
     id: firstEntry.id,
-    name: firstEntry.name || '(sans nom)',
+    name: firstEntry.name || t('tree:navigation.name.fallback'),
     type: firstEntry.type,
   };
 }

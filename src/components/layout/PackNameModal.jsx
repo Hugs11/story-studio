@@ -1,3 +1,9 @@
+import { readPackIdentityLock } from '../../store/officialProvenance.js';
+import { presentStoredError, presentUserMessage } from '../../i18n/userMessage.js';
+import { TechnicalDetail } from '../common/UserMessage.jsx';
+import { Trans } from 'react-i18next';
+import { translateHome as t } from '../../i18n/homePresentation.js';
+import { useHomeTranslation } from '../../i18n/useHomeTranslation.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { exists } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
@@ -5,6 +11,7 @@ import { CircleCheck, Image, Package, RotateCcw, TriangleAlert } from '../icons/
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
 import { ImageField } from '../editors/ImageField';
+import { PackAudioProcessingFields } from './PackAudioProcessingFields';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { generateConventionName } from '../../utils/packConvention';
@@ -16,7 +23,7 @@ import {
 } from '../../store/advancedExport/archiveName';
 import { generateUuid } from '../../utils/uuid';
 import { shouldPromptRegenerateImportedUuid } from '../../store/projectHelpers';
-import { packIdentityRefusal } from '../../store/packIdentityCheck';
+import { parsePackAudioEdgeSilenceOverride, readPackAudioEdgeSilenceOverrides, readPackAudioProcessing } from '../../config/audioProcessing';
 import './PackNameModal.css';
 
 // La fiche du pack, **commune aux deux éditeurs**.
@@ -68,7 +75,7 @@ function defaultDraft(packMetadata = {}) {
   };
 }
 
-function normalizeDraft(draft) {
+function normalizeDraft(draft, allowUnknownAge = false) {
   const namingMode = draft.namingMode === 'legacy' ? 'legacy' : 'convention';
   return {
     ...draft,
@@ -79,7 +86,7 @@ function normalizeDraft(draft) {
     description: String(draft.description || '').trim(),
     uuid: String(draft.uuid || '').trim(),
     originalUuid: String(draft.originalUuid || '').trim(),
-    minAge: String(draft.minAge || '3').replace(/\D/g, '') || '3',
+    minAge: allowUnknownAge ? String(draft.minAge ?? '').replace(/\D/g, '') : String(draft.minAge || '3').replace(/\D/g, '') || '3',
     version: normalizeVersion(draft.version),
     namingMode,
   };
@@ -108,7 +115,7 @@ function countStats(project) {
 }
 
 function filenameTokens(exportName) {
-  if (!exportName) return [{ kind: 'empty', text: 'Titre requis pour générer le nom exporté', insert: '' }];
+  if (!exportName) return [{ kind: 'empty', text: t('home:packName.filename.required'), insert: '' }];
   const tokens = [];
   let rest = String(exportName || '');
   const ageMatch = rest.match(/^(\d+\+\])/);
@@ -148,17 +155,34 @@ export function PackNameModal({
   exportFolder = null,
   generateDisabled = false,
   embedded = false,
+  allowUnknownAge = packMetadata?.minAge === '',
   promptRegenerateUuid = false,
   // Présent seulement pour un projet graphe : le brouillon lu dans le document,
   // la gouvernance de chaque champ et les compteurs de la structure.
   advanced = null,
   onSave,
   onSaveAndGenerate,
+  primaryActionLabel = null,
+  onDraftChange = null,
   onClose,
 }) {
+  const { t } = useHomeTranslation();
   const isAdvanced = !!advanced;
   // Côté graphe, l'UUID présenté est l'identité réellement utilisée à l'export.
   const governance = advanced?.governance ?? {};
+  const [freeIdentityLocked, setFreeIdentityLocked] = useState(false);
+  const [identityLockPending, setIdentityLockPending] = useState(!isAdvanced && open);
+  const uuidLocked = isAdvanced ? !governance.uuid.editable : freeIdentityLocked;
+  useEffect(() => {
+    if (!open || isAdvanced) return;
+    let cancelled = false;
+    setIdentityLockPending(true);
+    readPackIdentityLock(packMetadata?.uuid, project?.officialProvenance, invoke)
+      .then((locked) => { if (!cancelled) setFreeIdentityLocked(locked); })
+      .catch((error) => { if (!cancelled) { setFreeIdentityLocked(true); setNotice({ userMessage: error, codedOnly: true }); } })
+      .finally(() => { if (!cancelled) setIdentityLockPending(false); });
+    return () => { cancelled = true; };
+  }, [open, isAdvanced, packMetadata?.uuid, project?.officialProvenance]);
   // Côté graphe, la fiche compose sa source des deux endroits : l'enveloppe du
   // projet pour le nommage, le document pour ce qu'il porte réellement. L'ordre
   // compte — le document est l'autorité sur le titre et la version, et une
@@ -167,7 +191,16 @@ export function PackNameModal({
     () => (advanced ? { ...(packMetadata ?? {}), ...advanced.draft } : packMetadata),
     [advanced, packMetadata],
   );
+  // Le traitement demandé appartient au projet, pas aux métadonnées affichées
+  // ici. La fiche ne fait que le brouillonner avec les autres changements :
+  // Annuler ne touche donc jamais `globalOptions`.
+  const audioEditable = !embedded && project != null;
+  const audioSource = useMemo(
+    () => ({ ...readPackAudioProcessing(project?.globalOptions), ...readPackAudioEdgeSilenceOverrides(project?.globalOptions) }),
+    [project?.globalOptions?.harmonizeLoudness, project?.globalOptions?.silenceMode, project?.globalOptions?.leadingSilenceSec, project?.globalOptions?.trailingSilenceSec],
+  );
   const [draft, setDraft] = useState(() => defaultDraft(source));
+  const [audioDraft, setAudioDraft] = useState(() => audioSource);
   // Vrai dès que l'auteur a choisi lui-même un mode de nommage.
   //
   // Sans ce témoin, toucher un champ de la convention bascule la fiche en mode
@@ -190,7 +223,10 @@ export function PackNameModal({
   // cours fait battre l'hôte : se fier à l'identité effaçait la saisie en cours
   // à chaque progression. La signature ne change que si le document change
   // réellement — auquel cas reprendre ses valeurs est la bonne réponse.
-  const sourceSignature = JSON.stringify(source ?? {});
+  const sourceSignature = JSON.stringify({
+    metadata: source ?? {},
+    audio: audioEditable ? audioSource : null,
+  });
   const syncedSignatureRef = useRef(null);
   useEffect(() => {
     if (!open) {
@@ -198,19 +234,25 @@ export function PackNameModal({
       return;
     }
     if (syncedSignatureRef.current === sourceSignature) return;
+    if (onDraftChange && syncedSignatureRef.current !== null) {
+      syncedSignatureRef.current = sourceSignature;
+      return;
+    }
     syncedSignatureRef.current = sourceSignature;
-    setDraft(defaultDraft(JSON.parse(sourceSignature)));
+    const parsedSource = JSON.parse(sourceSignature);
+    setDraft(defaultDraft(parsedSource.metadata));
+    setAudioDraft(parsedSource.audio ?? { ...readPackAudioProcessing(null), ...readPackAudioEdgeSilenceOverrides(null) });
     setCatalogDraft(catalogImage ?? null);
     setNamingChosen(false);
     setSaving(null);
     setNotice(null);
     // La vignette n'est relue qu'avec la source : la reprendre à chaque rendu
     // effacerait le choix en cours, comme pour le reste du brouillon.
-  }, [open, sourceSignature]);
+  }, [open, sourceSignature, onDraftChange]);
 
-  const normalizedDraft = useMemo(() => normalizeDraft(draft), [draft]);
+  const normalizedDraft = useMemo(() => normalizeDraft(draft, allowUnknownAge), [draft, allowUnknownAge]);
   const namingMode = normalizedDraft.namingMode;
-  const showImportedUuidHint = promptRegenerateUuid
+  const showImportedUuidHint = !uuidLocked && promptRegenerateUuid
     && shouldPromptRegenerateImportedUuid(normalizedDraft);
   const exportName = useMemo(() => {
     // Côté graphe, l'aperçu passe par **le composeur que la production
@@ -227,12 +269,12 @@ export function PackNameModal({
       ? (normalizedDraft.legacyExportName || normalizedDraft.title)
       : generateConventionName(normalizedDraft);
   }, [isAdvanced, normalizedDraft]);
-  const tokens = useMemo(() => filenameTokens(exportName), [exportName]);
+  const tokens = filenameTokens(exportName);
   const stats = useMemo(() => countStats(project), [project]);
   const hasExportName = namingMode === ARCHIVE_NAMING_FREE
     ? !!(normalizedDraft.legacyExportName || normalizedDraft.title)
     : !!normalizedDraft.title;
-  const currentAge = String(draft.minAge || '3').replace(/\D/g, '') || '3';
+  const currentAge = allowUnknownAge ? String(draft.minAge ?? '').replace(/\D/g, '') : String(draft.minAge || '3').replace(/\D/g, '') || '3';
   const customAgeValue = AGE_CHIPS.includes(currentAge) ? '' : currentAge;
 
   useEffect(() => {
@@ -268,20 +310,25 @@ export function PackNameModal({
   const NAMING_NEUTRAL_FIELDS = ['uuid', 'namingMode', 'legacyExportName'];
 
   function updateField(field, value) {
-    setDraft((current) => ({
-      ...current,
+    if (field === 'uuid' && (uuidLocked || identityLockPending)) return;
+    const next = {
+      ...draft,
       // Côté graphe, un champ vidé reste vide : il repartira en « absent ».
       // Le replier sur 1 en ferait une valeur d'auteur que personne n'a posée.
       [field]: field === 'version' && !isAdvanced ? normalizeVersion(value) : value,
       namingMode: namingChosen || NAMING_NEUTRAL_FIELDS.includes(field)
-        ? current.namingMode
+        ? draft.namingMode
         : ARCHIVE_NAMING_CONVENTION,
-    }));
+    };
+    setDraft(next);
+    onDraftChange?.(next, field);
   }
 
   function chooseNamingMode(mode) {
     setNamingChosen(true);
-    setDraft((current) => ({ ...current, namingMode: mode }));
+    const next = { ...draft, namingMode: mode };
+    setDraft(next);
+    onDraftChange?.(next);
   }
 
   function regenerateUuid() {
@@ -292,7 +339,15 @@ export function PackNameModal({
     updateField('minAge', String(value || '').replace(/\D/g, ''));
   }
 
+  function updateAudioField(field, value) {
+    setAudioDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  const audioDurationInvalid = audioEditable && ['leadingSilenceSec', 'trailingSilenceSec']
+    .some((field) => parsePackAudioEdgeSilenceOverride(audioDraft[field]) === undefined);
+
   async function submit(kind) {
+    if (audioDurationInvalid) return;
     // La proposition de régénération d'UUID (nouvelle révision d'un pack importé)
     // est gérée en amont de la génération dans App.jsx (handleSavePackMetadata),
     // via un dialogue in-app awaitable — pour qu'elle soit résolue AVANT l'ouverture
@@ -311,9 +366,18 @@ export function PackNameModal({
           // Ce qui ne compose que le nom du fichier, et vit dans l'enveloppe du
           // projet. Séparé du reste parce que l'appelant l'écrit autrement :
           // aucun geste, aucune entrée dans le pack.
-          naming: archiveNamingFields(normalizeDraft(draft)),
+          naming: archiveNamingFields(normalizeDraft(draft, allowUnknownAge)),
         }
-      : normalizeDraft(draft);
+      : normalizeDraft(draft, allowUnknownAge);
+    // L'agrégateur réutilise cette fiche pour les champs de nommage, mais son
+    // projet provisoire n'a pas encore de source ni de destination persistante
+    // pour les réglages audio. Ils ne sont donc ni montrés ni envoyés ici.
+    if (audioEditable) {
+      payload.harmonizeLoudness = audioDraft.harmonizeLoudness;
+      payload.silenceMode = audioDraft.silenceMode;
+      payload.leadingSilenceSec = parsePackAudioEdgeSilenceOverride(audioDraft.leadingSilenceSec);
+      payload.trailingSilenceSec = parsePackAudioEdgeSilenceOverride(audioDraft.trailingSilenceSec);
+    }
     // La vignette ne part que si elle a changé : un enregistrement sans rapport
     // ne réécrit pas l'image du catalogue.
     if (catalogEditable && catalogDraft !== (catalogImage ?? null)) payload.catalogImage = catalogDraft;
@@ -321,9 +385,10 @@ export function PackNameModal({
     setNotice(null);
     // Une graphie que les passerelles ne liraient pas est refusée ici, avec sa
     // raison, plutôt qu'à l'export. La fiche reste ouverte avec sa saisie.
-    const identityRefusal = await packIdentityRefusal(draft.uuid, invoke);
-    if (identityRefusal) {
-      setNotice(identityRefusal);
+    try {
+      await invoke('check_pack_identity', { value: String(draft.uuid ?? ''), currentUuid: String(source.uuid ?? ''), officialProvenance: project?.officialProvenance ?? 'unknown' });
+    } catch (error) {
+      setNotice({ userMessage: error, codedOnly: true, suffix: { key: 'home:packName.uuid.refusalSuffix' } });
       setSaving(null);
       return;
     }
@@ -336,57 +401,61 @@ export function PackNameModal({
       // Côté graphe, `onSave` rend sa décision : la fiche reste ouverte avec sa
       // saisie quand la demande n'a pas abouti, et dit pourquoi. Côté Libre,
       // rien n'est rendu et le comportement ne change pas.
-      if (decision?.result === 'kept') setNotice(decision.notice);
+      if (decision?.result === 'kept') setNotice(decision.noticeRef ?? decision.notice);
+    } catch (error) {
+      setNotice({ userMessage: error, codedOnly: true });
     } finally {
       setSaving(null);
     }
   }
 
   const collisionText = collision === 'collision'
-    ? 'Un ZIP du même nom existe déjà dans le dossier d’export'
+    ? t('home:packName.filename.collision')
     : collision === 'free'
-      ? 'Nom disponible dans le dossier d’export'
+      ? t('home:packName.filename.available')
       : exportFolder
-        ? 'Statut du nom en cours de vérification'
-        : "Aucun dossier d'export disponible";
-  const generateButtonDisabled = !!saving || !hasExportName || generateDisabled;
-  const generateButtonTooltip = saving
-    ? 'Une action est déjà en cours.'
+        ? t('home:packName.filename.checking')
+        : t('home:packName.filename.noFolder');
+  const generateButtonDisabled = !!saving || audioDurationInvalid || !hasExportName || generateDisabled;
+  const generateButtonTooltip = audioDurationInvalid
+    ? t('home:packName.generate.invalidSilence')
+    : saving
+    ? t('home:packName.generate.busy')
     : !hasExportName
-      ? 'Renseigne le titre du pack avant de générer.'
+      ? t('home:packName.generate.missingTitle')
       : generateDisabled
-        ? 'Passe par « à corriger » avant de pouvoir générer le pack.'
+        ? t('home:packName.generate.blocked')
         : isAdvanced
           // Côté graphe, ce qui bloque est demandé au départ de la production,
           // sur le document courant : la fiche ne peut pas le promettre ici
           // sans tenir un second verdict.
-          ? 'Appliquer les métadonnées, vérifier ce qui bloque, puis générer le pack.'
-          : 'Appliquer les métadonnées et générer le pack.';
+          ? t('home:packName.generate.graphHint')
+          : t('home:packName.generate.menuHint');
 
   const modalContent = (
     <div className={`pack-meta-modal${embedded ? ' pack-meta-modal--embedded' : ''}`} onClick={(event) => event.stopPropagation()}>
       <header className="pack-meta-header">
         <span className="pack-meta-header-icon"><Package className="chrome-icon" strokeWidth={2} absoluteStrokeWidth /></span>
         <div className="pack-meta-heading">
-          <span className="pack-meta-eyebrow">Métadonnées du pack</span>
+          <span className="pack-meta-eyebrow">{t('home:packName.header.title')}</span>
           <h2 title={(isAdvanced ? draft.title : exportName) || undefined}>
-            {(isAdvanced ? draft.title : exportName) || 'Métadonnées du pack'}
+            {(isAdvanced ? draft.title : exportName) || t('home:packName.header.title')}
           </h2>
         </div>
-        <Button variant="icon" className="modal-close pack-meta-close" onClick={onClose} aria-label="Fermer">×</Button>
+        <Button variant="icon" className="modal-close pack-meta-close" onClick={onClose} aria-label={t('common:dialog.close.label')}>×</Button>
       </header>
 
       <div className="pack-meta-body">
         {catalogEditable ? (
           <aside className="pack-meta-cover-panel pack-meta-cover-panel--editable">
-            <span className="pack-meta-cover-label">Vignette catalogue</span>
+            <span className="pack-meta-cover-label">{t('home:packName.cover.catalogLabel')}</span>
             <ImageField
               compact
               align="start"
               fieldId="root:thumbnailImage"
               file={shownCover}
-              badge="Catalogue · taille libre"
-              formatHint="Taille libre : utilisée par STUdio, LuniiQt et les bibliothèques"
+              badge={t('home:packName.cover.catalogBadge')}
+              formatHint={t('home:packName.cover.catalogHint')}
               onPick={setCatalogDraft}
               // Retirer revient à l'image racine : il n'y a rien à retirer
               // tant que la vignette la reprend déjà.
@@ -395,71 +464,73 @@ export function PackNameModal({
             <div className="pack-meta-cover-copy">
               <span>
                 {catalogDraft
-                  ? 'Image propre au catalogue'
+                  ? t('home:packName.cover.custom')
                   : fallbackImage
-                    ? (isAdvanced ? "Reprend l'image de l'Écran racine" : "Reprend l'image du menu racine")
-                    : 'Aucune image : choisis-en une, ou définis l’image racine'}
+                    ? (isAdvanced ? t('home:packName.cover.entryFallback') : t('home:packName.cover.menuFallback'))
+                    : t('home:packName.cover.emptyHint')}
               </span>
             </div>
+            {audioEditable ? (
+              <PackAudioProcessingFields values={audioDraft} onChange={updateAudioField} />
+            ) : null}
           </aside>
         ) : (
           <aside className="pack-meta-cover-panel">
-            <span className="pack-meta-cover-label">Couverture</span>
+            <span className="pack-meta-cover-label">{t('home:packName.cover.label')}</span>
             <div className="pack-meta-cover">
               {coverUrl ? <img src={coverUrl} alt="" /> : <Image className="pack-meta-cover-empty" strokeWidth={1.7} absoluteStrokeWidth />}
             </div>
             <div className="pack-meta-cover-copy">
-              <span>{coverUrl ? 'Définie dans la bibliothèque' : 'Aucune image racine définie'}</span>
-              <small>non éditable ici</small>
+              <span>{coverUrl ? t('home:packName.cover.library') : t('home:packName.cover.missing')}</span>
+              <small>{t('home:packName.cover.readOnly')}</small>
             </div>
+            {audioEditable ? (
+              <PackAudioProcessingFields values={audioDraft} onChange={updateAudioField} />
+            ) : null}
           </aside>
         )}
 
         <section className="pack-meta-form">
           <div className="pack-meta-field-row">
-            <label>Titre du pack</label>
-            <input className="pack-meta-input" value={draft.title || ''} onChange={(event) => updateField('title', event.target.value)} placeholder="Titre de mon pack" />
+            <label>{t('home:packName.title.label')}</label>
+            <input className="pack-meta-input" value={draft.title || ''} onChange={(event) => updateField('title', event.target.value)} placeholder={t('home:packName.title.placeholder')} />
           </div>
 
           {/* Le mode de nommage, offert des deux côtés. C'est lui
               qui rend les quatre combinaisons atteignables : nommer par
               convention ou librement, croisé avec versionner ou non. */}
           <div className="pack-meta-field-row">
-            <label>Nom du fichier</label>
-            <div className="pack-meta-naming-modes" role="group" aria-label="Mode de nommage du fichier exporté">
+            <label>{t('home:packName.filename.label')}</label>
+            <div className="pack-meta-naming-modes" role="group" aria-label={t('home:packName.filename.modeLabel')}>
               <button
                 type="button"
                 className={`pack-meta-age-chip ${namingMode === ARCHIVE_NAMING_CONVENTION ? 'is-active' : ''}`}
                 onClick={() => chooseNamingMode(ARCHIVE_NAMING_CONVENTION)}
-              >
-                Convention
-              </button>
+              >{t('home:packName.filename.convention')}</button>
               <button
                 type="button"
                 className={`pack-meta-age-chip ${namingMode === ARCHIVE_NAMING_FREE ? 'is-active' : ''}`}
                 onClick={() => chooseNamingMode(ARCHIVE_NAMING_FREE)}
-              >
-                Nom libre
-              </button>
+              >{t('home:packName.filename.free')}</button>
             </div>
           </div>
 
           {namingMode === ARCHIVE_NAMING_FREE ? (
             <div className="pack-meta-field-row">
-              <label>Nom libre</label>
+              <label>{t('home:packName.filename.free')}</label>
               <input
                 className="pack-meta-input"
                 value={draft.legacyExportName || ''}
                 onChange={(event) => updateField('legacyExportName', event.target.value)}
-                placeholder={draft.title ? `${draft.title} (par défaut)` : 'Laisse vide pour utiliser le titre'}
+                placeholder={draft.title ? t('home:packName.filename.defaultPlaceholder', { title: draft.title }) : t('home:packName.filename.placeholder')}
               />
             </div>
           ) : (
             <>
           <div className="pack-meta-field-row">
-            <label>Âge minimum</label>
+            <label>{t('home:packName.age.label')}</label>
             <div className="pack-meta-age-control">
-              <div className="pack-meta-age-chips" role="group" aria-label="Âges minimum prédéfinis">
+              <div className="pack-meta-age-chips" role="group" aria-label={t('home:packName.age.presets')}>
                 {AGE_CHIPS.map((age) => (
                   <button
                     key={age}
@@ -472,7 +543,7 @@ export function PackNameModal({
                 ))}
               </div>
               <div className={`pack-meta-age-custom ${customAgeValue ? 'is-active' : ''}`}>
-                <span>Autre :</span>
+                <span>{t('home:packName.age.other')}</span>
                 <div className="pack-meta-age-custom-value">
                   <input
                     className="pack-meta-input pack-meta-age-other"
@@ -480,7 +551,7 @@ export function PackNameModal({
                     onChange={(event) => updateAge(event.target.value)}
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    aria-label="Âge minimum personnalisé"
+                    aria-label={t('home:packName.age.custom')}
                     placeholder="5"
                   />
                   <span aria-hidden="true">+</span>
@@ -490,18 +561,18 @@ export function PackNameModal({
           </div>
 
           <div className="pack-meta-field-row">
-            <label>Auteur</label>
-            <input className="pack-meta-input" value={draft.author || ''} onChange={(event) => updateField('author', event.target.value)} placeholder="Nom de l’auteur" />
+            <label>{t('home:packName.author.label')}</label>
+            <input className="pack-meta-input" value={draft.author || ''} onChange={(event) => updateField('author', event.target.value)} placeholder={t('home:packName.author.placeholder')} />
           </div>
 
           <div className="pack-meta-field-row">
-            <label>Producteur <span>facultatif</span></label>
-            <input className="pack-meta-input" value={draft.producer || ''} onChange={(event) => updateField('producer', event.target.value)} placeholder="Ex. producteur..." />
+            <label>{t('home:packName.producer.label')} <span>{t('home:packName.field.optional')}</span></label>
+            <input className="pack-meta-input" value={draft.producer || ''} onChange={(event) => updateField('producer', event.target.value)} placeholder={t('home:packName.producer.placeholder')} />
           </div>
 
           <div className="pack-meta-field-row">
-            <label>Bonus <span>facultatif</span></label>
-            <input className="pack-meta-input" value={draft.bonus || ''} onChange={(event) => updateField('bonus', event.target.value)} placeholder="ex. 8 chapitres" />
+            <label>{t('home:packName.bonus.label')} <span>{t('home:packName.field.optional')}</span></label>
+            <input className="pack-meta-input" value={draft.bonus || ''} onChange={(event) => updateField('bonus', event.target.value)} placeholder={t('home:packName.bonus.placeholder')} />
           </div>
             </>
           )}
@@ -511,7 +582,7 @@ export function PackNameModal({
               bloc du mode de nommage : elle reste visible quel que soit le
               mode. */}
           <div className="pack-meta-field-row">
-            <label>Version</label>
+            <label>{t('home:packName.version.label')}</label>
             {isAdvanced ? (
               <div className="pack-meta-uuid-control">
                 <input
@@ -521,7 +592,7 @@ export function PackNameModal({
                   value={draft.version ?? ''}
                   readOnly={!governance.version.editable}
                   disabled={!governance.version.editable}
-                  placeholder="Non renseignée"
+                  placeholder={t('home:packName.version.placeholder')}
                   onChange={(event) => updateField('version', event.target.value)}
                 />
                 {governance.version.reason ? (
@@ -534,45 +605,42 @@ export function PackNameModal({
           </div>
 
           <div className="pack-meta-field-row is-textarea">
-            <label>Description <span>changelog</span></label>
-            <textarea className="pack-meta-input pack-meta-textarea" value={draft.description || ''} onChange={(event) => updateField('description', event.target.value)} rows={3} placeholder="Public visé, contenu, changements depuis la version précédente..." />
+            <label>{t('home:packName.description.label')} <span>{t('home:packName.description.annotation')}</span></label>
+            <textarea className="pack-meta-input pack-meta-textarea" value={draft.description || ''} onChange={(event) => updateField('description', event.target.value)} rows={3} placeholder={t('home:packName.description.placeholder')} />
           </div>
 
           <div className="pack-meta-field-row">
-            <label>UUID du pack</label>
+            <label>{t('home:packName.uuid.label')}</label>
+            <Tooltip text={t('home:packName.uuid.officialLocked')} disabled={!uuidLocked} asChild wrap>
             <div className="pack-meta-uuid-control">
               <input
                 className="pack-meta-input pack-meta-uuid-input"
                 value={draft.uuid || ''}
                 onChange={(event) => updateField('uuid', event.target.value)}
-                readOnly={isAdvanced && !governance.uuid.editable}
-                disabled={isAdvanced && !governance.uuid.editable}
-                placeholder="UUID du pack"
+                readOnly={uuidLocked || identityLockPending}
+                style={uuidLocked ? { pointerEvents: 'none' } : undefined}
+                disabled={uuidLocked || identityLockPending}
+                placeholder={t('home:packName.uuid.label')}
               />
               {/* La même action est offerte dans les deux éditeurs. */}
-              {isAdvanced && !governance.uuid.editable ? null : (
-                <Tooltip text="Générer un nouvel UUID de pack" wrap>
-                  <Button variant="icon" className="pack-meta-uuid-button" onClick={regenerateUuid} aria-label="Générer un nouvel UUID de pack">
+              {uuidLocked || identityLockPending ? null : (
+                <Tooltip text={t('home:packName.uuid.regenerate')} wrap>
+                  <Button variant="icon" className="pack-meta-uuid-button" onClick={regenerateUuid} aria-label={t('home:packName.uuid.regenerate')}>
                     <RotateCcw className="chrome-icon" strokeWidth={2} absoluteStrokeWidth />
                   </Button>
                 </Tooltip>
               )}
             </div>
+            </Tooltip>
           </div>
-          <div className="pack-meta-field-row">
+          {!uuidLocked ? <div className="pack-meta-field-row">
             <span />
-            <p className="pack-meta-uuid-hint">Un nouvel UUID permet de conserver ce pack et l'ancien comme deux packs distincts.</p>
-          </div>
-          {isAdvanced && governance.uuid.reason ? (
-            <div className="pack-meta-field-row">
-              <span />
-              <p className="pack-meta-uuid-hint">{governance.uuid.reason}</p>
-            </div>
-          ) : null}
+            <p className="pack-meta-uuid-hint">{t('home:packName.uuid.help')}</p>
+          </div> : null}
           {showImportedUuidHint ? (
             <div className="pack-meta-field-row">
               <span />
-              <p className="pack-meta-uuid-hint">UUID importé du pack. Tu peux le régénérer si tu le souhaites.</p>
+              <p className="pack-meta-uuid-hint">{t('home:packName.uuid.importedHint')}</p>
             </div>
           ) : null}
         </section>
@@ -580,7 +648,7 @@ export function PackNameModal({
 
       <div className="pack-meta-preview">
         <div className="pack-meta-preview-head">
-          <span className="pack-meta-preview-label">Nom exporté</span>
+          <span className="pack-meta-preview-label">{t('home:packName.filename.previewLabel')}</span>
           <div className={`pack-meta-status is-${collision}`}>
             {collision === 'collision' ? <TriangleAlert className="chrome-icon" strokeWidth={2} absoluteStrokeWidth /> : <CircleCheck className="chrome-icon" strokeWidth={2} absoluteStrokeWidth />}
             <span>{collisionText}</span>
@@ -602,35 +670,35 @@ export function PackNameModal({
           <div className="pack-meta-summary">
             {advanced.counters ? (
               <>
-                <strong>{advanced.counters.stages}</strong> Écran{advanced.counters.stages > 1 ? 's' : ''}
+                <Trans i18nKey="home:packName.count.screens" count={advanced.counters.stages} components={{ strong: <strong /> }} />
                 <span>
-                  {advanced.counters.actions} liste{advanced.counters.actions > 1 ? 's' : ''} de choix
+                  {t('home:packName.count.actions', { count: advanced.counters.actions })}
                   {' · '}
-                  {advanced.counters.options} option{advanced.counters.options > 1 ? 's' : ''}
+                  {t('home:packName.count.options', { count: advanced.counters.options })}
                   {' · '}
-                  {advanced.counters.media} média{advanced.counters.media > 1 ? 's' : ''} lié{advanced.counters.media > 1 ? 's' : ''}
+                  {t('home:packName.count.media', { count: advanced.counters.media })}
                 </span>
               </>
             ) : (
-              <span>Structure en cours de lecture</span>
+              <span>{t('home:packName.structure.loading')}</span>
             )}
           </div>
         ) : (
           <div className="pack-meta-summary">
-            <strong>{stats.stories}</strong> histoire{stats.stories > 1 ? 's' : ''}
-            <span>{stats.media} média{stats.media > 1 ? 's' : ''} lié{stats.media > 1 ? 's' : ''}</span>
+            <Trans i18nKey="home:packName.count.stories" count={stats.stories} components={{ strong: <strong /> }} />
+            <span>{t('home:packName.count.media', { count: stats.media })}</span>
           </div>
         )}
         {notice ? (
-          <p className="pack-meta-notice" role="status" aria-live="polite">{notice}</p>
+          <p className="pack-meta-notice" role="status" aria-live="polite">{presentStoredError(notice)}<TechnicalDetail value={notice?.userMessage ? presentUserMessage(notice.userMessage).technicalDetail : ''} /></p>
         ) : null}
         <div className="pack-meta-actions">
-          <Button onClick={onClose} disabled={saving}>Annuler</Button>
+          <Button onClick={onClose} disabled={saving}>{t('common:dialog.cancel.label')}</Button>
           <Button
             onClick={() => submit('save')}
-            disabled={saving}
+            disabled={!!saving || audioDurationInvalid}
           >
-            {saving === 'save' ? 'Application...' : 'Appliquer'}
+            {saving === 'save' ? t('home:packName.save.applying') : t('home:packName.save.apply')}
           </Button>
           {/* Ce bouton est là **des deux côtés** : la fiche est la première
               étape du parcours de fabrication. Ce qui bloque est
@@ -640,9 +708,9 @@ export function PackNameModal({
               variant="primary"
               onClick={() => submit('generate')}
               disabled={generateButtonDisabled}
-              aria-label={generateButtonTooltip}
+              aria-label={primaryActionLabel || generateButtonTooltip}
             >
-              {saving === 'generate' ? 'Préparation...' : 'Appliquer & générer'}
+              {saving === 'generate' ? t('home:packName.generate.preparing') : primaryActionLabel || t('home:packName.generate.action')}
             </Button>
           </Tooltip>
         </div>

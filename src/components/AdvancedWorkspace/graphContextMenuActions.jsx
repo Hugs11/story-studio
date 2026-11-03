@@ -1,3 +1,4 @@
+import { translateGraph as t } from '../../i18n/graphPresentation.js';
 // Les actions du menu contextuel du graphe à plat.
 //
 // Pendant de `treeContextMenuActions.jsx` pour la surface avancée, et construit
@@ -45,7 +46,7 @@ export function buildGraphContextActions({
   onSetColor = null,
   onViewConnections = null,
   onDelete = null,
-  // Les libellés effectifs des raccourcis, affichés à droite des entrées.
+  // Relire les raccourcis à l’affichage : une action peut survivre au changement de langue.
   shortcutLabels = {},
 }) {
   if (!inspected) return [];
@@ -58,7 +59,7 @@ export function buildGraphContextActions({
   if (isStage && onSimulateFrom) {
     actions.push({
       icon: <Play />,
-      label: 'Simuler depuis ici',
+      get label() { return t('graph:context.preview.label'); },
       fn: () => onSimulateFrom(inspected.path),
     });
   }
@@ -71,18 +72,18 @@ export function buildGraphContextActions({
       .filter((one) => one.state === 'ready');
     actions.push({
       icon: <Play />,
-      label: 'Simuler depuis ici',
+      get label() { return t('graph:context.preview.label'); },
       fn: () => onListenFromAction(inspected.path),
-      disabledReason: ready.length === 0
-        ? 'Aucun de ses choix ne mène à un Écran exploitable.'
-        : null,
+      get disabledReason() { return ready.length === 0
+        ? t('graph:context.preview.disabled')
+        : null; },
     });
   }
 
   if (onViewConnections) {
     actions.push({
       icon: <Network />,
-      label: 'Voir les connexions',
+      get label() { return t('graph:context.connections.label'); },
       fn: () => onViewConnections(inspected.path),
     });
   }
@@ -94,7 +95,6 @@ export function buildGraphContextActions({
   const targets = selectedPaths.includes(inspected.path) && selectedPaths.length > 1
     ? selectedPaths
     : [inspected.path];
-  const several = targets.length > 1 ? ` (${targets.length} éléments)` : '';
 
   // Les mêmes trois dessins que l'arbre, pour les mêmes trois gestes : le clic
   // droit du graphe n'a pas à réapprendre un vocabulaire que l'auteur connaît.
@@ -104,12 +104,12 @@ export function buildGraphContextActions({
   if (onDuplicate) {
     actions.push({
       icon: <SquareStack />,
-      label: `Dupliquer${several}`,
+      get label() { return targets.length > 1 ? t('graph:context.duplicate.count', { count: targets.length }) : t('graph:context.duplicate.single'); },
       fn: () => onDuplicate(targets),
-      shortcut: shortcutLabels.selectionDuplicate ?? null,
-      disabledReason: editingDisabled
-        ? 'Édition suspendue le temps du geste en cours.'
-        : null,
+      get shortcut() { return shortcutLabels.selectionDuplicate ?? null; },
+      get disabledReason() { return editingDisabled
+        ? t('graph:context.editing.busy')
+        : null; },
     });
   }
   // Copier est une **lecture** : elle n'écrit rien dans le document, et reste
@@ -117,9 +117,9 @@ export function buildGraphContextActions({
   if (onCopy) {
     actions.push({
       icon: <Copy />,
-      label: `Copier${several}`,
+      get label() { return targets.length > 1 ? t('graph:context.copy.count', { count: targets.length }) : t('graph:context.copy.single'); },
       fn: () => onCopy(targets),
-      shortcut: shortcutLabels.selectionCopy ?? null,
+      get shortcut() { return shortcutLabels.selectionCopy ?? null; },
     });
   }
 
@@ -134,14 +134,14 @@ export function buildGraphContextActions({
     });
     actions.push({
       icon: <Scissors />,
-      label: `Couper${several}`,
+      get label() { return targets.length > 1 ? t('graph:context.cut.count', { count: targets.length }) : t('graph:context.cut.single'); },
       fn: () => onCut(targets),
-      shortcut: shortcutLabels.selectionCut ?? null,
-      disabledReason: entry
-        ? 'L’Écran racine ne se retire pas : désignez d’abord un autre Écran racine.'
+      get shortcut() { return shortcutLabels.selectionCut ?? null; },
+      get disabledReason() { return entry
+        ? t('graph:remove.selection.entry')
         : editingDisabled
-          ? 'Édition suspendue le temps du geste en cours.'
-          : null,
+          ? t('graph:context.editing.busy')
+          : null; },
     });
   }
 
@@ -155,7 +155,7 @@ export function buildGraphContextActions({
       type: 'node',
       render: () => (
         <NodeColorPicker
-          label={`Couleur${several}`}
+          label={targets.length > 1 ? t('graph:context.color.count', { count: targets.length }) : t('graph:context.color.single')}
           currentColor={currentColor}
           disabled={editingDisabled}
           onChange={(color) => onSetColor(targets, color)}
@@ -172,13 +172,13 @@ export function buildGraphContextActions({
     // liste. Aucun ne se retire en silence.
     actions.push({
       icon: <Trash2 />,
-      label: `Retirer${several}…`,
+      get label() { return targets.length > 1 ? t('graph:context.remove.count', { count: targets.length }) : t('graph:action.menu.remove'); },
       fn: () => onDelete(targets),
       danger: true,
-      shortcut: shortcutLabels.selectionDelete ?? null,
-      disabledReason: editingDisabled
-        ? 'Édition suspendue le temps du geste en cours.'
-        : null,
+      get shortcut() { return shortcutLabels.selectionDelete ?? null; },
+      get disabledReason() { return editingDisabled
+        ? t('graph:context.editing.busy')
+        : null; },
     });
   }
 
@@ -206,23 +206,22 @@ export function buildGraphSurfaceActions({
   shortcutLabels = {},
 }) {
   if (!graphPoint) return [];
-  const blocked = editingDisabled ? 'Édition indisponible.' : null;
   const actions = [];
   if (onCreateStage) {
     actions.push({
       icon: <Package />,
-      label: 'Créer un Écran ici',
-      shortcut: shortcutLabels.graphCreateStage ?? null,
-      disabledReason: blocked,
+      get label() { return t('graph:context.create.stage'); },
+      get shortcut() { return shortcutLabels.graphCreateStage ?? null; },
+      get disabledReason() { return editingDisabled ? t('graph:context.editing.disabled') : null; },
       fn: () => onCreateStage(graphPoint),
     });
   }
   if (onCreateAction) {
     actions.push({
       icon: <Waypoints />,
-      label: 'Créer une liste de choix ici',
-      shortcut: shortcutLabels.graphCreateAction ?? null,
-      disabledReason: blocked,
+      get label() { return t('graph:context.create.action'); },
+      get shortcut() { return shortcutLabels.graphCreateAction ?? null; },
+      get disabledReason() { return editingDisabled ? t('graph:context.editing.disabled') : null; },
       fn: () => onCreateAction(graphPoint),
     });
   }
@@ -231,9 +230,9 @@ export function buildGraphSurfaceActions({
     actions.push('sep');
     actions.push({
       icon: <ClipboardPaste />,
-      label: count > 1 ? `Coller ici (${count} éléments)` : 'Coller ici',
-      shortcut: shortcutLabels.selectionPaste ?? null,
-      disabledReason: blocked,
+      get label() { return count > 1 ? t('graph:context.paste.count', { count }) : t('graph:context.paste.single'); },
+      get shortcut() { return shortcutLabels.selectionPaste ?? null; },
+      get disabledReason() { return editingDisabled ? t('graph:context.editing.disabled') : null; },
       fn: () => onPaste(graphPoint),
     });
   }

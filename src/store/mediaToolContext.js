@@ -1,7 +1,8 @@
 import { basenameNoExt, pathKey } from '../utils/fileUtils.js';
 import { getEffectiveEndBehavior } from './generatedNavigation.js';
-import { refTargetEntryId } from './navigationTargets.js';
+import { navigationTargetEntryId } from './navigationTargets.js';
 import { buildProjectIndex, findEntryById } from './projectModel/index.js';
+import { mediaRefusal, translateMedia } from '../i18n/mediaPresentation.js';
 
 const ENTRY_NAVIGATION_FIELDS = [
   'returnAfterPlay',
@@ -116,7 +117,7 @@ export function createMediaToolSourceSignature(project, entryIds) {
 export function resolveAudioStoriesInProjectOrder(project, entryIds, statusByPath = {}) {
   const requestedIds = normalizeEntryIds(entryIds);
   if (requestedIds.length === 0) {
-    return { valid: false, code: 'empty-selection', reason: 'Aucune histoire sélectionnée.', stories: [] };
+    return mediaRefusal({ valid: false, code: 'empty-selection', stories: [] }, 'media:tool.refusal.emptySelection');
   }
 
   const requested = new Set(requestedIds);
@@ -126,32 +127,21 @@ export function resolveAudioStoriesInProjectOrder(project, entryIds, statusByPat
     .map(({ entry }) => entry);
 
   if (selectedEntries.length !== requestedIds.length || selectedEntries.some((entry) => entry.type !== 'story')) {
-    return {
-      valid: false,
-      code: 'mixed-selection',
-      reason: 'Sélectionnez uniquement des histoires.',
-      stories: [],
-    };
+    return mediaRefusal({ valid: false, code: 'mixed-selection', stories: [] }, 'media:tool.refusal.mixedSelection');
   }
 
   const withoutAudio = selectedEntries.find((entry) => !entry.audio);
   if (withoutAudio) {
-    return {
-      valid: false,
-      code: 'missing-audio',
-      reason: `L’histoire « ${withoutAudio.name || 'sans nom'} » ne possède pas d’audio principal.`,
-      stories: [],
-    };
+    return mediaRefusal({ valid: false, code: 'missing-audio', stories: [] }, 'media:tool.refusal.missingAudio', {
+      name: withoutAudio.name || { key: 'media:story.unnamed' },
+    });
   }
 
   const inaccessible = selectedEntries.find((entry) => isKnownMissing(entry.audio, statusByPath));
   if (inaccessible) {
-    return {
-      valid: false,
-      code: 'inaccessible-audio',
-      reason: `Le fichier audio de « ${inaccessible.name || 'sans nom'} » est introuvable.`,
-      stories: [],
-    };
+    return mediaRefusal({ valid: false, code: 'inaccessible-audio', stories: [] }, 'media:tool.refusal.inaccessibleAudio', {
+      name: inaccessible.name || { key: 'media:story.unnamed' },
+    });
   }
 
   return {
@@ -176,10 +166,10 @@ export function buildMediaAudioToolRequest({
   const resolved = resolveAudioStoriesInProjectOrder(project, entryIds, statusByPath);
   if (!resolved.valid) return resolved;
   if (tool === 'split' && resolved.stories.length !== 1) {
-    return { valid: false, code: 'split-count', reason: 'Sélectionnez une seule histoire à découper.' };
+    return mediaRefusal({ valid: false, code: 'split-count' }, 'media:tool.refusal.splitCount');
   }
   if (tool === 'assemble' && resolved.stories.length < 2) {
-    return { valid: false, code: 'assemble-count', reason: 'Sélectionnez au moins deux histoires à assembler.' };
+    return mediaRefusal({ valid: false, code: 'assemble-count' }, 'media:tool.refusal.assembleCount');
   }
 
   return {
@@ -192,22 +182,23 @@ export function buildMediaAudioToolRequest({
       entryIds: resolved.entryIds,
       sourcePaths: resolved.sourcePaths,
       sourceSignature: createMediaToolSourceSignature(project, resolved.entryIds),
-      storyNames: resolved.stories.map((entry) => entry.name || 'sans nom'),
+      // Ces noms forment le nom du fichier assemblé : repli dans la langue de création.
+      storyNames: resolved.stories.map((entry) => entry.name || translateMedia('media:story.unnamed')),
     },
   };
 }
 
 export function validateMediaAudioToolRequest(project, request, statusByPath = {}) {
   if (!request?.requestId || request.origin === 'media') {
-    return { valid: false, code: 'missing-context', reason: 'Aucun contexte projet n’est associé à cette opération.' };
+    return mediaRefusal({ valid: false, code: 'missing-context' }, 'media:tool.refusal.missingContext');
   }
   const resolved = resolveAudioStoriesInProjectOrder(project, request.entryIds, statusByPath);
   if (!resolved.valid) return resolved;
   if (resolved.sourcePaths.some((path, index) => pathKey(path) !== pathKey(request.sourcePaths?.[index]))) {
-    return { valid: false, code: 'source-changed', reason: 'Une histoire ou son audio a changé pendant le traitement.' };
+    return mediaRefusal({ valid: false, code: 'source-changed' }, 'media:tool.refusal.sourceChanged');
   }
   if (createMediaToolSourceSignature(project, request.entryIds) !== request.sourceSignature) {
-    return { valid: false, code: 'source-changed', reason: 'Le projet a changé pendant le traitement.' };
+    return mediaRefusal({ valid: false, code: 'source-changed' }, 'media:tool.refusal.projectChanged');
   }
   return { valid: true, code: null, reason: '', stories: resolved.stories, projectIndex: resolved.projectIndex };
 }
@@ -220,7 +211,6 @@ function navigationTargetsForEntry(entry) {
   if (entry?.afterPlaybackHomeStep) {
     targets.push(entry.afterPlaybackHomeStep.okTarget, entry.afterPlaybackHomeStep.homeTarget);
   }
-  if (entry?.type === 'ref') targets.push(entry.target);
   return targets.filter(Boolean);
 }
 
@@ -251,14 +241,14 @@ function findExternalNavigationToEntries(project, targetIds, removedSourceIds = 
     ['nightModeReturn', project?.nightModeReturn],
     ['nightModeHomeReturn', project?.nightModeHomeReturn],
   ]) {
-    const targetId = refTargetEntryId(target);
+    const targetId = navigationTargetEntryId(target);
     if (targetId && targets.has(targetId)) usages.push({ sourceId: 'root', field, targetId });
   }
   const index = buildProjectIndex(project);
   for (const { entry } of index.flatEntries) {
     if (removedSourceIds.has(entry.id)) continue;
     for (const target of navigationTargetsForEntry(entry)) {
-      const targetId = refTargetEntryId(target);
+      const targetId = navigationTargetEntryId(target);
       if (targetId && targets.has(targetId)) usages.push({ sourceId: entry.id, targetId });
     }
   }
@@ -269,18 +259,18 @@ export function getAssemblyReplacementEligibility(project, entryIds) {
   const resolved = resolveAudioStoriesInProjectOrder(project, entryIds);
   if (!resolved.valid) return resolved;
   if (resolved.stories.length < 2) {
-    return { valid: false, code: 'assemble-count', reason: 'Au moins deux histoires sont nécessaires.' };
+    return mediaRefusal({ valid: false, code: 'assemble-count' }, 'media:tool.refusal.twoStoriesNeeded');
   }
 
   const parentIds = resolved.stories.map((story) => resolved.projectIndex.parentMenuById.get(story.id) ?? null);
   if (new Set(parentIds).size !== 1) {
-    return { valid: false, code: 'multiple-parents', reason: 'Les histoires ne sont plus dans le même dossier.' };
+    return mediaRefusal({ valid: false, code: 'multiple-parents' }, 'media:tool.refusal.multipleParents');
   }
   const parentId = parentIds[0];
   const siblings = getContainerEntries(project, parentId, resolved.projectIndex);
   const positions = resolved.stories.map((story) => siblings.findIndex((entry) => entry.id === story.id));
   if (positions.some((position, index) => index > 0 && position !== positions[0] + index)) {
-    return { valid: false, code: 'not-consecutive', reason: 'Les histoires ne sont plus consécutives dans l’arbre.' };
+    return mediaRefusal({ valid: false, code: 'not-consecutive' }, 'media:tool.refusal.notConsecutive');
   }
 
   for (let index = 0; index < resolved.stories.length - 1; index += 1) {
@@ -296,11 +286,7 @@ export function getAssemblyReplacementEligibility(project, entryIds) {
       && !explicitRootMatchesRootDefault;
     const hasStoryHomeOverride = !!story.returnOnHome || !!story.returnOnHomeNone;
     if (behavior.usesEndStep || hasAmbiguousReturn || hasStoryHomeOverride) {
-      return {
-        valid: false,
-        code: 'ambiguous-navigation',
-        reason: 'La navigation entre les histoires n’est pas un enchaînement direct et sûr.',
-      };
+      return mediaRefusal({ valid: false, code: 'ambiguous-navigation' }, 'media:tool.refusal.ambiguousNavigation');
     }
   }
 
@@ -308,18 +294,13 @@ export function getAssemblyReplacementEligibility(project, entryIds) {
   const selectedIds = new Set(resolved.entryIds);
   const incoming = findExternalNavigationToEntries(project, removedIds, selectedIds);
   for (const target of preservedAssemblyTargets(resolved.stories[0], resolved.stories.at(-1))) {
-    const targetId = refTargetEntryId(target);
+    const targetId = navigationTargetEntryId(target);
     if (targetId && removedIds.has(targetId)) {
       incoming.push({ sourceId: resolved.stories[0].id, targetId });
     }
   }
   if (incoming.length > 0) {
-    return {
-      valid: false,
-      code: 'incoming-navigation',
-      reason: 'Une référence ou une navigation cible une histoire qui serait supprimée.',
-      incoming,
-    };
+    return mediaRefusal({ valid: false, code: 'incoming-navigation', incoming }, 'media:tool.refusal.incomingNavigation');
   }
 
   return { ...resolved, valid: true, parentId, positions };

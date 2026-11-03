@@ -39,7 +39,7 @@ export default defineConfig({
         {
           icon: 'discord',
           label: 'Discord de Story Studio',
-          href: 'https://discord.gg/jztpQz5Ad',
+          href: 'https://discord.gg/jeC6Qk4NS',
         },
       ],
       editLink: {

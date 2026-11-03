@@ -1,16 +1,19 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 
 use crate::domain::project::{EntryControlSettings, ProjectEntry};
 #[cfg(test)]
 use crate::native_pack::OptionSelection;
-use crate::native_pack::{sanitize_stage_label, ActionNode, StageNode, StoryDocument};
+use crate::native_pack::{ActionNode, StageNode, StoryDocument};
 
 use super::stage::imported_story_name;
 
 pub(crate) struct GraphImportOutput {
     pub(crate) root_entries: Vec<ProjectEntry>,
     pub(crate) shared_entries: Vec<ProjectEntry>,
+    pub(crate) out_of_tree_edges: Vec<OutOfTreeEdge>,
     pub(crate) diagnostics: Vec<String>,
     play_stage_by_entry: HashMap<String, String>,
 }
@@ -18,7 +21,52 @@ pub(crate) struct GraphImportOutput {
 pub(super) struct GraphImportProjection {
     pub(super) root_entries: Vec<serde_json::Value>,
     pub(super) shared_entries: Vec<serde_json::Value>,
+    pub(super) out_of_tree_edges: Vec<OutOfTreeEdge>,
     pub(super) diagnostics: Vec<String>,
+}
+
+/// Une arête OK que l'arbre de l'éditeur par menus ne peut pas porter : sa cible
+/// est déjà placée ailleurs (convergence, élément partagé) ou est un ancêtre
+/// (boucle). L'arbre n'a pas de nœud pour la représenter ; elle est seulement
+/// consignée ici, et sa présence rend la projection non éditable par menus
+/// (`IMPORT_AUTHORING_HIERARCHY_INCOMPLETE`) : un tel pack relève de l'éditeur
+/// graphe.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct OutOfTreeEdge {
+    /// Entrée projetée qui porte l'arête ; `None` pour une option de la racine.
+    pub(crate) source_entry_id: Option<String>,
+    /// Cible typée (`menu:`/`story:`/`story_play:`) de l'arête.
+    pub(crate) target: String,
+}
+
+/// Arêtes hors arbre encore portées par la projection : celles d'une entrée que
+/// la suite de l'import a retirée (pont de nuit) disparaissent avec elle.
+pub(super) fn live_out_of_tree_edge_count(
+    edges: &[OutOfTreeEdge],
+    root_entries: &[serde_json::Value],
+    shared_entries: &[serde_json::Value],
+) -> usize {
+    fn collect<'v>(entries: &'v [serde_json::Value], ids: &mut HashSet<&'v str>) {
+        for entry in entries {
+            if let Some(id) = entry.get("id").and_then(serde_json::Value::as_str) {
+                ids.insert(id);
+            }
+            if let Some(children) = entry.get("children").and_then(serde_json::Value::as_array) {
+                collect(children, ids);
+            }
+        }
+    }
+    let mut ids = HashSet::new();
+    collect(root_entries, &mut ids);
+    collect(shared_entries, &mut ids);
+    edges
+        .iter()
+        .filter(|edge| {
+            edge.source_entry_id
+                .as_deref()
+                .is_none_or(|source| ids.contains(source))
+        })
+        .count()
 }
 
 /// Variante sans assets, réservée aux tests du module (la prod passe par
@@ -40,29 +88,134 @@ pub(super) fn project_story_graph_values(
     Ok(GraphImportProjection {
         root_entries,
         shared_entries,
+        out_of_tree_edges: output.out_of_tree_edges,
         diagnostics: output.diagnostics,
     })
 }
 
-pub(super) fn promote_autonomous_root_ref_values(
-    root_entries: &mut [serde_json::Value],
-    shared_entries: &mut Vec<serde_json::Value>,
-) -> bool {
-    let Ok(parsed_roots) = serde_json::from_value::<Vec<ProjectEntry>>(serde_json::Value::Array(
-        root_entries.to_vec(),
-    )) else {
-        return false;
-    };
-    let Ok(parsed_shared) = serde_json::from_value::<Vec<ProjectEntry>>(serde_json::Value::Array(
-        shared_entries.clone(),
-    )) else {
-        return false;
-    };
-    let Some(promoted_index) = autonomous_root_ref_index(&parsed_roots, &parsed_shared) else {
-        return false;
-    };
+/// Catalogue classification uses the importer's entry shapes and indexed routers.
+/// Its result is stored by the catalogue: a change of result requires a new
+/// `LISTENING_VERSION` (`services/catalogue/analyze/listening.rs`).
+/// Playback return edges and menu/game loops are navigation, not additional
+/// stories: every stage reachable through OK edges is visited once. A non-story
+/// stage without an OK target (dead end), a missing target and interactive
+/// playback remain unknown.
+pub(crate) fn story_audio(document: &StoryDocument) -> Option<Vec<(String, String)>> {
+    let projector = GraphProjector::new_with_assets(document, None);
+    if !projector.diagnostics.is_empty()
+        || document
+            .stage_nodes
+            .iter()
+            .filter(|s| s.is_square_one())
+            .count()
+            != 1
+        || projector.stages.len() != document.stage_nodes.len()
+        || projector.actions.len() != document.action_nodes.len()
+    {
+        return None;
+    }
+    fn visit<'a>(
+        p: &GraphProjector<'a>,
+        ok_marks_transitions: bool,
+        id: &'a str,
+        done: &mut HashSet<&'a str>,
+        stories: &mut HashMap<String, String>,
+        depth: usize,
+    ) -> Option<()> {
+        if depth > MAX_TREE_DEPTH {
+            return None;
+        }
+        // A stage already visited (menu/game loop, shared target) adds nothing:
+        // its targets are explored from its first visit.
+        if !done.insert(id) {
+            return Some(());
+        }
+        let stage = p.stages.get(id)?;
+        if !stage.is_square_one() {
+            let candidate = match p.entry_shape(id)? {
+                EntryShape::Story { play_stage_id, .. } => play_stage_id,
+                EntryShape::Menu => id,
+            };
+            let play = p.stages.get(candidate)?;
+            // Import shapes also preserve prompts as entries. A listening
+            // story must permit uninterrupted playback: pausable with no wheel,
+            // or a terminal non-interactive sound. In particular, autoplay menu
+            // prompts and title/transition audio are not listening stories.
+            if is_playback_stage(play)
+                && !play.control_settings.wheel()
+                // Official packs mark their stories ok=false; their pausable
+                // introductions and game prompts are OK-skippable autoplay
+                // transitions. Packs whose stories accept OK keep counting them.
+                && !(ok_marks_transitions
+                    && play.control_settings.ok()
+                    && play.control_settings.autoplay())
+                && (play.control_settings.pause() || p.ok_targets(candidate).is_empty())
+            {
+                stories.insert(candidate.to_owned(), play.audio.as_deref()?.to_owned());
+                return Some(());
+            }
+        }
+        let targets = p.ok_targets(id);
+        if targets.is_empty() {
+            return None;
+        }
+        for target in targets {
+            visit(p, ok_marks_transitions, target, done, stories, depth + 1)?;
+        }
+        Some(())
+    }
+    let root = document.stage_nodes.iter().find(|s| s.is_square_one())?;
+    let mut stories = HashMap::new();
+    let ok_marks_transitions = document.stage_nodes.iter().any(|s| {
+        is_playback_stage(s)
+            && !s.control_settings.wheel()
+            && !s.control_settings.ok()
+            && s.control_settings.pause()
+    });
+    visit(
+        &projector,
+        ok_marks_transitions,
+        &root.uuid,
+        &mut HashSet::new(),
+        &mut stories,
+        0,
+    )?;
+    if stories.is_empty() {
+        return None;
+    }
+    let mut stories: Vec<_> = stories.into_iter().collect();
+    stories.sort();
+    Some(stories)
+}
 
-    root_entries[0] = shared_entries.remove(promoted_index);
+/// Racine dont l'unique option vise l'unique entrée partagée, sans aucune autre
+/// arête hors arbre : cette entrée devient la racine. Toute autre arête hors
+/// arbre (retour, autre convergence) laisse la projection non éditable.
+pub(super) fn promote_autonomous_root_target_values(
+    root_entries: &mut Vec<serde_json::Value>,
+    shared_entries: &mut Vec<serde_json::Value>,
+    out_of_tree_edges: &mut Vec<OutOfTreeEdge>,
+) -> bool {
+    if !root_entries.is_empty()
+        || shared_entries.len() != 1
+        || live_out_of_tree_edge_count(out_of_tree_edges, root_entries, shared_entries) != 1
+    {
+        return false;
+    }
+    let Some(root_edge_index) = out_of_tree_edges
+        .iter()
+        .position(|edge| edge.source_entry_id.is_none())
+    else {
+        return false;
+    };
+    let Ok(shared) = serde_json::from_value::<ProjectEntry>(shared_entries[0].clone()) else {
+        return false;
+    };
+    if !typed_target_matches_entry(&out_of_tree_edges[root_edge_index].target, &shared) {
+        return false;
+    }
+    root_entries.push(shared_entries.remove(0));
+    out_of_tree_edges.remove(root_edge_index);
     true
 }
 
@@ -95,6 +248,7 @@ struct GraphProjector<'a> {
     shared_ids: HashSet<&'a str>,
     emitted_shared: HashSet<&'a str>,
     shared_entries: Vec<ProjectEntry>,
+    out_of_tree_edges: Vec<OutOfTreeEdge>,
     diagnostics: Vec<String>,
 }
 
@@ -133,6 +287,7 @@ impl<'a> GraphProjector<'a> {
             shared_ids: HashSet::new(),
             emitted_shared: HashSet::new(),
             shared_entries: Vec::new(),
+            out_of_tree_edges: Vec::new(),
             diagnostics: Vec::new(),
         };
         projector.index_ok_edges(document);
@@ -148,20 +303,14 @@ impl<'a> GraphProjector<'a> {
         let mut root_entries = Vec::new();
         let mut active = Vec::new();
         let mut emitted_tree = HashSet::new();
-        for (option_index, target_id) in self.ok_targets(square_one_id).iter().enumerate() {
+        for target_id in self.ok_targets(square_one_id).iter() {
             let entry = if root_entries.is_empty() && !self.indexed_router_actions.is_empty() {
                 // La première cible de squareOne est l'ancre de l'arbre authoring.
                 // Une arête de retour vers cette ancre ne doit pas la déplacer dans
                 // le pool partagé : elle sera modélisée comme navigation de fin.
                 self.build_concrete_entry(target_id, &mut active, &mut emitted_tree, true)
             } else {
-                self.build_edge_entry(
-                    square_one_id,
-                    option_index,
-                    target_id,
-                    &mut active,
-                    &mut emitted_tree,
-                )
+                self.build_edge_entry(None, target_id, &mut active, &mut emitted_tree)
             };
             if let Some(entry) = entry {
                 root_entries.push(entry);
@@ -179,6 +328,7 @@ impl<'a> GraphProjector<'a> {
         Ok(GraphImportOutput {
             root_entries,
             shared_entries: self.shared_entries,
+            out_of_tree_edges: self.out_of_tree_edges,
             diagnostics: self.diagnostics,
             play_stage_by_entry,
         })
@@ -189,7 +339,11 @@ impl<'a> GraphProjector<'a> {
             .values()
             .find(|stage| stage.is_square_one())
             .map(|stage| stage.uuid.as_str())
-            .ok_or_else(|| "story.json sans squareOne".to_string())
+            .ok_or_else(|| {
+                user_message::UserMessage::new(codes::IMPORT_STORY_ENTRY_STAGE_ABSENT)
+                    .with_detail("story.json sans squareOne".to_string())
+                    .into_transport()
+            })
     }
 
     fn index_ok_edges(&mut self, document: &'a StoryDocument) {
@@ -229,11 +383,27 @@ impl<'a> GraphProjector<'a> {
                 continue;
             };
             let Some(action) = self.actions.get(transition.action_node.as_str()) else {
-                self.diagnostics.push(format!(
-                    "Stage '{}' okTransition vers action introuvable '{}'",
-                    stage.label(),
-                    transition.action_node
-                ));
+                self.diagnostics.push({
+                    let _msg_stage_label = (stage.label()).to_string();
+                    let _msg_transition_action_node = (transition.action_node).to_string();
+                    user_message::UserMessage::new(
+                        codes::IMPORT_OK_ACTION_MISSING,
+                    )
+                        .param(
+                            "stageLabel",
+                            user_message::transport_param(_msg_stage_label.clone()),
+                        )
+                        .param(
+                            "actionNodeId",
+                            user_message::transport_param(_msg_transition_action_node.clone()),
+                        )
+                        .with_detail(format!(
+                            "Stage '{_msg_stage_label}' okTransition vers action introuvable '{_msg_transition_action_node}'",
+                            _msg_stage_label = user_message::transport_detail(&_msg_stage_label),
+                            _msg_transition_action_node = user_message::transport_detail(&_msg_transition_action_node),
+                        ))
+                        .into_transport()
+                    });
                 continue;
             };
 
@@ -242,11 +412,27 @@ impl<'a> GraphProjector<'a> {
                 .filter(|target_id| {
                     let known = self.stages.contains_key(target_id);
                     if !known {
-                        self.diagnostics.push(format!(
-                            "Action '{}' pointe vers stage introuvable '{}'",
-                            action.label(),
-                            target_id
-                        ));
+                        self.diagnostics.push({
+                        let _msg_action_label = (action.label()).to_string();
+                        let _msg_target_id = (target_id).to_string();
+                        user_message::UserMessage::new(
+                            codes::IMPORT_ACTION_STAGE_MISSING,
+                        )
+                            .param(
+                                "actionLabel",
+                                user_message::transport_param(_msg_action_label.clone()),
+                            )
+                            .param(
+                                "targetId",
+                                user_message::transport_param(_msg_target_id.clone()),
+                            )
+                            .with_detail(format!(
+                                "Action '{_msg_action_label}' pointe vers stage introuvable '{_msg_target_id}'",
+                                _msg_action_label = user_message::transport_detail(&_msg_action_label),
+                                _msg_target_id = user_message::transport_detail(&_msg_target_id),
+                            ))
+                            .into_transport()
+                        });
                     }
                     known
                 })
@@ -263,13 +449,39 @@ impl<'a> GraphProjector<'a> {
                 Some(option_index) => match action_targets.get(option_index).copied() {
                     Some(target) => vec![target],
                     None => {
-                        self.diagnostics.push(format!(
-                            "Stage '{}' okTransition option {} hors limites pour l'action '{}' ({} options)",
-                            stage.label(),
-                            transition.selection,
-                            action.label(),
-                            action_targets.len()
-                        ));
+                        self.diagnostics.push({
+                            let _msg_stage_label = (stage.label()).to_string();
+                            let transition_selection = (transition.selection).to_string();
+                            let _msg_action_label = (action.label()).to_string();
+                            let _msg_action_targets = (action_targets.len()).to_string();
+                            user_message::UserMessage::new(
+                                codes::IMPORT_OK_OPTION_OUTSIDE,
+                            )
+                                .param(
+                                    "stageLabel",
+                                    user_message::transport_param(_msg_stage_label.clone()),
+                                )
+                                .param(
+                                    "selectionIndex",
+                                    user_message::transport_param(transition_selection.clone()),
+                                )
+                                .param(
+                                    "actionLabel",
+                                    user_message::transport_param(_msg_action_label.clone()),
+                                )
+                                .param(
+                                    "actionTargets",
+                                    user_message::transport_param(_msg_action_targets.clone()),
+                                )
+                                .with_detail(format!(
+                                    "Stage '{_msg_stage_label}' okTransition option {transition_selection} hors limites pour l'action '{_msg_action_label}' ({_msg_action_targets} options)",
+                                    _msg_action_label = user_message::transport_detail(&_msg_action_label),
+                                    _msg_action_targets = user_message::transport_detail(&_msg_action_targets),
+                                    _msg_stage_label = user_message::transport_detail(&_msg_stage_label),
+                                    transition_selection = user_message::transport_detail(&transition_selection),
+                                ))
+                                .into_transport()
+                            });
                         Vec::new()
                     }
                 },
@@ -381,10 +593,13 @@ impl<'a> GraphProjector<'a> {
         self.ok_edges.get(stage_id).cloned().unwrap_or_default()
     }
 
+    /// `source_entry_id` : entrée projetée qui porte l'option (`None` à la racine).
+    /// Rend l'entrée construite à cette place, ou `None` : cible injoignable, non
+    /// projetable, ou déjà placée ailleurs — l'arête est alors consignée hors arbre
+    /// dans `out_of_tree_edges`, sans nœud.
     fn build_edge_entry(
         &mut self,
-        source_id: &'a str,
-        option_index: usize,
+        source_entry_id: Option<&'a str>,
         target_id: &'a str,
         active: &mut Vec<&'a str>,
         emitted_tree: &mut HashSet<&'a str>,
@@ -392,20 +607,21 @@ impl<'a> GraphProjector<'a> {
         if !self.reachable.contains(target_id) {
             return None;
         }
-        if self.should_reference(target_id, active, emitted_tree) {
+        if self.target_is_out_of_tree(target_id, active, emitted_tree) {
             let target = self.typed_target(target_id)?;
             self.ensure_shared_entry(target_id, active, emitted_tree);
-            return Some(ref_entry(
-                source_id,
-                option_index,
-                &target,
-                active.contains(&target_id),
-            ));
+            self.out_of_tree_edges.push(OutOfTreeEdge {
+                source_entry_id: source_entry_id.map(str::to_string),
+                target,
+            });
+            return None;
         }
         self.build_concrete_entry(target_id, active, emitted_tree, true)
     }
 
-    fn should_reference(
+    /// La cible est déjà placée (partagée, ancêtre actif ou déjà émise) : l'arbre
+    /// ne peut pas la contenir une seconde fois.
+    fn target_is_out_of_tree(
         &self,
         target_id: &'a str,
         active: &[&'a str],
@@ -447,10 +663,27 @@ impl<'a> GraphProjector<'a> {
         let entry_stage_id = self.entry_stage_id(stage_id);
         let stage = *self.stages.get(entry_stage_id)?;
         if active.len() > MAX_TREE_DEPTH {
-            self.diagnostics.push(format!(
-                "Graphe trop profond pour une modelisation en arbre (profondeur > {MAX_TREE_DEPTH}), stage '{}'",
-                stage.label()
-            ));
+            self.diagnostics.push({
+                let _msg_max_tree_depth = (MAX_TREE_DEPTH).to_string();
+                let _msg_stage_label = (stage.label()).to_string();
+                user_message::UserMessage::new(
+                    codes::IMPORT_GRAPH_DEPTH_LIMIT,
+                )
+                    .param(
+                        "maxDepth",
+                        user_message::transport_param(_msg_max_tree_depth.clone()),
+                    )
+                    .param(
+                        "stageLabel",
+                        user_message::transport_param(_msg_stage_label.clone()),
+                    )
+                    .with_detail(format!(
+                        "Graphe trop profond pour une modelisation en arbre (profondeur > {_msg_max_tree_depth}), stage '{_msg_stage_label}'",
+                        _msg_max_tree_depth = user_message::transport_detail(&_msg_max_tree_depth),
+                        _msg_stage_label = user_message::transport_detail(&_msg_stage_label),
+                    ))
+                    .into_transport()
+                });
             return None;
         }
         let shape = self.entry_shape(entry_stage_id)?;
@@ -477,10 +710,10 @@ impl<'a> GraphProjector<'a> {
 
         match shape {
             EntryShape::Menu => {
-                for (option_index, target_id) in targets.iter().enumerate() {
+                let source_entry_id = stage.uuid.as_str();
+                for target_id in &targets {
                     if let Some(child) = self.build_edge_entry(
-                        stage_id,
-                        option_index,
+                        Some(source_entry_id),
                         target_id,
                         active,
                         emitted_tree,
@@ -507,10 +740,21 @@ impl<'a> GraphProjector<'a> {
                         .first()
                         .is_some_and(|target_id| *target_id == self_return_target);
                 if targets.len() > 1 && !extra_targets_are_shared_return {
-                    self.diagnostics.push(format!(
-                        "Stage '{}' a plusieurs sorties OK non modelisees en story",
-                        stage.label()
-                    ));
+                    self.diagnostics.push({
+                        let _msg_stage_label = (stage.label()).to_string();
+                        user_message::UserMessage::new(
+                            codes::IMPORT_STAGE_OUTPUTS_UNSUPPORTED,
+                        )
+                            .param(
+                                "stageLabel",
+                                user_message::transport_param(_msg_stage_label.clone()),
+                            )
+                            .with_detail(format!(
+                                "Stage '{_msg_stage_label}' a plusieurs sorties OK non modelisees en story",
+                                _msg_stage_label = user_message::transport_detail(&_msg_stage_label),
+                            ))
+                            .into_transport()
+                        });
                 }
             }
         }
@@ -668,8 +912,12 @@ impl<'a> GraphProjector<'a> {
                 image: self.resolve_asset(stage.image.as_deref()),
                 auto_black_image: stage.image.has_no_value(),
                 control_settings: Some(stage_controls(stage)),
-                children: vec![ref_entry(stage.uuid.as_str(), 0, &target, false)],
                 ..Default::default()
+            });
+            // Son unique sortie vise un nœud déjà placé : arête hors arbre.
+            self.out_of_tree_edges.push(OutOfTreeEdge {
+                source_entry_id: Some(stage.uuid.clone()),
+                target,
             });
             self.emitted_shared.insert(stage_id);
         }
@@ -753,67 +1001,6 @@ fn stage_controls(stage: &StageNode) -> EntryControlSettings {
     }
 }
 
-fn ref_entry(
-    source_id: &str,
-    option_index: usize,
-    target: &str,
-    is_back_edge: bool,
-) -> ProjectEntry {
-    ProjectEntry {
-        id: format!(
-            "ref-{}-{}-{}",
-            sanitize_stage_label(source_id),
-            option_index,
-            sanitize_stage_label(target)
-        ),
-        entry_type: "ref".to_string(),
-        name: "Reference".to_string(),
-        target: Some(target.to_string()),
-        ref_kind: Some(if is_back_edge { "return" } else { "continue" }.to_string()),
-        ..Default::default()
-    }
-}
-
-/// Promotes the only projected root ref when its target is the only autonomous
-/// shared entry. Any additional ref keeps the projection read-only: it may
-/// represent a return edge or another shared graph relationship.
-#[cfg(test)]
-fn promote_autonomous_root_ref(
-    root_entries: &mut [ProjectEntry],
-    shared_entries: &mut Vec<ProjectEntry>,
-) -> bool {
-    let Some(promoted_index) = autonomous_root_ref_index(root_entries, shared_entries) else {
-        return false;
-    };
-    let promoted = shared_entries.remove(promoted_index);
-    root_entries[0] = promoted;
-    true
-}
-
-fn autonomous_root_ref_index(
-    root_entries: &[ProjectEntry],
-    shared_entries: &[ProjectEntry],
-) -> Option<usize> {
-    if root_entries.len() != 1
-        || shared_entries.len() != 1
-        || root_entries[0].entry_type != "ref"
-        || count_refs(root_entries) != 1
-        || count_refs(shared_entries) != 0
-    {
-        return None;
-    }
-
-    let target = root_entries[0].target.as_deref()?;
-    typed_target_matches_entry(target, &shared_entries[0]).then_some(0)
-}
-
-fn count_refs(entries: &[ProjectEntry]) -> usize {
-    entries
-        .iter()
-        .map(|entry| usize::from(entry.entry_type == "ref") + count_refs(&entry.children))
-        .sum()
-}
-
 fn typed_target_matches_entry(target: &str, entry: &ProjectEntry) -> bool {
     let Some((kind, target_id)) = target.trim().split_once(':') else {
         return false;
@@ -875,8 +1062,6 @@ fn entry_to_json(entry: &ProjectEntry) -> serde_json::Value {
         serde_json::Value::String(entry.name.clone()),
     );
     insert_optional_string(&mut object, "nativeStageId", entry.native_stage_id.as_ref());
-    insert_optional_string(&mut object, "target", entry.target.as_ref());
-    insert_optional_string(&mut object, "refKind", entry.ref_kind.as_ref());
     insert_optional_string(&mut object, "audio", entry.audio.as_ref());
     insert_optional_string(&mut object, "image", entry.image.as_ref());
     if entry.auto_black_image {
@@ -1052,9 +1237,6 @@ mod tests {
 
     fn collect_targets(entries: &[ProjectEntry], targets: &mut Vec<String>) {
         for entry in entries {
-            if let Some(target) = entry.target.as_ref() {
-                targets.push(target.clone());
-            }
             if let Some(target) = entry.return_after_play.as_ref() {
                 targets.push(target.clone());
             }
@@ -1072,117 +1254,150 @@ mod tests {
         }
     }
 
-    fn synthetic_ref(target: &str) -> ProjectEntry {
-        ProjectEntry {
-            id: "root-ref".to_string(),
-            entry_type: "ref".to_string(),
-            name: "Reference".to_string(),
-            target: Some(target.to_string()),
-            ..ProjectEntry::default()
+    fn root_edge(target: &str) -> OutOfTreeEdge {
+        OutOfTreeEdge {
+            source_entry_id: None,
+            target: target.to_string(),
         }
     }
 
-    #[test]
-    fn autonomous_root_ref_is_promoted() {
-        let mut roots = vec![synthetic_ref("story:shared")];
-        let mut shared = vec![synthetic_entry("shared", "story", Some("native-shared"))];
+    fn inner_edge(source: &str, target: &str) -> OutOfTreeEdge {
+        OutOfTreeEdge {
+            source_entry_id: Some(source.to_string()),
+            target: target.to_string(),
+        }
+    }
 
-        assert!(promote_autonomous_root_ref(&mut roots, &mut shared));
-        assert_eq!(roots.len(), 1);
-        assert_eq!(roots[0].id, "shared");
-        assert!(shared.is_empty());
+    /// Promotion de la cible unique de la racine, sur les valeurs JSON que
+    /// produit `project_story_graph_values`.
+    fn promote(
+        shared: Vec<ProjectEntry>,
+        mut edges: Vec<OutOfTreeEdge>,
+    ) -> (
+        bool,
+        Vec<serde_json::Value>,
+        Vec<serde_json::Value>,
+        Vec<OutOfTreeEdge>,
+    ) {
+        let mut roots = Vec::new();
+        let mut shared = entries_to_json(&shared);
+        let promoted = promote_autonomous_root_target_values(&mut roots, &mut shared, &mut edges);
+        (promoted, roots, shared, edges)
     }
 
     #[test]
-    fn autonomous_root_ref_accepts_native_stage_id_target() {
-        let mut roots = vec![synthetic_ref("story:native-shared")];
-        let mut shared = vec![synthetic_entry("shared", "story", Some("native-shared"))];
+    fn autonomous_root_target_is_promoted() {
+        let (promoted, roots, shared, edges) = promote(
+            vec![synthetic_entry("shared", "story", Some("native-shared"))],
+            vec![root_edge("story:shared")],
+        );
 
-        assert!(promote_autonomous_root_ref(&mut roots, &mut shared));
-        assert_eq!(roots[0].id, "shared");
+        assert!(promoted);
+        assert_eq!(roots.len(), 1);
+        assert_eq!(roots[0]["id"], "shared");
+        assert!(shared.is_empty());
+        assert!(edges.is_empty());
+    }
+
+    #[test]
+    fn autonomous_root_target_accepts_native_stage_id_target() {
+        let (promoted, roots, shared, _) = promote(
+            vec![synthetic_entry("shared", "story", Some("native-shared"))],
+            vec![root_edge("story:native-shared")],
+        );
+
+        assert!(promoted);
+        assert_eq!(roots[0]["id"], "shared");
         assert!(shared.is_empty());
     }
 
     #[test]
     fn multiple_shared_entries_are_not_promoted() {
-        let mut roots = vec![synthetic_ref("story:shared")];
-        let mut shared = vec![
-            synthetic_entry("shared", "story", None),
-            synthetic_entry("other", "story", None),
-        ];
+        let (promoted, roots, shared, edges) = promote(
+            vec![
+                synthetic_entry("shared", "story", None),
+                synthetic_entry("other", "story", None),
+            ],
+            vec![root_edge("story:shared")],
+        );
 
-        assert!(!promote_autonomous_root_ref(&mut roots, &mut shared));
-        assert_eq!(roots[0].entry_type, "ref");
+        assert!(!promoted);
+        assert!(roots.is_empty());
         assert_eq!(shared.len(), 2);
+        assert_eq!(edges.len(), 1);
     }
 
     #[test]
-    fn internal_ref_keeps_root_projection_unchanged() {
-        let mut roots = vec![synthetic_ref("menu:shared")];
-        let mut shared = vec![ProjectEntry {
-            children: vec![synthetic_ref("story:other")],
-            ..synthetic_entry("shared", "menu", None)
-        }];
+    fn internal_out_of_tree_edge_keeps_root_projection_unchanged() {
+        let (promoted, roots, shared, edges) = promote(
+            vec![synthetic_entry("shared", "menu", None)],
+            vec![
+                root_edge("menu:shared"),
+                inner_edge("shared", "story:other"),
+            ],
+        );
 
-        assert!(!promote_autonomous_root_ref(&mut roots, &mut shared));
-        assert_eq!(roots[0].entry_type, "ref");
-        assert_eq!(shared[0].children.len(), 1);
+        assert!(!promoted);
+        assert!(roots.is_empty());
+        assert_eq!(shared.len(), 1);
+        assert_eq!(edges.len(), 2);
     }
 
     #[test]
     fn absent_or_ambiguous_target_keeps_root_projection_unchanged() {
         for target in ["story:missing", "story:shared:ambiguous"] {
-            let mut roots = vec![synthetic_ref(target)];
-            let mut shared = vec![synthetic_entry("shared", "story", None)];
+            let (promoted, roots, shared, _) = promote(
+                vec![synthetic_entry("shared", "story", None)],
+                vec![root_edge(target)],
+            );
 
-            assert!(!promote_autonomous_root_ref(&mut roots, &mut shared));
-            assert_eq!(roots[0].entry_type, "ref");
+            assert!(!promoted);
+            assert!(roots.is_empty());
             assert_eq!(shared.len(), 1);
         }
     }
 
     #[test]
-    fn cycle_back_ref_keeps_root_projection_unchanged() {
-        let mut roots = vec![synthetic_ref("menu:shared")];
-        let mut shared = vec![ProjectEntry {
-            children: vec![ProjectEntry {
-                children: vec![ProjectEntry {
-                    ref_kind: Some("return".to_string()),
-                    ..synthetic_ref("menu:shared")
-                }],
-                ..synthetic_entry("story", "story", None)
+    fn cycle_back_edge_keeps_root_projection_unchanged() {
+        let (promoted, roots, shared, _) = promote(
+            vec![ProjectEntry {
+                children: vec![synthetic_entry("story", "story", None)],
+                ..synthetic_entry("shared", "menu", None)
             }],
-            ..synthetic_entry("shared", "menu", None)
-        }];
+            vec![root_edge("menu:shared"), inner_edge("story", "menu:shared")],
+        );
 
-        assert!(!promote_autonomous_root_ref(&mut roots, &mut shared));
-        assert_eq!(roots[0].entry_type, "ref");
+        assert!(!promoted);
+        assert!(roots.is_empty());
         assert_eq!(shared.len(), 1);
     }
 
     #[test]
     fn promotion_preserves_order_native_ids_and_returns() {
-        let mut roots = vec![synthetic_ref("menu:native-shared")];
-        let mut shared = vec![ProjectEntry {
-            native_stage_id: Some("native-shared".to_string()),
-            return_after_play: Some("story:after".to_string()),
-            children: vec![
-                synthetic_entry("first", "story", Some("native-first")),
-                synthetic_entry("second", "story", Some("native-second")),
-            ],
-            ..synthetic_entry("shared", "menu", None)
-        }];
+        let (promoted, roots, shared, _) = promote(
+            vec![ProjectEntry {
+                native_stage_id: Some("native-shared".to_string()),
+                return_after_play: Some("story:after".to_string()),
+                children: vec![
+                    synthetic_entry("first", "story", Some("native-first")),
+                    synthetic_entry("second", "story", Some("native-second")),
+                ],
+                ..synthetic_entry("shared", "menu", None)
+            }],
+            vec![root_edge("menu:native-shared")],
+        );
 
-        assert!(promote_autonomous_root_ref(&mut roots, &mut shared));
+        assert!(promoted);
         let promoted = &roots[0];
-        assert_eq!(promoted.id, "shared");
-        assert_eq!(promoted.native_stage_id.as_deref(), Some("native-shared"));
-        assert_eq!(promoted.return_after_play.as_deref(), Some("story:after"));
+        assert_eq!(promoted["id"], "shared");
+        assert_eq!(promoted["nativeStageId"], "native-shared");
+        assert_eq!(promoted["returnAfterPlay"], "story:after");
         assert_eq!(
-            promoted
-                .children
+            promoted["children"]
+                .as_array()
+                .expect("children")
                 .iter()
-                .map(|entry| entry.id.as_str())
+                .map(|entry| entry["id"].as_str().expect("id"))
                 .collect::<Vec<_>>(),
             vec!["first", "second"]
         );
@@ -1415,9 +1630,12 @@ mod tests {
         let helper = &output.shared_entries[0];
         assert_eq!(helper.id, "helper");
         assert_eq!(helper.entry_type, "menu");
-        assert_eq!(helper.children.len(), 1);
-        assert_eq!(helper.children[0].entry_type, "ref");
-        assert_eq!(helper.children[0].target.as_deref(), Some("story:story"));
+        // Sa sortie vise un nœud déjà placé : aucun nœud, une arête hors arbre.
+        assert!(helper.children.is_empty());
+        assert_eq!(
+            output.out_of_tree_edges,
+            vec![inner_edge("helper", "story:story")]
+        );
     }
 
     #[test]
@@ -1467,14 +1685,20 @@ mod tests {
         assert_eq!(output.shared_entries[0].id, "hub");
         let branch_a = &output.root_entries[0].children[0];
         let branch_b = &output.root_entries[0].children[1];
-        assert_eq!(branch_a.children[0].entry_type, "ref");
-        assert_eq!(branch_a.children[0].target.as_deref(), Some("menu:hub"));
-        assert_eq!(branch_b.children[0].entry_type, "ref");
-        assert_eq!(branch_b.children[0].target.as_deref(), Some("menu:hub"));
+        // La convergence n'a pas de nœud dans l'arbre : deux arêtes hors arbre.
+        assert!(branch_a.children.is_empty());
+        assert!(branch_b.children.is_empty());
+        assert_eq!(
+            output.out_of_tree_edges,
+            vec![
+                inner_edge("branch-a", "menu:hub"),
+                inner_edge("branch-b", "menu:hub"),
+            ]
+        );
     }
 
     #[test]
-    fn ok_cycle_becomes_reference_without_recursive_tree() {
+    fn ok_cycle_becomes_out_of_tree_edge_without_recursive_tree() {
         let output = project_story_graph(&document(
             vec![
                 stage("root", "Root", true, false, Some("root-action"), None, None),
@@ -1489,15 +1713,15 @@ mod tests {
         ))
         .unwrap();
 
-        assert_eq!(output.root_entries.len(), 1);
-        assert_eq!(output.root_entries[0].entry_type, "ref");
-        assert_eq!(output.root_entries[0].target.as_deref(), Some("menu:a"));
+        // Ni la racine ni le retour de la boucle n'ont de nœud dans l'arbre.
+        assert!(output.root_entries.is_empty());
         assert_eq!(output.shared_entries.len(), 1);
         assert_eq!(output.shared_entries[0].id, "a");
-        let back_ref = &output.shared_entries[0].children[0].children[0];
-        assert_eq!(back_ref.entry_type, "ref");
-        assert_eq!(back_ref.target.as_deref(), Some("menu:a"));
-        assert_eq!(back_ref.ref_kind.as_deref(), Some("return"));
+        assert!(output.shared_entries[0].children[0].children.is_empty());
+        assert_eq!(
+            output.out_of_tree_edges,
+            vec![inner_edge("b", "menu:a"), root_edge("menu:a")]
+        );
     }
 
     #[test]
@@ -1609,11 +1833,13 @@ mod tests {
         assert_eq!(title.item_audio.as_deref(), Some("title.mp3"));
         assert_eq!(title.audio.as_deref(), Some("play.mp3"));
         assert!(title.title_control_settings.is_some());
+        assert!(output.root_entries[0].children[0].children.is_empty());
         assert_eq!(
-            output.root_entries[0].children[0].children[0]
-                .target
-                .as_deref(),
-            Some("story:title")
+            output.out_of_tree_edges,
+            vec![
+                inner_edge("branch-a", "story:title"),
+                inner_edge("branch-b", "story:title"),
+            ]
         );
     }
 
@@ -1661,11 +1887,13 @@ mod tests {
         assert_eq!(output.shared_entries.len(), 1);
         assert_eq!(output.shared_entries[0].id, "title");
         assert_eq!(output.shared_entries[0].entry_type, "story");
-        let choice = &output.root_entries[0];
-        assert_eq!(choice.children[0].target.as_deref(), Some("story:title"));
+        assert!(output.root_entries[0].children.is_empty());
         assert_eq!(
-            choice.children[1].target.as_deref(),
-            Some("story_play:title")
+            output.out_of_tree_edges,
+            vec![
+                inner_edge("choice", "story:title"),
+                inner_edge("choice", "story_play:title"),
+            ]
         );
     }
 
@@ -1831,5 +2059,100 @@ mod tests {
         let projector = GraphProjector::new(&synthetic);
 
         assert_eq!(projector.home_target("leaf"), None);
+    }
+}
+
+#[cfg(test)]
+mod listening_tests {
+    use super::*;
+    use serde_json::json;
+    fn measure(
+        stages: serde_json::Value,
+        actions: serde_json::Value,
+    ) -> Option<Vec<(String, String)>> {
+        story_audio(
+            &serde_json::from_value(json!({"stageNodes":stages,"actionNodes":actions})).unwrap(),
+        )
+    }
+    #[test]
+    fn listening_descends_prompts_and_deduplicates_shared_playback() {
+        let stages = json!([
+            {"uuid":"r","squareOne":true,"okTransition":{"actionNode":"root","optionIndex":0}},
+            {"uuid":"menu","audio":"prompt.mp3","controlSettings":{"autoplay":true},"okTransition":{"actionNode":"titles","optionIndex":0}},
+            {"uuid":"a","audio":"title-a.mp3","controlSettings":{"wheel":true},"okTransition":{"actionNode":"play","optionIndex":0}},
+            {"uuid":"b","audio":"title-b.mp3","controlSettings":{"wheel":true},"okTransition":{"actionNode":"play","optionIndex":0}},
+            {"uuid":"p","audio":"story.mp3","controlSettings":{"pause":true,"autoplay":true},"okTransition":{"actionNode":"root","optionIndex":0}},
+            {"uuid":"detached","audio":"unused.mp3","controlSettings":{"pause":true}}
+        ]);
+        let actions = json!([{"id":"root","options":["menu"]},{"id":"titles","options":["a","b"]},{"id":"play","options":["p"]}]);
+        assert_eq!(
+            measure(stages, actions),
+            Some(vec![("p".into(), "story.mp3".into())])
+        );
+    }
+    #[test]
+    fn ok_skippable_stories_count_when_no_stage_marks_stories_with_ok_false() {
+        let stages = json!([
+            {"uuid":"r","squareOne":true,"okTransition":{"actionNode":"root","optionIndex":0}},
+            {"uuid":"menu","audio":"q.mp3","controlSettings":{"autoplay":true},"okTransition":{"actionNode":"ch","optionIndex":0}},
+            {"uuid":"s1","audio":"s1.mp3","controlSettings":{"ok":true,"home":true,"pause":true,"autoplay":true},"okTransition":{"actionNode":"root","optionIndex":0}},
+            {"uuid":"s2","audio":"s2.mp3","controlSettings":{"ok":true,"home":true,"pause":true,"autoplay":true},"okTransition":{"actionNode":"root","optionIndex":0}}
+        ]);
+        let actions = json!([{"id":"root","options":["menu"]},{"id":"ch","options":["s1","s2"]}]);
+        assert_eq!(
+            measure(stages, actions),
+            Some(vec![
+                ("s1".into(), "s1.mp3".into()),
+                ("s2".into(), "s2.mp3".into())
+            ])
+        );
+    }
+    #[test]
+    fn a_game_loop_back_to_the_hub_keeps_the_stories_counted() {
+        let stages = json!([
+            {"uuid":"r","squareOne":true,"okTransition":{"actionNode":"root","optionIndex":0}},
+            {"uuid":"hub","audio":"hub.mp3","controlSettings":{"autoplay":true},"okTransition":{"actionNode":"hub-options","optionIndex":0}},
+            {"uuid":"t1","audio":"t1.mp3","controlSettings":{"wheel":true,"ok":true},"okTransition":{"actionNode":"play1","optionIndex":0}},
+            {"uuid":"t2","audio":"t2.mp3","controlSettings":{"wheel":true,"ok":true},"okTransition":{"actionNode":"play2","optionIndex":0}},
+            {"uuid":"g","audio":"game.mp3","controlSettings":{"wheel":true,"ok":true},"okTransition":{"actionNode":"question","optionIndex":0}},
+            {"uuid":"p1","audio":"p1.mp3","controlSettings":{"pause":true,"autoplay":true},"okTransition":{"actionNode":"back","optionIndex":0}},
+            {"uuid":"p2","audio":"p2.mp3","controlSettings":{"pause":true,"autoplay":true},"okTransition":{"actionNode":"back","optionIndex":0}},
+            {"uuid":"q","audio":"answer.mp3","controlSettings":{"ok":true,"autoplay":true},"okTransition":{"actionNode":"back","optionIndex":0}}
+        ]);
+        let actions = json!([
+            {"id":"root","options":["hub"]},
+            {"id":"hub-options","options":["t1","t2","g"]},
+            {"id":"play1","options":["p1"]},
+            {"id":"play2","options":["p2"]},
+            {"id":"question","options":["q"]},
+            {"id":"back","options":["hub"]}
+        ]);
+        assert_eq!(
+            measure(stages, actions),
+            Some(vec![
+                ("p1".into(), "p1.mp3".into()),
+                ("p2".into(), "p2.mp3".into())
+            ])
+        );
+    }
+    #[test]
+    fn a_wheel_dead_end_beside_a_story_leaves_the_measure_unknown() {
+        let stages = json!([
+            {"uuid":"r","squareOne":true,"okTransition":{"actionNode":"root","optionIndex":0}},
+            {"uuid":"menu","audio":"q.mp3","controlSettings":{"autoplay":true},"okTransition":{"actionNode":"ch","optionIndex":0}},
+            {"uuid":"s1","audio":"s1.mp3","controlSettings":{"home":true,"pause":true,"autoplay":true},"okTransition":{"actionNode":"root","optionIndex":0}},
+            {"uuid":"w","audio":"w.mp3","controlSettings":{"wheel":true}}
+        ]);
+        let actions = json!([{"id":"root","options":["menu"]},{"id":"ch","options":["s1","w"]}]);
+        assert!(measure(stages, actions).is_none());
+    }
+    #[test]
+    fn story_free_loops_missing_targets_and_interactive_dead_ends_are_unknown() {
+        for target in ["r", "missing", "wheel"] {
+            assert!(measure(json!([
+                {"uuid":"r","squareOne":true,"okTransition":{"actionNode":"choice","optionIndex":0}},
+                {"uuid":"wheel","audio":"choice.mp3","controlSettings":{"wheel":true,"pause":true}}
+            ]),json!([{"id":"choice","options":[target]}])).is_none());
+        }
     }
 }

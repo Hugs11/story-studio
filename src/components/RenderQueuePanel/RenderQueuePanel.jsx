@@ -1,3 +1,7 @@
+import { GenerationFolderPrompt } from '../Catalogue/open/GenerationFolderPrompt.jsx';
+import { useTranslation } from 'react-i18next';
+import { presentUserMessage } from '../../i18n/userMessage.js';
+import { getIntlLocale } from '../../i18n/language.js';
 import { useState, useEffect, useRef } from 'react';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { logger } from '../../utils/logger';
@@ -10,11 +14,11 @@ import { WORK_NATURE } from '../../store/production/renderQueueWork.js';
 import './RenderQueuePanel.css';
 
 const STATUS_LABEL = {
-  pending: 'En attente',
-  running: 'Génération…',
-  done: 'Terminé',
-  error: 'Erreur',
-  canceled: 'Annulé',
+  pending: 'production:queue.status.pending',
+  running: 'production:queue.status.running',
+  done: 'production:queue.status.done',
+  error: 'production:queue.status.error',
+  canceled: 'production:queue.status.canceled',
 };
 const PANEL_DEFAULT_HEIGHT = 340;
 const PANEL_MIN_HEIGHT = 120;
@@ -30,10 +34,11 @@ function clampPanelHeight(value) {
 
 function formatTime(ts) {
   const d = new Date(ts);
-  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString(getIntlLocale(), { hour: '2-digit', minute: '2-digit' });
 }
 
 function JobCard({ job, expanded, onToggle, onRemove, onCancel, advanced = null }) {
+  const { t } = useTranslation('production');
   const [copyStatus, setCopyStatus] = useState('idle');
   const [openFolderError, setOpenFolderError] = useState(false);
   const copyResetRef = useRef(null);
@@ -48,17 +53,19 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel, advanced = null 
   const production = renderJobReport(job);
   const isAdvanced = job.nature === WORK_NATURE.ADVANCED;
   const warnings = production?.result?.warnings ?? [];
-  const allText = [
-    ...job.logs,
-    ...warnings.map((warning) => typeof warning === 'string' ? warning : String(warning?.message ?? warning)),
-    ...(job.errorMessage ? [job.errorMessage] : []),
-  ].join('\n');
   const hasWarnings = job.status === 'done' && warnings.length > 0;
   const statusLabel = hasWarnings
-    ? `Terminé · ${warnings.length} avertissement${warnings.length > 1 ? 's' : ''}`
-    : STATUS_LABEL[job.status];
+    ? t('production:queue.warnings.count', { count: warnings.length })
+    : t(STATUS_LABEL[job.status]);
 
   async function handleCopyLogs() {
+    // Résolu au clic : la copie suit la langue active. L'erreur d'un travail
+    // graphe refusé référence son refus, relu ici, jamais un texte figé.
+    const allText = [
+      ...job.logs.map((line) => presentUserMessage(line).message),
+      ...warnings.map((warning) => presentUserMessage(warning).message),
+      ...(job.errorMessage ? [presentUserMessage(job.errorMessage).message] : []),
+    ].join('\n');
     try {
       await navigator.clipboard.writeText(allText);
       setCopyStatus('copied');
@@ -87,29 +94,29 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel, advanced = null 
     <div className={`rq-job rq-job-${job.status}${hasWarnings ? ' rq-job-has-warnings' : ''}`}>
       <div className="rq-job-header" onClick={onToggle} role="button">
         <div className="rq-job-meta">
-          <span className="rq-job-name">{job.projectName}</span>
+          <span className="rq-job-name">{job.projectName || t('common:status.node.fallback')}</span>
           <span className="rq-job-folder" title={job.outputFolder}>{folderName}</span>
           <span className="rq-job-time">{formatTime(job.createdAt)}</span>
         </div>
         <div className="rq-job-right">
           <span className={`rq-badge rq-badge-${hasWarnings ? 'warning' : job.status}`}>
             {job.status === 'running' && <span className="rq-spinner" />}
-            {job.cancelRequested ? 'Annulation…' : statusLabel}
+            {job.cancelRequested ? t('production:queue.cancel.progress') : statusLabel}
           </span>
           {(job.status === 'pending' || job.status === 'running') && (
             <Button
               size="sm"
               className="rq-cancel-btn"
-              title={job.status === 'pending' ? 'Annuler ce rendu' : 'Annuler la génération en cours'}
+              title={job.status === 'pending' ? t('production:queue.cancel.pending') : t('production:queue.cancel.running')}
               disabled={job.cancelRequested}
               onClick={(e) => { e.stopPropagation(); onCancel?.(job.id); }}
-            >Annuler</Button>
+            >{t('common:dialog.cancel.label')}</Button>
           )}
           {(job.status === 'done' || job.status === 'error' || job.status === 'canceled') && (
             <Button
               size="sm"
               className="rq-remove-btn"
-              title="Retirer"
+              title={t('production:queue.job.remove')}
               onClick={(e) => { e.stopPropagation(); onRemove(job.id); }}
             >✕</Button>
           )}
@@ -138,17 +145,17 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel, advanced = null 
             ) : null}
           />
           {job.logs.length === 0 && job.status === 'pending' && (
-            <div className="rq-log-empty">En attente de démarrage…</div>
+            <div className="rq-log-empty">{t('production:queue.start.waiting')}</div>
           )}
           <div className="rq-job-actions">
             {job.logs.length > 0 && (
               <Button size="sm" onClick={handleCopyLogs}>
-                {copyStatus === 'copied' ? 'Copié ✓' : copyStatus === 'error' ? 'Erreur' : 'Copier logs'}
+                {copyStatus === 'copied' ? t('production:queue.logs.copied') : copyStatus === 'error' ? t('production:queue.status.error') : t('production:queue.logs.copy')}
               </Button>
             )}
             {(job.status === 'done' || job.status === 'error' || job.status === 'canceled') && (
               <Button size="sm" onClick={handleOpenFolder}>
-                {openFolderError ? 'Erreur' : 'Ouvrir dossier'}
+                {openFolderError ? t('production:queue.status.error') : t('production:queue.folder.open')}
               </Button>
             )}
             {job.status === 'done' && job.resultPath && (
@@ -157,6 +164,7 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel, advanced = null 
               </span>
             )}
           </div>
+          {job.status === 'done' && job.resultPath && <GenerationFolderPrompt outputPath={job.resultPath} />}
         </div>
       )}
     </div>
@@ -176,6 +184,7 @@ export function RenderQueuePanel({
   // l'archive — disparaissent.
   advanced = null,
 }) {
+  const { t } = useTranslation('production');
   const [expandedId, setExpandedId] = useState(null);
   const [panelHeight, setPanelHeight] = useState(PANEL_DEFAULT_HEIGHT);
   const resizingRef = useRef(false);
@@ -236,31 +245,31 @@ export function RenderQueuePanel({
           className="rq-panel-resize-handle"
           role="separator"
           aria-orientation="horizontal"
-          aria-label="Redimensionner la file de rendu"
-          title="Redimensionner"
+          aria-label={t('production:queue.resize.label')}
+          title={t('production:queue.resize.title')}
           onPointerDown={handleResizeStart}
         />
       )}
       <div className="rq-panel-header">
         <span className="rq-panel-title">
-          File de rendu
-          {activeCount > 0 && <span className="rq-panel-count">{activeCount} en cours</span>}
+          {t('production:queue.panel.title')}
+          {activeCount > 0 && <span className="rq-panel-count">{t('production:queue.active.count', { count: activeCount })}</span>}
         </span>
         <div className="rq-panel-header-actions">
           {doneCount > 0 && (
-            <Button size="sm" onClick={onClearDone}>Vider terminés</Button>
+            <Button size="sm" onClick={onClearDone}>{t('production:queue.completed.clear')}</Button>
           )}
           {/* En embedded, la fermeture est assurée par la croix du bottom panel
               (bottom-workspace-close) — pas de doublon ici, comme SDQueuePanel. */}
           {!embedded && (
-            <Button size="sm" onClick={onClose} title="Fermer">✕</Button>
+            <Button size="sm" onClick={onClose} title={t('common:dialog.close.label')}>✕</Button>
           )}
         </div>
       </div>
 
       <div className="rq-panel-body">
         {jobs.length === 0 ? (
-          <div className="rq-empty">Aucun rendu en file d'attente.</div>
+          <div className="rq-empty">{t('production:queue.panel.empty')}</div>
         ) : (
           jobs.map(job => (
             <JobCard

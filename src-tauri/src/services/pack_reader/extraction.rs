@@ -1,3 +1,5 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::io::Read;
@@ -7,7 +9,7 @@ use serde::Serialize;
 use unicode_normalization::UnicodeNormalization;
 
 use super::after_playback::is_named_night_bridge_stage;
-use super::projection::walk_story_doc_to_entries;
+use super::projection::{walk_story_doc_to_entries, walk_story_doc_to_entries_named};
 use super::stage::{is_stage_autoplay, stage_action_options, stage_control_bool, stage_uuid};
 use super::validation::*;
 use crate::domain::project::{GlobalOptions, Project, ProjectEntry};
@@ -24,7 +26,6 @@ use crate::native_pack::{
 use crate::support::imported_pack::{ensure_studio_pack_zip, ImportedStudioPack};
 use crate::support::paths::path_for_frontend;
 
-const ROOT_REF_RATIO_LIMIT: f64 = 0.5;
 const PACK_EDITABILITY_STACK_BYTES: usize = 32 * 1024 * 1024;
 
 /// Lit le `story.json` d'un pack importé et le décode **avec** le contexte de sa
@@ -41,7 +42,22 @@ fn decode_imported_pack(
 ) -> Result<DecodedStoryDocument, StoryDecodeError> {
     let decoded = decode_story_document(story_json)?;
     let context = imported.conversion_context(&decoded.document);
-    Ok(decoded.with_conversion_context(context))
+    let mut decoded = decoded.with_conversion_context(context);
+    decoded.context.official_provenance = crate::domain::official_provenance::imported_provenance(
+        decoded
+            .context
+            .pack_identity
+            .value
+            .as_deref()
+            .unwrap_or_default(),
+        None,
+    )
+    .expect("no catalogue lookup");
+    decoded.context.official_origin_uuid = (decoded.context.official_provenance
+        == crate::domain::official_provenance::OfficialProvenance::Official)
+        .then(|| decoded.context.pack_identity.value.clone())
+        .flatten();
+    Ok(decoded)
 }
 
 /// Acquisition d'un projet avancé depuis un pack importé.
@@ -56,15 +72,17 @@ fn decode_imported_pack(
 /// pack sont déposés dans `assets_dir`, et l'acquisition rend en même temps les
 /// liaisons qui les rattachent aux références du document : sans elles, le
 /// projet acquis désignerait des médias que personne ne saurait retrouver.
-pub(crate) fn import_pack_as_advanced_document(
+pub(crate) fn import_pack_as_advanced_document_with_catalogue(
     pack_path: &str,
     assets_dir: &str,
+    catalogue: Option<&crate::services::catalogue::CatalogueState>,
 ) -> Result<AdvancedAcquisition, String> {
     let imported = ensure_studio_pack_zip(pack_path)?;
-    advanced_document_from_imported_pack(
+    advanced_document_from_imported_pack_with_catalogue(
         &imported,
         Path::new(assets_dir),
         &mut system_pack_identity,
+        catalogue,
     )
 }
 
@@ -76,17 +94,57 @@ pub(crate) fn import_pack_as_advanced_document(
 /// être persisté — c'est ce qui garantit qu'aucune référence ne manque et
 /// qu'aucune n'est inventée. Deux Stages qui partagent une image n'ont qu'une
 /// liaison ; deux fichiers homonymes venus de dossiers distincts en ont deux.
+#[cfg(test)]
 pub(crate) fn advanced_document_from_imported_pack(
     imported: &ImportedStudioPack,
     assets_dir: &Path,
     identities: PackIdentitySource<'_>,
 ) -> Result<AdvancedAcquisition, String> {
+    advanced_document_from_imported_pack_with_catalogue(imported, assets_dir, identities, None)
+}
+
+pub(crate) fn advanced_document_from_imported_pack_with_catalogue(
+    imported: &ImportedStudioPack,
+    assets_dir: &Path,
+    identities: PackIdentitySource<'_>,
+    catalogue: Option<&crate::services::catalogue::CatalogueState>,
+) -> Result<AdvancedAcquisition, String> {
     let story_json = read_story_json_from_zip(&imported.zip_path)?;
-    let decoded = decode_imported_pack(imported, &story_json)
-        .map_err(|error| format!("story.json invalide : {error}"))?;
+    let mut decoded = decode_imported_pack(imported, &story_json).map_err(|error| {
+        let _msg_error = user_message::UserMessage::from(error).into_transport();
+        user_message::UserMessage::new(codes::IMPORT_INVALID_STORY_JSON)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "story.json invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    decoded.context.official_provenance = crate::domain::official_provenance::imported_provenance(
+        decoded
+            .context
+            .pack_identity
+            .value
+            .as_deref()
+            .unwrap_or_default(),
+        catalogue,
+    )
+    .map_err(user_message::UserMessage::into_transport)?;
+    decoded.context.official_origin_uuid = (decoded.context.official_provenance
+        == crate::domain::official_provenance::OfficialProvenance::Official)
+        .then(|| decoded.context.pack_identity.value.clone())
+        .flatten();
     decoded.context.log_warnings();
-    fs::create_dir_all(assets_dir)
-        .map_err(|e| format!("Impossible de créer le dossier des médias : {}", e))?;
+    fs::create_dir_all(assets_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_MEDIA_FOLDER_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de créer le dossier des médias : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let extracted = extract_all_zip_assets(&imported.zip_path, assets_dir)?;
     let media_bindings = media_bindings_for_document(&decoded.document, |asset_ref| {
         let short = asset_ref.strip_prefix("assets/").unwrap_or(asset_ref);
@@ -105,18 +163,28 @@ pub(crate) fn advanced_document_from_imported_pack(
                 .map(|_| path_for_frontend(assets_dir.join(short))),
         )
     });
-    let payload =
-        initialize_advanced_document(decoded, identities).map_err(|error| error.to_string())?;
+    let official_provenance = decoded.context.official_provenance;
+    let official_origin_uuid = decoded.context.official_origin_uuid.clone();
+    let payload = initialize_advanced_document(decoded, identities)
+        .map_err(|error| user_message::UserMessage::from(error).into_transport())?;
     // La vignette catalogue voyage hors du document, par le même extracteur que
     // l'import hiérarchique. Son absence n'est pas une faute : un pack sans
     // `thumbnail.png` s'acquiert comme avant.
     let thumbnail_image =
         extract_zip_thumbnail(&imported.zip_path, assets_dir)?.map(|path| path_for_frontend(&path));
     Ok(AdvancedAcquisition {
+        official_provenance,
+        official_origin_uuid,
         payload,
         media_bindings,
         thumbnail_image,
     })
+}
+
+pub(crate) fn read_pack_uuid(zip_path: &Path) -> Result<String, String> {
+    let story = read_story_json_from_zip(zip_path)?;
+    let value = serde_json::from_str(&story).map_err(|e| e.to_string())?;
+    Ok(pack_identity_from_story(&value).unwrap_or_default())
 }
 
 pub fn load_pack_zip(zip_path: &str) -> Result<String, String> {
@@ -130,21 +198,52 @@ pub fn load_pack_zip_for_simulation(zip_path: &str) -> Result<String, String> {
 fn load_pack_zip_with_policy(zip_path: &str, for_simulation: bool) -> Result<String, String> {
     let imported = ensure_studio_pack_zip(zip_path)?;
     let story_json = read_story_json_from_zip(&imported.zip_path)?;
-    let decoded = decode_imported_pack(&imported, &story_json)
-        .map_err(|error| format!("story.json invalide : {error}"))?;
+    let decoded = decode_imported_pack(&imported, &story_json).map_err(|error| {
+        let _msg_error = user_message::UserMessage::from(error).into_transport();
+        user_message::UserMessage::new(codes::IMPORT_INVALID_STORY_JSON)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "story.json invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if for_simulation {
         let incomplete = decoded
             .context
             .diagnostics
             .iter()
             .filter(|diagnostic| diagnostic.code == "control-settings-incomplete")
-            .map(|diagnostic| format!("{} : {}", diagnostic.path, diagnostic.message))
+            .map(|diagnostic| {
+                let message = user_message::UserMessage {
+                    code: diagnostic.code.clone(),
+                    params: diagnostic.params.clone(),
+                    detail: Some(diagnostic.message.clone()),
+                }
+                .into_transport();
+                crate::support::user_message::compose_messages(
+                    &[diagnostic.path.clone(), message],
+                    " : ",
+                )
+            })
             .collect::<Vec<_>>();
         if !incomplete.is_empty() {
-            return Err(format!(
-                "Simulation indisponible : renseignez explicitement les contrôles manquants. {}",
-                incomplete.join(" ; ")
-            ));
+            return Err({
+                let _msg_incomplete_join =
+                    crate::support::user_message::compose_messages(&incomplete, " ; ");
+                user_message::UserMessage::new(
+                    codes::IMPORT_SIMULATION_CONTROLS_REQUIRED,
+                )
+                    .param(
+                        "incompleteControls",
+                        user_message::transport_param(_msg_incomplete_join.clone()),
+                    )
+                    .with_detail(format!(
+                        "Simulation indisponible : renseignez explicitement les contrôles manquants. {_msg_incomplete_join}",
+                        _msg_incomplete_join = user_message::transport_detail(&_msg_incomplete_join),
+                    ))
+                    .into_transport()
+            });
         }
     }
     decoded.context.log_warnings();
@@ -154,13 +253,31 @@ fn load_pack_zip_with_policy(zip_path: &str, for_simulation: bool) -> Result<Str
 pub fn get_pack_asset(zip_path: &str, asset_name: &str) -> Result<Vec<u8>, String> {
     let zip_path = ensure_studio_pack_zip(zip_path)?.zip_path;
     let asset_name = validate_pack_asset_name(asset_name)?;
-    let file =
-        fs::File::open(&zip_path).map_err(|e| format!("Impossible d'ouvrir le ZIP : {}", e))?;
+    let file = fs::File::open(&zip_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_SOURCE_ZIP_OPEN_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible d'ouvrir le ZIP : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
     ensure_zip_entry_count(archive.len(), &zip_path)?;
-    let mut entry = archive
-        .by_name(&asset_name)
-        .map_err(|_| format!("Asset introuvable : {}", asset_name))?;
+    let mut entry = archive.by_name(&asset_name).map_err(|_| {
+        let _msg_asset_name = (asset_name).to_string();
+        user_message::UserMessage::new(codes::IMPORT_ASSET_NOT_FOUND)
+            .param(
+                "assetName",
+                user_message::transport_param(_msg_asset_name.clone()),
+            )
+            .with_detail(format!(
+                "Asset introuvable : {_msg_asset_name}",
+                _msg_asset_name = user_message::transport_detail(&_msg_asset_name)
+            ))
+            .into_transport()
+    })?;
     ensure_zip_entry_size("Asset", &asset_name, entry.size(), ARCHIVE_MAX_FILE_BYTES)?;
     let mut buf = Vec::new();
     entry.read_to_end(&mut buf).map_err(|e| e.to_string())?;
@@ -169,17 +286,41 @@ pub fn get_pack_asset(zip_path: &str, asset_name: &str) -> Result<Vec<u8>, Strin
 
 /// Dézipe un ZIP/7z Lunii et retourne `{ rootAudio, rootImage, entries }`.
 /// Les fichiers audio et image sont copiés dans `dest_dir`.
-/// Refuse un pack que l'éditeur par menus ne sait pas reprendre : le préfixe
-/// « Pack non éditable » est reconnu par l'interface, qui renvoie vers le graphe.
+/// Refuse un pack que l’éditeur par menus ne sait pas reprendre : le code
+/// PACK_NOT_EDITABLE permet à l’interface de renvoyer vers le graphe.
 pub fn unpack_zip_to_entries(zip_path: &str, dest_dir: &str) -> Result<serde_json::Value, String> {
+    unpack_zip_to_entries_named(zip_path, dest_dir, None)
+}
+
+pub fn unpack_zip_to_entries_named(
+    zip_path: &str,
+    dest_dir: &str,
+    proposed_pack_name: Option<&str>,
+) -> Result<serde_json::Value, String> {
     let editability = classify_pack_editability(zip_path)?;
     if !editability.authoring_editable {
-        return Err(format!(
-            "Pack non éditable dans Story Studio : {}",
-            editability.reason
+        return Err(crate::support::user_message::coded_error(
+            codes::PACK_NOT_EDITABLE,
+            {
+                let _msg_editability_reason = (editability.reason).to_string();
+                user_message::UserMessage::new(codes::IMPORT_AUTHORING_EDITING_REFUSED)
+                    .param(
+                        "reason",
+                        user_message::transport_param(_msg_editability_reason.clone()),
+                    )
+                    .with_detail(format!(
+                        "Pack non éditable dans Story Studio : {_msg_editability_reason}",
+                        _msg_editability_reason =
+                            user_message::transport_detail(&_msg_editability_reason),
+                    ))
+                    .into_transport()
+            },
         ));
     }
-    unpack_zip_to_entries_unchecked(zip_path, dest_dir)
+    match proposed_pack_name {
+        Some(name) => unpack_zip_to_entries_unchecked_named(zip_path, dest_dir, Some(name)),
+        None => unpack_zip_to_entries_unchecked(zip_path, dest_dir),
+    }
 }
 
 /// Projection brute d'un pack, réservée aux tests et outils de mesure. Les chemins
@@ -189,24 +330,62 @@ pub(crate) fn unpack_zip_to_entries_unchecked(
     zip_path: &str,
     dest_dir: &str,
 ) -> Result<serde_json::Value, String> {
+    unpack_zip_to_entries_unchecked_named(zip_path, dest_dir, None)
+}
+
+fn unpack_zip_to_entries_unchecked_named(
+    zip_path: &str,
+    dest_dir: &str,
+    proposed_pack_name: Option<&str>,
+) -> Result<serde_json::Value, String> {
     let imported = ensure_studio_pack_zip(zip_path)?;
     let zip_path = imported.zip_path.clone();
     let dest = Path::new(dest_dir);
-    fs::create_dir_all(dest)
-        .map_err(|e| format!("Impossible de créer le dossier de destination : {}", e))?;
+    fs::create_dir_all(dest).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_DESTINATION_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de créer le dossier de destination : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+            ))
+            .into_transport()
+    })?;
 
     let story_json = read_story_json_from_zip(&zip_path)?;
-    let decoded = decode_imported_pack(&imported, &story_json)
-        .map_err(|error| format!("story.json invalide : {error}"))?;
+    let decoded = decode_imported_pack(&imported, &story_json).map_err(|error| {
+        let _msg_error = user_message::UserMessage::from(error).into_transport();
+        user_message::UserMessage::new(codes::IMPORT_INVALID_STORY_JSON)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "story.json invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     decoded.context.log_warnings();
     let doc = &decoded.source_value;
 
     let asset_map = extract_all_zip_assets(&zip_path, dest)?;
     let thumbnail_path = extract_zip_thumbnail(&zip_path, dest)?;
 
-    let mut result = walk_story_doc_to_entries(doc, &asset_map)?;
-    result["importDiagnostics"] = serde_json::to_value(&decoded.context.diagnostics)
-        .map_err(|error| format!("Diagnostics d'import non sérialisables : {error}"))?;
+    let mut result = walk_story_doc_to_entries_named(doc, &asset_map, proposed_pack_name)?;
+    result["importDiagnostics"] =
+        serde_json::to_value(&decoded.context.diagnostics).map_err(|error| {
+            let _msg_error = (error).to_string();
+            user_message::UserMessage::new(codes::IMPORT_DIAGNOSTICS_ENCODE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Diagnostics d'import non sérialisables : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                ))
+                .into_transport()
+        })?;
+    result["officialProvenance"] =
+        serde_json::to_value(decoded.context.official_provenance).unwrap();
+    if let Some(uuid) = &decoded.context.official_origin_uuid {
+        result["officialOriginUuid"] = serde_json::json!(uuid);
+    }
     if let Some(uuid) = pack_identity_from_story(doc) {
         result["uuid"] = serde_json::Value::String(uuid);
     }
@@ -223,34 +402,37 @@ pub struct PackEditabilityReport {
     pub authoring_editable: bool,
     pub read_only_inspectable: bool,
     pub reason: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason_code: Option<&'static str>,
     pub fidelity: Option<FidelityReport>,
     pub projected_entry_count: usize,
     pub root_entry_count: usize,
     pub shared_entry_count: usize,
     pub has_native_graph: bool,
     pub uses_graph_projection: bool,
-    pub root_ref_ratio: f64,
-    pub root_ref_only: bool,
     pub shared_entry_ratio: f64,
     pub has_unmodeled_wheel: bool,
     pub(crate) import_diagnostics: Vec<ImportDiagnostic>,
 }
 
 impl PackEditabilityReport {
+    fn with_reason_code(mut self, code: &'static str) -> Self {
+        self.reason_code = Some(code);
+        self
+    }
     fn unsupported(reason: String) -> Self {
         Self {
             round_trip_faithful: false,
             authoring_editable: false,
             read_only_inspectable: false,
             reason,
+            reason_code: None,
             fidelity: None,
             projected_entry_count: 0,
             root_entry_count: 0,
             shared_entry_count: 0,
             has_native_graph: false,
             uses_graph_projection: false,
-            root_ref_ratio: 0.0,
-            root_ref_only: false,
             shared_entry_ratio: 0.0,
             has_unmodeled_wheel: false,
             import_diagnostics: Vec::new(),
@@ -285,9 +467,23 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
             .name("story-studio-pack-editability".to_string())
             .stack_size(PACK_EDITABILITY_STACK_BYTES)
             .spawn_scoped(scope, || classify_pack_editability_inner(zip_path))
-            .map_err(|error| format!("Impossible de démarrer l'analyse du pack : {error}"))?;
+            .map_err(|error| {
+                let _msg_error = (error).to_string();
+                user_message::UserMessage::new(codes::IMPORT_ANALYSIS_START_FAILED)
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Impossible de démarrer l'analyse du pack : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error)
+                    ))
+                    .into_transport()
+            })?;
         worker.join().map_err(|_| {
-            "L'analyse d'éditabilité du pack s'est interrompue de façon inattendue.".to_string()
+            user_message::UserMessage::new(codes::IMPORT_EDITABILITY_ANALYSIS_INTERRUPTED)
+                .with_detail(
+                    "L'analyse d'éditabilité du pack s'est interrompue de façon inattendue."
+                        .to_string(),
+                )
+                .into_transport()
         })?
     })
 }
@@ -300,7 +496,17 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
         Ok(decoded) => decoded,
         Err(error) => {
             return Ok(PackEditabilityReport::unsupported_with_diagnostics(
-                format!("story.json non simulable par Story Studio ({error})."),
+                {
+                    let _msg_error =
+                        user_message::UserMessage::from(error.clone()).into_transport();
+                    user_message::UserMessage::new(codes::IMPORT_STORY_SIMULATION_UNAVAILABLE)
+                        .param("error", user_message::transport_param(_msg_error.clone()))
+                        .with_detail(format!(
+                            "story.json non simulable par Story Studio ({_msg_error}).",
+                            _msg_error = user_message::transport_detail(&_msg_error),
+                        ))
+                        .into_transport()
+                },
                 error.diagnostics,
             ));
         }
@@ -321,12 +527,23 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
         .collect::<Vec<_>>();
     if !incomplete_controls.is_empty() {
         return Ok(PackEditabilityReport::unsupported_with_diagnostics(
-            format!(
-                "Contrôles incomplets, conservés mais non interprétés : {}. Les cinq valeurs (wheel, ok, home, pause, autoplay) doivent être renseignées explicitement.",
-                incomplete_controls.join(", ")
-            ),
+            {
+            let _msg_incomplete_controls_join = (incomplete_controls.join(", ")).to_string();
+            user_message::UserMessage::new(
+                codes::IMPORT_INCOMPLETE_CONTROLS_PRESERVED,
+            )
+                .param(
+                    "incompleteControls",
+                    user_message::transport_param(_msg_incomplete_controls_join.clone()),
+                )
+                .with_detail(format!(
+                    "Contrôles incomplets, conservés mais non interprétés : {_msg_incomplete_controls_join}. Les cinq valeurs (wheel, ok, home, pause, autoplay) doivent être renseignées explicitement.",
+                    _msg_incomplete_controls_join = user_message::transport_detail(&_msg_incomplete_controls_join),
+                ))
+                .into_transport()
+            },
             decoded.context.diagnostics,
-        ));
+        ).with_reason_code(codes::IMPORT_INCOMPLETE_CONTROLS));
     }
     let mut import_diagnostics = decoded.context.diagnostics;
     // L'intégrité abstraite du graphe est mesurée à l'entrée et exposée, sans
@@ -342,18 +559,33 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
             .collect::<Vec<_>>()
             .join(", ");
         return Ok(PackEditabilityReport::unsupported_with_diagnostics(
-            format!("Asset(s) référencé(s) absent(s) du ZIP : {rendered}"),
+            user_message::UserMessage::new(codes::IMPORT_REFERENCED_ASSETS_MISSING)
+                .param("assets", rendered.as_str())
+                .with_detail(format!(
+                    "Asset(s) référencé(s) absent(s) du ZIP : {rendered}"
+                ))
+                .into_transport(),
             import_diagnostics,
-        ));
+        )
+        .with_reason_code(codes::IMPORT_MISSING_MEDIA));
     }
     let assets = presence_faithful_asset_map(&doc);
     let imported = match walk_story_doc_to_entries(&doc, &assets) {
         Ok(imported) => imported,
         Err(error) => {
             return Ok(PackEditabilityReport::read_only_unprojected(
-                format!(
-                    "Lecture seule : simulation native possible, projection authoring impossible ({error})."
-                ),
+                {
+                    let _msg_error = (error).to_string();
+                    user_message::UserMessage::new(
+                    codes::IMPORT_AUTHORING_PROJECTION_UNAVAILABLE,
+                )
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Lecture seule : simulation native possible, projection authoring impossible ({_msg_error}).",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                    ))
+                    .into_transport()
+                },
                 import_diagnostics,
             ))
         }
@@ -374,16 +606,12 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
     let root_entry_count = count_project_entries(&project.root_entries);
     let shared_entry_count = count_project_entries(&project.shared_entries);
     let projected_entry_count = root_entry_count + shared_entry_count;
-    let projected_ref_count = count_project_entries_of_type(&project.root_entries, "ref")
-        + count_project_entries_of_type(&project.shared_entries, "ref");
-    let root_ref_count = project
-        .root_entries
-        .iter()
-        .filter(|entry| entry.entry_type == "ref")
-        .count();
-    let root_ref_ratio = ratio(root_ref_count, project.root_entries.len());
-    let root_ref_only =
-        !project.root_entries.is_empty() && root_ref_count == project.root_entries.len();
+    // Arêtes que l'arbre par menus ne porte pas (convergence, boucle) : la
+    // projection les consigne sans nœud, et elles la rendent non éditable.
+    let out_of_tree_edge_count = imported
+        .get("outOfTreeEdgeCount")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0) as usize;
     let shared_entry_ratio = ratio(shared_entry_count, projected_entry_count);
     let has_native_graph = imported
         .get("nativeGraph")
@@ -396,7 +624,7 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
     let graph_projection_is_authoring_compatible = graph_projection_is_authoring_compatible(
         uses_graph_projection,
         shared_entry_count,
-        projected_ref_count,
+        out_of_tree_edge_count,
     );
     let has_unmodeled_wheel = has_unmodeled_wheel(&doc);
     let structural_validation = validate_project_structure_for_generation(&project);
@@ -428,41 +656,70 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
     let authoring_editable = projected_entry_count > 0
         && structural_validation_ok
         && graph_projection_is_authoring_compatible
-        && root_ref_ratio < ROOT_REF_RATIO_LIMIT
         && shared_entry_count == 0
         && !has_unmodeled_wheel
         && (round_trip_faithful || aggregate_end_gap_tolerated || end_home_or_night_gap_tolerated);
     let read_only_inspectable = !authoring_editable && story_document_is_simulable;
     let reason = if authoring_editable {
         if round_trip_faithful {
-            "Pack authoring éditable : génération canonique fidèle au story.json d'origine."
-                .to_string()
+            user_message::UserMessage::new(
+                codes::IMPORT_AUTHORING_CANONICAL_FAITHFUL,
+            )
+                .with_detail("Pack authoring éditable : génération canonique fidèle au story.json d'origine.".to_string())
+                .into_transport()
         } else if aggregate_end_gap_tolerated {
-            "Pack authoring éditable : agrégat Story Studio projeté, écart strict limité aux retours de fin/night par sous-pack.".to_string()
+            user_message::UserMessage::new(
+                codes::IMPORT_AUTHORING_AGGREGATE_FAITHFUL,
+            )
+                .with_detail("Pack authoring éditable : agrégat Story Studio projeté, écart strict limité aux retours de fin/night par sous-pack.".to_string())
+                .into_transport()
         } else {
-            "Pack authoring éditable : écart strict limité aux retours/prompts de fin/night, sans perte de nœud ni d'asset.".to_string()
+            user_message::UserMessage::new(
+                codes::IMPORT_AUTHORING_RETURNS_FAITHFUL,
+            )
+                .with_detail("Pack authoring éditable : écart strict limité aux retours/prompts de fin/night, sans perte de nœud ni d'asset.".to_string())
+                .into_transport()
         }
     } else if projected_entry_count == 0 {
-        "Lecture seule : aucune entrée authoring projetée depuis le story.json.".to_string()
+        user_message::UserMessage::new(codes::IMPORT_AUTHORING_ENTRY_ABSENT)
+            .with_detail(
+                "Lecture seule : aucune entrée authoring projetée depuis le story.json."
+                    .to_string(),
+            )
+            .into_transport()
     } else if has_unmodeled_wheel {
-        "Lecture seule : roue/carrousel natif non modélisé en authoring.".to_string()
+        user_message::UserMessage::new(codes::IMPORT_AUTHORING_CAROUSEL_UNSUPPORTED)
+            .with_detail(
+                "Lecture seule : roue/carrousel natif non modélisé en authoring.".to_string(),
+            )
+            .into_transport()
     } else if let Some(error) = structural_error {
         error
     } else if shared_entry_count > 0 {
-        "Lecture seule : projection hors arbre avec éléments partagés non prise en charge en authoring."
-            .to_string()
+        user_message::UserMessage::new(
+            codes::IMPORT_AUTHORING_SHARED_UNSUPPORTED,
+        )
+            .with_detail("Lecture seule : projection hors arbre avec éléments partagés non prise en charge en authoring.".to_string())
+            .into_transport()
     } else if uses_graph_projection && !graph_projection_is_authoring_compatible {
-        "Lecture seule : graph_import a produit une projection avec des éléments hors hiérarchie."
-            .to_string()
-    } else if root_ref_only {
-        "Lecture seule : la racine importée est uniquement composée de références.".to_string()
-    } else if root_ref_ratio >= ROOT_REF_RATIO_LIMIT {
-        "Lecture seule : trop de références à la racine du projet importé.".to_string()
+        user_message::UserMessage::new(
+            codes::IMPORT_AUTHORING_HIERARCHY_INCOMPLETE,
+        )
+            .with_detail("Lecture seule : graph_import a produit une projection avec des éléments hors hiérarchie.".to_string())
+            .into_transport()
     } else if !round_trip_faithful {
-        "Lecture seule : simulation native possible, génération canonique non fidèle au story.json d'origine."
-            .to_string()
+        user_message::UserMessage::new(
+            codes::IMPORT_CANONICAL_GENERATION_UNFAITHFUL,
+        )
+            .with_detail("Lecture seule : simulation native possible, génération canonique non fidèle au story.json d'origine.".to_string())
+            .into_transport()
     } else {
-        "Lecture seule : le pack est fidèle en round-trip mais hors critères authoring.".to_string()
+        user_message::UserMessage::new(codes::IMPORT_AUTHORING_CRITERIA_UNMET)
+            .with_detail(
+                "Lecture seule : le pack est fidèle en round-trip mais hors critères authoring."
+                    .to_string(),
+            )
+            .into_transport()
     };
 
     Ok(PackEditabilityReport {
@@ -470,14 +727,13 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
         authoring_editable,
         read_only_inspectable,
         reason,
+        reason_code: None,
         fidelity: Some(fidelity),
         projected_entry_count,
         root_entry_count,
         shared_entry_count,
         has_native_graph,
         uses_graph_projection,
-        root_ref_ratio,
-        root_ref_only,
         shared_entry_ratio,
         has_unmodeled_wheel,
         import_diagnostics,
@@ -706,11 +962,10 @@ fn aggregate_end_gap_is_tolerated(
     missing_stage_count <= wrapper_count
         && fidelity.asset_presence_gap_count <= missing_stage_count
         && fidelity.asset_presence_gap_count <= night_bridge_count
-        && !fidelity.topology_gaps.iter().any(|gap| {
-            gap.contains("nightModeAvailable")
-                || gap.contains("squareOne manquant")
-                || gap.contains("transition invalide")
-        })
+        && !fidelity
+            .topology_gap_kinds
+            .iter()
+            .any(|gap| gap.blocks_aggregate_tolerance())
 }
 
 fn end_home_or_night_gap_is_tolerated(fidelity: &FidelityReport) -> bool {
@@ -724,35 +979,9 @@ fn end_home_or_night_gap_is_tolerated(fidelity: &FidelityReport) -> bool {
     }
 
     fidelity
-        .topology_gaps
+        .topology_gap_kinds
         .iter()
-        .all(|gap| is_end_home_or_night_gap(gap))
-}
-
-fn is_end_home_or_night_gap(gap: &str) -> bool {
-    gap.starts_with("nightModeAvailable :")
-        || is_end_play_home_gap(gap)
-        || is_end_prompt_ok_gap(gap)
-}
-
-fn is_end_play_home_gap(gap: &str) -> bool {
-    gap.starts_with("transition ")
-        && gap.contains("kind: Home")
-        && gap.contains("pause: true")
-        && gap.contains("autoplay: true")
-        && !gap.contains("Invalid")
-}
-
-fn is_end_prompt_ok_gap(gap: &str) -> bool {
-    gap.starts_with("transition ")
-        && gap.contains("kind: Ok")
-        && gap.contains("has_audio: true")
-        && gap.contains("has_image: false")
-        && gap.contains("wheel: false")
-        && gap.contains("ok: true")
-        && gap.contains("home: true")
-        && gap.contains("pause: false")
-        && !gap.contains("Invalid")
+        .all(|gap| gap.is_end_home_or_night())
 }
 
 /// Teste « à sec » si un pack est éditable par Story Studio. Retourne :
@@ -812,15 +1041,33 @@ fn referenced_asset_names(doc: &serde_json::Value) -> BTreeSet<String> {
 }
 
 fn zip_asset_names(zip_path: &Path) -> Result<HashSet<String>, String> {
-    let file = fs::File::open(zip_path)
-        .map_err(|e| format!("Impossible d'ouvrir le ZIP assets : {}", e))?;
+    let file = fs::File::open(zip_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_ASSETS_ZIP_OPEN_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible d'ouvrir le ZIP assets : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
     ensure_zip_entry_count(archive.len(), zip_path)?;
     let mut names = HashSet::new();
     for index in 0..archive.len() {
-        let entry = archive
-            .by_index(index)
-            .map_err(|e| format!("Erreur lecture ZIP index {} : {}", index, e))?;
+        let entry = archive.by_index(index).map_err(|e| {
+            let _msg_index = (index).to_string();
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::IMPORT_EXTRACTION_ZIP_INDEX_FAILED)
+                .param("index", user_message::transport_param(_msg_index.clone()))
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Erreur lecture ZIP index {_msg_index} : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                    _msg_index = user_message::transport_detail(&_msg_index)
+                ))
+                .into_transport()
+        })?;
         let name = entry.name().replace('\\', "/");
         if name.ends_with('/') {
             continue;
@@ -828,9 +1075,19 @@ fn zip_asset_names(zip_path: &Path) -> Result<HashSet<String>, String> {
         let Ok(asset_name) = validate_pack_asset_name(&name) else {
             continue;
         };
-        let short = asset_name
-            .strip_prefix("assets/")
-            .ok_or_else(|| format!("Nom d'asset hors dossier assets/ : {asset_name}"))?;
+        let short = asset_name.strip_prefix("assets/").ok_or_else(|| {
+            let _msg_asset_name = (asset_name).to_string();
+            user_message::UserMessage::new(codes::IMPORT_ASSET_FOLDER_OUTSIDE)
+                .param(
+                    "assetName",
+                    user_message::transport_param(_msg_asset_name.clone()),
+                )
+                .with_detail(format!(
+                    "Nom d'asset hors dossier assets/ : {_msg_asset_name}",
+                    _msg_asset_name = user_message::transport_detail(&_msg_asset_name)
+                ))
+                .into_transport()
+        })?;
         names.insert(short.to_string());
     }
     Ok(names)
@@ -885,15 +1142,34 @@ fn project_from_imported_entries(
         .unwrap_or("")
         .to_string();
 
-    let mut entries: Vec<ProjectEntry> =
-        serde_json::from_value(imported.get("entries").cloned().unwrap_or_default())
-            .map_err(|error| format!("Entrées importées invalides : {error}"))?;
+    let mut entries: Vec<ProjectEntry> = serde_json::from_value(
+        imported.get("entries").cloned().unwrap_or_default(),
+    )
+    .map_err(|error| {
+        let _msg_error = (error).to_string();
+        user_message::UserMessage::new(codes::IMPORT_INVALID_IMPORTED_ENTRIES)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Entrées importées invalides : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     for entry in &mut entries {
         rewrite_imported_root_targets(entry, &wrapper_id);
     }
     let mut shared_entries: Vec<ProjectEntry> =
         serde_json::from_value(imported.get("sharedEntries").cloned().unwrap_or_default())
-            .map_err(|error| format!("Entrées partagées importées invalides : {error}"))?;
+            .map_err(|error| {
+                let _msg_error = (error).to_string();
+                user_message::UserMessage::new(codes::IMPORT_INVALID_IMPORTED_SHARED_ENTRIES)
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Entrées partagées importées invalides : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error)
+                    ))
+                    .into_transport()
+            })?;
     for entry in &mut shared_entries {
         rewrite_imported_root_targets(entry, &wrapper_id);
     }
@@ -924,6 +1200,21 @@ fn project_from_imported_entries(
             .and_then(|value| value.as_str())
             .unwrap_or("")
             .to_string(),
+        official_origin_uuid: imported
+            .get("officialOriginUuid")
+            .and_then(|v| v.as_str())
+            .map(str::to_owned),
+        contains_official_content: imported
+            .get("containsOfficialContent")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
+        official_provenance: serde_json::from_value(
+            imported
+                .get("officialProvenance")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null),
+        )
+        .unwrap_or_default(),
         pack_uuid: imported
             .get("uuid")
             .and_then(|value| value.as_str())
@@ -1046,22 +1337,12 @@ fn count_project_entries(entries: &[ProjectEntry]) -> usize {
         .sum()
 }
 
-fn count_project_entries_of_type(entries: &[ProjectEntry], entry_type: &str) -> usize {
-    entries
-        .iter()
-        .map(|entry| {
-            usize::from(entry.entry_type == entry_type)
-                + count_project_entries_of_type(&entry.children, entry_type)
-        })
-        .sum()
-}
-
 fn graph_projection_is_authoring_compatible(
     uses_graph_projection: bool,
     shared_entry_count: usize,
-    projected_ref_count: usize,
+    out_of_tree_edge_count: usize,
 ) -> bool {
-    !uses_graph_projection || (shared_entry_count == 0 && projected_ref_count == 0)
+    !uses_graph_projection || (shared_entry_count == 0 && out_of_tree_edge_count == 0)
 }
 
 fn ratio(part: usize, total: usize) -> f64 {
@@ -1128,13 +1409,23 @@ fn has_unmodeled_wheel(doc: &serde_json::Value) -> bool {
 }
 
 fn read_story_json_from_zip(zip_path: &Path) -> Result<String, String> {
-    let file =
-        fs::File::open(zip_path).map_err(|e| format!("Impossible d'ouvrir le ZIP : {}", e))?;
+    let file = fs::File::open(zip_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_SOURCE_ZIP_OPEN_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible d'ouvrir le ZIP : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
     ensure_zip_entry_count(archive.len(), zip_path)?;
-    let mut entry = archive
-        .by_name("story.json")
-        .map_err(|_| "story.json introuvable dans le ZIP".to_string())?;
+    let mut entry = archive.by_name("story.json").map_err(|_| {
+        user_message::UserMessage::new(codes::IMPORT_STORY_JSON_MISSING)
+            .with_detail("story.json introuvable dans le ZIP".to_string())
+            .into_transport()
+    })?;
     ensure_zip_entry_size(
         "story.json",
         "story.json",
@@ -1154,8 +1445,16 @@ fn extract_all_zip_assets(
     zip_path: &Path,
     dest: &Path,
 ) -> Result<HashMap<String, PathBuf>, String> {
-    let file = fs::File::open(zip_path)
-        .map_err(|e| format!("Impossible d'ouvrir le ZIP assets : {}", e))?;
+    let file = fs::File::open(zip_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_ASSETS_ZIP_OPEN_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible d'ouvrir le ZIP assets : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
     ensure_zip_entry_count(archive.len(), zip_path)?;
     let mut map = HashMap::new();
@@ -1163,9 +1462,19 @@ fn extract_all_zip_assets(
     let mut total_asset_bytes = 0_u64;
 
     for i in 0..archive.len() {
-        let mut entry = archive
-            .by_index(i)
-            .map_err(|e| format!("Erreur lecture ZIP index {} : {}", i, e))?;
+        let mut entry = archive.by_index(i).map_err(|e| {
+            let _msg_i = (i).to_string();
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::IMPORT_PREFLIGHT_ZIP_INDEX_FAILED)
+                .param("index", user_message::transport_param(_msg_i.clone()))
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Erreur lecture ZIP index {_msg_i} : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                    _msg_i = user_message::transport_detail(&_msg_i)
+                ))
+                .into_transport()
+        })?;
         let name = entry.name().replace('\\', "/");
         if name.ends_with('/') {
             continue;
@@ -1173,62 +1482,168 @@ fn extract_all_zip_assets(
         let Ok(asset_name) = validate_pack_asset_name(&name) else {
             continue;
         };
-        let short = asset_name
-            .strip_prefix("assets/")
-            .ok_or_else(|| format!("Nom d'asset hors dossier assets/ : {asset_name}"))?;
+        let short = asset_name.strip_prefix("assets/").ok_or_else(|| {
+            let _msg_asset_name = (asset_name).to_string();
+            user_message::UserMessage::new(codes::IMPORT_ASSET_FOLDER_OUTSIDE)
+                .param(
+                    "assetName",
+                    user_message::transport_param(_msg_asset_name.clone()),
+                )
+                .with_detail(format!(
+                    "Nom d'asset hors dossier assets/ : {_msg_asset_name}",
+                    _msg_asset_name = user_message::transport_detail(&_msg_asset_name)
+                ))
+                .into_transport()
+        })?;
         // NFC + minuscules : couvre les collisions des volumes Windows/macOS
         // insensibles à la casse et les formes Unicode composées/décomposées.
         let portable_name: String = short.nfc().flat_map(char::to_lowercase).collect();
         if !portable_names.insert(portable_name) {
-            return Err(format!(
-                "Collision de nom d'asset non portable entre plateformes : {short}"
-            ));
+            return Err({
+                let _msg_short = (short).to_string();
+                user_message::UserMessage::new(codes::IMPORT_ASSET_NAME_COLLISION)
+                    .param(
+                        "assetName",
+                        user_message::transport_param(_msg_short.clone()),
+                    )
+                    .with_detail(format!(
+                        "Collision de nom d'asset non portable entre plateformes : {_msg_short}",
+                        _msg_short = user_message::transport_detail(&_msg_short),
+                    ))
+                    .into_transport()
+            });
         }
         ensure_zip_entry_size("Asset", &name, entry.size(), ARCHIVE_MAX_FILE_BYTES)?;
-        total_asset_bytes = total_asset_bytes
-            .checked_add(entry.size())
-            .ok_or_else(|| "Taille totale des assets ZIP trop volumineuse.".to_string())?;
+        total_asset_bytes = total_asset_bytes.checked_add(entry.size()).ok_or_else(|| {
+            user_message::UserMessage::new(codes::IMPORT_ASSET_TOTAL_SIZE_LIMIT)
+                .with_detail("Taille totale des assets ZIP trop volumineuse.".to_string())
+                .into_transport()
+        })?;
         ensure_total_asset_size(total_asset_bytes)?;
         let out_path = dest.join(short);
         if let Some(parent) = out_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| format!("Création dossier asset {} impossible : {}", short, e))?;
+            fs::create_dir_all(parent).map_err(|e| {
+                let _msg_short = (short).to_string();
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(codes::IMPORT_ASSET_FOLDER_CREATE_FAILED)
+                    .param(
+                        "assetName",
+                        user_message::transport_param(_msg_short.clone()),
+                    )
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Création dossier asset {_msg_short} impossible : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                        _msg_short = user_message::transport_detail(&_msg_short)
+                    ))
+                    .into_transport()
+            })?;
         }
         let mut output = fs::OpenOptions::new()
             .write(true)
             .create_new(true)
             .open(&out_path)
-            .map_err(|e| format!("Création asset {} impossible : {}", short, e))?;
-        std::io::copy(&mut entry, &mut output)
-            .map_err(|e| format!("Écriture asset {} impossible : {}", short, e))?;
+            .map_err(|e| {
+                let _msg_short = (short).to_string();
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(codes::IMPORT_ASSET_CREATE_FAILED)
+                    .param(
+                        "assetName",
+                        user_message::transport_param(_msg_short.clone()),
+                    )
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Création asset {_msg_short} impossible : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                        _msg_short = user_message::transport_detail(&_msg_short)
+                    ))
+                    .into_transport()
+            })?;
+        std::io::copy(&mut entry, &mut output).map_err(|e| {
+            let _msg_short = (short).to_string();
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::IMPORT_ASSET_WRITE_FAILED)
+                .param(
+                    "assetName",
+                    user_message::transport_param(_msg_short.clone()),
+                )
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Écriture asset {_msg_short} impossible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                    _msg_short = user_message::transport_detail(&_msg_short)
+                ))
+                .into_transport()
+        })?;
         map.insert(short.to_string(), out_path);
     }
     Ok(map)
 }
 
 fn extract_zip_thumbnail(zip_path: &Path, dest: &Path) -> Result<Option<PathBuf>, String> {
-    let file = fs::File::open(zip_path)
-        .map_err(|e| format!("Impossible d'ouvrir le ZIP thumbnail : {}", e))?;
+    let file = fs::File::open(zip_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_THUMBNAIL_ZIP_OPEN_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible d'ouvrir le ZIP thumbnail : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
     for name in &["thumbnail.png", "thumbnail.jpg", "thumbnail.jpeg"] {
         if let Ok(mut entry) = archive.by_name(name) {
             ensure_zip_entry_size("Thumbnail", name, entry.size(), ARCHIVE_MAX_FILE_BYTES)?;
             let file_name = Path::new(name).file_name().unwrap_or_default();
             let thumbnail_dir = dest.join(".story-studio-thumbnail");
-            fs::create_dir_all(&thumbnail_dir)
-                .map_err(|e| format!("Création dossier thumbnail impossible : {}", e))?;
+            fs::create_dir_all(&thumbnail_dir).map_err(|e| {
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(codes::IMPORT_THUMBNAIL_FOLDER_CREATE_FAILED)
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Création dossier thumbnail impossible : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                    ))
+                    .into_transport()
+            })?;
             let out_path = thumbnail_dir.join(file_name);
             let mut output = fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
                 .open(&out_path)
-                .map_err(|e| format!("Création thumbnail impossible : {}", e))?;
-            std::io::copy(&mut entry, &mut output)
-                .map_err(|e| format!("Écriture thumbnail impossible : {}", e))?;
+                .map_err(|e| {
+                    let _msg_error = (e).to_string();
+                    user_message::UserMessage::new(codes::IMPORT_THUMBNAIL_CREATE_FAILED)
+                        .param("error", user_message::transport_param(_msg_error.clone()))
+                        .with_detail(format!(
+                            "Création thumbnail impossible : {_msg_error}",
+                            _msg_error = user_message::transport_detail(&_msg_error)
+                        ))
+                        .into_transport()
+                })?;
+            std::io::copy(&mut entry, &mut output).map_err(|e| {
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(codes::IMPORT_THUMBNAIL_WRITE_FAILED)
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Écriture thumbnail impossible : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error)
+                    ))
+                    .into_transport()
+            })?;
             return Ok(Some(out_path));
         }
     }
     Ok(None)
+}
+
+#[cfg(test)]
+pub(crate) fn import_pack_as_advanced_document(
+    pack_path: &str,
+    assets_dir: &str,
+) -> Result<AdvancedAcquisition, String> {
+    import_pack_as_advanced_document_with_catalogue(pack_path, assets_dir, None)
 }
 
 #[cfg(test)]
@@ -1239,6 +1654,8 @@ mod tests {
         project_from_imported_entries, read_story_json_from_zip, unpack_zip_to_entries,
         unpack_zip_to_entries_unchecked,
     };
+    use crate::support::user_message::MessageTransportAssertions as _;
+    use crate::support::user_message::{self, codes};
     use std::fs;
     use std::io::Write;
     use std::path::{Path, PathBuf};
@@ -1694,7 +2111,7 @@ mod tests {
 
         let error =
             extract_all_zip_assets(&zip_path, &output_dir).expect_err("collision must fail");
-        assert!(error.contains("Collision de nom d'asset non portable"));
+        assert!(error.contains_any_code(&[codes::IMPORT_ASSET_NAME_COLLISION]));
 
         fs::remove_dir_all(dir).expect("cleanup");
     }
@@ -1773,6 +2190,80 @@ mod tests {
             writer.write_all(asset.as_bytes()).expect("write asset");
         }
         writer.finish().expect("finish zip");
+    }
+
+    #[test]
+    fn proposed_pack_names_preserve_authored_titles_and_all_graph_fields() {
+        let dir = temp_dir("proposed_pack_names");
+        let mut story = editable_story_json();
+        story.as_object_mut().expect("object").remove("title");
+        let zip = dir.join("untitled.zip");
+        write_story_zip(&zip, &story);
+        let path = zip.to_str().expect("utf8");
+        let legacy =
+            unpack_zip_to_entries_unchecked(path, dir.join("legacy").to_str().expect("utf8"))
+                .expect("legacy import");
+        assert_eq!(legacy["title"], "Pack importé");
+        for name in ["Imported audiobook", "Audiolibro importato"] {
+            let result = super::unpack_zip_to_entries_unchecked_named(
+                path,
+                dir.join(name).to_str().expect("utf8"),
+                Some(name),
+            )
+            .expect("named import");
+            assert_eq!(result["title"], name);
+            // Seuls les noms proposés et la racine physique de l’extraction diffèrent.
+            let from = serde_json::to_string(&super::path_for_frontend(dir.join(name))).unwrap();
+            let to = serde_json::to_string(&super::path_for_frontend(dir.join("legacy"))).unwrap();
+            let entries = serde_json::to_string(&result["entries"])
+                .expect("entries")
+                .replace(&from[1..from.len() - 1], &to[1..to.len() - 1]);
+            let mut expected = legacy["entries"].clone();
+            expected[0]["name"] = serde_json::json!(name);
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&entries).expect("normalized paths"),
+                expected
+            );
+        }
+        story["title"] = serde_json::json!("Titre auteur");
+        let authored = dir.join("authored.zip");
+        write_story_zip(&authored, &story);
+        let result = super::unpack_zip_to_entries_unchecked_named(
+            authored.to_str().expect("utf8"),
+            dir.join("authored-out").to_str().expect("utf8"),
+            Some("Imported audiobook"),
+        )
+        .expect("authored import");
+        assert_eq!(result["title"], "Titre auteur");
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    /// L'ouverture dans l'éditeur graphe n'invente aucun titre : un pack sans
+    /// titre reste sans titre dans le document comme dans la source de fidélité,
+    /// et donc à l'export. Aucun nom par défaut, localisé ou non, n'y est écrit.
+    #[test]
+    fn advanced_acquisition_of_untitled_pack_injects_no_default_name() {
+        use crate::native_pack::persistence::decode_authoring_payload;
+        let dir = temp_dir("advanced_untitled_no_name");
+        let mut story = editable_story_json();
+        story.as_object_mut().expect("object").remove("title");
+        let zip = dir.join("untitled.zip");
+        write_story_zip(&zip, &story);
+        let acquisition = super::import_pack_as_advanced_document(
+            zip.to_str().expect("utf8"),
+            dir.join("advanced").to_str().expect("utf8"),
+        )
+        .expect("advanced import");
+        let decoded = decode_authoring_payload(&acquisition.payload).expect("payload");
+        assert_eq!(decoded.document.title, crate::native_pack::Presence::Absent);
+        let raw = serde_json::to_value(&decoded.document).expect("serialize");
+        assert!(!raw
+            .as_object()
+            .expect("document object")
+            .contains_key("title"));
+        assert_eq!(raw["stageNodes"], story["stageNodes"]);
+        assert_eq!(raw["actionNodes"], story["actionNodes"]);
+        fs::remove_dir_all(dir).expect("cleanup");
     }
 
     fn editable_story_json() -> serde_json::Value {
@@ -2422,7 +2913,15 @@ mod tests {
                 "end".to_string()
             }
         };
-        let controls = |wheel: bool, ok: bool, home: bool, autoplay: bool| serde_json::json!({ "wheel": wheel, "ok": ok, "home": home, "pause": false, "autoplay": autoplay });
+        let controls = |wheel: bool, ok: bool, home: bool, autoplay: bool| {
+            serde_json::json!({
+                "wheel": wheel,
+                "ok": ok,
+                "home": home,
+                "pause": false,
+                "autoplay": autoplay
+            })
+        };
         let to = |action: &str| serde_json::json!({ "actionNode": action, "optionIndex": 0 });
         let mut stages = vec![
             serde_json::json!({
@@ -2557,7 +3056,9 @@ mod tests {
             report.reason
         );
         assert!(
-            !report.reason.contains("agrégat Story Studio"),
+            !report
+                .reason
+                .contains_any_code(&[codes::IMPORT_AUTHORING_AGGREGATE_FAITHFUL]),
             "{}",
             report.reason
         );
@@ -2795,7 +3296,9 @@ mod tests {
         assert!(!report.authoring_editable);
         assert!(!report.read_only_inspectable);
         assert!(
-            report.reason.contains("Contrôles incomplets") && report.reason.contains("Lecture"),
+            report
+                .reason
+                .contains_any_code(&[codes::IMPORT_INCOMPLETE_CONTROLS_PRESERVED]),
             "{}",
             report.reason
         );
@@ -2815,7 +3318,10 @@ mod tests {
 
         let error = super::load_pack_zip_for_simulation(zip_path.to_str().expect("utf8"))
             .expect_err("la simulation directe ne contourne pas CTL-004");
-        assert!(error.contains("Simulation indisponible"), "{error}");
+        assert!(
+            error.contains_any_code(&[codes::IMPORT_SIMULATION_CONTROLS_REQUIRED]),
+            "{error}"
+        );
         assert!(error.contains("/controlSettings"), "{error}");
 
         fs::remove_dir_all(dir).expect("cleanup");
@@ -3056,7 +3562,7 @@ mod tests {
     }
 
     #[test]
-    fn example_shared_entry_branching_graph_is_roundtrip_faithful_but_read_only() {
+    fn example_shared_entry_branching_graph_is_read_only_for_the_graph_editor() {
         let dir = temp_dir("example_shared_entry_graph");
         let zip_path = dir.join("pack.zip");
         let story = example_shared_entry_story_json();
@@ -3078,9 +3584,19 @@ mod tests {
         );
 
         let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
+        // Convergence et boucle n'ont pas de nœud dans l'arbre par menus : sa
+        // régénération ne reproduit plus ces arêtes (non fidèle), et le pack va à
+        // l'éditeur graphe avec le même refus qu'avant le retrait des liens.
         assert!(
-            report.round_trip_faithful,
+            !report.round_trip_faithful,
             "diagnostic inattendu : {}",
+            report.reason
+        );
+        assert!(
+            report
+                .reason
+                .contains_any_code(&[codes::VALIDATION_AUTHORING_SHARED_UNSUPPORTED]),
+            "{}",
             report.reason
         );
         assert!(!report.authoring_editable);
@@ -3094,7 +3610,7 @@ mod tests {
             dir.join("public-out").to_str().expect("utf8"),
         )
         .expect_err("graph projection must not open as authoring");
-        assert!(public_error.contains("Pack non éditable"));
+        assert!(public_error.contains_any_code(&[codes::IMPORT_AUTHORING_EDITING_REFUSED]));
 
         let imported = unpack_zip_to_entries_unchecked(
             zip_path.to_str().expect("utf8"),
@@ -3191,7 +3707,9 @@ mod tests {
             report.reason, report.fidelity
         );
         assert!(
-            report.reason.contains("agrégat Story Studio"),
+            report
+                .reason
+                .contains_any_code(&[codes::IMPORT_AUTHORING_AGGREGATE_FAITHFUL]),
             "{}",
             report.reason
         );
@@ -3206,25 +3724,56 @@ mod tests {
         assert_eq!(super::story_studio_aggregation_wrapper_count(&story), 2);
     }
 
-    fn fidelity_with_topology_gaps(gaps: Vec<&str>) -> super::FidelityReport {
+    fn fidelity_with_topology_gaps(
+        kinds: Vec<crate::native_pack::fidelity_judge::TopologyGapKind>,
+    ) -> super::FidelityReport {
+        let gaps: Vec<_> = kinds
+            .iter()
+            .map(|_| "Détail technique arbitraire".to_string())
+            .collect();
         super::FidelityReport {
             faithful: false,
             generated_stage_count: 10,
             oracle_stage_count: 10,
             invalid_transition_count: 0,
             asset_presence_gap_count: 0,
-            topology_gaps: gaps.iter().map(|gap| gap.to_string()).collect(),
+            topology_gap_kinds: kinds,
+            topology_gaps: gaps.clone(),
             asset_presence_gaps: Vec::new(),
-            gaps: gaps.iter().map(|gap| gap.to_string()).collect(),
+            gaps,
+        }
+    }
+
+    #[test]
+    fn tolerance_uses_typed_evidence_even_if_french_details_change() {
+        use crate::native_pack::fidelity_judge::TopologyGapKind;
+        let mut report = fidelity_with_topology_gaps(vec![TopologyGapKind::NightMode]);
+        assert!(super::end_home_or_night_gap_is_tolerated(&report));
+        report.topology_gaps = vec!["Details changed, no French matcher tokens".into()];
+        assert!(super::end_home_or_night_gap_is_tolerated(&report));
+        report.generated_stage_count = 8;
+        report.topology_gap_kinds = vec![TopologyGapKind::Other];
+        report.topology_gaps =
+            vec!["nightModeAvailable squareOne manquant transition invalide".into()];
+        assert!(super::aggregate_end_gap_is_tolerated(2, 0, &report));
+        for kind in [
+            TopologyGapKind::NightMode,
+            TopologyGapKind::MissingEntry,
+            TopologyGapKind::InvalidTransition,
+        ] {
+            report.topology_gap_kinds = vec![kind];
+            report.topology_gaps = vec!["Details changed".into()];
+            assert!(!super::aggregate_end_gap_is_tolerated(2, 0, &report));
         }
     }
 
     #[test]
     fn end_home_or_night_gap_is_authoring_tolerated() {
+        use crate::native_pack::fidelity_judge::{test_end_gap, TopologyGapKind};
         let fidelity = fidelity_with_topology_gaps(vec![
-            "nightModeAvailable : généré=false oracle=true",
-            "transition généré=131 oracle=0 : TopologyShape { source: ControlShape { square_one: false, has_audio: true, has_image: false, wheel: false, ok: false, home: true, pause: true, autoplay: true }, kind: Home, state: Selected { option_index: 0, option_count: 1 } }",
-            "transition généré=144 oracle=14 : TopologyShape { source: ControlShape { square_one: false, has_audio: true, has_image: false, wheel: false, ok: true, home: true, pause: false, autoplay: false }, kind: Ok, state: Selected { option_index: 0, option_count: 1 } }",
+            TopologyGapKind::NightMode,
+            test_end_gap(true),
+            test_end_gap(false),
         ]);
 
         assert!(super::end_home_or_night_gap_is_tolerated(&fidelity));
@@ -3232,9 +3781,10 @@ mod tests {
 
     #[test]
     fn end_home_or_night_gap_requires_equal_stage_counts() {
-        let mut fidelity = fidelity_with_topology_gaps(vec![
-            "transition généré=1 oracle=0 : TopologyShape { source: ControlShape { square_one: false, has_audio: true, has_image: false, wheel: false, ok: false, home: true, pause: true, autoplay: true }, kind: Home, state: Selected { option_index: 0, option_count: 1 } }",
-        ]);
+        let mut fidelity =
+            fidelity_with_topology_gaps(vec![crate::native_pack::fidelity_judge::test_end_gap(
+                true,
+            )]);
         fidelity.generated_stage_count = 9;
 
         assert!(!super::end_home_or_night_gap_is_tolerated(&fidelity));
@@ -3432,11 +3982,13 @@ mod tests {
         let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
         assert!(!report.authoring_editable);
         assert!(
-            report.reason.contains("échec de génération canonique")
-                || report
-                    .fidelity
-                    .as_ref()
-                    .is_some_and(|fidelity| !fidelity.faithful),
+            crate::support::user_message::contains_code(
+                &report.reason,
+                codes::IMPORT_CANONICAL_GENERATION_UNFAITHFUL
+            ) || report
+                .fidelity
+                .as_ref()
+                .is_some_and(|fidelity| !fidelity.faithful),
             "diagnostic inattendu : {}",
             report.reason,
         );
@@ -3496,8 +4048,10 @@ mod tests {
         .expect_err("public extraction must enforce editability");
 
         assert!(
-            // Préfixe reconnu par l’interface (isFreeEditorRefusal) pour renvoyer vers le graphe.
-            error.starts_with("Pack non éditable dans Story Studio"),
+            serde_json::from_str::<user_message::UserMessage>(&error)
+                .unwrap()
+                .code
+                == codes::PACK_NOT_EDITABLE,
             "diagnostic inattendu : {error}",
         );
 
@@ -3534,7 +4088,6 @@ mod tests {
         );
         assert!(!report.read_only_inspectable);
         assert!(!report.uses_graph_projection);
-        assert!(!report.root_ref_only);
         assert_eq!(report.shared_entry_count, 0);
         assert!(!report.has_unmodeled_wheel);
     }
@@ -3564,12 +4117,12 @@ mod tests {
                     eprintln!("[AUTHORING] gap {gap}");
                 }
                 for gap in fidelity
-                    .topology_gaps
+                    .topology_gap_kinds
                     .iter()
-                    .filter(|gap| !super::is_end_home_or_night_gap(gap))
+                    .filter(|gap| !gap.is_end_home_or_night())
                     .take(8)
                 {
-                    eprintln!("[AUTHORING] non-tolerated gap {gap}");
+                    eprintln!("[AUTHORING] non-tolerated gap {gap:?}");
                 }
             }
         }

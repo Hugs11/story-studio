@@ -1,3 +1,6 @@
+import { useTreeTranslation } from '../../i18n/useTreeTranslation.jsx';
+import { focusButtonOnMouseDown } from '../common/mouseFocus.js';
+import { translateTree as t } from '../../i18n/treePresentation.js';
 // Barre de recherche du TreePanel : input + bouton clear.
 // Extraite de TreePanel.jsx pour reduire la surface du composant orchestrateur.
 
@@ -16,9 +19,11 @@ export function TreeSearchBar({
   onClearSearch,
   children = null,
 }) {
+  useTreeTranslation();
   return (
     <div
       className="tree-search-controls"
+      onMouseDown={focusButtonOnMouseDown}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)
           && !searchTerm
@@ -41,7 +46,7 @@ export function TreeSearchBar({
           ref={inputRef}
           className="tree-search-input"
           type="text"
-          placeholder="Rechercher…"
+          placeholder={t("tree:search.query.placeholder")}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyDown={(e) => {

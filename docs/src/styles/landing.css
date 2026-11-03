@@ -507,10 +507,6 @@
         align-items: start;
       }
 
-      .media-pair--settings {
-        grid-template-columns: minmax(0, 1.65fr) minmax(260px, 0.75fr);
-      }
-
       .media-pair figcaption {
         margin-top: 9px;
         color: var(--muted);
@@ -522,8 +518,7 @@
         .journey {
           gap: 52px;
         }
-        .media-pair,
-        .media-pair--settings {
+        .media-pair {
           grid-template-columns: 1fr;
         }
         .journey-media--compact {

@@ -1,7 +1,8 @@
+import { aiRef } from '../i18n/aiPresentation.js';
 import { useState } from 'react';
 import { sanitizeImportedName } from '../store/projectStore';
-import { getImageJobTargetLabel } from '../store/aiJobLabels';
-import { getProjectFilePrefix } from '../utils/projectPrefix';
+import { getImageJobTargetRef } from '../store/aiJobLabels';
+import { captureProjectMediaJob } from '../store/projectMediaOutput';
 import { applyGeneratedAudioToTarget as dispatchGeneratedAudioToTarget } from '../store/generatedAudioTarget';
 
 function getTtsStoryName(text) {
@@ -26,6 +27,7 @@ function getTtsStoryName(text) {
 // hoistée, désormais valeur de retour).
 export function useAiGeneration({
   store,
+  mediaStorageRef,
   sdStore,
   xttsStore,
   projectIndex,
@@ -52,11 +54,14 @@ export function useAiGeneration({
     setSdGenerateOpen(true);
   }
 
-  function handleSDGenerate(workflowId, workflowName, params) {
+  async function handleSDGenerate(workflowId, workflowName, params) {
+    const projectEpoch = store.workEpochRef.current;
+    const mediaOutput = await captureProjectMediaJob(mediaStorageRef.current);
     sdStore.addJob(workflowId, workflowName, params, {
-      projectName: getProjectFilePrefix(store.project, store.savePath),
+      mediaOutput,
+      projectEpoch,
       fieldId: sdGenerateContext?.fieldId || null,
-      targetLabel: getImageJobTargetLabel(sdGenerateContext, projectIndex),
+      targetLabelRef: getImageJobTargetRef(sdGenerateContext, projectIndex),
     });
     handleOpenAiQueue();
   }
@@ -66,25 +71,41 @@ export function useAiGeneration({
   }
 
   async function handleQueueXttsGenerate(job) {
+    const projectEpoch = store.workEpochRef.current;
+    const settings = { ...xttsSettings };
+    const target = job.target ? { projectEpoch, ...job.target } : null;
+    const mediaOutput = await captureProjectMediaJob(mediaStorageRef.current);
+    const labelRef = job.targetLabelRef || (!job.targetLabel ? aiRef("ai:queue.audio.name") : null);
     xttsStore.addJob({
-      label: job.targetLabel || 'Audio IA',
-      targetLabel: job.targetLabel || 'Audio IA',
+      label: labelRef ? '' : job.targetLabel || '',
+      labelRef,
+      targetLabel: labelRef ? '' : job.targetLabel || '',
+      targetLabelRef: labelRef,
       voiceLabel: job.voiceLabel || 'XTTS',
       // Toute cible est liée au travail qui l'a demandée : une voix revenue
       // après l'ouverture d'un autre projet ne s'y applique pas (garde de
       // `applyGeneratedAudioToTarget`). Une cible qui porte déjà son époque la
       // garde.
-      target: job.target
-        ? { projectEpoch: store.workEpochRef.current, ...job.target }
-        : null,
+      target,
       request: job.request,
-      settings: { ...xttsSettings },
-      projectName: getProjectFilePrefix(store.project, store.savePath),
+      settings,
+      mediaOutput,
+      projectEpoch,
     });
     handleOpenAiQueue();
   }
 
+  function relocateMediaJobPaths(remap) {
+    for (const job of xttsStore.jobs) {
+      if (job.resultPath) xttsStore.updateJob(job.id, { resultPath: remap(job.resultPath) });
+    }
+    for (const job of sdStore.jobs) {
+      if (job.resultPaths?.length) sdStore.updateJob(job.id, { resultPaths: job.resultPaths.map(remap) });
+    }
+  }
+
   return {
+    relocateMediaJobPaths,
     handleOpenAiQueue,
     handleOpenSDGenerate,
     handleRegenerateImageJob,

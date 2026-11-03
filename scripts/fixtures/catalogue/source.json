@@ -1,0 +1,13 @@
+{
+  "id": "source-id",
+  "path": "/packs",
+  "origin": "workspace",
+  "status": "active",
+  "revision": 2,
+  "includedIn": null,
+  "availability": "available",
+  "lastScanAt": null,
+  "lastScanStatus": null,
+  "exemplarCount": 0,
+  "scanning": false
+}

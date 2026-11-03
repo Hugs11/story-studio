@@ -1,0 +1,24 @@
+{
+  "items": [{
+    "operationId": "scan-id",
+    "requestId": "interface-request",
+    "sequence": 4,
+    "sourcesRevision": 1,
+    "catalogueRevision": 2,
+    "timestamp": 1234,
+    "error": null,
+    "status": "success",
+    "phase": "finalization",
+    "discoveryComplete": true,
+    "scanComplete": true,
+    "unvisitedExtentUnknown": false,
+    "currentSourceId": "source-id",
+    "currentDirectory": "/packs",
+    "roots": { "total": 1, "completed": 1, "failed": 0 },
+    "directories": { "visited": 1, "errors": 0, "total": null },
+    "candidates": { "discovered": 1, "processed": 1, "total": 1 },
+    "outcomes": { "indexedNew": 0, "updated": 0, "unchanged": 0, "ignored": 0, "refused": 1, "error": 0, "notProcessed": 0 },
+    "cards": { "created": 0, "updated": 0 },
+    "reasons": [{ "reason": "corruptArchive", "outcome": "refused", "count": 1 }]
+  }]
+}

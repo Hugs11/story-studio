@@ -1,4 +1,4 @@
-//! Frontière IPC du projet avancé ; aucun accès disque ni import.
+//! Frontière IPC du projet avancé ; aucun accès aux fichiers projet ni import.
 //!
 //! Les quatre commandes partagent une règle : elles rendent une **vue dérivée**
 //! ou une **chaîne de payload**, jamais un document ouvert à JavaScript. Aucune
@@ -11,6 +11,7 @@ use crate::native_pack::persistence::{
     validate_authoring_payload, AdvancedMediaBinding, AuthoringPayloadSummary, PersistenceError,
 };
 use crate::native_pack::readiness::{assess_graph_document_export_readiness, ExportReadiness};
+use crate::support::user_message::{codes, UserMessage};
 
 #[tauri::command]
 pub(crate) fn validate_advanced_payload(
@@ -27,7 +28,6 @@ pub(crate) fn validate_advanced_payload(
 /// tels quels. Un document décodable mais qui viole les invariants du graphe
 /// est **lu**, avec ses défauts dans `diagnostics` : c'est la seule façon de le
 /// montrer à l'auteur pour qu'il le répare.
-#[tauri::command]
 pub(crate) fn read_advanced_graph_view(
     payload: String,
 ) -> Result<AdvancedGraphView, PersistenceError> {
@@ -42,9 +42,13 @@ pub(crate) fn read_advanced_graph_view(
 /// projet, et `decode_authoring_payload` recharge ensuite l'identité telle
 /// quelle ; elle ne change donc jamais au fil du cycle de vie.
 #[tauri::command]
-pub(crate) fn create_advanced_document(title: String) -> Result<String, PersistenceError> {
-    crate::native_pack::persistence::create_advanced_document(
+pub(crate) fn create_advanced_document(
+    title: String,
+    initial_stage_name: Option<String>,
+) -> Result<String, PersistenceError> {
+    crate::native_pack::persistence::create_advanced_document_named(
         &title,
+        initial_stage_name.as_deref(),
         &mut crate::native_pack::persistence::system_pack_identity,
     )
 }
@@ -61,7 +65,38 @@ pub(crate) fn assess_advanced_payload_readiness(
     payload: String,
 ) -> Result<ExportReadiness, PersistenceError> {
     let decoded = crate::native_pack::persistence::decode_authoring_payload(&payload)?;
-    Ok(assess_graph_document_export_readiness(Ok(&decoded)))
+    let mut assessment = assess_graph_document_export_readiness(Ok(&decoded));
+    // Only the transient UI message is adapted; readiness and its evidence stay intact.
+    for diagnostic in &mut assessment.diagnostics {
+        if let crate::native_pack::readiness::ReadinessDiagnostic::Readiness(observation) =
+            diagnostic
+        {
+            if observation.code == "ROOT_UUID_DIVERGENT" {
+                let identity = decoded
+                    .context
+                    .pack_identity
+                    .value
+                    .as_deref()
+                    .or_else(|| {
+                        decoded
+                            .document
+                            .stage_nodes
+                            .iter()
+                            .find(|stage| stage.square_one.value() == Some(&true))
+                            .map(|stage| stage.uuid.as_str())
+                    })
+                    .unwrap_or_default();
+                observation.message = UserMessage::new(codes::ROOT_UUID_DIVERGENT)
+                    .param(
+                        "rootUuid",
+                        decoded.document.uuid.as_deref().unwrap_or_default(),
+                    )
+                    .param("identity", identity)
+                    .into_transport();
+            }
+        }
+    }
+    Ok(assessment)
 }
 
 /// Geste d'auteur appliqué au payload **courant**.
@@ -75,11 +110,47 @@ pub(crate) fn assess_advanced_payload_readiness(
 /// Comme les trois autres commandes, elle ne touche pas au disque, ne persiste
 /// rien et ne réémet aucun payload qu'on ne lui a pas demandé de muter. La
 /// readiness reste à demander séparément, sur le payload rendu.
-#[tauri::command]
 pub(crate) fn apply_advanced_gesture(
     payload: String,
     media_bindings: Vec<AdvancedMediaBinding>,
     gesture: AdvancedGesture,
 ) -> Result<AdvancedGestureOutcome, GestureError> {
     apply_gesture(&payload, media_bindings, &gesture)
+}
+
+/// Runtime authorization augments the pure engine with the already-open catalogue.
+pub(crate) mod ipc {
+    use super::*;
+    #[tauri::command]
+    pub(crate) fn read_advanced_graph_view(
+        payload: String,
+        catalogue: tauri::State<'_, crate::services::catalogue::CatalogueState>,
+    ) -> Result<AdvancedGraphView, PersistenceError> {
+        let mut view = super::read_advanced_graph_view(payload)?;
+        view.identity_locked = crate::domain::official_provenance::is_official_origin(
+            view.official_provenance,
+            view.pack_identity.value.as_deref().unwrap_or_default(),
+            Some(catalogue.inner()),
+        )
+        .expect("recognition falls back to the embedded list");
+        Ok(view)
+    }
+
+    #[tauri::command]
+    pub(crate) fn apply_advanced_gesture(
+        payload: String,
+        media_bindings: Vec<AdvancedMediaBinding>,
+        gesture: AdvancedGesture,
+        catalogue: tauri::State<'_, crate::services::catalogue::CatalogueState>,
+    ) -> Result<AdvancedGestureOutcome, GestureError> {
+        if let AdvancedGesture::SetDocumentMetadata { update } = &gesture {
+            let decoded = crate::native_pack::persistence::decode_authoring_payload(&payload)?;
+            crate::native_pack::editing::metadata::check_identity_update(
+                &decoded,
+                update,
+                Some(catalogue.inner()),
+            )?;
+        }
+        super::apply_advanced_gesture(payload, media_bindings, gesture)
+    }
 }

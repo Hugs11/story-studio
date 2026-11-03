@@ -73,11 +73,26 @@
   --border-radius-md: var(--radius-md);
   --border-radius-lg: var(--radius-lg);
 
+  /* Same overlay in light and dark themes. */
+  --overlay-backdrop: rgba(0, 0, 0, 0.55);
+
   /* Elevation */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.18);
   --shadow-lg: 0 14px 42px rgba(0, 0, 0, 0.22);
   --shadow-overlay: 0 16px 48px rgba(0, 0, 0, 0.28);
+
+  /* Fixed cover overlays, shared by light and dark themes (4b). */
+  --catalogue-cover-gradient: linear-gradient(to bottom, rgba(10,10,14,.42) 0%, rgba(10,10,14,0) 24%), linear-gradient(to top, rgba(10,10,14,.93) 0%, rgba(10,10,14,.7) 30%, rgba(10,10,14,.28) 46%, rgba(10,10,14,0) 60%);
+  /* Ombre et voile du haut au lieu d’un flou d’arrière-plan, que WebKitGTK redessine lentement en mise à l’échelle fractionnaire. */
+  --catalogue-cover-pill-bg: rgba(10,10,14,.6);
+  --catalogue-cover-pill-shadow: 0 1px 2px rgba(0,0,0,.35), 0 2px 10px rgba(0,0,0,.28);
+  --catalogue-cover-text: #fff;
+  --catalogue-cover-meta: rgba(255,255,255,.78);
+  --catalogue-cover-action-bg: rgba(255,255,255,.14);
+  --catalogue-card-radius: 10px;
+  --catalogue-card-action-radius: 6px;
+  --catalogue-card-selection-shadow: 0 0 0 2px var(--accent-2-dim);
 
   /* Motion */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
@@ -356,4 +371,26 @@
   --tree-path-guide: color-mix(in srgb, var(--text) 42%, var(--tree-depth-guide));
   --tree-scope-bg: color-mix(in srgb, var(--bg3) 26%, transparent);
   --tree-scope-hover-bg: color-mix(in srgb, var(--accent) 17%, transparent);
+}
+
+/* Catalogue: paired backgrounds/texts, >= 4.5:1 in both themes. */
+:root {
+  --catalogue-format-project-bg: #eee7ff;
+  --catalogue-format-project-text: #4c287f;
+  --catalogue-format-zip-bg: #dceeff;
+  --catalogue-format-zip-text: #164b78;
+  --catalogue-format-seven-zip-bg: #fce3f2;
+  --catalogue-format-seven-zip-text: #85245d;
+  --catalogue-format-folder-bg: #dbf2e4;
+  --catalogue-format-folder-text: #235c3a;
+}
+[data-theme='dark'] {
+  --catalogue-format-project-bg: #30203e;
+  --catalogue-format-project-text: #e1c8ff;
+  --catalogue-format-zip-bg: #182f44;
+  --catalogue-format-zip-text: #b9ddff;
+  --catalogue-format-seven-zip-bg: #432036;
+  --catalogue-format-seven-zip-text: #ffbde1;
+  --catalogue-format-folder-bg: #19382a;
+  --catalogue-format-folder-text: #b2e7c7;
 }

@@ -1,4 +1,6 @@
 use super::*;
+use crate::support::user_message;
+use crate::support::user_message::codes;
 
 pub(super) fn validate_reference_image_extension(path: &str) -> Result<(), String> {
     let ext = Path::new(path)
@@ -9,10 +11,18 @@ pub(super) fn validate_reference_image_extension(path: &str) -> Result<(), Strin
         ext.as_deref(),
         Some("png" | "jpg" | "jpeg" | "webp" | "bmp")
     ) {
-        return Err(format!(
-            "Extension d'image de référence non autorisée (attendu : png, jpg, jpeg, webp, bmp) : {}",
-            path
-        ));
+        return Err({
+            let _msg_path = (path).to_string();
+            user_message::UserMessage::new(
+                codes::COMFYUI_REFERENCE_EXTENSION_INVALID,
+            )
+                .param("path", user_message::transport_param(_msg_path.clone()))
+                .with_detail(format!(
+                    "Extension d'image de référence non autorisée (attendu : png, jpg, jpeg, webp, bmp) : {_msg_path}",
+                    _msg_path = user_message::transport_detail(&_msg_path),
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }
@@ -43,7 +53,16 @@ pub(super) fn http_client(timeout: Duration) -> Result<reqwest::blocking::Client
     reqwest::blocking::Client::builder()
         .timeout(timeout)
         .build()
-        .map_err(|e| format!("Impossible de créer le client HTTP : {}", e))
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_HTTP_CLIENT_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de créer le client HTTP : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })
 }
 
 pub(super) fn base64_encode(bytes: &[u8]) -> String {
@@ -71,9 +90,16 @@ pub(super) fn base64_encode(bytes: &[u8]) -> String {
 
 pub(super) fn read_ws_frame(stream: &mut TcpStream) -> Result<Option<String>, String> {
     let mut header = [0u8; 2];
-    stream
-        .read_exact(&mut header)
-        .map_err(|e| format!("Lecture WebSocket ComfyUI impossible : {}", e))?;
+    stream.read_exact(&mut header).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_WEBSOCKET_READ_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Lecture WebSocket ComfyUI impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     let opcode = header[0] & 0x0f;
     let masked = header[1] & 0x80 != 0;
@@ -94,12 +120,23 @@ pub(super) fn read_ws_frame(stream: &mut TcpStream) -> Result<Option<String>, St
     }
 
     if len > 10 * 1024 * 1024 {
-        return Err("Message WebSocket ComfyUI trop volumineux.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::COMFYUI_WEBSOCKET_MESSAGE_OVERSIZED)
+                .with_detail("Message WebSocket ComfyUI trop volumineux.".to_string())
+                .into_transport(),
+        );
     }
     let mut payload = vec![0u8; len as usize];
-    stream
-        .read_exact(&mut payload)
-        .map_err(|e| format!("Payload WebSocket ComfyUI illisible : {}", e))?;
+    stream.read_exact(&mut payload).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_WEBSOCKET_PAYLOAD_UNREADABLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Payload WebSocket ComfyUI illisible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if masked {
         for (index, byte) in payload.iter_mut().enumerate() {
             *byte ^= mask[index % 4];
@@ -107,9 +144,16 @@ pub(super) fn read_ws_frame(stream: &mut TcpStream) -> Result<Option<String>, St
     }
 
     match opcode {
-        1 => String::from_utf8(payload)
-            .map(Some)
-            .map_err(|e| format!("Message texte WebSocket ComfyUI invalide : {}", e)),
+        1 => String::from_utf8(payload).map(Some).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_WEBSOCKET_TEXT_INVALID)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Message texte WebSocket ComfyUI invalide : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        }),
         8 => Ok(None),
         _ => Ok(Some(String::new())),
     }
@@ -132,14 +176,50 @@ pub(super) fn safe_comfyui_output_filename(filename: &str) -> Result<String, Str
         || filename.contains("..")
         || filename.chars().any(char::is_control)
     {
-        return Err(format!("Nom de sortie ComfyUI invalide : {}", filename));
+        return Err({
+            let _msg_filename = (filename).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_OUTPUT_NAME_INVALID)
+                .param(
+                    "filename",
+                    user_message::transport_param(_msg_filename.clone()),
+                )
+                .with_detail(format!(
+                    "Nom de sortie ComfyUI invalide : {_msg_filename}",
+                    _msg_filename = user_message::transport_detail(&_msg_filename)
+                ))
+                .into_transport()
+        });
     }
     let file_name = Path::new(filename)
         .file_name()
         .and_then(|value| value.to_str())
-        .ok_or_else(|| format!("Nom de sortie ComfyUI invalide : {}", filename))?;
+        .ok_or_else(|| {
+            let _msg_filename = (filename).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_OUTPUT_NAME_INVALID)
+                .param(
+                    "filename",
+                    user_message::transport_param(_msg_filename.clone()),
+                )
+                .with_detail(format!(
+                    "Nom de sortie ComfyUI invalide : {_msg_filename}",
+                    _msg_filename = user_message::transport_detail(&_msg_filename)
+                ))
+                .into_transport()
+        })?;
     if file_name != filename {
-        return Err(format!("Nom de sortie ComfyUI invalide : {}", filename));
+        return Err({
+            let _msg_filename = (filename).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_OUTPUT_NAME_INVALID)
+                .param(
+                    "filename",
+                    user_message::transport_param(_msg_filename.clone()),
+                )
+                .with_detail(format!(
+                    "Nom de sortie ComfyUI invalide : {_msg_filename}",
+                    _msg_filename = user_message::transport_detail(&_msg_filename)
+                ))
+                .into_transport()
+        });
     }
     Ok(file_name.to_string())
 }

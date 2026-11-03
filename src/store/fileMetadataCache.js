@@ -1,7 +1,8 @@
 import { exists, stat } from '@tauri-apps/plugin-fs';
-import { pathKey, stripWindowsLongPathPrefix } from '../utils/fileUtils';
+import { pathKey, stripWindowsLongPathPrefix } from '../utils/fileUtils.js';
 
 export const FILE_REFRESH_THROTTLE_MS = 1500;
+export const FILE_RETRY_DELAYS_MS = Object.freeze([1500, 3000, 6000]);
 const PATH_QUERY_TIMEOUT_MS = 4000;
 
 const pathSnapshotCache = new Map();
@@ -31,6 +32,7 @@ function buildSnapshot(path, info, exists) {
     size: exists ? (info?.size ?? null) : null,
     mtimeMs: exists ? normalizeTimeMs(info?.mtime) : null,
     checkedAt: Date.now(),
+    current: true,
   };
 }
 
@@ -40,42 +42,46 @@ function isFresh(snapshot, maxAgeMs) {
     && (Date.now() - snapshot.checkedAt) < maxAgeMs;
 }
 
-async function queryPathSnapshot(path) {
+// Une réponse native booléenne est un constat ; un délai ou un rejet ne l'est
+// pas. Cette lecture directe sert aussi aux portes qui doivent éviter le cache.
+export async function readPathExistence(path, { timeoutMs = PATH_QUERY_TIMEOUT_MS } = {}) {
+  let timeoutId;
   try {
-    let existsTimeoutId = null;
-    const pathExists = await Promise.race([
-      exists(path),
-      new Promise((_, reject) => {
-        existsTimeoutId = setTimeout(() => reject(new Error('fs.exists timeout')), PATH_QUERY_TIMEOUT_MS);
+    const result = await Promise.race([
+      exists(readablePath(path)),
+      new Promise((resolve) => {
+        timeoutId = setTimeout(() => resolve(null), timeoutMs);
       }),
-    ]).finally(() => {
-      if (existsTimeoutId) clearTimeout(existsTimeoutId);
-    });
-    if (!pathExists) {
-      return buildSnapshot(path, null, false);
-    }
-    if (!statPermissionAvailable) {
-      return buildSnapshot(path, null, true);
-    }
-    try {
-      let statTimeoutId = null;
-      const info = await Promise.race([
-        stat(path),
-        new Promise((_, reject) => {
-          statTimeoutId = setTimeout(() => reject(new Error('fs.stat timeout')), PATH_QUERY_TIMEOUT_MS);
-        }),
-      ]).finally(() => {
-        if (statTimeoutId) clearTimeout(statTimeoutId);
-      });
-      return buildSnapshot(path, info, true);
-    } catch (error) {
-      if (String(error).includes('fs.stat not allowed')) {
-        statPermissionAvailable = false;
-      }
-      return buildSnapshot(path, null, true);
-    }
+    ]);
+    return typeof result === 'boolean' ? result : null;
   } catch {
-    return buildSnapshot(path, null, false);
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function queryPathSnapshot(path) {
+  const pathExists = await readPathExistence(path);
+  if (pathExists !== true) return buildSnapshot(path, null, pathExists);
+  if (!statPermissionAvailable) return buildSnapshot(path, null, true);
+  let statTimeoutId;
+  try {
+    const info = await Promise.race([
+      stat(path),
+      new Promise((_, reject) => {
+        statTimeoutId = setTimeout(() => reject(new Error('fs.stat timeout')), PATH_QUERY_TIMEOUT_MS);
+      }),
+    ]);
+    return buildSnapshot(path, info, true);
+  } catch (error) {
+    if (String(error).includes('fs.stat not allowed')) {
+      statPermissionAvailable = false;
+    }
+    // `exists` a établi la présence, même si les métadonnées restent illisibles.
+    return buildSnapshot(path, null, true);
+  } finally {
+    clearTimeout(statTimeoutId);
   }
 }
 
@@ -99,34 +105,42 @@ export function notifyFileChanged(path) {
   const normalizedPath = readablePath(path);
   const key = cacheKey(normalizedPath);
   if (!key) return;
-  pathSnapshotCache.delete(key);
+  invalidateCachedSnapshot(key);
+  inflightPathSnapshots.delete(key);
   window.dispatchEvent(new CustomEvent(FILE_CHANGED_EVENT, { detail: { path: normalizedPath } }));
+}
+
+function invalidateCachedSnapshot(key) {
+  const snapshot = pathSnapshotCache.get(key);
+  if (snapshot) snapshot.current = false;
+  pathSnapshotCache.delete(key);
 }
 
 export async function readPathSnapshot(path, { maxAgeMs = 0, force = false } = {}) {
   const normalizedPath = readablePath(path);
-  if (!normalizedPath) return buildSnapshot('', null, false);
+  if (!normalizedPath) return buildSnapshot('', null, null);
   const key = cacheKey(normalizedPath);
-
   const cachedSnapshot = pathSnapshotCache.get(key);
-  if (!force && isFresh(cachedSnapshot, maxAgeMs)) {
-    return cachedSnapshot;
-  }
-
+  if (!force && isFresh(cachedSnapshot, maxAgeMs)) return cachedSnapshot;
   const inflight = inflightPathSnapshots.get(key);
-  if (inflight) return inflight;
+  if (!force && inflight) return inflight;
+  invalidateCachedSnapshot(key);
 
   const promise = queryPathSnapshot(normalizedPath)
     .then((snapshot) => {
-      pathSnapshotCache.set(key, snapshot);
-      inflightPathSnapshots.delete(key);
+      // Une requête remplacée ne peut plus publier dans le cache. L'audit
+      // ignore également son résultat ; aucune table de lectures réglées
+      // n'est conservée pour prolonger ce suivi.
+      snapshot.current = inflightPathSnapshots.get(key) === promise;
+      if (snapshot.current) {
+        if (snapshot.exists !== null) pathSnapshotCache.set(key, snapshot);
+        else pathSnapshotCache.delete(key);
+      }
       return snapshot;
     })
-    .catch((error) => {
-      inflightPathSnapshots.delete(key);
-      throw error;
+    .finally(() => {
+      if (inflightPathSnapshots.get(key) === promise) inflightPathSnapshots.delete(key);
     });
-
   inflightPathSnapshots.set(key, promise);
   return promise;
 }

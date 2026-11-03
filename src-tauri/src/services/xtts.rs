@@ -24,6 +24,8 @@ pub struct XttsGenerateRequest {
     pub voice: Option<String>,
     #[serde(rename = "workspaceDir", default)]
     pub workspace_dir: Option<String>,
+    #[serde(rename = "projectDestination", default)]
+    pub project_destination: Option<crate::services::project_files::ProjectMediaDestination>,
     #[serde(rename = "filenameHint")]
     pub filename_hint: Option<String>,
 }
@@ -78,6 +80,7 @@ mod tests {
             speaker: None,
             voice: None,
             workspace_dir: Some(workspace.to_string_lossy().to_string()),
+            project_destination: None,
             filename_hint: None,
         };
         assert_eq!(
@@ -140,6 +143,7 @@ mod tests {
                 speaker: None,
                 voice: Some("titre_energique".to_string()),
                 workspace_dir: Some(workspace.to_string_lossy().to_string()),
+                project_destination: None,
                 filename_hint: Some("phase-3-xtts-cpu".to_string()),
             },
             &emit,

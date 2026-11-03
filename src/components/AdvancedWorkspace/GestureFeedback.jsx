@@ -1,3 +1,6 @@
+import { useTranslation, Trans } from 'react-i18next';
+import { graphTranslationEngine, translateGraph as t } from '../../i18n/graphPresentation.js';
+import { UserMessage } from '../common/UserMessage.jsx';
 // Ce qu'un geste a fait, et ce qu'un refus a empêché.
 //
 // Deux messages distincts, jamais confondus :
@@ -11,6 +14,7 @@ import { Button } from '../common/Button';
 import { describeReferences } from '../../store/advancedAuthoring/authoringPlans.js';
 
 function ReferenceList({ index, references }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const rows = describeReferences(index, references);
   if (rows.length === 0) return null;
   return (
@@ -19,7 +23,7 @@ function ReferenceList({ index, references }) {
         <li key={row.optionId ?? row.path}>
           {row.unresolved
             ? <code>{row.path}</code>
-            : <>{row.actionLabel} — choix {row.ordinal}</>}
+            : <>{t('graph:feedback.reference.label', { name: row.actionLabel, ordinal: row.ordinal })}</>}
         </li>
       ))}
     </ul>
@@ -27,21 +31,18 @@ function ReferenceList({ index, references }) {
 }
 
 export function RefusalNotice({ refusal, index, onDismiss }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   if (!refusal) return null;
   const error = refusal.error ?? {};
   return (
     <div className="advanced-feedback advanced-feedback--refusal" role="alert">
       <p className="advanced-feedback__head">
-        <strong>Geste refusé</strong>
-        {' — '}
-        <code>{error.code ?? 'ERREUR'}</code>
-        {' '}
-        Le projet est inchangé.
+        <Trans i18n={graphTranslationEngine()} t={t} i18nKey="graph:feedback.refusal.head" values={{ code: error.code ?? t('graph:feedback.error.fallback') }} components={{ strong: <strong />, code: <code /> }} />
       </p>
-      <p className="advanced-feedback__message">{error.message ?? String(refusal.error)}</p>
+      <div className="advanced-feedback__message"><UserMessage value={error} /></div>
       {error.path && <p className="advanced-feedback__path"><code>{error.path}</code></p>}
       <ReferenceList index={index} references={error.references ?? []} />
-      <Button size="sm" onClick={onDismiss}>Fermer</Button>
+      <Button size="sm" onClick={onDismiss}>{t('common:dialog.close.label')}</Button>
     </div>
   );
 }
@@ -50,6 +51,7 @@ export function RefusalNotice({ refusal, index, onDismiss }) {
 // déjà sélectionné et montré sur le graphe. Le rapport ne dit que ce qui ne se
 // voit pas : les raccords et les médias touchés par le geste.
 export function ReportNotice({ entry, onDismiss }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const report = entry?.report;
   if (!report) return null;
 
@@ -72,38 +74,36 @@ export function ReportNotice({ entry, onDismiss }) {
     <div className="advanced-feedback advanced-feedback--report" role="status">
       {maintained.length > 0 && (
         <p className="advanced-feedback__message">
-          {maintained.length} transition(s) ont conservé leur destination.
+          {t('graph:feedback.maintained.count', { count: maintained.length })}
         </p>
       )}
       {removedLinks.length > 0 && (
         <p className="advanced-feedback__message">
-          {removedLinks.length} raccord(s) ont été retirés.
+          {t('graph:feedback.removed.count', { count: removedLinks.length })}
         </p>
       )}
       {redirected.length > 0 && (
         <p className="advanced-feedback__message">
-          {redirected.length} raccord(s) ont changé de destination.
+          {t('graph:feedback.redirected.count', { count: redirected.length })}
         </p>
       )}
       {stale.length > 0 && (
         <p className="advanced-feedback__message">
-          {stale.length} décision(s) d'export deviennent périmées : elles restent enregistrées
-          comme trace, elles ne s'appliquent plus à la valeur courante.
+          {t('graph:feedback.stale.count', { count: stale.length })}
         </p>
       )}
       {released.length > 0 && (
         <p className="advanced-feedback__message">
-          {released.length} référence(s) média ne sont plus utilisées par cet écran. Leur
-          liaison reste enregistrée ; aucun fichier n'a été effacé.
+          {t('graph:feedback.released.count', { count: released.length })}
         </p>
       )}
       {missing.length > 0 && (
         <p className="advanced-feedback__message">
-          {missing.length} référence(s) média restent sans fichier résolu.
+          {t('graph:feedback.missing.count', { count: missing.length })}
         </p>
       )}
       <div className="advanced-feedback__actions">
-        <Button size="sm" onClick={onDismiss}>Fermer</Button>
+        <Button size="sm" onClick={onDismiss}>{t('common:dialog.close.label')}</Button>
       </div>
     </div>
   );

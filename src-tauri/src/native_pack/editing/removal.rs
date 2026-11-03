@@ -28,6 +28,7 @@
 //! Le retrait d'un Écran emploie son propre geste, qui retire ses occurrences
 //! dans un ordre déterministe.
 
+use crate::support::user_message::{codes, UserMessage};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 
@@ -190,9 +191,22 @@ fn check_unique(identifiers: &[String], label: &str) -> Result<(), GestureError>
     let mut seen = HashSet::new();
     for identifier in identifiers {
         if !seen.insert(identifier.as_str()) {
-            return Err(invalid(format!(
-                "Le {label} « {identifier} » est nommé deux fois dans le même retrait."
-            )));
+            return Err(invalid(
+                UserMessage::new(codes::GRAPH_REMOVAL_NODE_DUPLICATED)
+                    .param(
+                        "label",
+                        serde_json::json!({
+                            "code": if label == "Stage" {
+                                codes::LABEL_NODE_STAGE
+                            } else {
+                                codes::LABEL_NODE_ACTION
+                            },
+                            "params": {}
+                        }),
+                    )
+                    .param("identifier", (identifier).to_string())
+                    .into_transport(),
+            ));
         }
     }
     Ok(())
@@ -205,7 +219,9 @@ pub(crate) fn delete_subgraph(
     references: &mut ReferenceReport,
 ) -> Result<(), GestureError> {
     if request.stages.is_empty() && request.actions.is_empty() {
-        return Err(invalid("Aucun nœud à retirer.".to_string()));
+        return Err(invalid(
+            UserMessage::new(codes::GRAPH_REMOVAL_NODES_EMPTY).into_transport(),
+        ));
     }
     check_unique(&request.stages, "Stage")?;
     check_unique(&request.actions, "ActionNode")?;
@@ -220,7 +236,8 @@ pub(crate) fn delete_subgraph(
                 &format!("/stageNodes/@uuid={stage_uuid}#0"),
                 "Le Stage d'entrée ne se retire pas : un pack a exactement un Écran d'entrée, et le transfert de l'entrée est un geste distinct."
                     .to_string(),
-            ));
+            )
+.with_user_message(UserMessage::new(codes::SQUARE_ONE_REMOVAL)));
         }
     }
     for action_id in &request.actions {
@@ -251,6 +268,7 @@ pub(crate) fn delete_subgraph(
                 "Cette occurrence survit au retrait et désigne un Écran retiré : elle n'a reçu aucune décision."
                     .to_string(),
             )
+.with_user_message(UserMessage::new(codes::OPTION_DECISION_REQUIRED))
             .with_references(expected_options.clone()));
         }
     }
@@ -262,7 +280,8 @@ pub(crate) fn delete_subgraph(
                 &target,
                 "Cette occupation de rang ne survit pas au retrait, ou ne désigne aucun Écran retiré : le geste n'y touche pas."
                     .to_string(),
-            ));
+            )
+.with_user_message(UserMessage::new(codes::UNEXPECTED_OPTION_DECISION)));
         }
         match &decision.resolution {
             OptionResolution::Remove => {
@@ -271,14 +290,16 @@ pub(crate) fn delete_subgraph(
                     &target,
                     "Un retrait par lot ne retire pas d'occupation de rang : les rangs suivants glisseraient d'un plan à l'autre. Retirer un rang se fait par `delete-stage`."
                         .to_string(),
-                ))
+                )
+.with_user_message(UserMessage::new(codes::UNSUPPORTED_REMOVAL_RESOLUTION)))
             }
             OptionResolution::Retarget { uuid } if removed_stages.contains(uuid.as_str()) => {
                 return Err(GestureError::new(
                     "UNKNOWN_STAGE",
                     &target,
                     "Le retargeting désigne un Stage que le geste retire.".to_string(),
-                ))
+                )
+.with_user_message(UserMessage::new(codes::UNKNOWN_STAGE).param("context", codes::UNKNOWN_STAGE_RETARGET_REMOVED)))
             }
             _ => {}
         }
@@ -304,6 +325,7 @@ pub(crate) fn delete_subgraph(
                 "Cette transition survit au retrait et vise une Action retirée : elle n'a reçu aucune décision."
                     .to_string(),
             )
+.with_user_message(UserMessage::new(codes::TRANSITION_DECISION_REQUIRED))
             .with_references(expected_transitions.clone()));
         }
     }
@@ -315,7 +337,8 @@ pub(crate) fn delete_subgraph(
                 &target,
                 "Cette transition ne survit pas au retrait, ou ne vise aucune Action retirée : le geste n'y touche pas."
                     .to_string(),
-            ));
+            )
+.with_user_message(UserMessage::new(codes::UNEXPECTED_TRANSITION_DECISION)));
         }
         if let TransitionUpdate::Set { action_node, .. } = &decision.update {
             if removed_actions.contains(action_node.as_str()) {
@@ -323,7 +346,8 @@ pub(crate) fn delete_subgraph(
                     "UNKNOWN_ACTION",
                     &target,
                     "Le retargeting désigne une Action que le geste retire.".to_string(),
-                ));
+                )
+                .with_user_message(UserMessage::new(codes::UNKNOWN_ACTION)));
             }
         }
     }

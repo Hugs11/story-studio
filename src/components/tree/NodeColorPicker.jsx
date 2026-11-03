@@ -1,3 +1,5 @@
+import { useTreeTranslation } from '../../i18n/useTreeTranslation.jsx';
+import { translateTree as t } from '../../i18n/treePresentation.js';
 import { TREE_COLOR_PALETTE } from './treeOperations.js';
 
 // Palette partagée par le menu du Libre et l'éditeur Graphe. L'état mixte est
@@ -5,10 +7,11 @@ import { TREE_COLOR_PALETTE } from './treeOperations.js';
 // cliquer × efface toute la sélection.
 export function NodeColorPicker({
   currentColor = null,
-  label = 'Couleur',
+  label = t("tree:multi.color.label"),
   disabled = false,
   onChange,
 }) {
+  useTreeTranslation();
   return (
     <div className="ctx-color-section">
       {label && <div className="ctx-color-header">{label}</div>}
@@ -20,7 +23,7 @@ export function NodeColorPicker({
             className={`ctx-color-dot${currentColor === color ? ' is-active' : ''}`}
             style={{ backgroundColor: color }}
             title={color}
-            aria-label={`Choisir la couleur ${color}`}
+            aria-label={t("tree:color.choose.aria", { color })}
             aria-pressed={currentColor === color}
             disabled={disabled}
             onClick={() => onChange(color)}
@@ -29,8 +32,8 @@ export function NodeColorPicker({
         <button
           type="button"
           className={`ctx-color-clear${currentColor === null ? ' is-active' : ''}`}
-          title={currentColor === '__mixed__' ? 'Couleurs différentes — cliquer pour effacer' : 'Aucune couleur'}
-          aria-label="Retirer la couleur"
+          title={currentColor === '__mixed__' ? t("tree:multi.color.clearMixed") : t("tree:multi.color.none")}
+          aria-label={t("tree:color.clear.aria")}
           aria-pressed={currentColor === null}
           disabled={disabled}
           onClick={() => onChange(null)}

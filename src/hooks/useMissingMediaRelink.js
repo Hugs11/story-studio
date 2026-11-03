@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+import { useMessageLanguage } from '../i18n/useMessageLanguage.js';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   buildRelinkSignature,
@@ -75,6 +77,8 @@ export function useMissingMediaRelink({
   pathAudit,
   handleSaveProject,
 }) {
+  useMessageLanguage();
+  const language = i18next.resolvedLanguage ?? 'fr';
   const [dismissedMissingMediaSignature, setDismissedMissingMediaSignature] = useState('');
 
   useEffect(() => {
@@ -83,7 +87,7 @@ export function useMissingMediaRelink({
 
   const missingMedia = useMemo(
     () => collectMissingMedia(store.project, pathAudit),
-    [store.project, pathAudit],
+    [store.project, pathAudit, language],
   );
   const missingMediaSignature = useMemo(
     () => buildRelinkSignature(missingMedia),

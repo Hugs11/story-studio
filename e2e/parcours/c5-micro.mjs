@@ -304,7 +304,7 @@ async function runRefuse() {
     if (rec.outcome === 'denied') {
       check(
         '[refus] message lisible affiché',
-        typeof rec.message === 'string' && rec.message.includes("Impossible d'accéder au micro"),
+        typeof rec.message === 'string' && /Impossible d['’]accéder au micro/.test(rec.message),
         rec,
       );
       await closeRecordModalAfterError(page);

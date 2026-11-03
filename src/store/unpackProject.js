@@ -1,3 +1,5 @@
+import { containsOfficialContent, officialIdentityFields } from './officialProvenance.js';
+import { translateImport as t } from '../i18n/importPresentation.js';
 import { replaceEntryWithEntries } from './projectModel/operations.js';
 import {
   ProjectMenuDepthError,
@@ -24,8 +26,8 @@ export function getUnpackedPackDetails({ result = {}, zipPath = '', zipName = ''
   const isZipConvention = /^\d+\+\]/.test(zipFilename);
   const isTitleConvention = /^\d+\+\]/.test(rawTitle);
   const packName = (rawTitle && (isTitleConvention || !isZipConvention))
-    ? sanitizeImportedName(rawTitle, zipName || 'Pack importé')
-    : sanitizeImportedName(zipFilename || zipName, 'Pack importé');
+    ? sanitizeImportedName(rawTitle, zipName || t('import:names.pack.fallback'))
+    : sanitizeImportedName(zipFilename || zipName, t('import:names.pack.fallback'));
   const fallbackAge = (zipFilename || zipName || '').match(/^\s*(\d+)\s*\+/)?.[1] || '3';
   const lifted = liftLeadingAge(packName, fallbackAge);
   // Un titre de convention réduit à l'âge (« 6+] ») n'a rien de lisible : le
@@ -101,20 +103,28 @@ export function buildProjectAfterZipUnpack({
     ...details.packMetadata,
     uuid: details.packMetadata.uuid || project?.packMetadata?.uuid || generateUuid(),
   };
+  // Stamp every root: deleting the entire imported subtree removes containment.
+  const importedEntries = result?.officialProvenance === 'official'
+    ? entries.map(entry => ({ ...entry, officialProvenance: result.officialProvenance, officialOriginUuid: result.officialOriginUuid || details.packMetadata.uuid }))
+    : entries;
   const nextProject = shouldPromote
     ? {
         ...project,
         projectType: 'pack',
         projectName: project?.projectName ?? '',
         packMetadata,
+        officialProvenance: result?.officialProvenance ?? 'unknown',
+        ...officialIdentityFields(result),
         rootAudio: result?.rootAudio ?? null,
         rootImage: result?.rootImage ?? null,
         thumbnailImage: result?.thumbnailImage ?? result?.rootImage ?? null,
         sameImage: !!(result?.rootImage) && !result?.thumbnailImage,
         nativeGraph: result?.nativeGraph ?? null,
-        rootEntries: entries,
+        rootEntries: importedEntries,
       }
-    : replaceEntryWithEntries(project, menuId, itemId, entries);
+    : replaceEntryWithEntries(project, menuId, itemId, importedEntries);
+
+  nextProject.containsOfficialContent = containsOfficialContent(nextProject);
 
   return {
     project: nextProject,

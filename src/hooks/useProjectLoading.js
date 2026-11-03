@@ -1,3 +1,6 @@
+import { installProjectAccess, releaseProjectAccess } from '../store/projectSessionAccess.js';
+import { translateImport as t } from '../i18n/importPresentation.js';
+import { presentUserMessage } from '../i18n/userMessage.js';
 import { useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {
@@ -48,6 +51,7 @@ export function useProjectLoading({
     autoSaveSnapshotRef.current = null;
     setAutoSavedPath(null);
     await onProjectLoaded?.(result);
+    await installProjectAccess(result.accessToken, result.data);
     sdStore.clearDone();
     xttsStore.clearDone();
     // Recalculer les métadonnées ZIP manquantes pour les projets anciens
@@ -65,11 +69,11 @@ export function useProjectLoading({
         const squareOne = (data.stageNodes || []).find((node) => node.squareOne === true);
         if (!entry.coverImage && squareOne?.image) nextFields.coverImage = squareOne.image;
         if (!entry.coverAudio && squareOne?.audio) nextFields.coverAudio = squareOne.audio;
-        if (!entry.name?.trim() && data.title?.trim()) nextFields.name = sanitizeImportedName(data.title.trim(), 'ZIP importe');
+        if (!entry.name?.trim() && data.title?.trim()) nextFields.name = sanitizeImportedName(data.title.trim(), t('import:names.zip.fallback'));
         if (Object.keys(nextFields).length > 0) store.updateItem(entry.id, nextFields);
       } catch (e) {
         const scope = ancestors.map((parent) => parent.name).join(' / ') || 'racine';
-        logger.warn('load:zip-metadata-error', { scope, zipPath: entry.zipPath, error: String(e) });
+        logger.warn('load:zip-metadata-error', { scope, zipPath: entry.zipPath, error: presentUserMessage(e).message });
       }
     }
   }, [
@@ -88,18 +92,21 @@ export function useProjectLoading({
   const handleLoad = useCallback(async () => {
     const canContinue = await confirmSaveBeforeLeaveCurrent(handleSaveProject);
     if (!canContinue) return;
+    let claimed = null;
     try {
       const result = await loadProject();
-      if (result && await routeLoadedProject?.(result)) return;
+      claimed = result?.accessToken;
+      if (result && await routeLoadedProject?.(result)) { await releaseProjectAccess(result.accessToken); return; }
       if (result) {
         await onBeforeProjectReplaced?.();
         await applyLoadedProject(result);
       }
     } catch (error) {
-      logger.error(`load:error error=${error}`);
+      await releaseProjectAccess(claimed).catch(() => {});
+      logger.error(`load:error error=${presentUserMessage(error).message}`);
       showErrorDialog({
-        title: error?.code === 'menu_depth_limit' ? 'Limite d’imbrication' : 'Ouverture du projet',
-        message: String(error?.message || error),
+        get title() { return error?.code === 'VALIDATION_MENU_DEPTH_LIMIT' ? t('import:project.depth.title') : t('import:project.open.title'); },
+        message: error,
       });
     }
   }, [
@@ -111,20 +118,25 @@ export function useProjectLoading({
     showErrorDialog,
   ]);
 
-  const handleLoadRecent = useCallback(async (path) => {
+  const openProjectFromPath = useCallback(async (path, { forgetOnFailure = false } = {}) => {
     const canContinue = await confirmSaveBeforeLeaveCurrent(handleSaveProject);
-    if (!canContinue) return;
+    if (!canContinue) return false;
+    let claimed = null;
     try {
-      const result = await loadProjectFromPath(path);
+      const result = await loadProjectFromPath(path, { editorAccess: true });
+      claimed = result.accessToken;
       await onBeforeProjectReplaced?.();
       await applyLoadedProject(result);
+      return true;
     } catch (e) {
-      logger.error(`load-recent:error path='${path}' error=${e}`);
-      setRecentProjects(forgetRecentProject(path));
+      await releaseProjectAccess(claimed).catch(() => {});
+      logger.error(`load-recent:error path='${path}' error=${presentUserMessage(e).message}`);
+      if (forgetOnFailure) setRecentProjects(forgetRecentProject(path));
       showErrorDialog({
-        title: 'Projet récent',
-        message: `Impossible d'ouvrir ce projet récent :\n${e}`,
+        get title() { return t('import:project.recent.title'); },
+        message: { userMessage: e, prefix: { key: 'import:project.recent.prefix' }, suffix: `` },
       });
+      return false;
     }
   }, [
     applyLoadedProject,
@@ -135,5 +147,7 @@ export function useProjectLoading({
     showErrorDialog,
   ]);
 
-  return { applyLoadedProject, handleLoad, handleLoadRecent };
+  const handleLoadRecent = useCallback(path => openProjectFromPath(path, { forgetOnFailure: true }), [openProjectFromPath]);
+
+  return { applyLoadedProject, handleLoad, handleLoadRecent, openProjectFromPath };
 }

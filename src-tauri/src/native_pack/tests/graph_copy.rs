@@ -6,8 +6,7 @@
 
 use super::*;
 use crate::native_pack::graph_copy::{
-    bound_files, graph_copy_of_project, verify_graph_copy, GraphCopy, IDENTITY_REFUSAL,
-    INCLUDED_PACK_REFUSAL, UNFAITHFUL_REFUSAL,
+    bound_files, graph_copy_of_project, verify_graph_copy, GraphCopy,
 };
 use crate::native_pack::persistence::{
     decode_authoring_payload, encode_authoring_payload, AdvancedMediaBinding, MediaBindingStatus,
@@ -201,23 +200,6 @@ fn le_mode_nuit_et_le_message_de_fin_restent_fideles() {
 }
 
 #[test]
-fn une_reference_reste_fidele_sans_dupliquer_son_media() {
-    let project = free_project(
-        json!([
-            menu("m1", json!([story("s1", json!({}))]), json!({})),
-            menu(
-                "m2",
-                json!([{ "id": "r1", "type": "ref", "name": "Rappel", "target": "story:s1",
-                         "audio": null, "image": null, "itemAudio": null, "itemImage": null }]),
-                json!({}),
-            ),
-        ]),
-        json!({}),
-    );
-    assert_faithful_copy(&project);
-}
-
-#[test]
 fn un_projet_incomplet_se_copie_avec_des_medias_manquants_distincts() {
     let project = free_project(
         json!([
@@ -266,17 +248,20 @@ fn un_pack_inclus_refuse_la_copie() {
         json!({}),
     );
     let refusal = graph_copy_of_project(&project).expect_err("pack inclus");
-    assert_eq!(refusal, INCLUDED_PACK_REFUSAL);
+    assert!(crate::support::user_message::contains_code(
+        &refusal,
+        "GRAPH_COPY_INCLUDED_PACK"
+    ));
 }
 
 #[test]
 fn une_identite_illisible_refuse_la_copie() {
     let mut project = free_project(json!([story("s1", json!({}))]), json!({}));
     project.pack_uuid = "pas une identité".to_string();
-    assert_eq!(
-        graph_copy_of_project(&project).expect_err("identité"),
-        IDENTITY_REFUSAL
-    );
+    assert!(crate::support::user_message::contains_code(
+        &graph_copy_of_project(&project).expect_err("identité"),
+        "GRAPH_COPY_INVALID_IDENTITY"
+    ));
 }
 
 #[test]
@@ -296,7 +281,10 @@ fn la_garde_refuse_une_copie_qui_ne_produirait_pas_le_meme_pack() {
     stage.ok_transition = Presence::Null;
     let altered = encode_authoring_payload(&decoded).expect("payload réécrit");
     let refusal = verify_graph_copy(&project, &altered).expect_err("écart de structure");
-    assert!(refusal.starts_with(UNFAITHFUL_REFUSAL), "{refusal}");
+    assert!(
+        crate::support::user_message::contains_code(&refusal, "GRAPH_COPY_UNFAITHFUL_DETAIL"),
+        "{refusal}"
+    );
 }
 
 /// Lit le `story.json` d'une archive produite.
@@ -452,4 +440,90 @@ fn le_rangement_avant_ecriture_garde_la_meme_structure() {
         "le rangement a bien écrit des positions"
     );
     verify_graph_copy(&project, &arranged.payload).expect("même structure après rangement");
+}
+
+#[test]
+fn official_graph_copy_only_refuses_flattened_foreign_origins() {
+    use crate::domain::official_provenance::OfficialProvenance;
+    use crate::native_pack::output_identity::for_context;
+    for origin in [PACK_UUID, "00000000-0000-4000-8000-00000000000c"] {
+        let mut project = free_project(
+            json!([story(
+                "s1",
+                json!({"officialProvenance":"official", "officialOriginUuid":origin})
+            )]),
+            json!({}),
+        );
+        project.official_provenance = OfficialProvenance::Official;
+        project.official_origin_uuid = Some(PACK_UUID.into());
+        let copy = assert_faithful_copy(&project);
+        let decoded = decode_authoring_payload(&copy.payload).unwrap();
+        let decision = for_context(&decoded.context, PACK_UUID, None);
+        if origin == PACK_UUID {
+            let mut story = json!({"uuid":PACK_UUID});
+            decision.unwrap().apply(&mut story);
+            assert_eq!(story["official"], true);
+            assert_eq!(story["uuid"], PACK_UUID);
+            assert!(!decoded.context.contains_official_content);
+        } else {
+            assert_eq!(
+                decision.unwrap_err().code,
+                "OFFICIAL_CONTENT_OUTPUT_REFUSED"
+            );
+            assert!(decoded.context.contains_official_content);
+        }
+    }
+}
+
+#[test]
+fn unknown_graph_copy_origins_are_recognized_again_at_each_export() {
+    use crate::native_pack::output_identity::{for_context, for_project};
+    use crate::services::official_packs::OfficialCatalogue;
+    use crate::support::user_message::UserMessage;
+    const C: &str = "00000000-0000-4000-8000-00000000000c";
+    struct Catalogue;
+    impl OfficialCatalogue for Catalogue {
+        type Error = UserMessage;
+        fn contains_official(&self, uuid: &str) -> Result<bool, UserMessage> {
+            Ok(uuid == C || uuid == PACK_UUID)
+        }
+    }
+    for origin in [PACK_UUID, C] {
+        let project = free_project(
+            json!([story(
+                "s1",
+                json!({"officialProvenance":"unknown", "packUuid":origin})
+            )]),
+            json!({}),
+        );
+        let copy = assert_faithful_copy(&project);
+        let decoded = decode_authoring_payload(&copy.payload).unwrap();
+        assert!(!decoded.context.contains_official_content);
+        assert!(for_context(&decoded.context, PACK_UUID, None).is_ok());
+        if origin == C {
+            assert_eq!(decoded.context.foreign_pack_uuids, vec![C]);
+            assert_eq!(
+                UserMessage::from(for_project(&project, Some(&Catalogue)).unwrap_err()).code,
+                "OFFICIAL_CONTENT_OUTPUT_REFUSED"
+            );
+            assert_eq!(
+                for_context(&decoded.context, PACK_UUID, Some(&Catalogue))
+                    .unwrap_err()
+                    .code,
+                "OFFICIAL_CONTENT_OUTPUT_REFUSED"
+            );
+        } else {
+            assert!(decoded.context.foreign_pack_uuids.is_empty());
+            assert!(for_context(&decoded.context, PACK_UUID, Some(&Catalogue)).is_ok());
+        }
+    }
+    // Old persisted contexts carried only the boolean.
+    let mut context = crate::native_pack::StoryDocumentContext::created();
+    context.contains_official_content = true;
+    let context: crate::native_pack::StoryDocumentContext =
+        serde_json::from_value(serde_json::to_value(context).unwrap()).unwrap();
+    assert_eq!(
+        for_context(&context, PACK_UUID, None).unwrap_err().code,
+        "OFFICIAL_CONTENT_OUTPUT_REFUSED"
+    );
 }

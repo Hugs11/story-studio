@@ -1,3 +1,4 @@
+import { useCommonTranslation } from '../i18n/commonPresentation.js';
 import { lazy } from 'react';
 import { renderDeferred } from './renderDeferred';
 import { SaveProgressModal } from './common/SaveProgressModal';
@@ -41,6 +42,8 @@ const PodcastImportModal = lazy(() => import('./PodcastImport/PodcastImportModal
 //  - contexte lecture seule (project, savePath, réglages…).
 export function AppModals({
   modals,
+  subscriptionImportSource,
+  onSubscriptionImportClosed,
   // état payload (pas un simple booléen de disclosure)
   youtubeFunnelMode,
   setYoutubeFunnelMode,
@@ -57,6 +60,7 @@ export function AppModals({
   modalExportFolder,
   importedPackPendingMetaRef,
   optionsTabProps,
+  preferencesSection = optionsTabProps?.initialSection ?? null,
   // génération IA
   sdGenerate,
   onSDGenerate,
@@ -71,6 +75,7 @@ export function AppModals({
   advancedMetadataForm = null,
   onSaveAdvancedPackMetadata = null,
   // cycle de vie projet
+  onLandAggregate,
   onLandEditablePack,
   onLandAdvancedPack,
   onBeforeReplacePack,
@@ -97,6 +102,7 @@ export function AppModals({
   setImportNotice,
   onToolbarRecordSaved,
 }) {
+  const { t } = useCommonTranslation();
   // Le mode du projet, lu à sa source unique. Il décide de l'aiguillage de la
   // fiche du pack, y compris avant que le document de graphe ait été lu une
   // première fois.
@@ -104,12 +110,13 @@ export function AppModals({
 
   return (
     <>
-      {appVersion && <ReleaseNotesModal key={appVersion} appVersion={appVersion} />}
+      {appVersion && <ReleaseNotesModal key={appVersion} appVersion={appVersion} forceOpen={modals.isOpen('releaseNotes')} onClose={() => modals.close('releaseNotes')} />}
       {modals.isOpen('prefs') && renderDeferred(
         <OptionsTab
           {...optionsTabProps}
           asModal
-          onClose={() => modals.close('prefs')}
+          initialSection={preferencesSection}
+          onClose={() => { optionsTabProps.onPreferencesClosed?.(); modals.close('prefs'); }}
         />,
       )}
 
@@ -129,7 +136,8 @@ export function AppModals({
         <GenerateVoiceModal
           savePath={savePath}
           xttsSettings={xttsSettings}
-          label="Nouvelle histoire"
+          label={t('common:appModals.tts.label')}
+          labelRef={{ key: 'common:appModals.tts.label' }}
           initialText=""
           filenameHint="histoire-tts"
           target={toolbarTtsTarget}
@@ -142,7 +150,8 @@ export function AppModals({
       {modals.isOpen('podcastImport') && renderDeferred(
         <PodcastImportModal
           onImport={onPodcastEditorImport}
-          onClose={() => modals.close('podcastImport')}
+          initialSource={subscriptionImportSource?.source === 'podcast' ? subscriptionImportSource : null}
+          onClose={() => { modals.close('podcastImport'); onSubscriptionImportClosed?.(); }}
           toLibrary={graphProject}
         />,
       )}
@@ -170,13 +179,15 @@ export function AppModals({
         <YoutubeImportFunnel
           mode={youtubeFunnelMode}
           toLibrary={youtubeFunnelMode === 'editor' && graphProject}
-          onClose={() => setYoutubeFunnelMode(null)}
+          initialSource={subscriptionImportSource?.source === 'youtube' ? subscriptionImportSource : null}
+          onClose={() => { setYoutubeFunnelMode(null); onSubscriptionImportClosed?.(); }}
           onImport={youtubeFunnelMode === 'editor' ? onYoutubeEditorImport : onYoutubeFunnelImport}
         />
       )}
 
       {modals.isOpen('aggregatePacks') && renderDeferred(
         <AggregatePacksFunnel
+          onLand={onLandAggregate}
           onClose={() => modals.close('aggregatePacks')}
         />
       )}
@@ -244,8 +255,8 @@ export function AppModals({
         />,
       )}
 
-      {saveAsProgress && <SaveProgressModal data={saveAsProgress} title="Enregistrement sous..." doneTitle="Copie terminée" />}
-      {saveProgress && <SaveProgressModal data={saveProgress} title="Enregistrement..." doneTitle="Projet enregistré" />}
+      {saveAsProgress && <SaveProgressModal data={saveAsProgress} title={t('common:appModals.saveAs.progress')} doneTitle={t('common:appModals.saveAs.done')} />}
+      {saveProgress && <SaveProgressModal data={saveProgress} title={t('common:appModals.save.progress')} doneTitle={t('common:titleBar.save.saved')} />}
       {triageRequest && (
         <SessionMediaTriageModal items={triageRequest.items} onResolve={triageRequest.resolve} />
       )}
@@ -259,20 +270,18 @@ export function AppModals({
       )}
 
       {unpacking && (
-        <GenerateProgressModal title="Extraction en cours...">
+        <GenerateProgressModal title={t('common:appModals.extraction.title')}>
           <div className="gen-progress-name">{unpacking.name}</div>
-          <div className="gen-progress-desc">
-            Story Studio analyse le pack et extrait les éléments éditables.
-          </div>
+          <div className="gen-progress-desc">{t('common:appModals.extraction.description')}</div>
         </GenerateProgressModal>
       )}
 
       {importing && (
-        <GenerateProgressModal title="Import en cours...">
+        <GenerateProgressModal title={t('common:appModals.import.title')}>
           <div className="gen-progress-name">{importing.name}</div>
           <div className="gen-progress-desc">{importing.phase}</div>
           <div className="gen-progress-meta">
-            {importing.total > 1 ? `Fichier ${Math.max(importing.index, 1)} sur ${importing.total}` : 'Traitement du fichier importé'}
+            {importing.total > 1 ? t('common:appModals.import.position', { index: Math.max(importing.index, 1), total: importing.total }) : t('common:appModals.import.single')}
           </div>
         </GenerateProgressModal>
       )}
@@ -283,7 +292,7 @@ export function AppModals({
 
       {/* Credits modal */}
       {modals.isOpen('credits') && (
-        <CreditsModal appVersion={appVersion} onClose={() => modals.close('credits')} />
+        <CreditsModal appVersion={appVersion} onClose={() => modals.close('credits')} onOpenReleaseNotes={appVersion ? () => { modals.close('credits'); modals.open('releaseNotes'); } : null} />
       )}
     </>
   );

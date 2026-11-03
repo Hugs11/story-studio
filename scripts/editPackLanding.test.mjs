@@ -164,7 +164,7 @@ test('depuis l’accueil, l’atterrissage donne le même projet que depuis un �
   try {
     await land(fromHome);
     await land(fromEditor);
-    const strip = ({ packMetadata, ...rest }) => ({ ...rest, packMetadata: { ...packMetadata, uuid: '' } });
+    const strip = ({ packMetadata, storage, ...rest }) => ({ ...rest, storage: { ...storage, workId: '' }, packMetadata: { ...packMetadata, uuid: '' } });
     assert.deepEqual(strip(fromEditor.store.project), strip(fromHome.store.project));
   } finally {
     fromEditor.restore();

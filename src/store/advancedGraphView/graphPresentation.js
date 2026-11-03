@@ -1,3 +1,4 @@
+import { translateGraph as t } from '../../i18n/graphPresentation.js';
 import { defaultHomeReturnOf } from './defaultHomeReturns.js';
 import { ACTION_KIND } from './graphViewModel.js';
 
@@ -131,8 +132,8 @@ export function describeEdgeEnds(index, edgeId) {
     return {
       from: labelOf(derived.from),
       to: labelOf(derived.to),
-      via: 'Bouton Accueil',
-      term: 'retour par défaut de la Lunii, hors du pack',
+      via: t("graph:edge.boutonAccueil.label"),
+      term: t("graph:edge.defaultLuniiReturnOutsideThePack.label"),
     };
   }
   for (const edges of index.outgoing.values()) {
@@ -148,16 +149,15 @@ export function describeEdgeEnds(index, edgeId) {
       // lesquels l'activent, quand l'Écran le sait.
       const controls = index.byPath.get(edge.from)?.node?.controls;
       const on = (key) => controls?.[key]?.presence === 'value' && controls[key].value === true;
-      const triggers = [on('ok') && 'OK', on('autoplay') && 'fin du son'].filter(Boolean);
-      via = triggers.length > 0 ? `Suite du parcours, par ${triggers.join(' ou ')}` : 'Suite du parcours';
+      via = on('ok') && on('autoplay') ? t('graph:edge.route.both') : on('ok') ? t('graph:edge.route.ok') : on('autoplay') ? t('graph:edge.route.autoplay') : t('graph:edge.route.label');
       term = 'okTransition';
     } else if (isHome(edge)) {
-      via = 'Bouton Accueil';
+      via = t("graph:edge.boutonAccueil.label");
       term = 'homeTransition';
-    } else via = Number.isInteger(edge.ordinal) ? `choix ${edge.ordinal + 1}` : 'choix';
+    } else via = Number.isInteger(edge.ordinal) ? t("graph:edge.choix.label", { ordinal: edge.ordinal + 1 }) : t("graph:edge.choix.labelVariant");
     return {
       from: labelOf(edge.from),
-      to: labelOf(edge.to) ?? 'destination à choisir',
+      to: labelOf(edge.to) ?? t("graph:edge.destinationToChoose.label"),
       via,
       term,
     };

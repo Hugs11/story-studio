@@ -8,8 +8,10 @@ import { Histogram } from './Histogram';
 import { drawFilteredImage, CANVAS_W, CANVAS_H } from './useImageEditor';
 import { computeLuminanceHistogram } from './imageHistogram';
 import { LEVELS_GAMMA_MIN, LEVELS_GAMMA_MAX } from './imageLevels';
+import { useMediaTranslation } from '../../i18n/useMediaTranslation.js';
 
 export function LevelsControl({ filters, setFilter, image, transform, imgLoaded }) {
+  const { t } = useMediaTranslation();
   const [histogram, setHistogram] = useState(null);
 
   const { levelsBlack, levelsWhite, levelsGamma } = filters;
@@ -58,17 +60,17 @@ export function LevelsControl({ filters, setFilter, image, transform, imgLoaded 
 
   return (
     <div className="filter-group">
-      <div className="filter-group-title">Niveaux</div>
-      <div className="filter-group-help">Écrase les noirs et les blancs, ajuste les tons moyens.</div>
+      <div className="filter-group-title">{t('media:imageEditor.levels.title')}</div>
+      <div className="filter-group-help">{t('media:imageEditor.levels.help')}</div>
 
       <Histogram bins={histogram} black={levelsBlack} white={levelsWhite} gamma={levelsGamma} />
 
-      <FilterSlider label="Noir" value={levelsBlack} min={0} max={255} signed={false}
+      <FilterSlider label={t('media:imageEditor.levels.black')} value={levelsBlack} min={0} max={255} signed={false}
         onChange={handleBlack} />
-      <FilterSlider label="Gamma" value={levelsGamma} min={LEVELS_GAMMA_MIN} max={LEVELS_GAMMA_MAX}
+      <FilterSlider label={t('media:imageEditor.levels.gamma')} value={levelsGamma} min={LEVELS_GAMMA_MIN} max={LEVELS_GAMMA_MAX}
         step={0.01} signed={false} format={v => Number(v).toFixed(2)}
         onChange={v => setFilter('levelsGamma', v)} />
-      <FilterSlider label="Blanc" value={levelsWhite} min={0} max={255} signed={false}
+      <FilterSlider label={t('media:imageEditor.levels.white')} value={levelsWhite} min={0} max={255} signed={false}
         onChange={handleWhite} />
     </div>
   );

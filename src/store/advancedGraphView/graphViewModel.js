@@ -9,7 +9,9 @@
 // l'unique vérité sémantique, et l'index en est une lecture jetable,
 // reconstruite à chaque révision de document.
 
-import { normalizeFrenchSearchText } from '../../utils/frenchText.js';
+import i18next from 'i18next';
+import { translateGraph as t } from '../../i18n/graphPresentation.js';
+import { normalizeSearchText } from '../../utils/frenchText.js';
 
 export const STAGE_KIND = 'stage';
 export const ACTION_KIND = 'action';
@@ -18,7 +20,7 @@ export const ACTION_KIND = 'action';
 // une Action sans nom (`ACTION_NODE_FALLBACK_NAME`, `native_pack/document.rs`).
 const STUDIO_UNNAMED_ACTION = 'Action node';
 // Ce que l'auteur lit à sa place : une Liste de choix qui n'a pas de nom.
-const UNNAMED_LIST_LABEL = 'Liste sans nom';
+const UNNAMED_LIST_LABEL = 'graph:node.unnamed.label';
 
 // Le libellé d'affichage d'un nœud, avec l'information « est-ce un repli ? ».
 //
@@ -38,7 +40,7 @@ export function nodeLabel(node) {
     && !(isAction && authored.trim() === STUDIO_UNNAMED_ACTION)) {
     return { label: authored, isFallback: false };
   }
-  if (isAction) return { label: UNNAMED_LIST_LABEL, isFallback: true };
+  if (isAction) return { get label() { return t(UNNAMED_LIST_LABEL); }, isFallback: true };
   if (fallback.trim() !== '') return { label: fallback, isFallback: true };
   // Dernier recours : l'identifiant source. Il est toujours présent, et le
   // montrer vaut mieux qu'une ligne vide dans une liste de 9 121 entrées.
@@ -85,23 +87,32 @@ export function buildGraphIndex(view) {
   let unnamedLists = 0;
   const displayLabel = (node) => {
     const label = nodeLabel(node);
-    if (label.isFallback && label.label === UNNAMED_LIST_LABEL) {
+    if (label.isFallback && node.fallbackLabel === STUDIO_UNNAMED_ACTION) {
       unnamedLists += 1;
-      return { label: `${UNNAMED_LIST_LABEL} ${unnamedLists}`, isFallback: true };
+      const number = unnamedLists;
+      return { get label() { return t('graph:node.unnamed.numbered', { number }); }, isFallback: true };
     }
     return label;
   };
 
   const register = (node, kind) => {
     const label = displayLabel(node);
+    let language, cachedHaystack;
     const entry = {
       kind,
       path: node.path,
       node,
-      // Les textes de recherche sont calculés **une fois**, à la construction :
-      // les recalculer à chaque frappe coûterait une passe complète par
-      // caractère sur un profil à 9 121 nœuds.
-      haystack: normalizeFrenchSearchText(searchableText(node, kind, label.label)),
+      // Les textes de recherche sont mémorisés pour la langue active :
+      // un changement de langue les renouvelle à la lecture, sans reconstruire
+      // l’index ni refaire une passe à chaque frappe.
+      get haystack() {
+        const active = i18next.resolvedLanguage ?? 'fr';
+        if (language !== active) {
+          cachedHaystack = normalizeSearchText(searchableText(node, kind, label.label));
+          language = active;
+        }
+        return cachedHaystack;
+      },
       label,
     };
     entries.push(entry);

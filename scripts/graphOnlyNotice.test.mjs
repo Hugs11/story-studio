@@ -6,21 +6,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  GRAPH_ONLY_NOTICE,
   graphOnlyNoticeFor,
 } from '../src/components/EditPack/graphOnlyNotice.js';
 
 const graphOnly = { status: 'landed', advanced: true, report: { authoringEditable: false } };
 
+// Source indépendante : git show 033ca57:src/components/EditPack/graphOnlyNotice.js
+const expectedNotice = 'Ce pack s’ouvre uniquement dans l’éditeur graphe : l’éditeur par menus ne sait pas représenter sa structure.';
+
 test('le texte de la notice est celui décidé', () => {
-  assert.equal(
-    GRAPH_ONLY_NOTICE,
-    'Ce pack s’ouvre uniquement dans l’éditeur graphe : l’éditeur par menus ne sait pas représenter sa structure.',
-  );
+  assert.equal(graphOnlyNoticeFor(graphOnly), expectedNotice);
 });
 
 test('pack graphe seulement ouvert depuis l’accueil ou les menus : notice', () => {
-  assert.equal(graphOnlyNoticeFor(graphOnly, { openedFromGraph: false }), GRAPH_ONLY_NOTICE);
+  assert.equal(graphOnlyNoticeFor(graphOnly, { openedFromGraph: false }), expectedNotice);
 });
 
 test('pack graphe seulement ouvert depuis le graphe : aucune notice', () => {

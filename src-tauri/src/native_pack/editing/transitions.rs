@@ -16,6 +16,7 @@
 //! Enfin, absent et `null` restent distincts : le retrait porte
 //! sa forme, il ne choisit pas à la place de l'auteur.
 
+use crate::support::user_message::{codes, UserMessage};
 use serde::{Deserialize, Serialize};
 
 use super::options::{insert_option, ActionOptionTarget, ReferenceReport};
@@ -102,6 +103,9 @@ pub(crate) fn set_stage_transition(
                         &format!("{path}/optionIndex"),
                         error.to_string(),
                     )
+                    .with_user_message(
+                        UserMessage::new("OPTION_INDEX_OUT_OF_DIALECT").param("index", error.index),
+                    )
                 })?;
             let action = document
                 .action_nodes
@@ -112,6 +116,11 @@ pub(crate) fn set_stage_transition(
                         "UNKNOWN_ACTION",
                         &format!("{path}/actionNode"),
                         format!("Aucun ActionNode « {action_node} » dans le document."),
+                    )
+                    .with_user_message(
+                        UserMessage::new(codes::UNKNOWN_ACTION)
+                            .param("action_node", (action_node).to_string())
+                            .param("context", codes::UNKNOWN_ACTION_TRANSITION_TARGET),
                     )
                 })?;
             // `Fixed(i)` exige `0 ≤ i < N` et `Random` exige `N ≥ 1`. Poser une
@@ -126,7 +135,11 @@ pub(crate) fn set_stage_transition(
                         "L'ActionNode « {action_node} » porte {} option(s) : {selection} n'en désigne aucune.",
                         action.options.len()
                     ),
-                ));
+                )
+.with_user_message(UserMessage::new(codes::OPTION_SELECTION_OUT_OF_BOUNDS)
+.param("action_node", (action_node).to_string())
+.param("action_options", (action.options.len()).to_string())
+.param("selection", (selection).to_string()).param("context", codes::OPTION_SELECTION_OUT_OF_BOUNDS_TRANSITION)));
             }
             Presence::Value(Transition {
                 action_node: action_node.clone(),
@@ -160,6 +173,10 @@ pub(crate) fn connect_stage_to_empty_action(
             "ACTION_NOT_EMPTY",
             &format!("/actionNodes/@id={action_node}#0"),
             format!("L'ActionNode « {action_node} » possède déjà une ou plusieurs options."),
+        )
+        .with_user_message(
+            UserMessage::new(codes::ACTION_NOT_EMPTY)
+                .param("action_node", (action_node).to_string()),
         ));
     }
 

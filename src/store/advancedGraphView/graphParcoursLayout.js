@@ -95,12 +95,21 @@ function progressionEdges(index) {
   );
 }
 
+function choiceOrdinal(edge) {
+  return edge.kind === 'action-option' && Number.isFinite(edge.ordinal)
+    ? edge.ordinal : Infinity;
+}
+
 // Le graphe de mise en page : des unités, et les liens entre unités.
 //
 // Une unité est un Écran, éventuellement accompagné de l'Action qui n'est
 // qu'à lui. Une Action partagée — ou orpheline — est une unité à elle seule.
 export function buildLayoutGraph(index) {
-  const edges = progressionEdges(index);
+  const edges = progressionEdges(index).sort((left, right) => (
+    choiceOrdinal(left) - choiceOrdinal(right)
+    || left.to.localeCompare(right.to)
+    || left.from.localeCompare(right.from)
+  ));
 
   // Combien d'Écrans mènent à chaque Action, retours Home exclus. C'est ce
   // comptage, et lui seul, qui distingue un raccord d'une convergence.
@@ -151,15 +160,17 @@ export function buildLayoutGraph(index) {
   // Action — a déjà été absorbé par la contraction et ne compte plus.
   const outgoing = units.map(() => new Set());
   const incoming = units.map(() => new Set());
+  const successors = units.map(() => []);
   for (const edge of edges) {
     const from = unitOf.get(edge.from);
     const to = unitOf.get(edge.to);
     if (from === undefined || to === undefined || from === to) continue;
     outgoing[from].add(to);
     incoming[to].add(from);
+    successors[from].push({ to, parent: edge.from, ordinal: choiceOrdinal(edge) });
   }
 
-  return { units, unitOf, outgoing, incoming, ownerOf, edges };
+  return { units, unitOf, outgoing, incoming, successors, ownerOf, edges };
 }
 
 // L'ordre dans lequel les composantes sont visitées.
@@ -194,16 +205,14 @@ function assignLevels(graph, index, root) {
     order.push(start);
     for (let cursor = 0; cursor < queue.length; cursor += 1) {
       const current = queue[cursor];
-      // Les successeurs sont triés par chemin : le parcours en largeur ne
-      // doit rien devoir à l'ordre d'insertion d'un ensemble.
-      const next = [...graph.outgoing[current]].sort(
-        (left, right) => graph.units[left].anchor.localeCompare(graph.units[right].anchor),
-      );
-      for (const unit of next) {
+      // Les choix précèdent le départage par chemin. La première découverte
+      // fixe aussi le parent : un lien ultérieur ne peut pas réclamer l'Écran.
+      for (const { to: unit, parent, ordinal } of graph.successors[current]) {
         if (seen.has(unit)) continue;
         seen.add(unit);
         graph.units[unit].level = graph.units[current].level + 1;
         graph.units[unit].component = component;
+        if (Number.isFinite(ordinal)) graph.units[unit].firstChoice = { parent, ordinal };
         queue.push(unit);
         order.push(unit);
       }
@@ -269,6 +278,23 @@ function orderLevels(graph, levels) {
         if (delta !== 0) return delta;
         return graph.units[left].anchor.localeCompare(graph.units[right].anchor);
       });
+      // Le barycentre choisit les places des groupes, mais jamais l'ordre
+      // des enfants d'un même premier parent. Réoccuper leurs seules places
+      // évite un comparateur mêlant deux ordres potentiellement contradictoires.
+      const groups = new Map();
+      levels[level].forEach((id, position) => {
+        const choice = graph.units[id].firstChoice;
+        if (!choice) return;
+        if (!groups.has(choice.parent)) groups.set(choice.parent, []);
+        groups.get(choice.parent).push({ id, position });
+      });
+      for (const group of groups.values()) {
+        const ordered = group.map(({ id }) => id).sort((left, right) => (
+          graph.units[left].firstChoice.ordinal - graph.units[right].firstChoice.ordinal
+          || graph.units[left].anchor.localeCompare(graph.units[right].anchor)
+        ));
+        group.forEach(({ position }, rank) => { levels[level][position] = ordered[rank]; });
+      }
     }
   }
   return levels;

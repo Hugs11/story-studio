@@ -1,3 +1,5 @@
+import { graphTranslationEngine } from '../../i18n/graphPresentation.js';
+import { useTranslation } from 'react-i18next';
 // Choisir un nœud, explicitement.
 //
 // Aucune cible n'est jamais préremplie par défaut : ni le premier Écran venu,
@@ -11,10 +13,10 @@
 
 import { useMemo, useState } from 'react';
 
+import { Select } from '../common/Select';
 import { searchGraph } from '../../store/advancedGraphView/graphSearch.js';
 import { isEntryStage } from '../../store/advancedGraphView/graphViewModel.js';
 
-const PLACEHOLDER = '— choisir —';
 
 export function NodePicker({
   index,
@@ -23,12 +25,13 @@ export function NodePicker({
   onChange,
   id,
   disabled = false,
-  emptyLabel = PLACEHOLDER,
+  emptyLabel = null,
   excludePaths = [],
   // Le sélecteur choisit le **choix d'une liste** : l'Écran d'entrée n'y
   // figure pas, il n'est jamais une destination.
   forChoice = false,
 }) {
+  const { t } = useTranslation('graph', { i18n: graphTranslationEngine() });
   const [query, setQuery] = useState('');
   const excluded = useMemo(() => new Set(excludePaths), [excludePaths]);
 
@@ -51,34 +54,35 @@ export function NodePicker({
         type="search"
         className="advanced-picker__query"
         value={query}
-        placeholder="Filtrer par nom ou identifiant"
-        aria-label="Filtrer les nœuds proposés"
+        placeholder={t("graph:picker.filter.placeholder")}
+        aria-label={t("graph:picker.filter.aria")}
         disabled={disabled}
         onChange={(event) => setQuery(event.target.value)}
       />
-      <select
+      <Select
         id={id}
         className="advanced-picker__select"
         value={value ?? ''}
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value || null)}
-      >
-        <option value="">{emptyLabel}</option>
-        {options.map((entry) => (
-          <option key={entry.path} value={entry.path}>
-            {entry.label.label}
-            {entry.label.isFallback ? ' (sans nom)' : ''}
-            {entry.node.uniqueId === false ? ' — identifiant dupliqué' : ''}
-          </option>
-        ))}
-      </select>
+        onChange={(path) => onChange(path || null)}
+        options={[
+          { value: '', label: emptyLabel ?? t('graph:picker.choice.placeholder') },
+          ...options.map((entry) => ({
+            value: entry.path,
+            label: entry.label.isFallback
+              ? entry.node.uniqueId === false
+                ? t('graph:picker.option.unnamedDuplicate', { name: entry.label.label })
+                : t('graph:picker.option.unnamed', { name: entry.label.label })
+              : entry.node.uniqueId === false
+                ? t('graph:picker.option.duplicate', { name: entry.label.label })
+                : entry.label.label,
+          })),
+        ]}
+      />
       {selected?.node.uniqueId === false && (
         // Le refus est expliqué **avant** le geste : un identifiant dupliqué
         // n'est pas adressable, et le dire après coup serait l'essuyer.
-        <p className="advanced-field__warning">
-          Ce nœud porte un identifiant dupliqué : le geste le refusera tant que le doublon
-          n'est pas résolu.
-        </p>
+        <p className="advanced-field__warning">{t("graph:picker.duplicate.warning")}</p>
       )}
     </div>
   );

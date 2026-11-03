@@ -1,3 +1,5 @@
+import { useTreeTranslation } from '../../i18n/useTreeTranslation.jsx';
+import { presentTree, translateTree as t } from '../../i18n/treePresentation.js';
 import { useEffect, useRef } from 'react';
 import './ContextMenu.css';
 
@@ -10,6 +12,7 @@ import './ContextMenu.css';
 // seconde version pour le graphe aurait laissé le Libre sans. Les trois
 // surfaces y gagnent ensemble.
 export function ContextMenu({ x, y, onClose, actions }) {
+  useTreeTranslation();
   const ref = useRef(null);
   // L'élément qui avait le focus avant l'ouverture. Le menu le lui rend à la
   // fermeture : sans cela, fermer par Échap laissait le focus sur le corps du
@@ -97,7 +100,9 @@ export function ContextMenu({ x, y, onClose, actions }) {
       role="menu"
       onKeyDown={onMenuKeyDown}
     >
-      {actions.map((action, i) =>
+      {actions.map((rawAction, i) => {
+        const action = typeof rawAction === 'object' ? { ...rawAction, label: presentTree(rawAction.label), disabledReason: presentTree(rawAction.disabledReason) } : rawAction;
+        return (
         action === 'sep' || action?.type === 'sep'
           ? <div key={i} className="ctx-sep" />
           : action?.type === 'node'
@@ -109,7 +114,7 @@ export function ContextMenu({ x, y, onClose, actions }) {
               role="menuitem"
               className={`ctx-item${action.danger ? ' danger' : ''}${action.disabledReason ? ' is-disabled' : ''}`}
               aria-disabled={action.disabledReason ? 'true' : undefined}
-              aria-label={action.disabledReason ? `${action.label}. ${action.disabledReason}` : undefined}
+              aria-label={action.disabledReason ? t('tree:context.disabled.aria', { label: action.label, reason: action.disabledReason }) : undefined}
               title={action.disabledReason || undefined}
               onClick={() => {
                 if (action.disabledReason) return;
@@ -125,7 +130,8 @@ export function ContextMenu({ x, y, onClose, actions }) {
               {action.disabledReason ? <span className="ctx-disabled-hint">{action.disabledReason}</span> : null}
             </button>
           )
-      )}
+        );
+      })}
     </div>
   );
 }

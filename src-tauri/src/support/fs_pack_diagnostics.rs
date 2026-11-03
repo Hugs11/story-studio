@@ -8,8 +8,8 @@
 //! Les questions mesurées :
 //!
 //! - **collisions d'offset** (`q1_collisions`) — deux transitions partagent-elles
-//!   un `li_offset` avec des `option_count` différents ? Le lecteur déduplique sur
-//!   le seul offset et retient le premier compte.
+//!   un `li_offset` avec des `option_count` différents ? Le lecteur préserve chaque
+//!   tranche distincte (offset et longueur).
 //! - **options perdues** (`q2_dropped_options`) — des options disparaissent-elles
 //!   dans le `filter_map` de résolution ?
 //! - **fidélité par transition** (`q3`) — chaque transition native est-elle
@@ -285,6 +285,31 @@ mod recording {
         fn on_native_transition(&mut self, transition: NativeTransition) {
             self.transitions.push(transition);
         }
+    }
+
+    #[test]
+    fn q3_report_detects_option_count_and_destinations_in_a_false_document() {
+        let mut diagnostics = FsPackDiagnostics::default();
+        diagnostics.on_link_table(&[1, 2], 3);
+        diagnostics.on_native_transition(NativeTransition {
+            stage_index: 0,
+            trigger: Trigger::Ok,
+            li_offset: 0,
+            option_count: 2,
+            selected: 0,
+            action_index: 0,
+        });
+        let document = serde_json::json!({
+            "stageNodes":[{"uuid":"entry","okTransition":{"actionNode":"a","optionIndex":0}}, {"uuid":"one"}, {"uuid":"two"}],
+            "actionNodes":[{"id":"a","options":["two"]}]
+        });
+        let report = diagnostics.q3_report(&document);
+        assert_eq!(report.checked_transition_count, 1);
+        assert_eq!(report.mismatch_count, 1);
+        assert!(report.mismatches[0]
+            .kinds
+            .contains(&"NOMBRE_OPTIONS".into()));
+        assert!(report.mismatches[0].kinds.contains(&"DESTINATIONS".into()));
     }
 
     impl FsPackDiagnostics {
@@ -670,8 +695,8 @@ mod tests {
 
     #[test]
     fn q1_reports_shared_offset_with_diverging_option_counts() {
-        // Deux stages pointent sur l'offset 0 avec 2 puis 3 options : le lecteur
-        // retient le premier compte et la seconde transition perd une destination.
+        // Deux stages pointent sur l'offset 0 avec 2 puis 3 options : le
+        // diagnostic garde la collision, même si les deux slices sont préservées.
         let stages = [
             FixtureStage::with_ok(0, 2, 0),
             FixtureStage::with_ok(0, 3, 0),
@@ -748,37 +773,19 @@ mod tests {
     }
 
     #[test]
-    fn q3_reports_the_transition_degraded_by_a_shared_offset() {
-        // Même montage que pour les collisions d'offset : la seconde transition
-        // déclare trois destinations, l'ActionNode dédupliqué n'en porte que
-        // deux.
+    fn q3_accepts_distinct_slices_at_a_shared_offset() {
+        // L9r intentionally preserves both lengths instead of degrading the
+        // second transition to the first action's two destinations.
         let stages = [
             FixtureStage::with_ok(0, 2, 0),
             FixtureStage::with_ok(0, 3, 2),
             FixtureStage::default(),
             FixtureStage::default(),
         ];
-        let report = diagnose("q3_ko", uuid_pack_name(), &stages, &[1, 2, 3]);
-
+        let report = diagnose("q3_slices", uuid_pack_name(), &stages, &[1, 2, 3]);
+        assert_eq!(report.q1_collision_count, 1);
         assert_eq!(report.q3.checked_transition_count, 2);
-        assert_eq!(report.q3.mismatch_count, 1, "{report:?}");
-        let mismatch = &report.q3.mismatches[0];
-        assert_eq!(mismatch.stage_index, 1);
-        assert_eq!(
-            mismatch.native_action_index, 0,
-            "ActionNode partagé avec le stage 0"
-        );
-        assert_eq!(mismatch.native_option_count, 3);
-        assert_eq!(mismatch.document_option_count, Some(2));
-        assert_eq!(mismatch.native_targets, [Some(1), Some(2), Some(3)]);
-        assert_eq!(mismatch.document_targets, [Some(1), Some(2)]);
-        assert_eq!(mismatch.native_selected_target, Some(3));
-        assert_eq!(mismatch.document_selected_target, None);
-        assert!(mismatch.kinds.contains(&"NOMBRE_OPTIONS".to_string()));
-        assert!(mismatch.kinds.contains(&"DESTINATIONS".to_string()));
-        assert!(mismatch
-            .kinds
-            .contains(&"DESTINATION_SELECTIONNEE".to_string()));
+        assert_eq!(report.q3.mismatch_count, 0, "{report:?}");
     }
 
     #[test]

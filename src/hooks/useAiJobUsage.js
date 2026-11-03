@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import { translateAi as t } from '../i18n/aiPresentation.js';
 import { useCallback } from 'react';
 import { pathKey } from '../utils/fileUtils';
 import { advancedMediaUsageForPaths } from '../store/advancedAuthoring/mediaUsage';
@@ -16,47 +18,48 @@ function advancedJobUsage(project, advancedUsages, paths, words) {
   if (!found.known) {
     return {
       state: 'unknown',
-      label: 'Usage non calculé',
-      detail: 'Le fichier est lié au document. Les écrans qui l’emploient ne sont pas encore connus : ouvre l’éditeur du projet pour les établir.',
+      label: t("ai:usage.state.unknown"),
+      detail: t("ai:usage.state.unknownHelp"),
     };
   }
   if (found.usages.length === 0) {
     return { state: 'unused', label: words.unused, detail: words.boundUnreferenced };
   }
   const detail = found.usages
-    .map((usage) => `Écran : ${usage.label} · Champ : ${usage.field === 'image' ? 'image' : 'audio'}`)
+    .map((usage) => t("ai:usage.screen.detail", { name: usage.label, field: usage.field === "image" ? t("ai:queue.kind.image").toLowerCase() : t("ai:queue.kind.audio").toLowerCase() }))
     .join(' ; ');
   return {
     state: 'used',
-    label: found.usages.length === 1 ? words.used : `${words.used} ×${found.usages.length}`,
+    label: found.usages.length === 1 ? words.used : t(words.usedKey, { count: found.usages.length }),
     detail,
   };
 }
 
 const AUDIO_FIELD_LABELS = {
-  rootAudio: 'audio d’accueil',
-  nightModeAudio: 'audio de fin',
-  itemAudio: 'audio de sélection',
-  audio: 'audio de lecture',
-  afterPlaybackPromptAudio: 'audio après lecture',
-  afterPlaybackSequence: 'audio de fin intermédiaire',
-  afterPlaybackHomeStep: 'audio Home pendant lecture',
-  coverAudio: 'audio de couverture',
+  rootAudio: "ai:usage.audio.root",
+  nightModeAudio: "ai:usage.audio.end",
+  itemAudio: "ai:usage.audio.selection",
+  audio: "ai:usage.audio.playback",
+  afterPlaybackPromptAudio: "ai:usage.audio.after",
+  afterPlaybackSequence: "ai:usage.audio.sequence",
+  afterPlaybackHomeStep: "ai:usage.audio.home",
+  coverAudio: "ai:usage.audio.cover",
 };
 
 function audioFieldLabel(field) {
-  return AUDIO_FIELD_LABELS[field] || 'champ audio';
+  return AUDIO_FIELD_LABELS[field] ? t(AUDIO_FIELD_LABELS[field]) : t("ai:usage.audio.field");
 }
 
 export function useAiJobUsage({ project, projectIndex, advancedMediaUsages = null }) {
+  useTranslation();
   const getAudioJobUsage = useCallback((job) => {
     if (!job || job.kind !== 'audio' || job.status !== 'done' || !job.resultPath) return null;
     if (isAdvancedProject(project)) {
       return advancedJobUsage(project, advancedMediaUsages, [job.resultPath], {
-        used: 'Utilisé',
-        unused: 'Non utilisé',
-        noBinding: 'Aucune liaison du document ne pointe vers ce fichier.',
-        boundUnreferenced: 'Le fichier est lié au document, mais aucun écran ne l’emploie.',
+        used: t("ai:usage.audio.used"), usedKey: "ai:usage.audio.count",
+        unused: t("ai:usage.audio.unused"),
+        noBinding: t("ai:usage.audio.unbound"),
+        boundUnreferenced: t("ai:usage.file.unreferenced"),
       });
     }
     const resultPath = pathKey(job.resultPath);
@@ -64,16 +67,16 @@ export function useAiJobUsage({ project, projectIndex, advancedMediaUsages = nul
 
     function addUsage(path, nodeName, field) {
       if (path && pathKey(path) === resultPath) {
-        usages.push(`Nœud : ${nodeName} · Champ : ${audioFieldLabel(field)}`);
+        usages.push(t("ai:usage.node.detail", { name: nodeName, field: audioFieldLabel(field) }));
       }
     }
 
-    addUsage(project?.rootAudio, project?.name || 'Accueil', 'rootAudio');
-    addUsage(project?.nightModeAudio, 'Fin', 'nightModeAudio');
+    addUsage(project?.rootAudio, project?.name || t("ai:usage.node.home"), 'rootAudio');
+    addUsage(project?.nightModeAudio, t("ai:usage.node.end"), 'nightModeAudio');
 
     for (const flatEntry of projectIndex.flatEntries ?? []) {
       const entry = flatEntry.entry ?? flatEntry;
-      const nodeName = entry.name || (entry.type === 'menu' ? 'Menu sans titre' : entry.type === 'zip' ? 'ZIP sans titre' : 'Histoire sans titre');
+      const nodeName = entry.name || (entry.type === 'menu' ? t("ai:usage.node.menu") : entry.type === 'zip' ? t("ai:usage.node.zip") : t("ai:usage.node.story"));
       if (entry.type === 'menu') {
         addUsage(entry.audio, nodeName, 'audio');
       } else if (entry.type === 'story') {
@@ -92,7 +95,7 @@ export function useAiJobUsage({ project, projectIndex, advancedMediaUsages = nul
     if (usages.length > 0) {
       return {
         state: 'used',
-        label: usages.length === 1 ? 'Utilisé' : `Utilisé ×${usages.length}`,
+        label: usages.length === 1 ? t("ai:usage.audio.used") : t("ai:usage.audio.count", { count: usages.length }),
         detail: usages.join(' ; '),
       };
     }
@@ -106,24 +109,24 @@ export function useAiJobUsage({ project, projectIndex, advancedMediaUsages = nul
     switch (target?.kind) {
       case 'root':
         currentPath = project?.[target.field] ?? null;
-        nodeName = project?.name || 'Accueil';
+        nodeName = project?.name || t("ai:usage.node.home");
         break;
       case 'rootStory':
         currentPath = project?.rootEntries?.[0]?.[target.field] ?? null;
-        nodeName = project?.rootEntries?.[0]?.name || 'Histoire principale';
+        nodeName = project?.rootEntries?.[0]?.name || t("ai:usage.node.mainStory");
         break;
       case 'menu': {
         const entry = projectIndex.entryById.get(target.entryId);
         targetExists = !!entry;
         currentPath = entry?.[target.field] ?? null;
-        nodeName = entry?.name || 'Menu sans titre';
+        nodeName = entry?.name || t("ai:usage.node.menu");
         break;
       }
       case 'story': {
         const entry = projectIndex.entryById.get(target.entryId);
         targetExists = !!entry;
         currentPath = entry?.[target.field] ?? null;
-        nodeName = entry?.name || 'Histoire sans titre';
+        nodeName = entry?.name || t("ai:usage.node.story");
         break;
       }
       case 'storySequence': {
@@ -131,7 +134,7 @@ export function useAiJobUsage({ project, projectIndex, advancedMediaUsages = nul
         const step = entry?.afterPlaybackSequence?.find((item) => item.id === target.stepId);
         targetExists = !!entry && !!step;
         currentPath = step?.[target.field] ?? null;
-        nodeName = `${entry?.name || 'Histoire sans titre'} · ${step?.name || 'Sequence de fin'}`;
+        nodeName = `${entry?.name || t("ai:usage.node.story")} · ${step?.name || t("ai:usage.node.sequence")}`;
         fieldLabel = audioFieldLabel('afterPlaybackSequence');
         break;
       }
@@ -139,7 +142,7 @@ export function useAiJobUsage({ project, projectIndex, advancedMediaUsages = nul
         const entry = projectIndex.entryById.get(target.entryId);
         targetExists = !!entry && !!entry.afterPlaybackHomeStep;
         currentPath = entry?.afterPlaybackHomeStep?.[target.field] ?? null;
-        nodeName = `${entry?.name || 'Histoire sans titre'} · Home pendant lecture`;
+        nodeName = t("ai:usage.node.homeStep", { name: entry?.name || t("ai:usage.node.story") });
         fieldLabel = audioFieldLabel('afterPlaybackHomeStep');
         break;
       }
@@ -149,22 +152,22 @@ export function useAiJobUsage({ project, projectIndex, advancedMediaUsages = nul
     }
 
     if (!targetExists) {
-      return { state: 'unused', label: 'Non utilisé', detail: `${fieldLabel} n’existe plus` };
+      return { state: 'unused', label: t("ai:usage.audio.unused"), detail: t("ai:usage.field.missing", { field: fieldLabel }) };
     }
     if (pathKey(currentPath) === resultPath) {
-      return { state: 'used', label: 'Utilisé', detail: `Nœud : ${nodeName} · Champ : ${fieldLabel}` };
+      return { state: 'used', label: t("ai:usage.audio.used"), detail: t("ai:usage.node.detail", { name: nodeName, field: fieldLabel }) };
     }
-    return { state: 'unused', label: 'Non utilisé', detail: `Nœud : ${nodeName} · Champ modifié : ${fieldLabel}` };
+    return { state: 'unused', label: t("ai:usage.audio.unused"), detail: t("ai:usage.node.modified", { name: nodeName, field: fieldLabel }) };
   }, [project, projectIndex, advancedMediaUsages]);
 
   const getImageJobUsage = useCallback((job) => {
     if (!job || job.kind === 'audio' || job.status !== 'done' || !job.resultPaths?.length) return null;
     if (isAdvancedProject(project)) {
       return advancedJobUsage(project, advancedMediaUsages, job.resultPaths, {
-        used: 'Utilisée',
-        unused: 'Non utilisée',
-        noBinding: 'Aucune liaison du document ne pointe vers ces fichiers.',
-        boundUnreferenced: 'Le fichier est lié au document, mais aucun écran ne l’emploie.',
+        used: t("ai:usage.image.used"), usedKey: "ai:usage.graphImage.count",
+        unused: t("ai:usage.image.unused"),
+        noBinding: t("ai:usage.image.unbound"),
+        boundUnreferenced: t("ai:usage.file.unreferenced"),
       });
     }
     const resultSet = new Set(job.resultPaths.map(pathKey));
@@ -176,26 +179,26 @@ export function useAiJobUsage({ project, projectIndex, advancedMediaUsages = nul
       }
     }
 
-    const rootLabel = project?.projectName || project?.packMetadata?.title || 'Accueil';
-    addUsage(project?.rootImage, rootLabel, 'image d’accueil');
-    addUsage(project?.thumbnailImage, rootLabel, 'vignette');
+    const rootLabel = project?.projectName || project?.packMetadata?.title || t("ai:usage.node.home");
+    addUsage(project?.rootImage, rootLabel, t("ai:usage.image.start"));
+    addUsage(project?.thumbnailImage, rootLabel, t("ai:usage.image.thumbnail"));
 
     for (const flatEntry of projectIndex.flatEntries ?? []) {
       const entry = flatEntry.entry ?? flatEntry;
-      const nodeName = entry.name || (entry.type === 'menu' ? 'Menu sans titre' : 'Histoire sans titre');
-      addUsage(entry.image, nodeName, entry.type === 'menu' ? 'image du menu' : 'image de l’histoire');
-      addUsage(entry.itemImage, nodeName, 'image de sélection');
-      addUsage(entry.coverImage, nodeName, 'couverture');
+      const nodeName = entry.name || (entry.type === 'menu' ? t("ai:usage.node.menu") : t("ai:usage.node.story"));
+      addUsage(entry.image, nodeName, entry.type === 'menu' ? t("ai:usage.image.menu") : t("ai:usage.image.story"));
+      addUsage(entry.itemImage, nodeName, t("ai:usage.image.selection"));
+      addUsage(entry.coverImage, nodeName, t("ai:usage.image.cover"));
     }
 
     if (usages.length > 0) {
       return {
         state: 'used',
-        label: usages.length === 1 ? 'Utilisée' : `Utilisées ×${usages.length}`,
+        label: usages.length === 1 ? t("ai:usage.image.used") : t("ai:usage.image.count", { count: usages.length }),
         detail: usages.join(' ; '),
       };
     }
-    return { state: 'unused', label: 'Non utilisée', detail: 'Aucune image de cette génération n’est assignée au projet.' };
+    return { state: 'unused', label: t("ai:usage.image.unused"), detail: t("ai:usage.image.unassigned") };
   }, [project, projectIndex, advancedMediaUsages]);
 
   return { getAudioJobUsage, getImageJobUsage };

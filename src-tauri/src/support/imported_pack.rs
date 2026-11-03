@@ -1,8 +1,13 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
+#[cfg(test)]
+use crate::support::user_message::MessageTransportAssertions as _;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
+use std::sync::atomic::AtomicBool;
 
 use crate::native_pack::{StoryDocument, StoryDocumentContext};
 use crate::services::project_files::{validate_existing_dir_path, validate_existing_file_path};
@@ -14,14 +19,18 @@ use crate::support::tool_resolver::{
 };
 
 mod bundle;
+pub(crate) mod cancellation;
 mod source_tree;
+mod studio_folder;
 
+pub(crate) use bundle::portable_key as archive_portable_key;
 pub use bundle::BundleChildEntry;
 use bundle::{collect_bundle_children, has_annex_archives, BUNDLE_CONTAINER_FINGERPRINT_VERSION};
 use source_tree::{
     archive_entry_name, cache_key_for_source as source_cache_key, is_link_or_reparse,
-    revalidate_regular_entry, validated_directory_tree,
+    revalidate_regular_entry,
 };
+pub(crate) use studio_folder::StudioFolder;
 
 pub(crate) const IMPORTED_PACK_CACHE_DIR: &str = "story_studio_imported_pack_cache";
 // Incrémenter à chaque évolution du story.json produit par la conversion (voir
@@ -96,13 +105,22 @@ struct ConversionSidecar {
 }
 
 pub(crate) fn validate_existing_pack_path(path: &str) -> Result<PathBuf, String> {
-    let canonical = validate_existing_file_path(path, "Archive importee")?;
+    let canonical = validate_existing_file_path(path, codes::FILES_IMPORTED_ARCHIVE_TRANSPORT)?;
     let extension = pack_extension(&canonical);
     if !matches!(extension.as_deref(), Some("zip" | "7z")) {
-        return Err(format!(
-            "Le fichier n'est ni un ZIP ni un 7z : {}",
-            canonical.display()
-        ));
+        return Err({
+            let _msg_canonical = (canonical.display()).to_string();
+            user_message::UserMessage::new(codes::IMPORT_ARCHIVE_EXTENSION_INVALID)
+                .param(
+                    "canonical",
+                    user_message::transport_param(_msg_canonical.clone()),
+                )
+                .with_detail(format!(
+                    "Le fichier n'est ni un ZIP ni un 7z : {_msg_canonical}",
+                    _msg_canonical = user_message::transport_detail(&_msg_canonical)
+                ))
+                .into_transport()
+        });
     }
     Ok(canonical)
 }
@@ -147,22 +165,57 @@ impl BundleInventory {
             .iter()
             .find(|child| child.child_id == child_id)
             .ok_or_else(|| {
-                "Ce pack ne fait pas partie de l'archive ouverte. Rouvrez l'archive pour \
-                 rafraîchir sa liste."
-                    .to_string()
+                user_message::UserMessage::new(codes::IMPORT_BUNDLE_SELECTION_STALE)
+                    .with_detail(
+                        "Ce pack ne fait pas partie de l'archive ouverte. Rouvrez l'archive pour \
+                    rafraîchir sa liste."
+                            .to_string(),
+                    )
+                    .into_transport()
             })?;
-        let metadata = fs::symlink_metadata(&child.absolute)
-            .map_err(|e| format!("Le pack choisi est devenu illisible : {e}"))?;
+        let metadata = fs::symlink_metadata(&child.absolute).map_err(|e| {
+            let _msg_e = (e).to_string();
+            user_message::UserMessage::new(codes::FILES_CHOSEN_PACK_BECAME_UNREADABLE)
+                .param("error", user_message::transport_param(_msg_e.clone()))
+                .with_detail(format!(
+                    "Le pack choisi est devenu illisible : {_msg_e}",
+                    _msg_e = user_message::transport_detail(&_msg_e)
+                ))
+                .into_transport()
+        })?;
         if is_link_or_reparse(&metadata) || !metadata.is_file() {
-            return Err("Le pack choisi n'est pas un fichier régulier.".to_string());
+            return Err(
+                user_message::UserMessage::new(codes::IMPORT_CHOSEN_PACK_IRREGULAR)
+                    .with_detail("Le pack choisi n'est pas un fichier régulier.".to_string())
+                    .into_transport(),
+            );
         }
-        let canonical = fs::canonicalize(&child.absolute)
-            .map_err(|e| format!("Le pack choisi est devenu illisible : {e}"))?;
+        let canonical = fs::canonicalize(&child.absolute).map_err(|e| {
+            let _msg_e = (e).to_string();
+            user_message::UserMessage::new(codes::FILES_CHOSEN_PACK_BECAME_UNREADABLE)
+                .param("error", user_message::transport_param(_msg_e.clone()))
+                .with_detail(format!(
+                    "Le pack choisi est devenu illisible : {_msg_e}",
+                    _msg_e = user_message::transport_detail(&_msg_e)
+                ))
+                .into_transport()
+        })?;
         let canonical_workspace = fs::canonicalize(self.workspace.root()).map_err(|e| {
-            format!("Le dossier temporaire du pack choisi est devenu illisible : {e}")
+            let _msg_e = (e).to_string();
+            user_message::UserMessage::new(codes::IMPORT_CHOSEN_TEMP_FOLDER_UNREADABLE)
+                .param("error", user_message::transport_param(_msg_e.clone()))
+                .with_detail(format!(
+                    "Le dossier temporaire du pack choisi est devenu illisible : {_msg_e}",
+                    _msg_e = user_message::transport_detail(&_msg_e),
+                ))
+                .into_transport()
         })?;
         if !canonical.starts_with(&canonical_workspace) {
-            return Err("Le pack choisi est sorti de son dossier temporaire.".to_string());
+            return Err(
+                user_message::UserMessage::new(codes::IMPORT_CHOSEN_PACK_OUTSIDE)
+                    .with_detail("Le pack choisi est sorti de son dossier temporaire.".to_string())
+                    .into_transport(),
+            );
         }
         Ok(canonical)
     }
@@ -175,13 +228,17 @@ struct ImportWorkspace {
 }
 
 impl ImportWorkspace {
-    fn create(cache_key: &str) -> Result<Self, String> {
-        let root = unique_import_workspace(cache_key);
+    fn create_in(parent: &Path, cache_key: &str) -> Result<Self, String> {
+        let root = unique_import_workspace_in(parent, cache_key);
         fs::create_dir_all(&root).map_err(|e| {
-            format!(
-                "Impossible de preparer le dossier temporaire d'import : {}",
-                e
-            )
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::IMPORT_TEMP_FOLDER_PREPARE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de preparer le dossier temporaire d'import : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                ))
+                .into_transport()
         })?;
         Ok(Self { root })
     }
@@ -198,7 +255,30 @@ impl Drop for ImportWorkspace {
 }
 
 pub(crate) fn ensure_studio_pack_zip(path: &str) -> Result<ImportedStudioPack, String> {
-    match ensure_studio_pack_source(path)? {
+    ensure_studio_pack_zip_cancellable(path, &AtomicBool::new(false))
+}
+pub(crate) fn ensure_studio_pack_zip_cancellable(
+    path: &str,
+    cancel: &AtomicBool,
+) -> Result<ImportedStudioPack, String> {
+    match ensure_studio_pack_source_cancellable(path, cancel)? {
+        ImportedPackSource::Pack(pack) => Ok(pack),
+        ImportedPackSource::Bundle(inventory) => {
+            Err(bundle_rejection_message(inventory.children.len()))
+        }
+    }
+}
+
+/// Existing archive conversion with an explicitly owned local cache. Both
+/// extraction workspace and published conversion stay under this directory.
+pub(crate) fn ensure_studio_pack_zip_in_cancellable(
+    path: &str,
+    cache_dir: &Path,
+    cancel: &AtomicBool,
+) -> Result<ImportedStudioPack, String> {
+    let result = ensure_studio_pack_source_inner(path, cancel, Some(cache_dir));
+    cancellation::check(cancel)?;
+    match result? {
         ImportedPackSource::Pack(pack) => Ok(pack),
         ImportedPackSource::Bundle(inventory) => {
             Err(bundle_rejection_message(inventory.children.len()))
@@ -210,10 +290,18 @@ pub(crate) fn ensure_studio_pack_zip(path: &str) -> Result<ImportedStudioPack, S
 /// enveloppe. Il remplace « aucun pack reconnu », qui décrivait un symptôme
 /// plutôt que la situation, et il nomme la porte d'entrée qui sait la traiter.
 fn bundle_rejection_message(children: usize) -> String {
-    format!(
-        "Cette archive n'est pas un pack : elle contient {children} packs. \
-         Ouvrez-la depuis « Modifier un pack » pour choisir lequel ouvrir."
-    )
+    {
+        let _msg_children = (children).to_string();
+        user_message::UserMessage::new(
+            codes::IMPORT_BUNDLE_SELECTION_REQUIRED,
+        )
+            .param("children", user_message::transport_param(_msg_children.clone()))
+            .with_detail(format!(
+                "Cette archive n'est pas un pack : elle contient {_msg_children} packs. Ouvrez-la depuis « Modifier un pack » pour choisir lequel ouvrir.",
+                _msg_children = user_message::transport_detail(&_msg_children),
+            ))
+            .into_transport()
+    }
 }
 
 /// L'empreinte de contenu du conteneur, rendue au frontend avec l'inventaire et
@@ -225,6 +313,22 @@ pub fn bundle_container_fingerprint(path: &str) -> Result<String, String> {
 }
 
 pub fn ensure_studio_pack_source(path: &str) -> Result<ImportedPackSource, String> {
+    ensure_studio_pack_source_cancellable(path, &AtomicBool::new(false))
+}
+fn ensure_studio_pack_source_cancellable(
+    path: &str,
+    cancel: &AtomicBool,
+) -> Result<ImportedPackSource, String> {
+    let result = ensure_studio_pack_source_inner(path, cancel, None);
+    cancellation::check(cancel)?;
+    result
+}
+fn ensure_studio_pack_source_inner(
+    path: &str,
+    cancel: &AtomicBool,
+    cache_dir: Option<&Path>,
+) -> Result<ImportedPackSource, String> {
+    cancellation::check(cancel)?;
     let source = validate_existing_pack_path(path)?;
     let extension = pack_extension(&source);
     if extension.as_deref() == Some("zip") && zip_contains_story_json(&source)? {
@@ -233,7 +337,11 @@ pub fn ensure_studio_pack_source(path: &str) -> Result<ImportedPackSource, Strin
         // Ne pas interpréter un fichier compagnon d'une archive utilisateur.
         if is_conversion_cache_zip(&source) {
             let provenance = read_conversion_sidecar(&source).ok_or_else(|| {
-                "Provenance du pack en cache absente ou périmée. Rouvrez le dossier ou l'archive d'origine pour renouveler sa conversion.".to_string()
+                user_message::UserMessage::new(
+                    codes::IMPORT_CONVERSION_PROVENANCE_STALE,
+                )
+                    .with_detail("Provenance du pack en cache absente ou périmée. Rouvrez le dossier ou l'archive d'origine pour renouveler sa conversion.".to_string())
+                    .into_transport()
             })?;
             return Ok(ImportedPackSource::Pack(ImportedStudioPack {
                 zip_path: source,
@@ -245,37 +353,53 @@ pub fn ensure_studio_pack_source(path: &str) -> Result<ImportedPackSource, Strin
         )));
     }
 
-    let cache_dir = std::env::temp_dir().join(IMPORTED_PACK_CACHE_DIR);
+    let cache_dir = cache_dir
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| std::env::temp_dir().join(IMPORTED_PACK_CACHE_DIR));
     fs::create_dir_all(&cache_dir).map_err(|e| {
-        format!(
-            "Impossible de creer le cache des archives importees : {}",
-            e
-        )
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_ARCHIVE_CACHE_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de creer le cache des archives importees : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
     })?;
-    let cache_key = cache_key_for_source(&source)?;
+    let cache_key = cache_key_for_source_cancellable(&source, cancel)?;
     let cached_zip = cache_dir.join(format!("{}.zip", cache_key));
     if let Some(cached) = cached_conversion(&cached_zip) {
         return Ok(ImportedPackSource::Pack(cached));
     }
 
-    let workspace = ImportWorkspace::create(&cache_key)?;
+    let workspace = ImportWorkspace::create_in(&cache_dir, &cache_key)?;
     let extracted_dir = workspace.root().join("extracted");
     let converted_zip = workspace.root().join("converted.zip");
     fs::create_dir_all(&extracted_dir).map_err(|e| {
-        format!(
-            "Impossible de preparer le dossier temporaire d'import : {}",
-            e
-        )
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_TEMP_FOLDER_PREPARE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de preparer le dossier temporaire d'import : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+            ))
+            .into_transport()
     })?;
 
     match extension.as_deref() {
-        Some("zip") => extract_zip_archive(&source, &extracted_dir)?,
-        Some("7z") => extract_7z_archive(&source, &extracted_dir)?,
+        Some("zip") => extract_zip_archive_cancellable(&source, &extracted_dir, cancel)?,
+        Some("7z") => extract_7z_archive_cancellable(&source, &extracted_dir, cancel)?,
         _ => {
-            return Err(format!(
-                "Format d'archive non pris en charge : {}",
-                source.display()
-            ))
+            return Err({
+                let _msg_source = (source.display()).to_string();
+                user_message::UserMessage::new(codes::FILES_UNSUPPORTED_ARCHIVE_FORMAT)
+                    .param("source", user_message::transport_param(_msg_source.clone()))
+                    .with_detail(format!(
+                        "Format d'archive non pris en charge : {_msg_source}",
+                        _msg_source = user_message::transport_detail(&_msg_source)
+                    ))
+                    .into_transport()
+            })
         }
     }
 
@@ -308,17 +432,27 @@ pub fn ensure_studio_pack_source(path: &str) -> Result<ImportedPackSource, Strin
             "archives annexes ignorees a cote du pack reconnu"
         );
     }
-    let provenance =
-        convert_pack_root_to_zip(&pack_root, &converted_zip, &fallback_pack_title(&source))?;
+    let provenance = convert_pack_root_to_zip(
+        &pack_root,
+        &converted_zip,
+        &fallback_pack_title(&source),
+        cancel,
+    )?;
 
-    if cache_key_for_source(&source)? != cache_key {
-        return Err(format!(
-            "La source importee a change pendant sa conversion : {}",
-            source.display()
-        ));
+    if cache_key_for_source_cancellable(&source, cancel)? != cache_key {
+        return Err({
+            let _msg_source = (source.display()).to_string();
+            user_message::UserMessage::new(codes::IMPORT_CONVERSION_SOURCE_CHANGED)
+                .param("source", user_message::transport_param(_msg_source.clone()))
+                .with_detail(format!(
+                    "La source importee a change pendant sa conversion : {_msg_source}",
+                    _msg_source = user_message::transport_detail(&_msg_source),
+                ))
+                .into_transport()
+        });
     }
 
-    publish_cached_conversion(&converted_zip, &cached_zip, &provenance)?;
+    publish_cached_conversion_cancellable(&converted_zip, &cached_zip, &provenance, cancel)?;
 
     Ok(ImportedPackSource::Pack(ImportedStudioPack {
         zip_path: cached_zip,
@@ -347,39 +481,75 @@ pub fn extract_bundle_child(
     let observed = bundle_container_fingerprint(container_path)?;
     if observed != container_fingerprint {
         return Err(
-            "Cette archive a changé depuis l'affichage de sa liste. Rouvrez-la pour \
-             rafraîchir les packs qu'elle contient."
-                .to_string(),
+            user_message::UserMessage::new(codes::IMPORT_BUNDLE_ARCHIVE_CHANGED)
+                .with_detail(
+                    "Cette archive a changé depuis l'affichage de sa liste. Rouvrez-la pour \
+                rafraîchir les packs qu'elle contient."
+                        .to_string(),
+                )
+                .into_transport(),
         );
     }
 
     let ImportedPackSource::Bundle(inventory) = ensure_studio_pack_source(container_path)? else {
         return Err(
-            "Cette archive ne contient plus plusieurs packs. Rouvrez-la pour repartir de son \
-             contenu réel."
-                .to_string(),
+        user_message::UserMessage::new(
+            codes::IMPORT_BUNDLE_PACK_COUNT_CHANGED,
+        )
+            .with_detail("Cette archive ne contient plus plusieurs packs. Rouvrez-la pour repartir de son \
+                contenu réel.".to_string())
+            .into_transport(),
         );
     };
     let child_file = inventory.child_file(child_id)?;
 
     let destination_dir = cache_dir.join(BUNDLE_CHILD_CACHE_DIR).join(&observed);
-    fs::create_dir_all(&destination_dir)
-        .map_err(|e| format!("Impossible de preparer le cache des packs enfants : {e}"))?;
+    fs::create_dir_all(&destination_dir).map_err(|e| {
+        let _msg_e = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_CHILD_CACHE_PREPARE_FAILED)
+            .param("error", user_message::transport_param(_msg_e.clone()))
+            .with_detail(format!(
+                "Impossible de preparer le cache des packs enfants : {_msg_e}",
+                _msg_e = user_message::transport_detail(&_msg_e)
+            ))
+            .into_transport()
+    })?;
     let extension = pack_extension(&child_file).unwrap_or_else(|| "zip".to_string());
     let destination = destination_dir.join(format!("{child_id}.{extension}"));
 
     let staged = destination_dir.join(format!(".{child_id}.{}.tmp", uuid::Uuid::new_v4()));
     if let Err(error) = fs::copy(&child_file, &staged) {
         let _ = fs::remove_file(&staged);
-        return Err(format!("Impossible de preparer le pack choisi : {error}"));
+        return Err({
+            let _msg_error = (error).to_string();
+            user_message::UserMessage::new(codes::IMPORT_CHOSEN_PACK_PREPARE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de preparer le pack choisi : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        });
     }
     if let Err(error) = fs::rename(&staged, &destination) {
         let _ = fs::remove_file(&destination);
         if let Err(second) = fs::rename(&staged, &destination) {
             let _ = fs::remove_file(&staged);
-            return Err(format!(
-                "Impossible de publier le pack choisi : {error}; nouvelle tentative : {second}"
-            ));
+            return Err({
+                let _msg_error = (error).to_string();
+                let _msg_second = (second).to_string();
+                user_message::UserMessage::new(
+                    codes::IMPORT_CHOSEN_PACK_PUBLISH_FAILED,
+                )
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .param("second", user_message::transport_param(_msg_second.clone()))
+                    .with_detail(format!(
+                        "Impossible de publier le pack choisi : {_msg_error}; nouvelle tentative : {_msg_second}",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                        _msg_second = user_message::transport_detail(&_msg_second),
+                    ))
+                    .into_transport()
+            });
         }
     }
 
@@ -398,49 +568,59 @@ pub(crate) fn ensure_studio_pack_zip_from_dir(
     dir: &str,
     cache_dir: &Path,
 ) -> Result<ImportedStudioPack, String> {
-    let source = validate_existing_dir_path(dir, "Dossier de pack importe")?;
+    ensure_studio_pack_zip_from_dir_cancellable(dir, cache_dir, &AtomicBool::new(false))
+}
+pub(crate) fn ensure_studio_pack_zip_from_dir_cancellable(
+    dir: &str,
+    cache_dir: &Path,
+    cancel: &AtomicBool,
+) -> Result<ImportedStudioPack, String> {
+    let result = ensure_studio_pack_zip_from_dir_inner(dir, cache_dir, cancel);
+    cancellation::check(cancel)?;
+    result
+}
+fn ensure_studio_pack_zip_from_dir_inner(
+    dir: &str,
+    cache_dir: &Path,
+    cancel: &AtomicBool,
+) -> Result<ImportedStudioPack, String> {
+    cancellation::check(cancel)?;
+    let source = validate_existing_dir_path(dir, codes::FILES_IMPORTED_PACK_FOLDER_TRANSPORT)?;
 
     fs::create_dir_all(cache_dir).map_err(|e| {
-        format!(
-            "Impossible de creer le cache des archives importees : {}",
-            e
-        )
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_ARCHIVE_CACHE_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de creer le cache des archives importees : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
     })?;
-    let cache_key = cache_key_for_source(&source)?;
+    // La racine du pack est localisée avant la clé : pour un pack Studio, la clé
+    // ne couvre que ce que l'archive contiendra (voir `directory_cache_key`).
+    let pack_root = locate_pack_root(&source)?;
+    let cache_key = directory_cache_key(&source, &pack_root, cancel)?;
     let cached_zip = cache_dir.join(format!("{}.zip", cache_key));
     if let Some(cached) = cached_conversion(&cached_zip) {
         return Ok(cached);
     }
 
-    let workspace = unique_import_workspace(&cache_key);
-    let converted_zip = workspace.join("converted.zip");
-    fs::create_dir_all(&workspace).map_err(|e| {
-        format!(
-            "Impossible de preparer le dossier temporaire d'import : {}",
-            e
-        )
-    })?;
+    let workspace = ImportWorkspace::create_in(cache_dir, &cache_key)?;
+    let converted_zip = workspace.root().join("converted.zip");
+    let provenance = convert_pack_root_to_zip(
+        &pack_root,
+        &converted_zip,
+        &fallback_pack_title(&source),
+        cancel,
+    )?;
 
-    let conversion_result = (|| -> Result<PackConversionProvenance, String> {
-        let pack_root = locate_pack_root(&source)?;
-        convert_pack_root_to_zip(&pack_root, &converted_zip, &fallback_pack_title(&source))
-    })();
-
-    if conversion_result.is_err() {
-        let _ = fs::remove_dir_all(&workspace);
-    }
-    let provenance = conversion_result?;
-
-    if cache_key_for_source(&source)? != cache_key {
-        let _ = fs::remove_dir_all(&workspace);
-        return Err(format!(
-            "Le dossier importe a change pendant sa conversion : {}",
-            source.display()
-        ));
+    if directory_cache_key(&source, &pack_root, cancel)? != cache_key {
+        return Err(folder_changed(&source));
     }
 
-    let publish_result = publish_cached_conversion(&converted_zip, &cached_zip, &provenance);
-    let _ = fs::remove_dir_all(&workspace);
+    let publish_result =
+        publish_cached_conversion_cancellable(&converted_zip, &cached_zip, &provenance, cancel);
     publish_result?;
 
     Ok(ImportedStudioPack {
@@ -449,8 +629,12 @@ pub(crate) fn ensure_studio_pack_zip_from_dir(
     })
 }
 
+#[cfg(test)]
 fn unique_import_workspace(cache_key: &str) -> PathBuf {
-    std::env::temp_dir().join(format!(
+    unique_import_workspace_in(&std::env::temp_dir(), cache_key)
+}
+fn unique_import_workspace_in(parent: &Path, cache_key: &str) -> PathBuf {
+    parent.join(format!(
         "story_studio_imported_pack_{}_{}_{}",
         now_millis(),
         cache_key,
@@ -508,13 +692,15 @@ fn read_conversion_sidecar(cached_zip: &Path) -> Option<PackConversionProvenance
 /// toujours sa provenance. Son contenu ne dépend que de la source, donc deux
 /// conversions concurrentes de la même archive écrivent les mêmes octets et
 /// restent appariées quel que soit le gagnant de la publication.
-fn publish_cached_conversion(
+fn publish_cached_conversion_cancellable(
     converted_zip: &Path,
     cached_zip: &Path,
     provenance: &PackConversionProvenance,
+    cancel: &AtomicBool,
 ) -> Result<(), String> {
+    cancellation::check(cancel)?;
     publish_conversion_sidecar(cached_zip, provenance)?;
-    publish_cached_zip(converted_zip, cached_zip)
+    publish_cached_zip(converted_zip, cached_zip, cancel)
 }
 
 fn publish_conversion_sidecar(
@@ -522,17 +708,44 @@ fn publish_conversion_sidecar(
     provenance: &PackConversionProvenance,
 ) -> Result<(), String> {
     let sidecar_path = conversion_sidecar_path(cached_zip);
-    let parent = sidecar_path
-        .parent()
-        .ok_or_else(|| format!("Chemin de cache invalide : {}", cached_zip.display()))?;
-    fs::create_dir_all(parent)
-        .map_err(|e| format!("Impossible de finaliser le cache d'import : {e}"))?;
+    let parent = sidecar_path.parent().ok_or_else(|| {
+        let _msg_cached_zip = (cached_zip.display()).to_string();
+        user_message::UserMessage::new(codes::FILES_INVALID_CACHE_PATH)
+            .param(
+                "cachedZip",
+                user_message::transport_param(_msg_cached_zip.clone()),
+            )
+            .with_detail(format!(
+                "Chemin de cache invalide : {_msg_cached_zip}",
+                _msg_cached_zip = user_message::transport_detail(&_msg_cached_zip)
+            ))
+            .into_transport()
+    })?;
+    fs::create_dir_all(parent).map_err(|e| {
+        let _msg_e = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_CACHE_FINALIZE_FAILED)
+            .param("error", user_message::transport_param(_msg_e.clone()))
+            .with_detail(format!(
+                "Impossible de finaliser le cache d'import : {_msg_e}",
+                _msg_e = user_message::transport_detail(&_msg_e)
+            ))
+            .into_transport()
+    })?;
 
     let bytes = serde_json::to_vec_pretty(&ConversionSidecar {
         conversion_format_version: CONVERSION_FORMAT_VERSION.to_string(),
         provenance: provenance.clone(),
     })
-    .map_err(|e| format!("Provenance de conversion non serialisable : {e}"))?;
+    .map_err(|e| {
+        let _msg_e = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_PROVENANCE_ENCODE_FAILED)
+            .param("error", user_message::transport_param(_msg_e.clone()))
+            .with_detail(format!(
+                "Provenance de conversion non serialisable : {_msg_e}",
+                _msg_e = user_message::transport_detail(&_msg_e)
+            ))
+            .into_transport()
+    })?;
 
     let staged = parent.join(format!(
         ".{}.{}.tmp",
@@ -544,29 +757,77 @@ fn publish_conversion_sidecar(
     ));
     if let Err(error) = fs::write(&staged, &bytes) {
         let _ = fs::remove_file(&staged);
-        return Err(format!(
-            "Impossible de preparer la provenance de conversion {} : {}",
-            sidecar_path.display(),
-            error
-        ));
+        return Err({
+            let _msg_sidecar_path = (sidecar_path.display()).to_string();
+            let _msg_error = (error).to_string();
+            user_message::UserMessage::new(
+                codes::IMPORT_PROVENANCE_PREPARE_FAILED,
+            )
+                .param(
+                    "sidecarPath",
+                    user_message::transport_param(_msg_sidecar_path.clone()),
+                )
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de preparer la provenance de conversion {_msg_sidecar_path} : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                    _msg_sidecar_path = user_message::transport_detail(&_msg_sidecar_path),
+                ))
+                .into_transport()
+        });
     }
     if let Err(error) = fs::rename(&staged, &sidecar_path) {
         let _ = fs::remove_file(&staged);
-        return Err(format!(
-            "Impossible de publier la provenance de conversion {} : {}",
-            sidecar_path.display(),
-            error
-        ));
+        return Err({
+            let _msg_sidecar_path = (sidecar_path.display()).to_string();
+            let _msg_error = (error).to_string();
+            user_message::UserMessage::new(
+                codes::IMPORT_PROVENANCE_PUBLISH_FAILED,
+            )
+                .param(
+                    "sidecarPath",
+                    user_message::transport_param(_msg_sidecar_path.clone()),
+                )
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de publier la provenance de conversion {_msg_sidecar_path} : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                    _msg_sidecar_path = user_message::transport_detail(&_msg_sidecar_path),
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }
 
-fn publish_cached_zip(converted_zip: &Path, cached_zip: &Path) -> Result<(), String> {
-    let parent = cached_zip
-        .parent()
-        .ok_or_else(|| format!("Chemin de cache invalide : {}", cached_zip.display()))?;
-    fs::create_dir_all(parent)
-        .map_err(|e| format!("Impossible de finaliser le cache d'import : {e}"))?;
+fn publish_cached_zip(
+    converted_zip: &Path,
+    cached_zip: &Path,
+    cancel: &AtomicBool,
+) -> Result<(), String> {
+    let parent = cached_zip.parent().ok_or_else(|| {
+        let _msg_cached_zip = (cached_zip.display()).to_string();
+        user_message::UserMessage::new(codes::FILES_INVALID_CACHE_PATH)
+            .param(
+                "cachedZip",
+                user_message::transport_param(_msg_cached_zip.clone()),
+            )
+            .with_detail(format!(
+                "Chemin de cache invalide : {_msg_cached_zip}",
+                _msg_cached_zip = user_message::transport_detail(&_msg_cached_zip)
+            ))
+            .into_transport()
+    })?;
+    fs::create_dir_all(parent).map_err(|e| {
+        let _msg_e = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_CACHE_FINALIZE_FAILED)
+            .param("error", user_message::transport_param(_msg_e.clone()))
+            .with_detail(format!(
+                "Impossible de finaliser le cache d'import : {_msg_e}",
+                _msg_e = user_message::transport_detail(&_msg_e)
+            ))
+            .into_transport()
+    })?;
 
     if cached_zip.is_file() && zip_contains_story_json(cached_zip).unwrap_or(false) {
         return Ok(());
@@ -577,15 +838,38 @@ fn publish_cached_zip(converted_zip: &Path, cached_zip: &Path) -> Result<(), Str
         .and_then(OsStr::to_str)
         .unwrap_or("pack.zip");
     let staged_zip = parent.join(format!(".{cached_name}.{}.tmp", uuid::Uuid::new_v4()));
-    if let Err(error) = fs::copy(converted_zip, &staged_zip) {
+    if let Err(error) = (|| {
+        cancellation::copy(
+            &mut fs::File::open(converted_zip)?,
+            &mut fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&staged_zip)?,
+            cancel,
+        )
+    })() {
         let _ = fs::remove_file(&staged_zip);
-        return Err(format!(
-            "Impossible de preparer le cache de l'archive convertie {} : {}",
-            cached_zip.display(),
-            error
-        ));
+        return Err({
+            let _msg_cached_zip = (cached_zip.display()).to_string();
+            let _msg_error = (error).to_string();
+            user_message::UserMessage::new(
+                codes::IMPORT_CONVERTED_CACHE_PREPARE_FAILED,
+            )
+                .param("cachedZip", user_message::transport_param(_msg_cached_zip.clone()))
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de preparer le cache de l'archive convertie {_msg_cached_zip} : {_msg_error}",
+                    _msg_cached_zip = user_message::transport_detail(&_msg_cached_zip),
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                ))
+                .into_transport()
+        });
     }
 
+    if let Err(error) = cancellation::check(cancel) {
+        let _ = fs::remove_file(&staged_zip);
+        return Err(error);
+    }
     if let Err(first_error) = fs::rename(&staged_zip, cached_zip) {
         if cached_zip.is_file() && zip_contains_story_json(cached_zip).unwrap_or(false) {
             let _ = fs::remove_file(&staged_zip);
@@ -594,16 +878,65 @@ fn publish_cached_zip(converted_zip: &Path, cached_zip: &Path) -> Result<(), Str
         let _ = fs::remove_file(cached_zip);
         if let Err(second_error) = fs::rename(&staged_zip, cached_zip) {
             let _ = fs::remove_file(&staged_zip);
-            return Err(format!(
-                "Impossible de publier le cache de l'archive convertie {} : {}; nouvelle tentative : {}",
-                cached_zip.display(),
-                first_error,
-                second_error
-            ));
+            return Err({
+                let _msg_cached_zip = (cached_zip.display()).to_string();
+                let _msg_first_error = (first_error).to_string();
+                let _msg_second_error = (second_error).to_string();
+                user_message::UserMessage::new(
+                    codes::IMPORT_CONVERTED_CACHE_PUBLISH_FAILED,
+                )
+                    .param(
+                        "cachedZip",
+                        user_message::transport_param(_msg_cached_zip.clone()),
+                    )
+                    .param(
+                        "firstError",
+                        user_message::transport_param(_msg_first_error.clone()),
+                    )
+                    .param(
+                        "secondError",
+                        user_message::transport_param(_msg_second_error.clone()),
+                    )
+                    .with_detail(format!(
+                        "Impossible de publier le cache de l'archive convertie {_msg_cached_zip} : {_msg_first_error}; nouvelle tentative : {_msg_second_error}",
+                        _msg_cached_zip = user_message::transport_detail(&_msg_cached_zip),
+                        _msg_first_error = user_message::transport_detail(&_msg_first_error),
+                        _msg_second_error = user_message::transport_detail(&_msg_second_error),
+                    ))
+                    .into_transport()
+            });
         }
     }
 
     Ok(())
+}
+
+/// Le `story.json` qu'une conversion de dossier Studio écrit dans son archive :
+/// la décision d'identité de toute réécriture, sans catalogue (celle de
+/// l'usage suit, sur ce texte).
+fn authorize_studio_story_text(
+    text: &str,
+) -> Result<crate::native_pack::output_identity::AuthorizedStory, String> {
+    let value = serde_json::from_str(text)
+        .map_err(|e| crate::native_pack::output_identity::invalid_story(e).into_transport())?;
+    let identity = crate::native_pack::output_identity::for_story(
+        &value,
+        crate::native_pack::output_identity::OutputForm::Rewritten,
+        None,
+    )
+    .map_err(user_message::UserMessage::into_transport)?;
+    identity.serialize(text)
+}
+
+fn folder_changed(source: &Path) -> String {
+    let _msg_source = (source.display()).to_string();
+    user_message::UserMessage::new(codes::IMPORT_CONVERSION_FOLDER_CHANGED)
+        .param("source", user_message::transport_param(_msg_source.clone()))
+        .with_detail(format!(
+            "Le dossier importe a change pendant sa conversion : {_msg_source}",
+            _msg_source = user_message::transport_detail(&_msg_source),
+        ))
+        .into_transport()
 }
 
 /// Convertit une racine de pack déjà localisée (Studio ou filesystem) en ZIP Studio.
@@ -611,17 +944,31 @@ fn convert_pack_root_to_zip(
     pack_root: &Path,
     output_zip: &Path,
     fallback_title: &str,
+    cancel: &AtomicBool,
 ) -> Result<PackConversionProvenance, String> {
+    cancellation::check(cancel)?;
     if looks_like_studio_pack_directory(pack_root) {
-        zip_directory_to_file(pack_root, output_zip)
+        let text = crate::native_pack::output_identity::read_story_text(pack_root)
+            .map_err(user_message::UserMessage::into_transport)?;
+        let authorized = authorize_studio_story_text(&text)?;
+        zip_directory_to_file_cancellable(&authorized, pack_root, output_zip, cancel)
             .map(|()| PackConversionProvenance::StudioDirectory)
     } else if looks_like_fs_pack_directory(pack_root) {
-        convert_fs_pack_directory_to_zip(pack_root, output_zip, fallback_title)
+        convert_fs_pack_directory_to_zip(pack_root, output_zip, fallback_title, cancel)
     } else {
-        Err(format!(
-            "Archive importee non reconnue : {}",
-            pack_root.display()
-        ))
+        Err({
+            let _msg_pack_root = (pack_root.display()).to_string();
+            user_message::UserMessage::new(codes::FILES_IMPORTED_ARCHIVE_NOT_RECOGNIZED)
+                .param(
+                    "packRoot",
+                    user_message::transport_param(_msg_pack_root.clone()),
+                )
+                .with_detail(format!(
+                    "Archive importee non reconnue : {_msg_pack_root}",
+                    _msg_pack_root = user_message::transport_detail(&_msg_pack_root)
+                ))
+                .into_transport()
+        })
     }
 }
 
@@ -631,8 +978,32 @@ fn pack_extension(path: &Path) -> Option<String> {
         .map(|value| value.to_ascii_lowercase())
 }
 
+#[cfg(test)]
 fn cache_key_for_source(path: &Path) -> Result<String, String> {
     source_cache_key(path, CONVERSION_FORMAT_VERSION)
+}
+fn cache_key_for_source_cancellable(path: &Path, cancel: &AtomicBool) -> Result<String, String> {
+    source_tree::cache_key_for_source_cancellable(path, CONVERSION_FORMAT_VERSION, cancel)
+}
+
+/// Clé de cache d'un dossier source. Un pack Studio n'est archivé que pour
+/// `story.json`, `thumbnail.png` et `assets/` : sa clé porte sur ce même
+/// périmètre. Un pack filesystem garde l'empreinte du dossier entier.
+fn directory_cache_key(
+    source: &Path,
+    pack_root: &Path,
+    cancel: &AtomicBool,
+) -> Result<String, String> {
+    if looks_like_studio_pack_directory(pack_root) {
+        source_tree::studio_pack_cache_key_cancellable(
+            source,
+            pack_root,
+            CONVERSION_FORMAT_VERSION,
+            cancel,
+        )
+    } else {
+        cache_key_for_source_cancellable(source, cancel)
+    }
 }
 
 fn fallback_pack_title(source: &Path) -> String {
@@ -641,14 +1012,42 @@ fn fallback_pack_title(source: &Path) -> String {
         .and_then(OsStr::to_str)
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| "Archive importee".to_string())
+        .unwrap_or_else(|| {
+            user_message::UserMessage::new(codes::FILES_IMPORTED_ARCHIVE)
+                .with_detail("Archive importee".to_string())
+                .into_transport()
+        })
 }
 
 fn zip_contains_story_json(path: &Path) -> Result<bool, String> {
-    let file = fs::File::open(path)
-        .map_err(|e| format!("Impossible d'ouvrir l'archive {} : {}", path.display(), e))?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| format!("ZIP invalide {} : {}", path.display(), e))?;
+    let file = fs::File::open(path).map_err(|e| {
+        let _msg_path = (path.display()).to_string();
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_ARCHIVE_OPEN_FAILED)
+            .param("path", user_message::transport_param(_msg_path.clone()))
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible d'ouvrir l'archive {_msg_path} : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+                _msg_path = user_message::transport_detail(&_msg_path)
+            ))
+            .into_transport()
+    })?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| {
+        archive_zip_error(&e, {
+            let _msg_path = (path.display()).to_string();
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::IMPORT_ARCHIVE_ZIP_INVALID)
+                .param("path", user_message::transport_param(_msg_path.clone()))
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "ZIP invalide {_msg_path} : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                    _msg_path = user_message::transport_detail(&_msg_path)
+                ))
+                .into_transport()
+        })
+    })?;
     ensure_archive_entry_count(archive.len(), path)?;
     let has_story_json = archive.by_name("story.json").is_ok();
     Ok(has_story_json)
@@ -656,24 +1055,54 @@ fn zip_contains_story_json(path: &Path) -> Result<bool, String> {
 
 fn ensure_archive_entry_count(len: usize, source: &Path) -> Result<(), String> {
     if len > ARCHIVE_MAX_ENTRIES {
-        return Err(format!(
-            "Archive trop volumineuse : {} entrees dans {} (maximum {}).",
-            len,
-            source.display(),
-            ARCHIVE_MAX_ENTRIES
-        ));
+        return Err({
+            let _msg_len = (len).to_string();
+            let _msg_source = (source.display()).to_string();
+            let _msg_archive_max_entries = (ARCHIVE_MAX_ENTRIES).to_string();
+            user_message::UserMessage::new(
+                codes::IMPORT_ARCHIVE_ENTRIES_LIMIT,
+            )
+                .param("count", user_message::transport_param(_msg_len.clone()))
+                .param("source", user_message::transport_param(_msg_source.clone()))
+                .param(
+                    "maxEntries",
+                    user_message::transport_param(_msg_archive_max_entries.clone()),
+                )
+                .with_detail(format!(
+                    "Archive trop volumineuse : {_msg_len} entrees dans {_msg_source} (maximum {_msg_archive_max_entries}).",
+                    _msg_archive_max_entries = user_message::transport_detail(&_msg_archive_max_entries),
+                    _msg_len = user_message::transport_detail(&_msg_len),
+                    _msg_source = user_message::transport_detail(&_msg_source),
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }
 
 fn ensure_extracted_entry_size(name: &str, size: u64) -> Result<(), String> {
     if size > ARCHIVE_MAX_FILE_BYTES {
-        return Err(format!(
-            "Fichier trop volumineux dans l'archive : {} fait {} Mo (maximum {} Mo).",
-            name,
-            size / 1024 / 1024,
-            ARCHIVE_MAX_FILE_BYTES / 1024 / 1024
-        ));
+        return Err({
+            let _msg_name = (name).to_string();
+            let _msg_size_1024_1024 = (size / 1024 / 1024).to_string();
+            let file_size_limit_mb = (ARCHIVE_MAX_FILE_BYTES / 1024 / 1024).to_string();
+            user_message::UserMessage::new(
+                codes::IMPORT_ARCHIVE_MEMBER_SIZE_LIMIT,
+            )
+                .param("name", user_message::transport_param(_msg_name.clone()))
+                .param("sizeMb", user_message::transport_param(_msg_size_1024_1024.clone()))
+                .param(
+                    "maxFileMb",
+                    user_message::transport_param(file_size_limit_mb.clone()),
+                )
+                .with_detail(format!(
+                    "Fichier trop volumineux dans l'archive : {_msg_name} fait {_msg_size_1024_1024} Mo (maximum {file_size_limit_mb} Mo).",
+                    file_size_limit_mb = user_message::transport_detail(&file_size_limit_mb),
+                    _msg_name = user_message::transport_detail(&_msg_name),
+                    _msg_size_1024_1024 = user_message::transport_detail(&_msg_size_1024_1024),
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }
@@ -681,7 +1110,7 @@ fn ensure_extracted_entry_size(name: &str, size: u64) -> Result<(), String> {
 /// Le refus d'une entrée illisible, dit à l'auteur : l'archive d'origine par son
 /// nom, la compression quand c'est elle qui est en cause, puis le détail
 /// technique pour un rapport. Jamais le chemin temporaire d'extraction.
-fn unreadable_zip_entry_message(
+pub(crate) fn unreadable_zip_entry_message(
     source: &Path,
     entry_name: &str,
     compression: zip::CompressionMethod,
@@ -696,65 +1125,183 @@ fn unreadable_zip_entry_message(
         zip::CompressionMethod::Lzma => Some("LZMA".to_string()),
         other => Some(format!("{other:?}")),
     };
-    match method {
-        Some(method) => format!(
-            "L'archive « {archive} » utilise une compression ({method}) que Story Studio ne sait pas lire. Recompressez-la en ZIP standard avant de l'ouvrir. (Détail : {entry_name} : {error})"
-        ),
-        None => format!(
-            "L'archive « {archive} » est endommagée : le fichier {entry_name} ne peut pas être extrait. (Détail : {error})"
-        ),
-    }
+    let detail = match &method {
+        Some(method) => user_message::UserMessage::new(
+            codes::FILES_ARCHIVE_COMPRESSION_UNSUPPORTED,
+        )
+            .param("archive", archive.as_str())
+            .param("method", method.as_str())
+            .param("entryName", entry_name)
+            .param("error", error.to_string())
+            .with_detail(format!(
+                "L'archive « {archive} » utilise une compression ({method}) que Story Studio ne sait pas lire. Recompressez-la en ZIP standard avant de l'ouvrir. (Détail : {entry_name} : {error})",
+            ))
+            .into_transport(),
+        None => user_message::UserMessage::new(
+            codes::FILES_ARCHIVE_DAMAGED_ENTRY_DETAILS,
+        )
+            .param("archive", archive.as_str())
+            .param("entryName", entry_name)
+            .param("error", error.to_string())
+            .with_detail(format!(
+                "L'archive « {archive} » est endommagée : le fichier {entry_name} ne peut pas être extrait. (Détail : {error})",
+            ))
+            .into_transport(),
+    };
+    crate::support::user_message::coded_error(
+        if method.is_some() {
+            codes::IMPORT_UNSUPPORTED_COMPRESSION
+        } else {
+            codes::IMPORT_INVALID_ARCHIVE
+        },
+        detail,
+    )
 }
 
+#[cfg(test)]
 fn extract_zip_archive(source: &Path, output_dir: &Path) -> Result<(), String> {
-    let file = fs::File::open(source)
-        .map_err(|e| format!("Impossible d'ouvrir le ZIP {} : {}", source.display(), e))?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| format!("ZIP invalide {} : {}", source.display(), e))?;
+    extract_zip_archive_cancellable(source, output_dir, &AtomicBool::new(false))
+}
+fn extract_zip_archive_cancellable(
+    source: &Path,
+    output_dir: &Path,
+    cancel: &AtomicBool,
+) -> Result<(), String> {
+    cancellation::check(cancel)?;
+    let file = fs::File::open(source).map_err(|e| {
+        let _msg_source = (source.display()).to_string();
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_ZIP_OPEN_FAILED)
+            .param("source", user_message::transport_param(_msg_source.clone()))
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible d'ouvrir le ZIP {_msg_source} : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+                _msg_source = user_message::transport_detail(&_msg_source)
+            ))
+            .into_transport()
+    })?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| {
+        archive_zip_error(&e, {
+            let _msg_source = (source.display()).to_string();
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::IMPORT_EXTRACTION_ZIP_INVALID)
+                .param("source", user_message::transport_param(_msg_source.clone()))
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "ZIP invalide {_msg_source} : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                    _msg_source = user_message::transport_detail(&_msg_source)
+                ))
+                .into_transport()
+        })
+    })?;
     ensure_archive_entry_count(archive.len(), source)?;
     let mut total_extracted_bytes = 0_u64;
 
     for index in 0..archive.len() {
-        let mut entry = archive
-            .by_index(index)
-            .map_err(|e| format!("Lecture ZIP impossible {} : {}", source.display(), e))?;
+        let mut entry = archive.by_index(index).map_err(|e| {
+            archive_zip_error(&e, {
+                let _msg_source = (source.display()).to_string();
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(codes::FILES_ZIP_READ_FAILED)
+                    .param("source", user_message::transport_param(_msg_source.clone()))
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Lecture ZIP impossible {_msg_source} : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                        _msg_source = user_message::transport_detail(&_msg_source)
+                    ))
+                    .into_transport()
+            })
+        })?;
         let enclosed = entry.enclosed_name().ok_or_else(|| {
-            format!(
-                "Entree ZIP invalide ou dangereuse dans {} : {}",
-                source.display(),
-                entry.name()
-            )
+            let _msg_source = (source.display()).to_string();
+            let _msg_entry_name = (entry.name()).to_string();
+            user_message::UserMessage::new(codes::FILES_INVALID_DANGEROUS_ZIP_ENTRY)
+                .param("source", user_message::transport_param(_msg_source.clone()))
+                .param(
+                    "entryName",
+                    user_message::transport_param(_msg_entry_name.clone()),
+                )
+                .with_detail(format!(
+                    "Entree ZIP invalide ou dangereuse dans {_msg_source} : {_msg_entry_name}",
+                    _msg_entry_name = user_message::transport_detail(&_msg_entry_name),
+                    _msg_source = user_message::transport_detail(&_msg_source)
+                ))
+                .into_transport()
         })?;
         let target = output_dir.join(enclosed);
         if entry.is_dir() {
             fs::create_dir_all(&target).map_err(|e| {
-                format!(
-                    "Impossible de creer le dossier extrait {} : {}",
-                    target.display(),
-                    e
-                )
+                let _msg_target = (target.display()).to_string();
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(codes::IMPORT_EXTRACTED_FOLDER_CREATE_FAILED)
+                    .param("target", user_message::transport_param(_msg_target.clone()))
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Impossible de creer le dossier extrait {_msg_target} : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                        _msg_target = user_message::transport_detail(&_msg_target)
+                    ))
+                    .into_transport()
             })?;
             continue;
         }
         ensure_extracted_entry_size(entry.name(), entry.size())?;
-        total_extracted_bytes = total_extracted_bytes
-            .checked_add(entry.size())
-            .ok_or_else(|| "Taille totale extraite trop volumineuse.".to_string())?;
+        total_extracted_bytes =
+            total_extracted_bytes
+                .checked_add(entry.size())
+                .ok_or_else(|| {
+                    user_message::UserMessage::new(codes::IMPORT_EXTRACTION_TOTAL_SIZE_LIMIT)
+                        .with_detail("Taille totale extraite trop volumineuse.".to_string())
+                        .into_transport()
+                })?;
         if total_extracted_bytes > MAX_TOTAL_EXTRACTED_BYTES {
-            return Err(format!(
-                "Archive trop volumineuse : {} Mo a extraire (maximum {} Mo).",
-                total_extracted_bytes / 1024 / 1024,
-                MAX_TOTAL_EXTRACTED_BYTES / 1024 / 1024
-            ));
+            return Err({
+                let extracted_size_mb = (total_extracted_bytes / 1024 / 1024).to_string();
+                let extracted_size_limit_mb = (MAX_TOTAL_EXTRACTED_BYTES / 1024 / 1024).to_string();
+                user_message::UserMessage::new(
+                    codes::IMPORT_EXTRACTION_MEASURED_SIZE_LIMIT,
+                )
+                    .param(
+                        "totalExtractedMb",
+                        user_message::transport_param(extracted_size_mb.clone()),
+                    )
+                    .param(
+                        "maxExtractedMb",
+                        user_message::transport_param(extracted_size_limit_mb.clone()),
+                    )
+                    .with_detail(format!(
+                        "Archive trop volumineuse : {extracted_size_mb} Mo a extraire (maximum {extracted_size_limit_mb} Mo).",
+                        extracted_size_limit_mb = user_message::transport_detail(&extracted_size_limit_mb),
+                        extracted_size_mb = user_message::transport_detail(&extracted_size_mb),
+                    ))
+                    .into_transport()
+            });
         }
 
         if let Some(parent) = target.parent() {
             fs::create_dir_all(parent).map_err(|e| {
-                format!(
-                    "Impossible de preparer le dossier d'extraction {} : {}",
-                    parent.display(),
-                    e
+                let _msg_parent = (parent.display()).to_string();
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(
+                    codes::IMPORT_EXTRACTION_FOLDER_PREPARE_FAILED,
                 )
+                    .param(
+                        "parent",
+                        user_message::transport_param(_msg_parent.clone()),
+                    )
+                    .param(
+                        "error",
+                        user_message::transport_param(_msg_error.clone()),
+                    )
+                    .with_detail(format!(
+                        "Impossible de preparer le dossier d'extraction {_msg_parent} : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                        _msg_parent = user_message::transport_detail(&_msg_parent)
+                    ))
+                    .into_transport()
             })?;
         }
 
@@ -765,48 +1312,77 @@ fn extract_zip_archive(source: &Path, output_dir: &Path) -> Result<(), String> {
         {
             Ok(file) => file,
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-                return Err(format!(
-                    "Collision de nom pendant l'extraction de {} : {} existe deja sur ce volume.",
-                    source.display(),
-                    target.display()
-                ));
+                return Err({
+                    let _msg_source = (source.display()).to_string();
+                    let _msg_target = (target.display()).to_string();
+                    user_message::UserMessage::new(
+                        codes::IMPORT_EXTRACTION_NAME_COLLISION,
+                    )
+                        .param("source", user_message::transport_param(_msg_source.clone()))
+                        .param("target", user_message::transport_param(_msg_target.clone()))
+                        .with_detail(format!(
+                            "Collision de nom pendant l'extraction de {_msg_source} : {_msg_target} existe deja sur ce volume.",
+                            _msg_source = user_message::transport_detail(&_msg_source),
+                            _msg_target = user_message::transport_detail(&_msg_target),
+                        ))
+                        .into_transport()
+                });
             }
             Err(error) => {
-                return Err(format!(
-                    "Impossible de creer le fichier extrait {} : {}",
-                    target.display(),
-                    error
-                ));
+                return Err({
+                    let _msg_target = (target.display()).to_string();
+                    let _msg_error = (error).to_string();
+                    user_message::UserMessage::new(codes::IMPORT_EXTRACTED_FILE_CREATE_FAILED)
+                        .param("target", user_message::transport_param(_msg_target.clone()))
+                        .param("error", user_message::transport_param(_msg_error.clone()))
+                        .with_detail(format!(
+                            "Impossible de creer le fichier extrait {_msg_target} : {_msg_error}",
+                            _msg_error = user_message::transport_detail(&_msg_error),
+                            _msg_target = user_message::transport_detail(&_msg_target)
+                        ))
+                        .into_transport()
+                });
             }
         };
         let compression = entry.compression();
         let entry_name = entry.name().to_string();
-        std::io::copy(&mut entry, &mut out)
+        cancellation::copy(&mut entry, &mut out, cancel)
             .map_err(|e| unreadable_zip_entry_message(source, &entry_name, compression, &e))?;
     }
 
     Ok(())
 }
 
+#[cfg(test)]
 fn extract_7z_archive(source: &Path, output_dir: &Path) -> Result<(), String> {
+    extract_7z_archive_cancellable(source, output_dir, &AtomicBool::new(false))
+}
+fn extract_7z_archive_cancellable(
+    source: &Path,
+    output_dir: &Path,
+    cancel: &AtomicBool,
+) -> Result<(), String> {
+    cancellation::check(cancel)?;
     let seven_zip = resolve_7z_path()?;
     let mut cmd = Command::new(&seven_zip);
     apply_no_window(&mut cmd);
-    let output = cmd
-        .arg("x")
+    cmd.arg("x")
         .arg("-y")
         .arg(format!("-o{}", output_dir.display()))
-        .arg(source)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| {
-            format!(
-                "Impossible de lancer 7z pour extraire {} : {}",
-                source.display(),
-                e
-            )
-        })?;
+        .arg(source);
+    let output = cancellation::run(cmd, cancel).map_err(|e| {
+        let _msg_source = (source.display()).to_string();
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_7Z_PROCESS_START_FAILED)
+            .param("source", user_message::transport_param(_msg_source.clone()))
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer 7z pour extraire {_msg_source} : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+                _msg_source = user_message::transport_detail(&_msg_source)
+            ))
+            .into_transport()
+    })?;
 
     if output.status.success() {
         validate_extracted_tree_limits(output_dir)?;
@@ -815,12 +1391,34 @@ fn extract_7z_archive(source: &Path, output_dir: &Path) -> Result<(), String> {
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     let stdout = String::from_utf8_lossy(&output.stdout);
-    Err(format!(
-        "Extraction 7z impossible pour {}.\n{}\n{}",
-        source.display(),
-        stdout.trim(),
-        stderr.trim()
-    ))
+    // La sortie de l’outil externe est une donnée technique, pas une phrase de l’application.
+    let raw = format!("{stdout}\n{stderr}").to_ascii_lowercase();
+    let code = if raw.contains("password") {
+        codes::IMPORT_PASSWORD_REQUIRED
+    } else if raw.contains("unsupported method")
+        || raw.contains("compression")
+        || raw.contains("lzma")
+    {
+        codes::IMPORT_UNSUPPORTED_COMPRESSION
+    } else {
+        codes::IMPORT_INVALID_ARCHIVE
+    };
+    Err(crate::support::user_message::coded_error(code, {
+        let _msg_source = (source.display()).to_string();
+        let _msg_stdout = (stdout.trim()).to_string();
+        let _msg_stderr = (stderr.trim()).to_string();
+        user_message::UserMessage::new(codes::IMPORT_7Z_EXTRACTION_FAILED)
+            .param("source", user_message::transport_param(_msg_source.clone()))
+            .param("stdout", user_message::transport_param(_msg_stdout.clone()))
+            .param("stderr", user_message::transport_param(_msg_stderr.clone()))
+            .with_detail(format!(
+                "Extraction 7z impossible pour {_msg_source}.\n{_msg_stdout}\n{_msg_stderr}",
+                _msg_source = user_message::transport_detail(&_msg_source),
+                _msg_stderr = user_message::transport_detail(&_msg_stderr),
+                _msg_stdout = user_message::transport_detail(&_msg_stdout)
+            ))
+            .into_transport()
+    }))
 }
 
 fn validate_extracted_tree_limits(root: &Path) -> Result<(), String> {
@@ -829,46 +1427,120 @@ fn validate_extracted_tree_limits(root: &Path) -> Result<(), String> {
     let mut total_bytes = 0_u64;
 
     while let Some(dir) = stack.pop() {
-        for entry in fs::read_dir(&dir)
-            .map_err(|e| format!("Impossible de verifier {} : {}", dir.display(), e))?
-        {
-            let entry = entry.map_err(|e| format!("Lecture dossier impossible : {}", e))?;
+        for entry in fs::read_dir(&dir).map_err(|e| {
+            let _msg_dir = (dir.display()).to_string();
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::IMPORT_EXTRACTED_PATH_CHECK_FAILED)
+                .param("dir", user_message::transport_param(_msg_dir.clone()))
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de verifier {_msg_dir} : {_msg_error}",
+                    _msg_dir = user_message::transport_detail(&_msg_dir),
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })? {
+            let entry = entry.map_err(|e| {
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(codes::FILES_FOLDER_READ_FAILED)
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Lecture dossier impossible : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error)
+                    ))
+                    .into_transport()
+            })?;
             let path = entry.path();
-            let metadata = fs::symlink_metadata(&path)
-                .map_err(|e| format!("Metadonnees inaccessibles {} : {}", path.display(), e))?;
+            let metadata = fs::symlink_metadata(&path).map_err(|e| {
+                let _msg_path = (path.display()).to_string();
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(codes::IMPORT_ENTRY_METADATA_INACCESSIBLE)
+                    .param("path", user_message::transport_param(_msg_path.clone()))
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Metadonnees inaccessibles {_msg_path} : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                        _msg_path = user_message::transport_detail(&_msg_path)
+                    ))
+                    .into_transport()
+            })?;
             if is_link_or_reparse(&metadata) {
-                return Err(format!(
-                    "Archive refusee : lien symbolique ou point de reanalyse extrait interdit ({})",
-                    path.display()
-                ));
+                return Err({
+                    let _msg_path = (path.display()).to_string();
+                    user_message::UserMessage::new(
+                        codes::IMPORT_EXTRACTION_SYMLINK_FORBIDDEN,
+                    )
+                        .param("path", user_message::transport_param(_msg_path.clone()))
+                        .with_detail(format!(
+                            "Archive refusee : lien symbolique ou point de reanalyse extrait interdit ({_msg_path})",
+                            _msg_path = user_message::transport_detail(&_msg_path),
+                        ))
+                        .into_transport()
+                });
             }
             entry_count += 1;
             if entry_count > ARCHIVE_MAX_ENTRIES {
-                return Err(format!(
-                    "Archive trop volumineuse apres extraction : plus de {} entrees.",
-                    ARCHIVE_MAX_ENTRIES
-                ));
+                return Err({
+                    let _msg_archive_max_entries = (ARCHIVE_MAX_ENTRIES).to_string();
+                    user_message::UserMessage::new(
+                        codes::IMPORT_EXTRACTION_ENTRY_COUNT_LIMIT,
+                    )
+                        .param(
+                            "maxEntries",
+                            user_message::transport_param(_msg_archive_max_entries.clone()),
+                        )
+                        .with_detail(format!(
+                            "Archive trop volumineuse apres extraction : plus de {_msg_archive_max_entries} entrees.",
+                            _msg_archive_max_entries = user_message::transport_detail(&_msg_archive_max_entries),
+                        ))
+                        .into_transport()
+                });
             }
             if metadata.is_dir() {
                 stack.push(path);
                 continue;
             }
             if !metadata.is_file() {
-                return Err(format!(
-                    "Archive refusee : entree extraite non reguliere ({})",
-                    path.display()
-                ));
+                return Err({
+                    let _msg_path = (path.display()).to_string();
+                    user_message::UserMessage::new(codes::IMPORT_EXTRACTION_ENTRY_IRREGULAR)
+                        .param("path", user_message::transport_param(_msg_path.clone()))
+                        .with_detail(format!(
+                            "Archive refusee : entree extraite non reguliere ({_msg_path})",
+                            _msg_path = user_message::transport_detail(&_msg_path),
+                        ))
+                        .into_transport()
+                });
             }
             ensure_extracted_entry_size(&path.to_string_lossy(), metadata.len())?;
-            total_bytes = total_bytes
-                .checked_add(metadata.len())
-                .ok_or_else(|| "Taille totale extraite trop volumineuse.".to_string())?;
+            total_bytes = total_bytes.checked_add(metadata.len()).ok_or_else(|| {
+                user_message::UserMessage::new(codes::IMPORT_EXTRACTION_TOTAL_SIZE_LIMIT)
+                    .with_detail("Taille totale extraite trop volumineuse.".to_string())
+                    .into_transport()
+            })?;
             if total_bytes > MAX_TOTAL_EXTRACTED_BYTES {
-                return Err(format!(
-                    "Archive trop volumineuse apres extraction : {} Mo (maximum {} Mo).",
-                    total_bytes / 1024 / 1024,
-                    MAX_TOTAL_EXTRACTED_BYTES / 1024 / 1024
-                ));
+                return Err({
+                    let source_size_mb = (total_bytes / 1024 / 1024).to_string();
+                    let extracted_size_limit_mb =
+                        (MAX_TOTAL_EXTRACTED_BYTES / 1024 / 1024).to_string();
+                    user_message::UserMessage::new(
+                        codes::IMPORT_EXTRACTION_FINAL_SIZE_LIMIT,
+                    )
+                        .param(
+                            "totalMb",
+                            user_message::transport_param(source_size_mb.clone()),
+                        )
+                        .param(
+                            "maxExtractedMb",
+                            user_message::transport_param(extracted_size_limit_mb.clone()),
+                        )
+                        .with_detail(format!(
+                            "Archive trop volumineuse apres extraction : {source_size_mb} Mo (maximum {extracted_size_limit_mb} Mo).",
+                            extracted_size_limit_mb = user_message::transport_detail(&extracted_size_limit_mb),
+                            source_size_mb = user_message::transport_detail(&source_size_mb),
+                        ))
+                        .into_transport()
+                });
             }
         }
     }
@@ -944,7 +1616,7 @@ fn seven_zip_candidates(context: &SevenZipResolutionContext<'_>) -> Vec<PathBuf>
     candidates
 }
 
-fn resolve_7z_path() -> Result<PathBuf, String> {
+pub(crate) fn resolve_7z_path() -> Result<PathBuf, String> {
     let context = SevenZipResolutionContext {
         platform: std::env::consts::OS,
         architecture: std::env::consts::ARCH,
@@ -965,15 +1637,35 @@ fn locate_pack_root(extracted_dir: &Path) -> Result<PathBuf, String> {
     candidates.dedup();
 
     match candidates.len() {
-        0 => Err(format!(
-            "Aucun pack Lunii reconnu apres extraction dans {}",
-            extracted_dir.display()
-        )),
+        0 => Err({
+            let _msg_extracted_dir = (extracted_dir.display()).to_string();
+            user_message::UserMessage::new(codes::IMPORT_EXTRACTED_LUNII_PACK_MISSING)
+                .param(
+                    "extractedDir",
+                    user_message::transport_param(_msg_extracted_dir.clone()),
+                )
+                .with_detail(format!(
+                    "Aucun pack Lunii reconnu apres extraction dans {_msg_extracted_dir}",
+                    _msg_extracted_dir = user_message::transport_detail(&_msg_extracted_dir),
+                ))
+                .into_transport()
+        }),
         1 => Ok(candidates.remove(0)),
-        _ => Err(format!(
-            "Plusieurs packs ont ete detectes dans la meme archive ({}). Une seule histoire par archive est prise en charge.",
-            extracted_dir.display()
-        )),
+        _ => Err({
+            let _msg_extracted_dir = (extracted_dir.display()).to_string();
+            user_message::UserMessage::new(
+                codes::IMPORT_SINGLE_PACK_REQUIRED,
+            )
+                .param(
+                    "extractedDir",
+                    user_message::transport_param(_msg_extracted_dir.clone()),
+                )
+                .with_detail(format!(
+                    "Plusieurs packs ont ete detectes dans la meme archive ({_msg_extracted_dir}). Une seule histoire par archive est prise en charge.",
+                    _msg_extracted_dir = user_message::transport_detail(&_msg_extracted_dir),
+                ))
+                .into_transport()
+        }),
     }
 }
 
@@ -982,42 +1674,97 @@ fn collect_pack_candidates(
     depth: usize,
     candidates: &mut Vec<PathBuf>,
 ) -> Result<(), String> {
-    if looks_like_studio_pack_directory(dir) || looks_like_fs_pack_directory(dir) {
+    if (looks_like_studio_pack_directory(dir) && dir.join("assets").is_dir())
+        || looks_like_fs_pack_directory(dir)
+    {
         candidates.push(dir.to_path_buf());
         return Ok(());
     }
+    // Un `story.json` sans `assets/` (pack sans média) est un pack, mais le plus
+    // faible des candidats : un vrai pack plus bas dans l'arbre l'emporte, et ce
+    // fichier n'est alors qu'un parasite du dossier parent.
+    let bare_story = looks_like_studio_pack_directory(dir);
 
     if depth == 0 {
+        if bare_story {
+            candidates.push(dir.to_path_buf());
+        }
         return Ok(());
     }
+    let found_before = candidates.len();
 
-    for entry in fs::read_dir(dir)
-        .map_err(|e| format!("Impossible de parcourir {} : {}", dir.display(), e))?
-    {
-        let entry = entry.map_err(|e| format!("Lecture dossier impossible : {}", e))?;
+    for entry in fs::read_dir(dir).map_err(|e| {
+        let _msg_dir = (dir.display()).to_string();
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_EXTRACTED_FOLDER_BROWSE_FAILED)
+            .param("dir", user_message::transport_param(_msg_dir.clone()))
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de parcourir {_msg_dir} : {_msg_error}",
+                _msg_dir = user_message::transport_detail(&_msg_dir),
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })? {
+        let entry = entry.map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::FILES_FOLDER_READ_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Lecture dossier impossible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
         let path = entry.path();
         if path.is_dir() {
             collect_pack_candidates(&path, depth - 1, candidates)?;
         }
     }
+    if bare_story && candidates.len() == found_before {
+        candidates.push(dir.to_path_buf());
+    }
 
     Ok(())
 }
 
+/// Dossier Studio : `story.json` à la racine. `assets/` est facultatif, un pack
+/// sans média n'en a pas (une archive ne conserve pas les dossiers vides).
 fn looks_like_studio_pack_directory(dir: &Path) -> bool {
-    dir.join("story.json").is_file() && dir.join("assets").is_dir()
+    dir.join("story.json").is_file()
 }
 
 fn looks_like_fs_pack_directory(dir: &Path) -> bool {
     crate::support::fs_pack_reader::detect_fs_pack_variant(dir).is_some()
 }
 
-fn zip_directory_to_file(source_dir: &Path, output_zip: &Path) -> Result<(), String> {
-    let entries = validated_directory_tree(source_dir)?;
-    let out_file = fs::File::create(output_zip)
-        .map_err(|e| format!("Impossible de creer {} : {}", output_zip.display(), e))?;
-    let mut writer = zip::ZipWriter::new(out_file);
+fn zip_directory_to_file_cancellable(
+    authorized: &crate::native_pack::output_identity::AuthorizedStory,
+    source_dir: &Path,
+    output_zip: &Path,
+    cancel: &AtomicBool,
+) -> Result<(), String> {
+    let entries = source_tree::validated_studio_pack_tree_cancellable(source_dir, cancel)?;
+    let out_file = fs::File::create(output_zip).map_err(|e| {
+        user_message::UserMessage::new(codes::FILES_ARCHIVE_CREATE_FAILED)
+            .param("outputZip", output_zip.display().to_string())
+            .param("error", e.to_string())
+            .with_detail(format!(
+                "Impossible de creer {} : {}",
+                output_zip.display(),
+                e
+            ))
+            .into_transport()
+    })?;
+    let mut writer = zip::ZipWriter::new(cancellation::Writer {
+        inner: out_file,
+        cancel,
+        stage: "zipWrite",
+    });
     let options = zip::write::SimpleFileOptions::default()
+        // Conversion preserves source bytes; the ZIP container must not depend
+        // on when a preview, copy or replacement happens to rebuild it.
+        .last_modified_time(zip::DateTime::default())
         .compression_method(zip::CompressionMethod::Deflated);
 
     for entry in entries.into_iter().filter(|entry| !entry.is_dir) {
@@ -1027,21 +1774,77 @@ fn zip_directory_to_file(source_dir: &Path, output_zip: &Path) -> Result<(), Str
         // divergence restante.
         revalidate_regular_entry(source_dir, &entry)?;
         let entry_name = archive_entry_name(&entry.relative)?;
-        let mut input = fs::File::open(&entry.absolute)
-            .map_err(|e| format!("Impossible de lire {} : {}", entry.absolute.display(), e))?;
-        writer
-            .start_file(entry_name, options)
-            .map_err(|e| format!("Impossible d'ecrire ZIP {} : {}", output_zip.display(), e))?;
-        std::io::copy(&mut input, &mut writer)
-            .map_err(|e| format!("Impossible d'ecrire ZIP {} : {}", output_zip.display(), e))?;
+        let mut input = fs::File::open(&entry.absolute).map_err(|e| {
+            let _msg_entry_absolute = (entry.absolute.display()).to_string();
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::FILES_ARCHIVE_ENTRY_READ_FAILED)
+                .param(
+                    "entryAbsolute",
+                    user_message::transport_param(_msg_entry_absolute.clone()),
+                )
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de lire {_msg_entry_absolute} : {_msg_error}",
+                    _msg_entry_absolute = user_message::transport_detail(&_msg_entry_absolute),
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
+        let is_story = entry_name == "story.json";
+        writer.start_file(entry_name, options).map_err(|e| {
+            let _msg_output_zip = (output_zip.display()).to_string();
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::FILES_ZIP_WRITE_FAILED)
+                .param(
+                    "outputZip",
+                    user_message::transport_param(_msg_output_zip.clone()),
+                )
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible d'ecrire ZIP {_msg_output_zip} : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                    _msg_output_zip = user_message::transport_detail(&_msg_output_zip)
+                ))
+                .into_transport()
+        })?;
+        let written = if is_story {
+            authorized.copy_to(&mut writer, cancel)
+        } else {
+            cancellation::copy(&mut input, &mut writer, cancel)
+        };
+        written.map_err(|e| {
+            let _msg_output_zip = (output_zip.display()).to_string();
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::FILES_ZIP_WRITE_FAILED)
+                .param(
+                    "outputZip",
+                    user_message::transport_param(_msg_output_zip.clone()),
+                )
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible d'ecrire ZIP {_msg_output_zip} : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                    _msg_output_zip = user_message::transport_detail(&_msg_output_zip)
+                ))
+                .into_transport()
+        })?;
     }
 
     writer.finish().map_err(|e| {
-        format!(
-            "Finalisation ZIP impossible {} : {}",
-            output_zip.display(),
-            e
-        )
+        let _msg_output_zip = (output_zip.display()).to_string();
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_ZIP_FINALIZE_FAILED)
+            .param(
+                "outputZip",
+                user_message::transport_param(_msg_output_zip.clone()),
+            )
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Finalisation ZIP impossible {_msg_output_zip} : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+                _msg_output_zip = user_message::transport_detail(&_msg_output_zip)
+            ))
+            .into_transport()
     })?;
     Ok(())
 }
@@ -1050,15 +1853,40 @@ fn convert_fs_pack_directory_to_zip(
     pack_dir: &Path,
     output_zip: &Path,
     fallback_title: &str,
+    cancel: &AtomicBool,
 ) -> Result<PackConversionProvenance, String> {
-    crate::support::fs_pack_reader::read_fs_pack_to_studio_zip(
+    crate::support::fs_pack_reader::read_fs_pack_to_studio_zip_cancellable(
         pack_dir,
         output_zip,
         fallback_title,
+        cancel,
     )?;
     Ok(PackConversionProvenance::FsProjection {
         directory_identity: crate::support::fs_pack_reader::fs_pack_directory_identity(pack_dir),
     })
+}
+
+pub(crate) fn archive_zip_error(error: &zip::result::ZipError, detail: String) -> String {
+    use crate::support::user_message::{coded_error, codes};
+    // La crate rapporte ces causes natives via UnsupportedArchive. Seule sa
+    // raison externe en anglais est examinée, jamais les phrases de l’application.
+    let code = match error {
+        zip::result::ZipError::UnsupportedArchive(reason)
+            if reason.to_ascii_lowercase().contains("password") =>
+        {
+            codes::IMPORT_PASSWORD_REQUIRED
+        }
+        zip::result::ZipError::UnsupportedArchive(reason)
+        | zip::result::ZipError::InvalidArchive(reason)
+            if reason.to_ascii_lowercase().contains("encrypted")
+                || reason.to_ascii_lowercase().contains("utf-8") =>
+        {
+            codes::IMPORT_UNSUPPORTED_VARIANT
+        }
+        zip::result::ZipError::UnsupportedArchive(_) => codes::IMPORT_UNSUPPORTED_COMPRESSION,
+        _ => codes::IMPORT_INVALID_ARCHIVE,
+    };
+    coded_error(code, detail)
 }
 
 #[cfg(test)]
@@ -1073,6 +1901,18 @@ mod tests {
         let error = std::io::Error::other("LZ distance 840524 is beyond output size 0");
         let lzma =
             unreadable_zip_entry_message(source, "abc/li", zip::CompressionMethod::Lzma, &error);
+        let lzma: user_message::UserMessage = serde_json::from_str(&lzma).unwrap();
+        assert_eq!(lzma.code, codes::IMPORT_UNSUPPORTED_COMPRESSION);
+        let lzma: user_message::UserMessage = serde_json::from_str(&lzma.detail.unwrap()).unwrap();
+        assert_eq!(lzma.code, codes::FILES_ARCHIVE_COMPRESSION_UNSUPPORTED);
+        assert_eq!(
+            lzma.params["archive"],
+            "5+ Le quiz (installation Quizz).zip"
+        );
+        assert_eq!(lzma.params["method"], "LZMA");
+        assert_eq!(lzma.params["entryName"], "abc/li");
+        assert_eq!(lzma.params["error"], error.to_string());
+        let lzma = lzma.detail.unwrap();
         assert!(lzma.starts_with(
             "L'archive « 5+ Le quiz (installation Quizz).zip » utilise une compression (LZMA)"
         ));
@@ -1088,7 +1928,18 @@ mod tests {
             zip::CompressionMethod::Deflated,
             &error,
         );
-        assert!(deflated.contains("est endommagée"));
+        let deflated: user_message::UserMessage = serde_json::from_str(&deflated).unwrap();
+        assert_eq!(deflated.code, codes::IMPORT_INVALID_ARCHIVE);
+        let deflated: user_message::UserMessage =
+            serde_json::from_str(&deflated.detail.unwrap()).unwrap();
+        assert_eq!(deflated.code, codes::FILES_ARCHIVE_DAMAGED_ENTRY_DETAILS);
+        assert_eq!(
+            deflated.params["archive"],
+            "5+ Le quiz (installation Quizz).zip"
+        );
+        assert_eq!(deflated.params["entryName"], "abc/li");
+        assert_eq!(deflated.params["error"], error.to_string());
+        assert!(deflated.detail.unwrap().contains("est endommagée"));
     }
 
     fn temp_import_dir(name: &str) -> PathBuf {
@@ -1122,6 +1973,94 @@ mod tests {
         let mut bytes = Vec::new();
         entry.read_to_end(&mut bytes).expect("read zip entry");
         bytes
+    }
+
+    /// The files of a pack folder as ZIP entries under `<folder name>/`.
+    fn folder_entries(pack_dir: &Path) -> Vec<(String, Vec<u8>)> {
+        fn walk(root: &Path, dir: &Path, out: &mut Vec<(String, Vec<u8>)>) {
+            for entry in fs::read_dir(dir).expect("read fixture folder") {
+                let path = entry.expect("fixture entry").path();
+                if path.is_dir() {
+                    walk(root, &path, out);
+                } else {
+                    let name = path.strip_prefix(root).unwrap().to_str().unwrap();
+                    out.push((name.replace('\\', "/"), fs::read(&path).unwrap()));
+                }
+            }
+        }
+        let mut out = Vec::new();
+        walk(pack_dir.parent().unwrap(), pack_dir, &mut out);
+        out
+    }
+
+    fn converted_assets(zip_path: &Path) -> Vec<Vec<u8>> {
+        let mut archive = zip::ZipArchive::new(fs::File::open(zip_path).unwrap()).unwrap();
+        (0..archive.len())
+            .filter_map(|index| {
+                let mut entry = archive.by_index(index).unwrap();
+                entry.name().starts_with("assets/").then(|| {
+                    let mut bytes = Vec::new();
+                    entry.read_to_end(&mut bytes).unwrap();
+                    bytes
+                })
+            })
+            .collect()
+    }
+
+    /// Les packs `.cleartext` (index sans suffixe, en clair) s'importent par
+    /// la même règle que le catalogue, depuis un ZIP comme depuis un dossier,
+    /// sans que leurs médias soient déchiffrés ; une clé inconnue est nommée.
+    #[test]
+    fn cleartext_device_packs_import_without_deciphering_and_unknown_keys_are_named() {
+        use crate::support::fs_pack_reader::fs_fixtures::{
+            write_cleartext_pack, write_unknown_key_pack, CLEARTEXT_AUDIO, CLEARTEXT_IMAGE,
+            DIALECT_PACK_UUID,
+        };
+        let dir = temp_import_dir("cleartext_import");
+        let pack_dir = dir.join("folder").join(DIALECT_PACK_UUID);
+        write_cleartext_pack(&pack_dir, true);
+        let entries = folder_entries(&pack_dir);
+        let zip_path = dir.join("3+ Clear pack.zip");
+        write_zip(
+            &zip_path,
+            &entries
+                .iter()
+                .map(|(name, bytes)| (name.as_str(), bytes.as_slice()))
+                .collect::<Vec<_>>(),
+        );
+        let from_zip = ensure_studio_pack_zip(zip_path.to_str().unwrap())
+            .expect("import du ZIP en clair")
+            .zip_path;
+        let from_folder = ensure_studio_pack_zip_from_dir(
+            pack_dir.to_str().unwrap(),
+            &dir.join(IMPORTED_PACK_CACHE_DIR),
+        )
+        .expect("import du dossier en clair")
+        .zip_path;
+        for converted in [&from_zip, &from_folder] {
+            let assets = converted_assets(converted);
+            assert!(assets.iter().any(|a| a == CLEARTEXT_IMAGE), "{converted:?}");
+            assert!(assets.iter().any(|a| a == CLEARTEXT_AUDIO), "{converted:?}");
+        }
+
+        let locked_dir = dir.join("locked").join(DIALECT_PACK_UUID);
+        write_unknown_key_pack(&locked_dir, true);
+        let locked_entries = folder_entries(&locked_dir);
+        let locked_zip = dir.join("Locked.zip");
+        write_zip(
+            &locked_zip,
+            &locked_entries
+                .iter()
+                .map(|(name, bytes)| (name.as_str(), bytes.as_slice()))
+                .collect::<Vec<_>>(),
+        );
+        let error = ensure_studio_pack_zip(locked_zip.to_str().unwrap()).expect_err("clé inconnue");
+        assert!(
+            error.contains_any_code(&[codes::IMPORT_FS_ENCRYPTED_UNKNOWN_KEY]),
+            "{error}"
+        );
+        let _ = fs::remove_file(&from_zip);
+        fs::remove_dir_all(dir).expect("cleanup cleartext import fixture");
     }
 
     fn minimal_plain_node_index() -> Vec<u8> {
@@ -1329,7 +2268,9 @@ mod tests {
         context.resource_dir = Some(dir.join("resources"));
         let error = resolve_regular_file("7-Zip", seven_zip_candidates(&context))
             .expect_err("missing tool");
-        assert!(error.contains("7-Zip introuvable"));
+        assert!(error.contains_any_code(&[codes::FILES_TOOL_CANDIDATES_EXHAUSTED]));
+        let message: user_message::UserMessage = serde_json::from_str(&error).unwrap();
+        let error = message.params["searched"].as_str().unwrap();
         assert!(error.contains(
             &dir.join("resources")
                 .join("tools")
@@ -1416,7 +2357,7 @@ mod tests {
         symlink(&outside, extracted.join("linked")).expect("create symlink");
 
         let error = validate_extracted_tree_limits(&extracted).expect_err("reject symlink");
-        assert!(error.contains("lien symbolique"));
+        assert!(error.contains_any_code(&[codes::IMPORT_EXTRACTION_SYMLINK_FORBIDDEN]));
 
         fs::remove_dir_all(dir).expect("cleanup");
     }
@@ -1450,7 +2391,7 @@ mod tests {
                 );
             }
             Err(error) => assert!(
-                error.contains("Collision de nom"),
+                error.contains_any_code(&[codes::IMPORT_EXTRACTION_NAME_COLLISION]),
                 "unexpected extraction error: {error}"
             ),
         }
@@ -1474,7 +2415,7 @@ mod tests {
 
         let error = extract_zip_archive(&archive, &extracted)
             .expect_err("reject duplicate extraction target");
-        assert!(error.contains("Collision de nom"));
+        assert!(error.contains_any_code(&[codes::IMPORT_EXTRACTION_NAME_COLLISION]));
         assert_eq!(
             fs::read(extracted.join("story.json")).expect("read preserved extraction target"),
             b"existing"
@@ -1494,7 +2435,7 @@ mod tests {
         create_windows_junction(&extracted.join("linked"), &target);
 
         let error = validate_extracted_tree_limits(&extracted).expect_err("reject junction");
-        assert!(error.contains("reanalyse") || error.contains("lien"));
+        assert!(error.contains_any_code(&[codes::IMPORT_EXTRACTION_SYMLINK_FORBIDDEN]));
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
 
@@ -1715,7 +2656,7 @@ mod tests {
 
         let err =
             ensure_studio_pack_zip(path.to_str().expect("path utf8")).expect_err("reject txt");
-        assert!(err.contains("ni un ZIP ni un 7z"));
+        assert!(err.contains_any_code(&[codes::IMPORT_ARCHIVE_EXTENSION_INVALID]));
 
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
@@ -1742,9 +2683,50 @@ mod tests {
 
         let err = ensure_studio_pack_zip(zip_path.to_str().expect("zip path utf8"))
             .expect_err("reject unrecognized zip");
-        assert!(err.contains("non reconnue") || err.contains("Aucun pack Lunii reconnu"));
+        assert!(
+            err.contains_any_code(&[codes::FILES_IMPORTED_ARCHIVE_NOT_RECOGNIZED])
+                || err.contains_any_code(&[codes::IMPORT_EXTRACTED_LUNII_PACK_MISSING])
+        );
 
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn explicit_archive_cache_owns_conversion_workspace_and_provenance() {
+        let dir = temp_import_dir("explicit_archive_cache");
+        let archive = dir.join("wrapped.zip");
+        write_zip(
+            &archive,
+            &[
+                ("pack/story.json", br#"{"title":"Cache","stageNodes":[]}"#),
+                ("pack/assets/a.png", b"png"),
+            ],
+        );
+        let cache = dir.join("local").join(IMPORTED_PACK_CACHE_DIR);
+        let converted = ensure_studio_pack_zip_in_cancellable(
+            archive.to_str().unwrap(),
+            &cache,
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+        assert_eq!(converted.zip_path.parent(), Some(cache.as_path()));
+        assert!(converted.provenance.is_some());
+        let reread = ensure_studio_pack_zip_in_cancellable(
+            converted.zip_path.to_str().unwrap(),
+            &cache,
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+        assert_eq!(reread.provenance, converted.provenance);
+        assert!(fs::read_dir(&cache)
+            .unwrap()
+            .all(|e| !e.unwrap().file_type().unwrap().is_dir()));
+        let workspace = ImportWorkspace::create_in(&cache, "owned").unwrap();
+        assert!(workspace.root().starts_with(&cache));
+        let path = workspace.root().to_path_buf();
+        drop(workspace);
+        assert!(!path.exists());
+        fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
@@ -1766,6 +2748,157 @@ mod tests {
                 .zip_path;
         assert_eq!(zip.parent(), Some(cache_dir.as_path()));
         assert!(zip_contains_story_json(&zip).expect("converted zip has story.json"));
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn studio_directory_without_assets_converts_to_a_valid_zip_without_assets_entry() {
+        let dir = temp_import_dir("studio_dir_no_assets");
+        let pack_dir = dir.join("pack");
+        let cache_dir = dir.join("cache");
+        fs::create_dir_all(&pack_dir).expect("create pack dir");
+        fs::write(
+            pack_dir.join("story.json"),
+            br#"{"title":"Sans media","stageNodes":[],"actionNodes":[]}"#,
+        )
+        .expect("write story.json");
+
+        let zip =
+            ensure_studio_pack_zip_from_dir(pack_dir.to_str().expect("path utf8"), &cache_dir)
+                .expect("convert directory without assets")
+                .zip_path;
+        assert!(zip_contains_story_json(&zip).expect("converted zip has story.json"));
+        assert!(converted_assets(&zip).is_empty());
+        let reloaded = crate::services::pack_reader::load_pack_zip(zip.to_str().expect("zip utf8"))
+            .expect("the converted zip is readable");
+        assert!(reloaded.contains("Sans media"));
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    fn zip_entry_names(zip_path: &Path) -> Vec<String> {
+        let archive = zip::ZipArchive::new(fs::File::open(zip_path).unwrap()).unwrap();
+        let mut names = archive.file_names().map(str::to_string).collect::<Vec<_>>();
+        names.sort();
+        names
+    }
+
+    /// Un dossier de pack Studio n'est archivé que pour son pack : `story.json`,
+    /// `thumbnail.png` et tout `assets/`. Une archive posée à côté, un
+    /// `.DS_Store` ou un dossier de notes n'entrent ni dans l'archive ni dans
+    /// la clé de cache.
+    #[test]
+    fn studio_directory_archive_holds_only_the_pack_and_ignores_foreign_root_entries() {
+        let dir = temp_import_dir("studio_dir_foreign_root_entries");
+        let pack_dir = dir.join("pack");
+        let cache_dir = dir.join("cache");
+        fs::create_dir_all(pack_dir.join("assets").join("sous")).expect("create assets");
+        fs::create_dir_all(pack_dir.join("notes").join("brouillons")).expect("create notes");
+        fs::write(
+            pack_dir.join("story.json"),
+            br#"{"title":"Pack propre","stageNodes":[]}"#,
+        )
+        .expect("write story");
+        fs::write(pack_dir.join("thumbnail.png"), b"thumb").expect("write thumbnail");
+        fs::write(pack_dir.join("assets").join("a.png"), b"png").expect("write asset");
+        fs::write(pack_dir.join("assets").join("sous").join("b.mp3"), b"mp3")
+            .expect("write nested asset");
+        // Rien n'est trié à l'intérieur d'assets/.
+        fs::write(pack_dir.join("assets").join("Archive.zip"), b"kept").expect("write asset zip");
+        write_zip(
+            &pack_dir.join("Archive.zip"),
+            &[("story.json", b"{}"), ("assets/x.png", b"x")],
+        );
+        fs::write(pack_dir.join(".DS_Store"), b"ds").expect("write DS_Store");
+        fs::write(
+            pack_dir.join("notes").join("brouillons").join("n.txt"),
+            b"note",
+        )
+        .expect("write note");
+
+        let first =
+            ensure_studio_pack_zip_from_dir(pack_dir.to_str().expect("path utf8"), &cache_dir)
+                .expect("convert studio directory with foreign entries")
+                .zip_path;
+        assert_eq!(
+            zip_entry_names(&first),
+            [
+                "assets/Archive.zip",
+                "assets/a.png",
+                "assets/sous/b.mp3",
+                "story.json",
+                "thumbnail.png",
+            ]
+        );
+        assert_eq!(read_zip_entry(&first, "thumbnail.png"), b"thumb");
+
+        // Un fichier étranger modifié ou ajouté ne change pas la clé de cache.
+        fs::write(pack_dir.join(".DS_Store"), b"autre contenu").expect("mutate DS_Store");
+        fs::write(pack_dir.join("lisez-moi.txt"), b"nouveau").expect("add foreign file");
+        let again =
+            ensure_studio_pack_zip_from_dir(pack_dir.to_str().expect("path utf8"), &cache_dir)
+                .expect("cached conversion")
+                .zip_path;
+        assert_eq!(again, first, "un fichier étranger n'invalide pas le cache");
+
+        // Un média du pack, lui, l'invalide.
+        fs::write(pack_dir.join("assets").join("a.png"), b"PNG").expect("mutate asset");
+        let changed =
+            ensure_studio_pack_zip_from_dir(pack_dir.to_str().expect("path utf8"), &cache_dir)
+                .expect("reconversion")
+                .zip_path;
+        assert_ne!(changed, first);
+
+        // Pack sans assets/ : seul story.json, même avec des étrangers.
+        let bare = dir.join("bare");
+        fs::create_dir_all(bare.join("divers")).expect("create bare pack");
+        fs::write(
+            bare.join("story.json"),
+            br#"{"title":"Nu","stageNodes":[]}"#,
+        )
+        .expect("write bare story");
+        fs::write(bare.join("Archive.zip"), b"zip").expect("write bare archive");
+        fs::write(bare.join("divers").join("x.txt"), b"x").expect("write bare note");
+        let bare_zip =
+            ensure_studio_pack_zip_from_dir(bare.to_str().expect("path utf8"), &cache_dir)
+                .expect("convert bare studio directory")
+                .zip_path;
+        assert_eq!(zip_entry_names(&bare_zip), ["story.json"]);
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn stray_story_json_in_a_parent_does_not_hide_the_real_pack_below() {
+        let dir = temp_import_dir("studio_dir_stray_parent");
+        let parent = dir.join("parent");
+        let real = parent.join("sous").join("vrai");
+        let cache_dir = dir.join("cache");
+        fs::create_dir_all(real.join("assets")).expect("create real pack");
+        fs::write(parent.join("story.json"), br#"{"title":"Parasite"}"#).expect("write stray");
+        let real_story = br#"{"title":"Vrai pack","stageNodes":[]}"#;
+        fs::write(real.join("story.json"), real_story).expect("write real story");
+        fs::write(real.join("assets").join("a.png"), b"png").expect("write asset");
+
+        let zip = ensure_studio_pack_zip_from_dir(parent.to_str().expect("path utf8"), &cache_dir)
+            .expect("the real pack wins over the stray parent")
+            .zip_path;
+        assert_eq!(read_zip_entry(&zip, "story.json"), real_story);
+        assert_eq!(converted_assets(&zip).len(), 1);
+
+        // Sans pack plus bas, le parent nu reste un pack sans média.
+        let alone = dir.join("alone");
+        fs::create_dir_all(alone.join("vide")).expect("create empty child");
+        fs::write(
+            alone.join("story.json"),
+            br#"{"title":"Seul","stageNodes":[]}"#,
+        )
+        .expect("write alone");
+        let zip = ensure_studio_pack_zip_from_dir(alone.to_str().expect("path utf8"), &cache_dir)
+            .expect("bare parent alone is a pack")
+            .zip_path;
+        assert!(zip_contains_story_json(&zip).expect("story.json present"));
 
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
@@ -1889,7 +3022,10 @@ mod tests {
         fs::remove_file(&sidecar).expect("retirer la provenance publiée");
         let error = ensure_studio_pack_zip(converted.zip_path.to_str().expect("zip path utf8"))
             .expect_err("un chemin de cache orphelin ne devient pas un import Studio");
-        assert!(error.contains("Provenance"), "{error}");
+        assert!(
+            error.contains_any_code(&[codes::IMPORT_CONVERSION_PROVENANCE_STALE]),
+            "{error}"
+        );
         assert!(
             converted.zip_path.is_file(),
             "la lecture ne détruit pas le cache"
@@ -1969,7 +3105,7 @@ mod tests {
         symlink(&outside_dir, pack_dir.join("assets/dir-link")).expect("create dir symlink");
 
         let error = cache_key_for_source(&pack_dir).expect_err("reject source symlinks");
-        assert!(error.contains("lien") || error.contains("symbolique"));
+        assert!(error.contains_any_code(&[codes::IMPORT_FOLDER_SYMLINK_FORBIDDEN]));
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
 
@@ -1989,7 +3125,7 @@ mod tests {
         symlink(&pack_dir, pack_dir.join("assets/loop")).expect("create loop symlink");
 
         let error = cache_key_for_source(&pack_dir).expect_err("reject symlink loop");
-        assert!(error.contains("lien") || error.contains("symbolique"));
+        assert!(error.contains_any_code(&[codes::IMPORT_FOLDER_SYMLINK_FORBIDDEN]));
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
 
@@ -2013,7 +3149,7 @@ mod tests {
         .expect("create broken symlink");
 
         let error = cache_key_for_source(&pack_dir).expect_err("reject broken symlink");
-        assert!(error.contains("lien") || error.contains("symbolique"));
+        assert!(error.contains_any_code(&[codes::IMPORT_FOLDER_SYMLINK_FORBIDDEN]));
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
 
@@ -2044,7 +3180,7 @@ mod tests {
             .expect("Windows symbolic-link privilege is required for the directory link");
 
         let error = cache_key_for_source(&pack_dir).expect_err("reject Windows reparse link");
-        assert!(error.contains("reanalyse") || error.contains("lien"));
+        assert!(error.contains_any_code(&[codes::IMPORT_FOLDER_SYMLINK_FORBIDDEN]));
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
 
@@ -2066,7 +3202,7 @@ mod tests {
         create_windows_junction(&junction, &target_dir);
 
         let error = cache_key_for_source(&pack_dir).expect_err("reject Windows junction");
-        assert!(error.contains("reanalyse") || error.contains("lien"));
+        assert!(error.contains_any_code(&[codes::IMPORT_FOLDER_SYMLINK_FORBIDDEN]));
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
 
@@ -2079,7 +3215,10 @@ mod tests {
 
         let err = ensure_studio_pack_zip_from_dir(dir.to_str().expect("path utf8"), &cache_dir)
             .expect_err("reject non-pack directory");
-        assert!(err.contains("Aucun pack Lunii reconnu") || err.contains("non reconnue"));
+        assert!(
+            err.contains_any_code(&[codes::IMPORT_EXTRACTED_LUNII_PACK_MISSING])
+                || err.contains_any_code(&[codes::FILES_IMPORTED_ARCHIVE_NOT_RECOGNIZED])
+        );
 
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
@@ -2088,10 +3227,10 @@ mod tests {
     fn archive_limits_report_explicit_errors() {
         let err = ensure_archive_entry_count(ARCHIVE_MAX_ENTRIES + 1, Path::new("large.zip"))
             .unwrap_err();
-        assert!(err.contains("Archive trop volumineuse"));
+        assert!(err.contains_any_code(&[codes::IMPORT_ARCHIVE_ENTRIES_LIMIT]));
 
         let err = ensure_extracted_entry_size("assets/audio.mp3", ARCHIVE_MAX_FILE_BYTES + 1)
             .unwrap_err();
-        assert!(err.contains("Fichier trop volumineux"));
+        assert!(err.contains_any_code(&[codes::IMPORT_ARCHIVE_MEMBER_SIZE_LIMIT]));
     }
 }

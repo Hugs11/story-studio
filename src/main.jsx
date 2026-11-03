@@ -1,7 +1,18 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import { I18nextProvider } from 'react-i18next';
+import i18n, { initializeI18n } from './i18n';
+import { loadLanguage } from './i18n/language';
+import { admitEditorStartup } from './store/startupAdmission.js';
 import { runSettingsMigrations } from "./store/persistentSettings";
+
+// Admission precedes language persistence, migrations and editor module effects.
+async function start() {
+if (!await admitEditorStartup()) return;
+const { default: App } = await import('./App');
+
+// La détection précède toute migration, y compris dans les bancs de développement.
+initializeI18n(loadLanguage());
 
 // Banc d'essai des moteurs de graphe, monté à la place de
 // l'application sous `VITE_BENCH=graph npm run tauri:dev`.
@@ -59,8 +70,14 @@ document.addEventListener('contextmenu', e => {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <I18nextProvider i18n={i18n}>
+      <App />
+    </I18nextProvider>
   </React.StrictMode>,
 );
 
 }
+
+}
+
+void start();

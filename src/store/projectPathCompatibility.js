@@ -31,5 +31,5 @@ export function chooseCompatibleProjectPath(relativePath, projectPath, workspace
 } = {}) {
   const workspacePath = workspaceFallbackForProjectRelativePath(relativePath, workspaceDir);
   if (!workspacePath || pathKey(workspacePath) === pathKey(projectPath)) return projectPath;
-  return !projectExists && workspaceExists ? workspacePath : projectPath;
+  return projectExists === false && workspaceExists === true ? workspacePath : projectPath;
 }

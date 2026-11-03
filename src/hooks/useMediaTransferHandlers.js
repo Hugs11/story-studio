@@ -1,3 +1,5 @@
+import { presentUserMessage } from '../i18n/userMessage.js';
+import { beginProjectMediaOutput } from '../store/projectMediaOutput';
 import { useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { ask } from '@tauri-apps/plugin-dialog';
@@ -11,13 +13,16 @@ import {
 import { findEntryById } from '../store/projectModel';
 import { pathKey } from '../utils/fileUtils';
 import { FICHIERS_IMPORTES } from '../store/workspaceDirs';
+import { keepFolderPackInProject } from '../utils/packFolder';
 import { buildTransferPromptSignature } from '../store/projectHelpers';
-import { getProjectFilePrefix } from '../utils/projectPrefix';
-import { formatFrenchCount } from '../utils/frenchText.js';
+
+import { translateMedia } from '../i18n/mediaPresentation.js';
 import { logger } from '../utils/logger';
 
 export function useMediaTransferHandlers({
   store,
+  mediaStorageRef = null,
+  sessionModeRef = null,
   copyImportedFilesEnabled,
   setCopyImportedFilesEnabled,
   workspaceDir,
@@ -34,9 +39,10 @@ export function useMediaTransferHandlers({
   // `artifactCopies` reçoit les copies annexes — la source d'une image éditée —
   // pour qu'un appelant dont le geste échoue puisse tout retirer
   // (`discardMediaCopies`). La copie principale est le chemin rendu.
-  const maybeCopyToProject = useCallback(async (filePath, { artifactCopies = null } = {}) => {
+  const maybeCopyToProject = useCallback(async (filePath, { artifactCopies = null, mediaStorage = null, mediaOutput = null } = {}) => {
     if (!copyImportedFilesEnabled) return filePath;
-    const ws = workspaceDirRef.current;
+    const captured = mediaStorage ?? { ...(mediaStorageRef?.current ?? {}), root: workspaceDirRef.current, storage: (store.readProject?.() ?? store.project).storage, ephemeral: sessionModeRef?.current === 'ephemeral' };
+    const ws = captured.root;
     if (isAlreadyManagedFile(filePath, ws, savePathRef.current)) return filePath;
     try {
       const targetWorkspace = ws || await getWorkspaceDir();
@@ -45,8 +51,8 @@ export function useMediaTransferHandlers({
         filePath,
         targetWorkspace,
         FICHIERS_IMPORTES,
-        getProjectFilePrefix(store.project, savePathRef.current),
-        { artifactCopies },
+        { ...captured, root: targetWorkspace },
+        { artifactCopies, mediaOutput },
       );
     } catch (e) {
       logger.error('media-transfer:copy-to-project-error', e);
@@ -54,73 +60,108 @@ export function useMediaTransferHandlers({
       setTimeout(() => setSaveToast?.(null), 3000);
       return filePath;
     }
-  }, [copyImportedFilesEnabled, savePathRef, setSaveToast, setWorkspaceDirState, store, workspaceDir, workspaceDirRef]);
+  }, [mediaStorageRef, sessionModeRef, copyImportedFilesEnabled, savePathRef, setSaveToast, setWorkspaceDirState, store, workspaceDir, workspaceDirRef]);
 
-  const copyGeneratedMediaToProject = useCallback(async (filePath) => {
-    const ws = workspaceDirRef.current;
+  const copyGeneratedMediaToProject = useCallback(async (filePath, { mediaStorage = null, mediaOutput = null } = {}) => {
+    const captured = mediaStorage ?? { ...(mediaStorageRef?.current ?? {}), root: workspaceDirRef.current, storage: (store.readProject?.() ?? store.project).storage, ephemeral: sessionModeRef?.current === 'ephemeral' };
+    const ws = captured.root;
     if (isAlreadyManagedFile(filePath, ws, savePathRef.current)) return filePath;
     try {
       const targetWorkspace = ws || await getWorkspaceDir();
       if (!workspaceDir) setWorkspaceDirState(targetWorkspace);
-      return await copyMediaToWorkspace(filePath, targetWorkspace, FICHIERS_IMPORTES, getProjectFilePrefix(store.project, savePathRef.current));
+      return await copyMediaToWorkspace(filePath, targetWorkspace, FICHIERS_IMPORTES, { ...captured, root: targetWorkspace }, { mediaOutput });
     } catch (e) {
       logger.error('media-transfer:copy-generated-to-project-error', e);
       setSaveToast?.('error');
       setTimeout(() => setSaveToast?.(null), 3000);
       return filePath;
     }
-  }, [savePathRef, setSaveToast, setWorkspaceDirState, store, workspaceDir, workspaceDirRef]);
+  }, [mediaStorageRef, sessionModeRef, savePathRef, setSaveToast, setWorkspaceDirState, store, workspaceDir, workspaceDirRef]);
+
+  const keepFolderPack = useCallback(async (folderPath, { destination, isCurrent, apply }) => {
+    const epoch = store.workEpochRef.current;
+    const mediaStorage = {
+      ...destination, storage: { ...destination.storage },
+    };
+    const current = () => {
+      const project = store.readProject?.() ?? store.project;
+      return store.workEpochRef.current === epoch
+        && project.storage.workId === mediaStorage.storage.workId
+        && (mediaStorage.ephemeral || project.storage.folder === mediaStorage.storage.folder)
+        && workspaceDirRef.current === mediaStorage.root
+        && (sessionModeRef.current === 'ephemeral') === mediaStorage.ephemeral
+        && isCurrent();
+    };
+    // Le dialogue de choix peut avoir laissé terminer une promotion avant
+    // même le prochain rendu React : sa destination initiale fait encore foi.
+    if (!current()) return null;
+    // Une sauvegarde peut avoir lieu, mais ne peut ni promouvoir/nettoyer la
+    // session ni déplacer cette sortie avant son affectation (ou son retrait).
+    const mediaOutput = beginProjectMediaOutput(mediaStorage);
+    try {
+      return await keepFolderPackInProject(folderPath,
+        staged => copyGeneratedMediaToProject(staged, { mediaStorage, mediaOutput }), {
+          workspaceDir: mediaStorage.root, isCurrent: current, apply,
+        });
+    } finally { mediaOutput.release(); }
+  }, [copyGeneratedMediaToProject, sessionModeRef, store, workspaceDirRef]);
 
   const dropOnNode = useCallback(async ({ nodeId, nodeType, path, paths, kind, clipboardMode }) => {
     if (kind !== 'audio' && kind !== 'image') return;
     const sourcePaths = (Array.isArray(paths) && paths.length > 0 ? paths : [path]).filter(Boolean);
     if (sourcePaths.length === 0) return;
-    logger.info('media-transfer:drop', {
-      nodeId,
-      nodeType,
-      kind,
-      count: sourcePaths.length,
-      clipboardMode: clipboardMode || 'copy',
-    });
-    const finalPaths = [];
-    for (const sourcePath of sourcePaths) {
-      finalPaths.push(await maybeCopyToProject(sourcePath));
-    }
-    if (clipboardMode === 'cut') {
+    const epoch = store.workEpochRef?.current;
+    const mediaStorage = { ...(mediaStorageRef?.current ?? {}), root: workspaceDirRef.current, storage: (store.readProject?.() ?? store.project).storage, ephemeral: sessionModeRef?.current === 'ephemeral' };
+    const mediaOutput = mediaStorage.root ? beginProjectMediaOutput(mediaStorage) : null;
+    try {
+      logger.info('media-transfer:drop', {
+        nodeId,
+        nodeType,
+        kind,
+        count: sourcePaths.length,
+        clipboardMode: clipboardMode || 'copy',
+      });
+      const finalPaths = [];
       for (const sourcePath of sourcePaths) {
-        store.removeMediaReferences(sourcePath);
+        finalPaths.push(await maybeCopyToProject(sourcePath, { mediaStorage, mediaOutput }));
       }
-    }
-    if (kind === 'image') {
-      const finalPath = finalPaths[0];
+      if (epoch != null && store.workEpochRef.current !== epoch) return;
+      if (clipboardMode === 'cut') {
+        for (const sourcePath of sourcePaths) {
+          store.removeMediaReferences(sourcePath);
+        }
+      }
+      if (kind === 'image') {
+        const finalPath = finalPaths[0];
+        if (nodeType === 'root') {
+          store.updateRootMedia('rootImage', finalPath);
+        } else if (nodeType === 'menu') {
+          store.updateMenu(nodeId, { image: finalPath });
+        } else if (nodeType === 'story') {
+          store.updateItem(nodeId, { itemImage: finalPath });
+        }
+        return;
+      }
       if (nodeType === 'root') {
-        store.updateRootMedia('rootImage', finalPath);
+        for (const finalPath of finalPaths) {
+          store.addStory(null, finalPath);
+        }
       } else if (nodeType === 'menu') {
-        store.updateMenu(nodeId, { image: finalPath });
+        for (const finalPath of finalPaths) {
+          store.addStory(nodeId, finalPath);
+        }
       } else if (nodeType === 'story') {
-        store.updateItem(nodeId, { itemImage: finalPath });
+        // Remplacement de l'audio principal : on garde l'ancien fichier visible
+        // dans le gestionnaire de médias (« Non utilisés ») au lieu de le rendre
+        // orphelin invisible sur le disque.
+        const previousAudio = findEntryById(store.project, nodeId)?.audio;
+        store.updateItem(nodeId, { audio: finalPaths[0] });
+        if (previousAudio && pathKey(previousAudio) !== pathKey(finalPaths[0])) {
+          addPathsToMediaLibrary?.([previousAudio]);
+        }
       }
-      return;
-    }
-    if (nodeType === 'root') {
-      for (const finalPath of finalPaths) {
-        store.addStory(null, finalPath);
-      }
-    } else if (nodeType === 'menu') {
-      for (const finalPath of finalPaths) {
-        store.addStory(nodeId, finalPath);
-      }
-    } else if (nodeType === 'story') {
-      // Remplacement de l'audio principal : on garde l'ancien fichier visible
-      // dans le gestionnaire de médias (« Non utilisés ») au lieu de le rendre
-      // orphelin invisible sur le disque.
-      const previousAudio = findEntryById(store.project, nodeId)?.audio;
-      store.updateItem(nodeId, { audio: finalPaths[0] });
-      if (previousAudio && pathKey(previousAudio) !== pathKey(finalPaths[0])) {
-        addPathsToMediaLibrary?.([previousAudio]);
-      }
-    }
-  }, [addPathsToMediaLibrary, maybeCopyToProject, store]);
+    } finally { mediaOutput?.release(); }
+  }, [addPathsToMediaLibrary, maybeCopyToProject, mediaStorageRef, sessionModeRef, store, workspaceDirRef]);
 
   const notifyCutPaste = useCallback(({ path, kind } = {}) => {
     if (!path) return;
@@ -144,6 +185,13 @@ export function useMediaTransferHandlers({
       copyEnabled = copyImportedFilesEnabled,
       skipPrompt = false,
       targetWorkspaceDir = null,
+      sourceSessionDir = null,
+      mediaStorage = null,
+      // Enregistrement automatique : aucune question ne s'ouvre. Un transfert
+      // qui aurait été proposé est seulement signalé (`deferred`) — copier
+      // sans l'accord de l'auteur n'est pas permis, et l'appelant doit alors
+      // laisser le projet « modifié » jusqu'au prochain enregistrement manuel.
+      silent = false,
     } = options;
     if (!copyEnabled || !savePath) return { project, changed: false, copies: [] };
 
@@ -157,22 +205,20 @@ export function useMediaTransferHandlers({
     if (!forcePrompt && dismissedTransferPromptRef.current === signature) {
       return { project, changed: false, copies: [] };
     }
+    if (silent) return { project, changed: false, copies: [], deferred: true };
 
+    // Dialogue natif : textes résolus dans la langue active au moment de l'ouverture.
     const sample = candidates.slice(0, 5).map((candidate) => `• ${candidate.filename}`).join('\n');
     const suffix = candidates.length > 5
-      ? `\n• …et ${formatFrenchCount(candidates.length - 5, 'autre', 'autres')}`
+      ? `\n• ${translateMedia('native:transfer.prompt.more', { count: candidates.length - 5 })}`
       : '';
     const confirmed = skipPrompt || (await ask(
-        `${formatFrenchCount(
-          candidates.length,
-          'fichier déjà lié au projet est',
-          'fichiers déjà liés au projet sont',
-        )} encore hors de l’emplacement de travail.\n\n${sample}${suffix}\n\nLes copier dans fichiers-importes/ et mettre à jour le projet ?`,
+        translateMedia('native:transfer.prompt.message', { count: candidates.length, files: `${sample}${suffix}` }),
         {
-          title: 'Transférer les fichiers existants ?',
+          title: translateMedia('native:transfer.prompt.title'),
           kind: 'warning',
-          okLabel: 'Transférer',
-          cancelLabel: 'Plus tard',
+          okLabel: translateMedia('native:transfer.prompt.confirm'),
+          cancelLabel: translateMedia('native:transfer.prompt.later'),
         }
       ));
 
@@ -186,7 +232,7 @@ export function useMediaTransferHandlers({
     // Un Save As transmet déjà le projet et le chemin nouvellement nommés. Ne pas
     // relire le store précédent ici : pendant une promotion de session, il peut
     // encore porter le nom technique du snapshot de récupération.
-    const projectPrefix = getProjectFilePrefix(project, savePath);
+    const projectPrefix = { ...(mediaStorage ?? { root: targetWorkspaceDir || workspaceDir, storage: project.storage, ephemeral: false }), sessionRoot: sourceSessionDir };
     const transferResult = await transferProjectFilesToProject(
       project,
       savePath,
@@ -207,13 +253,15 @@ export function useMediaTransferHandlers({
     dismissedTransferPromptRef.current = null;
 
     if (transferResult.errors.length > 0) {
-      const details = transferResult.errors
-        .slice(0, 5)
-        .map((error) => `• ${error.label}\n  ${error.error}`)
-        .join('\n');
+      const errors = transferResult.errors.slice(0, 5);
       showErrorDialog({
-        title: 'Transfert incomplet',
-        message: `Certains fichiers n'ont pas pu être transférés :\n\n${details}`,
+        get title() { return translateMedia('media:transfer.incomplete.title'); },
+        message: { parts: [{ key: 'media:transfer.incomplete.message' }, '\n\n', ...errors.flatMap((error, index) => [
+          index ? '\n• ' : '• ',
+          { get parts() { return [error.label]; } },
+          '\n  ', { userMessage: error.userMessage },
+        ])] },
+        technicalDetail: errors.map((error) => presentUserMessage(error.userMessage).technicalDetail).filter(Boolean).join('\n'),
       });
     }
 
@@ -260,6 +308,7 @@ export function useMediaTransferHandlers({
   return {
     maybeCopyToProject,
     copyGeneratedMediaToProject,
+    keepFolderPack,
     dropOnNode,
     notifyCutPaste,
     extractAudioEmbeddedImage,

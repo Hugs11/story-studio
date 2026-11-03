@@ -97,6 +97,7 @@ async function batchLayout(page) {
   const row = page.locator('.editor-setting-row.is-action-row')
     .filter({ hasText: 'Générer à partir des noms' }).first();
   await row.waitFor({ timeout: 15_000 });
+  await row.scrollIntoViewIfNeeded();
   return row.evaluate((element) => {
     const copy = element.querySelector('.editor-setting-copy');
     const actions = element.querySelector('.editor-setting-actions');
@@ -110,7 +111,30 @@ async function batchLayout(page) {
     });
     const inside = (box) => box.left >= rect.left - 1 && box.right <= rect.right + 1
       && box.top >= rect.top - 1 && box.bottom <= rect.bottom + 1;
+    const panel = element.closest('.advanced-panel-slot--advanced-inspector');
+    const card = element.closest('.card');
+    const box = node => {
+      const r = node.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
+    };
+    const panelRect = box(panel);
+    const cardRect = box(card);
+    const horizontallyInside = r => r.left >= panelRect.left - 1 && r.right <= panelRect.right + 1;
+    const panelNodes = [panel, ...panel.querySelectorAll('*')];
+    const horizontalScrollers = panelNodes.filter(node => {
+      const style = getComputedStyle(node);
+      return ['auto', 'scroll'].includes(style.overflowX) && node.scrollWidth > node.clientWidth + 1;
+    }).map(node => ({ tag: node.tagName, className: node.className, clientWidth: node.clientWidth, scrollWidth: node.scrollWidth }));
     return {
+      panelRect, cardRect, rowRect: box(element), buttonRects,
+      panelInsideViewport: panelRect.left >= -1 && panelRect.right <= innerWidth + 1
+        && panelRect.top >= -1 && panelRect.bottom <= innerHeight + 1,
+      cardInsidePanel: horizontallyInside(cardRect),
+      rowInsidePanel: horizontallyInside(rect),
+      buttonsInsidePanel: buttonRects.every(r => horizontallyInside(r)
+        && r.top >= panelRect.top - 1 && r.bottom <= panelRect.bottom + 1),
+      panelNoHorizontalOverflow: panel.scrollWidth <= panel.clientWidth + 1 && horizontalScrollers.length === 0,
+      horizontalScrollers,
       panelWidth: element.closest('.advanced-panel-slot--advanced-inspector')?.getBoundingClientRect().width ?? null,
       rowWidth: rect.width,
       copyWidth: copyRect.width,
@@ -178,7 +202,9 @@ export async function run() {
         layouts.push({ resolution: resolution.label, boundary, storedWidth, ...metrics });
         ctx.check(`${resolution.label} / largeur ${boundary} : texte et boutons restent dans la carte`,
           metrics.noHorizontalOverflow && metrics.buttonsInside
-            && metrics.buttonCount === 2 && metrics.copyWidth >= 180,
+            && metrics.buttonCount === 2 && metrics.panelInsideViewport
+            && metrics.cardInsidePanel && metrics.rowInsidePanel
+            && metrics.buttonsInsidePanel && metrics.panelNoHorizontalOverflow,
           { storedWidth, ...metrics });
         if (boundary === 'min') {
           ctx.check(`${resolution.label} / largeur minimale : actions empilées sous le texte`,
@@ -193,8 +219,12 @@ export async function run() {
   } catch (error) {
     ctx.check(`parcours interrompu : ${error.message}`, false, { stack: error.stack });
   } finally {
-    const stop = await app.stop({ graceful: true });
-    ctx.check('fermeture propre et workspace réel intact', stop.closedGracefully && stop.polluted.length === 0, stop);
+    try {
+      const stop = await app.stop({ graceful: true });
+      ctx.check('fermeture propre et workspace réel intact', stop.closedGracefully && stop.polluted.length === 0, stop);
+    } catch (error) {
+      ctx.check('fermeture propre et workspace réel intact', false, { error: error.message, stack: error.stack });
+    }
   }
   return ctx.finish({ layouts });
 }

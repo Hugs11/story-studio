@@ -21,6 +21,7 @@
 //! `set_stage_transition`, qui seul juge les bornes de sélection. Un collage
 //! n'est pas une seconde façon de créer un nœud.
 
+use crate::support::user_message::{codes, UserMessage};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -132,25 +133,30 @@ fn check_ranks(request: &PasteSubgraphRequest) -> Result<(), GestureError> {
         for (ordinal, option) in action.options.iter().enumerate() {
             if let PasteOptionTarget::Stage { stage } = option {
                 if *stage >= request.stages.len() {
-                    return Err(invalid(format!(
-                        "L'option {ordinal} de l'Action collée {rank} désigne un Écran hors du collage."
-                    )));
+                    return Err(invalid(
+                        UserMessage::new(codes::GRAPH_PASTED_OPTION_TARGET_OUTSIDE)
+                            .param("ordinal", (ordinal).to_string())
+                            .param("rank", (rank).to_string())
+                            .into_transport(),
+                    ));
                 }
             }
         }
     }
     for transition in &request.transitions {
         if transition.stage >= request.stages.len() {
-            return Err(invalid(format!(
-                "Une transition collée part d'un Écran hors du collage (rang {}).",
-                transition.stage
-            )));
+            return Err(invalid(
+                UserMessage::new(codes::GRAPH_PASTED_STAGE_SOURCE_OUTSIDE)
+                    .param("transition_stage", (transition.stage).to_string())
+                    .into_transport(),
+            ));
         }
         if transition.action >= request.actions.len() {
-            return Err(invalid(format!(
-                "Une transition collée mène à une Action hors du collage (rang {}).",
-                transition.action
-            )));
+            return Err(invalid(
+                UserMessage::new(codes::GRAPH_PASTED_ACTION_TARGET_OUTSIDE)
+                    .param("transition_action", (transition.action).to_string())
+                    .into_transport(),
+            ));
         }
     }
     Ok(())
@@ -166,7 +172,7 @@ pub(crate) fn paste_subgraph(
 ) -> Result<(CreatedNodes, ConstructionReport), GestureError> {
     if request.stages.is_empty() && request.actions.is_empty() {
         return Err(invalid(
-            "Le presse-papier ne porte aucun nœud à coller.".to_string(),
+            UserMessage::new(codes::GRAPH_CLIPBOARD_NODES_EMPTY).into_transport(),
         ));
     }
     check_ranks(request)?;

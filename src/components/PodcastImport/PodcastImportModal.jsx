@@ -1,21 +1,28 @@
-import { useMemo, useState } from 'react';
+import { TechnicalDetail } from '../common/UserMessage';
+import { Trans } from 'react-i18next';
+import { translateImport as t, importFollowStatusText as followStatusText } from '../../i18n/importPresentation.js';
+import { useMessageLanguage } from '../../i18n/useMessageLanguage.js';
+import {presentUserMessage, presentStoredError } from '../../i18n/userMessage.js';
+import { getIntlLocale } from '../../i18n/language.js';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { AppModalPortal } from '../common/AppModalPortal';
 import { Check, Loader2, Rss, Search, X } from '../icons/LucideLocal';
+import { useSubscriptionFollow } from '../MediaSubscriptions/useSubscriptionFollow';
 import './PodcastImportModal.css';
 
 function formatBytes(bytes) {
   if (!bytes || bytes <= 0) return '';
   const mb = bytes / (1024 * 1024);
-  if (mb >= 1) return `${mb.toFixed(mb >= 10 ? 0 : 1)} Mo`;
-  return `${Math.max(1, Math.round(bytes / 1024))} Ko`;
+  if (mb >= 1) return t('import:bundle.size.megabytes', { size: mb.toFixed(mb >= 10 ? 0 : 1) });
+  return t('import:bundle.size.kilobytes', { size: Math.max(1, Math.round(bytes / 1024)) });
 }
 
 function formatDate(pubDate) {
   if (!pubDate) return '';
   const date = new Date(pubDate);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(getIntlLocale(), { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function episodeMeta(ep) {
@@ -25,41 +32,82 @@ function episodeMeta(ep) {
     .join(' · ');
 }
 
-export function PodcastImportModal({ onImport, onClose, toLibrary = false }) {
+export function PodcastImportModal({ onImport, onClose, toLibrary = false, initialSource = null }) {
+  useMessageLanguage();
   const [phase, setPhase] = useState('url');
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [feed, setFeed] = useState(null);
+  const [loadedUrl, setLoadedUrl] = useState('');
   const [selected, setSelected] = useState(() => new Set());
   const [query, setQuery] = useState('');
+  const subscriptionFollow = useSubscriptionFollow('podcast', initialSource);
+  const { follow, sourceLoaded: followSourceLoaded, reset: resetFollow, toggle: toggleFollow } = subscriptionFollow;
+  const followEnabled = follow.enabled;
+  const feedLoadRequestRef = useRef(0);
+  const loadingRef = useRef(false);
+  const loadedUrlRef = useRef('');
+  loadedUrlRef.current = loadedUrl;
+
+  const initialSourceUrl = initialSource?.url?.trim() ?? '';
+
+  useEffect(() => () => {
+    feedLoadRequestRef.current += 1;
+    loadingRef.current = false;
+  }, []);
+
+  const loadFeed = useCallback(async (sourceUrl) => {
+    const trimmed = sourceUrl.trim();
+    if (!trimmed) return;
+    const requestId = ++feedLoadRequestRef.current;
+    loadingRef.current = true;
+    setLoading(true);
+    setError('');
+    try {
+      const result = await invoke('fetch_podcast_feed', { url: trimmed, proposedEpisodeName: t('import:names.episode.numbered', { number: '{{number}}' }) });
+      if (requestId !== feedLoadRequestRef.current) return;
+      setFeed(result);
+      setLoadedUrl(trimmed);
+      setSelected(new Set());
+      setQuery('');
+      setPhase('episodes');
+      followSourceLoaded(trimmed, loadedUrlRef.current);
+    } catch (err) {
+      if (requestId === feedLoadRequestRef.current) setError(err);
+    } finally {
+      if (requestId === feedLoadRequestRef.current) {
+        loadingRef.current = false;
+        setLoading(false);
+      }
+    }
+  }, [followSourceLoaded]);
+
+  useEffect(() => {
+    if (!initialSourceUrl) return;
+    setUrl(initialSourceUrl);
+    void loadFeed(initialSourceUrl);
+  }, [initialSourceUrl, loadFeed]);
 
   const episodes = feed?.episodes ?? [];
+  const pendingIds = useMemo(() => (
+    loadedUrl && loadedUrl === initialSourceUrl
+      ? new Set(initialSource?.pendingIds ?? [])
+      : new Set()
+  ), [initialSource?.pendingIds, initialSourceUrl, loadedUrl]);
   const normalizedQuery = query.trim().toLowerCase();
   const visibleEpisodes = useMemo(
-    () => (normalizedQuery
+    () => [...(normalizedQuery
       ? episodes.filter((ep) => ep.title.toLowerCase().includes(normalizedQuery))
-      : episodes),
-    [episodes, normalizedQuery],
+      : episodes)].sort((left, right) => Number(pendingIds.has(right.id)) - Number(pendingIds.has(left.id))),
+    [episodes, normalizedQuery, pendingIds],
   );
 
   async function handleLoadFeed(event) {
     event?.preventDefault();
     const trimmed = url.trim();
-    if (!trimmed || loading) return;
-    setLoading(true);
-    setError('');
-    try {
-      const result = await invoke('fetch_podcast_feed', { url: trimmed });
-      setFeed(result);
-      setSelected(new Set());
-      setQuery('');
-      setPhase('episodes');
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setLoading(false);
-    }
+    if (!trimmed || loadingRef.current) return;
+    await loadFeed(trimmed);
   }
 
   function toggleEpisode(id) {
@@ -84,9 +132,17 @@ export function PodcastImportModal({ onImport, onClose, toLibrary = false }) {
   }
 
   function handleImport() {
-    if (selected.size === 0) return;
+    if (selected.size === 0 && !subscriptionFollow.canSubmitAlone) return;
     const chosen = episodes.filter((ep) => selected.has(ep.id));
-    onImport(chosen, feed);
+    const subscriptionRequest = {
+      ...subscriptionFollow.requestFields(),
+      source: 'podcast',
+      url: loadedUrl || url.trim(),
+      title: feed?.title || t('import:podcast.default.title'),
+      baselineIds: [...new Set(episodes.map((episode) => episode.id).filter(Boolean))],
+      baselineComplete: true,
+    };
+    onImport(chosen, feed, undefined, subscriptionRequest);
     onClose();
   }
 
@@ -95,47 +151,62 @@ export function PodcastImportModal({ onImport, onClose, toLibrary = false }) {
       <div
         className="podcast-modal"
         role="dialog"
-        aria-label="Importer un podcast"
+        aria-label={t('import:podcast.modal.title')}
         onClick={(event) => event.stopPropagation()}
       >
         {phase === 'url' ? (
           <>
             <header className="podcast-head">
               <span className="podcast-head-icon"><Rss /></span>
-              <span className="podcast-head-title">Importer un podcast</span>
+              <span className="podcast-head-title">{t('import:podcast.modal.title')}</span>
               <span className="podcast-spacer" />
-              <button type="button" className="podcast-icon-btn" aria-label="Fermer" onClick={onClose} disabled={loading}>
+              <button type="button" className="podcast-icon-btn" aria-label={t('common:dialog.close.label')} onClick={onClose} disabled={loading}>
                 <X />
               </button>
             </header>
 
             <div className="podcast-body">
               <form onSubmit={handleLoadFeed}>
-                <label className="podcast-field-label" htmlFor="podcast-url-input">Adresse du flux RSS</label>
+                <label className="podcast-field-label" htmlFor="podcast-url-input">{t('import:podcast.feedAddress.label')}</label>
                 <label className="podcast-search">
                   <Rss />
                   <input
                     id="podcast-url-input"
                     type="url"
                     inputMode="url"
-                    placeholder="https://exemple.com/podcast/feed.xml"
+                    placeholder={t('import:podcast.url.placeholder')}
                     value={url}
-                    onChange={(event) => setUrl(event.target.value)}
+                    onChange={(event) => {
+                      const nextUrl = event.target.value;
+                      if (loadedUrlRef.current && nextUrl.trim() !== loadedUrlRef.current) resetFollow();
+                      setUrl(nextUrl);
+                    }}
+                    disabled={loading}
                     autoFocus
                   />
                 </label>
               </form>
               <p className="podcast-hint">
-                Colle l'URL du flux RSS du podcast. Tu pourras choisir les épisodes à télécharger
-                {toLibrary ? ' avant de les retrouver dans Médias.' : " avant qu'ils ne deviennent des histoires."}
+                {toLibrary ? t('import:podcast.modal.libraryHint') : t('import:podcast.modal.storyHint')}
               </p>
-              {error && <div className="podcast-error" role="alert">{error}</div>}
+              <label className="podcast-follow-toggle">
+                <input
+                  type="checkbox"
+                  checked={followEnabled}
+                  disabled={loading}
+                  onChange={(event) => toggleFollow(event.target.checked)}
+                />
+              <span>
+                <strong>{t('import:podcast.follow.label')}</strong>
+                <small>{t('import:podcast.follow.hint')}</small>
+                <small>{followStatusText(follow)}</small>
+              </span>
+              </label>
+              {error && <div className="podcast-error" role="alert">{presentStoredError(error)}<TechnicalDetail value={presentUserMessage(error).technicalDetail} /></div>}
             </div>
 
             <footer className="podcast-foot">
-              <button type="button" className="podcast-btn podcast-btn-ghost" onClick={onClose} disabled={loading}>
-                Annuler
-              </button>
+              <button type="button" className="podcast-btn podcast-btn-ghost" onClick={onClose} disabled={loading}>{t('common:dialog.cancel.label')}</button>
               <span className="podcast-spacer" />
               <button
                 type="button"
@@ -144,7 +215,7 @@ export function PodcastImportModal({ onImport, onClose, toLibrary = false }) {
                 disabled={loading || !url.trim()}
               >
                 {loading && <Loader2 className="podcast-spin" />}
-                {loading ? 'Chargement…' : 'Charger les épisodes'}
+                {loading ? t('import:podcast.loading.progress') : t('import:podcast.load.action')}
               </button>
             </footer>
           </>
@@ -152,32 +223,43 @@ export function PodcastImportModal({ onImport, onClose, toLibrary = false }) {
           <>
             <header className="podcast-head">
               <span className="podcast-head-icon"><Rss /></span>
-              <span className="podcast-head-title" title={feed?.title}>{feed?.title || 'Podcast'}</span>
+              <span className="podcast-head-title" title={feed?.title}>{feed?.title || t('import:podcast.default.title')}</span>
               <span className="podcast-head-count">
-                {episodes.length} épisode{episodes.length > 1 ? 's' : ''}
+                {t('import:podcast.episodes.count', { count: episodes.length })}
               </span>
               <span className="podcast-spacer" />
-              <button type="button" className="podcast-icon-btn" aria-label="Fermer" onClick={onClose}>
+              <button type="button" className="podcast-icon-btn" aria-label={t('common:dialog.close.label')} onClick={onClose}>
                 <X />
               </button>
             </header>
 
             <div className="podcast-subhead">
+              <label className="podcast-follow-toggle">
+                <input
+                  type="checkbox"
+                  checked={followEnabled}
+                  disabled={loading}
+                  onChange={(event) => toggleFollow(event.target.checked)}
+                />
+              <span>
+                <strong>{t('import:podcast.follow.label')}</strong>
+                <small>{t('import:podcast.follow.hint')}</small>
+                <small>{followStatusText(follow)}</small>
+              </span>
+              </label>
               <div className="podcast-toolbar">
                 <label className="podcast-search">
                   <Search />
                   <input
                     type="text"
-                    placeholder="Filtrer les épisodes…"
+                    placeholder={t('import:podcast.filter.placeholder')}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                   />
                 </label>
                 <div className="podcast-bulk">
-                  <button type="button" className="podcast-seg" onClick={selectAllVisible}>Tout sélectionner</button>
-                  <button type="button" className="podcast-seg" onClick={clearSelection} disabled={selected.size === 0}>
-                    Tout désélectionner
-                  </button>
+                  <button type="button" className="podcast-seg" onClick={selectAllVisible}>{t('import:media.selectAll.action')}</button>
+                  <button type="button" className="podcast-seg" onClick={clearSelection} disabled={selected.size === 0}>{t('import:media.clearSelection.action')}</button>
                 </div>
               </div>
             </div>
@@ -186,23 +268,27 @@ export function PodcastImportModal({ onImport, onClose, toLibrary = false }) {
               {visibleEpisodes.length === 0 ? (
                 <div className="podcast-empty">
                   <Search />
-                  <span>Aucun épisode ne correspond à ce filtre.</span>
+                  <span>{t('import:podcast.filter.empty')}</span>
                 </div>
               ) : (
                 visibleEpisodes.map((ep) => {
                   const checked = selected.has(ep.id);
+                  const isNew = pendingIds.has(ep.id);
                   const meta = episodeMeta(ep);
                   return (
                     <button
                       type="button"
                       key={ep.id}
-                      className={`podcast-row${checked ? ' is-selected' : ''}`}
+                      className={`podcast-row${checked ? ' is-selected' : ''}${isNew ? ' is-new' : ''}`}
                       aria-pressed={checked}
                       onClick={() => toggleEpisode(ep.id)}
                     >
                       <span className="podcast-row-check">{checked ? <Check /> : null}</span>
                       <div className="podcast-row-main">
-                        <div className="podcast-row-name" title={ep.title}>{ep.title}</div>
+                        <div className="podcast-row-title-line">
+                          <div className="podcast-row-name" title={ep.title}>{ep.title}</div>
+                          {isNew && <span className="podcast-new-badge">{t('import:media.new.badge')}</span>}
+                        </div>
                         {meta && <div className="podcast-row-meta">{meta}</div>}
                       </div>
                     </button>
@@ -212,20 +298,18 @@ export function PodcastImportModal({ onImport, onClose, toLibrary = false }) {
             </div>
 
             <footer className="podcast-foot">
-              <button type="button" className="podcast-btn podcast-btn-ghost" onClick={() => setPhase('url')}>
-                Retour
-              </button>
+              <button type="button" className="podcast-btn podcast-btn-ghost" onClick={() => setPhase('url')}>{t('import:media.back.action')}</button>
               <span className="podcast-spacer" />
-              <span className="podcast-foot-status"><b>{selected.size}</b> sélectionné{selected.size > 1 ? 's' : ''}</span>
+              <span className="podcast-foot-status"><Trans i18nKey="import:media.selected.count" count={selected.size} components={{ strong: <b /> }} /></span>
               <button
                 type="button"
                 className="podcast-btn podcast-btn-primary"
                 onClick={handleImport}
-                disabled={selected.size === 0}
+                disabled={selected.size === 0 && !subscriptionFollow.canSubmitAlone}
               >
                 {selected.size > 0
-                  ? `Importer ${selected.size} épisode${selected.size > 1 ? 's' : ''}`
-                  : 'Importer'}
+                  ? t('import:podcast.import.action', { count: selected.size })
+                  : (subscriptionFollow.canSubmitAlone ? (follow.subscriptionId ? t('import:media.follow.save') : t('import:media.follow.enable')) : t('import:media.import.action'))}
               </button>
             </footer>
           </>

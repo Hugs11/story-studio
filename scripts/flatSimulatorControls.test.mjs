@@ -12,7 +12,8 @@ import { action, presence, stage } from './advancedViewFixtures.mjs';
 // Navigation, contrôles, timeline, châssis et effets viennent de la production.
 const doubles = new Map([
   ['react/jsx-runtime', 'export const Fragment = "fragment"; export function jsx(type, props, key) { return { type, props, key }; } export const jsxs = jsx;'],
-  ['@tauri-apps/api/core', 'export async function invoke() { return globalThis.__flatTestStory; }'],
+  ['@tauri-apps/api/core', 'export async function invoke() { if (globalThis.__flatTestLoadError) throw globalThis.__flatTestLoadError; return globalThis.__flatTestStory; }'],
+  ['../../components/common/UserMessage.jsx', 'export function TechnicalDetail({ value }) { return value; }'],
   ['./FlatImage', 'export function FlatImage() { return null; }'],
   ['../../utils/logger', 'export const logger = { error() {} };'],
   ['../../utils/audioPlayer', 'export function disposeAudioPlayerRef(ref) { ref.current?.destroy(); ref.current = null; }'],
@@ -184,3 +185,16 @@ for (const origin of ['archive', 'projection', 'document']) {
     });
   }
 }
+
+
+test('une erreur load_pack_zip encodée est présentée sans JSON brut', async (t) => {
+  const detail = 'Archive illisible : détail français historique';
+  globalThis.__flatTestLoadError = JSON.stringify({ code: 'UNEXPECTED_ERROR', params: {}, detail });
+  t.after(() => { delete globalThis.__flatTestLoadError; });
+  const hook = runner(() => FlatSimulator({ source: { kind: 'pack', zipPath: '/essai.zip' } }));
+  t.after(() => hook.unmount());
+  hook.render(); hook.flush(); await settle();
+  const panel = hook.render();
+  assert.ok(elements(panel).some(node => node.props.children?.[0] === detail));
+  assert.ok(elements(panel).some(node => node.props.value === detail));
+});

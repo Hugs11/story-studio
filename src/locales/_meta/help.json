@@ -1,0 +1,1349 @@
+{
+  "scope.general.label": {
+    "context": "Raccourcis clavier > section general ; nom de la portée active ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Général ».",
+    "en": {
+      "sourceHash": "22d51e852503",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "22d51e852503",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.general.description": {
+    "context": "Raccourcis clavier > section general ; explication des surfaces où les commandes de cette section sont actives ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Général ».",
+    "en": {
+      "sourceHash": "bb47180ae7c9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bb47180ae7c9",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.selection.label": {
+    "context": "Raccourcis clavier > section selection ; nom de la portée active ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Sélection ».",
+    "en": {
+      "sourceHash": "051e522a6c09",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "051e522a6c09",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.selection.description": {
+    "context": "Raccourcis clavier > section selection ; explication des surfaces où les commandes de cette section sont actives ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Sélection ».",
+    "en": {
+      "sourceHash": "b3cdc6b5c310",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b3cdc6b5c310",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.libre.label": {
+    "context": "Raccourcis clavier > section libre ; nom de la portée active ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Éditeur par menus ».",
+    "en": {
+      "sourceHash": "5e8465716136",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5e8465716136",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.libre.description": {
+    "context": "Raccourcis clavier > section libre ; explication des surfaces où les commandes de cette section sont actives ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Éditeur par menus ».",
+    "en": {
+      "sourceHash": "04dda38cf3ca",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "04dda38cf3ca",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.graph.label": {
+    "context": "Raccourcis clavier > section graph ; nom de la portée active ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Éditeur graphe ».",
+    "en": {
+      "sourceHash": "ba1f144e22f9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ba1f144e22f9",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.graph.description": {
+    "context": "Raccourcis clavier > section graph ; explication des surfaces où les commandes de cette section sont actives ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Éditeur graphe ».",
+    "en": {
+      "sourceHash": "225d03973566",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "225d03973566",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.mediaPanel.label": {
+    "context": "Raccourcis clavier > section mediaPanel ; nom de la portée active ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Panneau Médias ».",
+    "en": {
+      "sourceHash": "8010028772b1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8010028772b1",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.mediaPanel.description": {
+    "context": "Raccourcis clavier > section mediaPanel ; explication des surfaces où les commandes de cette section sont actives ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Panneau Médias ».",
+    "en": {
+      "sourceHash": "50ef8351f95f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "50ef8351f95f",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.audioEditor.label": {
+    "context": "Raccourcis clavier > section audioEditor ; nom de la portée active ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Éditeur audio ».",
+    "en": {
+      "sourceHash": "6010bd8095c0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6010bd8095c0",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.audioEditor.description": {
+    "context": "Raccourcis clavier > section audioEditor ; explication des surfaces où les commandes de cette section sont actives ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Éditeur audio ».",
+    "en": {
+      "sourceHash": "33f403e3fd2a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "33f403e3fd2a",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.imageEditor.label": {
+    "context": "Raccourcis clavier > section imageEditor ; nom de la portée active ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Éditeur d'image ».",
+    "en": {
+      "sourceHash": "12262242816b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "12262242816b",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.imageEditor.description": {
+    "context": "Raccourcis clavier > section imageEditor ; explication des surfaces où les commandes de cette section sont actives ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Éditeur d'image ».",
+    "en": {
+      "sourceHash": "dc68d6a3f5cb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dc68d6a3f5cb",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.a11y.label": {
+    "context": "Raccourcis clavier > section a11y ; nom de la portée active ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Navigation standard ».",
+    "en": {
+      "sourceHash": "daafbd5ca7b9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "daafbd5ca7b9",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.a11y.description": {
+    "context": "Raccourcis clavier > section a11y ; explication des surfaces où les commandes de cette section sont actives ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Portée : « Navigation standard ».",
+    "en": {
+      "sourceHash": "15b3d631dcb5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "15b3d631dcb5",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.newProject.label": {
+    "context": "Raccourcis clavier > commande newProject ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Retour à l’accueil ».",
+    "en": {
+      "sourceHash": "61d8da049493",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "61d8da049493",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.openProject.label": {
+    "context": "Raccourcis clavier > commande openProject ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Ouvrir un projet ».",
+    "en": {
+      "sourceHash": "d7c0e88a062c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d7c0e88a062c",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.openPack.label": {
+    "context": "Raccourcis clavier > commande openPack ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Ouvrir un pack ».",
+    "en": {
+      "sourceHash": "b34ccd8a9c8c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b34ccd8a9c8c",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.saveProject.label": {
+    "context": "Raccourcis clavier > commande saveProject ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Enregistrer le projet ». Enregistrer signifie sauvegarder le fichier projet (save), sans prise de son.",
+    "en": {
+      "sourceHash": "54f960eee25c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "54f960eee25c",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.saveAs.label": {
+    "context": "Raccourcis clavier > commande saveAs ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Enregistrer sous ». Enregistrer signifie sauvegarder le fichier projet (save), sans prise de son.",
+    "en": {
+      "sourceHash": "73d9a34061de",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "73d9a34061de",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.tabOptions.label": {
+    "context": "Raccourcis clavier > commande tabOptions ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Préférences ».",
+    "en": {
+      "sourceHash": "203260387103",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "203260387103",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.generate.label": {
+    "context": "Raccourcis clavier > commande generate ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Générer le pack ».",
+    "en": {
+      "sourceHash": "dd84571aee34",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd84571aee34",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.treeSearch.label": {
+    "context": "Raccourcis clavier > commande treeSearch ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Rechercher dans la structure ».",
+    "en": {
+      "sourceHash": "b20097d93cf7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b20097d93cf7",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.toggleValidation.label": {
+    "context": "Raccourcis clavier > commande toggleValidation ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Ouvrir les éléments à corriger ».",
+    "en": {
+      "sourceHash": "64f693caaf48",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "64f693caaf48",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.undo.label": {
+    "context": "Raccourcis clavier > commande undo ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Annuler ».",
+    "en": {
+      "sourceHash": "46ad3916f6a0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "46ad3916f6a0",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.redo.label": {
+    "context": "Raccourcis clavier > commande redo ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Rétablir ».",
+    "en": {
+      "sourceHash": "4cf3fd72da6f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4cf3fd72da6f",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.selectionCopy.label": {
+    "context": "Raccourcis clavier > commande selectionCopy ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Copier la sélection ».",
+    "en": {
+      "sourceHash": "6052e2df2890",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6052e2df2890",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.selectionCut.label": {
+    "context": "Raccourcis clavier > commande selectionCut ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Couper la sélection ».",
+    "en": {
+      "sourceHash": "fa2a562b62bd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fa2a562b62bd",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.selectionPaste.label": {
+    "context": "Raccourcis clavier > commande selectionPaste ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Coller ».",
+    "en": {
+      "sourceHash": "39f83c75c57a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "39f83c75c57a",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.selectionDuplicate.label": {
+    "context": "Raccourcis clavier > commande selectionDuplicate ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Dupliquer la sélection ».",
+    "en": {
+      "sourceHash": "1fab48ad3ba4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1fab48ad3ba4",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.selectionDelete.label": {
+    "context": "Raccourcis clavier > commande selectionDelete ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Supprimer la sélection ».",
+    "en": {
+      "sourceHash": "10d2e66dda46",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "10d2e66dda46",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.selectionRename.label": {
+    "context": "Raccourcis clavier > commande selectionRename ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Renommer ».",
+    "en": {
+      "sourceHash": "fe10a42ca032",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fe10a42ca032",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.importStories.label": {
+    "context": "Raccourcis clavier > commande importStories ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Importer des histoires ».",
+    "en": {
+      "sourceHash": "1272680790b8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1272680790b8",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.addFolder.label": {
+    "context": "Raccourcis clavier > commande addFolder ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Ajouter un dossier ».",
+    "en": {
+      "sourceHash": "1d5249e33cfe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1d5249e33cfe",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.toggleTree.label": {
+    "context": "Raccourcis clavier > commande toggleTree ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Afficher/masquer l'arbre ».",
+    "en": {
+      "sourceHash": "9183e4a359ec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9183e4a359ec",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.toggleSettings.label": {
+    "context": "Raccourcis clavier > commande toggleSettings ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Afficher/masquer les réglages ».",
+    "en": {
+      "sourceHash": "93ee3334c887",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "93ee3334c887",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.toggleDiagram.label": {
+    "context": "Raccourcis clavier > commande toggleDiagram ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Afficher/masquer le diagramme ».",
+    "en": {
+      "sourceHash": "fcfde4fbe4a4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fcfde4fbe4a4",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.graphZoomIn.label": {
+    "context": "Raccourcis clavier > commande graphZoomIn ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Agrandir ».",
+    "en": {
+      "sourceHash": "88c7e3b5554f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "88c7e3b5554f",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.graphZoomOut.label": {
+    "context": "Raccourcis clavier > commande graphZoomOut ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Réduire ».",
+    "en": {
+      "sourceHash": "2896a21cf475",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2896a21cf475",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.graphFit.label": {
+    "context": "Raccourcis clavier > commande graphFit ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Cadrer tout le graphe ».",
+    "en": {
+      "sourceHash": "5cd9f7c918a7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5cd9f7c918a7",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.graphVisitBack.label": {
+    "context": "Raccourcis clavier > commande graphVisitBack ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Nœud visité précédent ».",
+    "en": {
+      "sourceHash": "ae81176a6014",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ae81176a6014",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.graphVisitForward.label": {
+    "context": "Raccourcis clavier > commande graphVisitForward ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Nœud visité suivant ».",
+    "en": {
+      "sourceHash": "7e05fa888b82",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7e05fa888b82",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.graphCreateStage.label": {
+    "context": "Raccourcis clavier > commande graphCreateStage ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Créer un Écran sous le pointeur ».",
+    "en": {
+      "sourceHash": "0a2d812e7cf6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0a2d812e7cf6",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.graphCreateAction.label": {
+    "context": "Raccourcis clavier > commande graphCreateAction ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Créer une liste de choix sous le pointeur ».",
+    "en": {
+      "sourceHash": "0bced2cea981",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0bced2cea981",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.graphToggleOverview.label": {
+    "context": "Raccourcis clavier > commande graphToggleOverview ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Afficher/masquer la vue d’ensemble ».",
+    "en": {
+      "sourceHash": "c5c0bc9c4da7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c5c0bc9c4da7",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.graphArrange.label": {
+    "context": "Raccourcis clavier > commande graphArrange ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Ranger le graphe ».",
+    "en": {
+      "sourceHash": "26777582e8b0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "26777582e8b0",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.graphBoxSelect.label": {
+    "context": "Raccourcis clavier > commande graphBoxSelect ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Sélectionner une zone du graphe ».",
+    "en": {
+      "sourceHash": "e3f596bd894b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e3f596bd894b",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.graphBoxSelect.readOnlyReason": {
+    "context": "Raccourcis clavier > commande graphBoxSelect ; explication sous la commande fixe : pourquoi la combinaison ne se personnalise pas ou comment exécuter le geste ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Sélectionner une zone du graphe ».",
+    "en": {
+      "sourceHash": "ec2bc910290d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ec2bc910290d",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.mediaSearch.label": {
+    "context": "Raccourcis clavier > commande mediaSearch ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Rechercher dans les médias ».",
+    "en": {
+      "sourceHash": "7576799b237f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7576799b237f",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioPlayPause.label": {
+    "context": "Raccourcis clavier > commande audioPlayPause ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Lecture / Pause ».",
+    "en": {
+      "sourceHash": "4bc7ae5b53cc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4bc7ae5b53cc",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioShuttleBack.label": {
+    "context": "Raccourcis clavier > commande audioShuttleBack ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Lecture arrière (jog/shuttle) ».",
+    "en": {
+      "sourceHash": "c835ceea0643",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c835ceea0643",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioShuttleStop.label": {
+    "context": "Raccourcis clavier > commande audioShuttleStop ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Pause (jog/shuttle) ».",
+    "en": {
+      "sourceHash": "6b22e5e2287f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6b22e5e2287f",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioShuttleFwd.label": {
+    "context": "Raccourcis clavier > commande audioShuttleFwd ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Lecture avant (jog/shuttle) ».",
+    "en": {
+      "sourceHash": "20de3f7288e0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "20de3f7288e0",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioNudgeBack.label": {
+    "context": "Raccourcis clavier > commande audioNudgeBack ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Reculer de 50 ms (avec pré-écoute) ».",
+    "en": {
+      "sourceHash": "84592ab4172a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "84592ab4172a",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioNudgeFwd.label": {
+    "context": "Raccourcis clavier > commande audioNudgeFwd ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Avancer de 50 ms (avec pré-écoute) ».",
+    "en": {
+      "sourceHash": "33cea6d86f8a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "33cea6d86f8a",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioGoStart.label": {
+    "context": "Raccourcis clavier > commande audioGoStart ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Aller au début ».",
+    "en": {
+      "sourceHash": "3cfc86d90716",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3cfc86d90716",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioGoEnd.label": {
+    "context": "Raccourcis clavier > commande audioGoEnd ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Aller à la fin ».",
+    "en": {
+      "sourceHash": "2df498099e54",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2df498099e54",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioMarkIn.label": {
+    "context": "Raccourcis clavier > commande audioMarkIn ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Marquer le point d'entrée ».",
+    "en": {
+      "sourceHash": "c764b4e0fcfc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c764b4e0fcfc",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioMarkOut.label": {
+    "context": "Raccourcis clavier > commande audioMarkOut ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Marquer le point de sortie ».",
+    "en": {
+      "sourceHash": "8d9d5e79de16",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8d9d5e79de16",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioClearIn.label": {
+    "context": "Raccourcis clavier > commande audioClearIn ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Effacer le point d'entrée ».",
+    "en": {
+      "sourceHash": "89e9db4e1883",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "89e9db4e1883",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioClearOut.label": {
+    "context": "Raccourcis clavier > commande audioClearOut ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Effacer le point de sortie ».",
+    "en": {
+      "sourceHash": "90248a64db37",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "90248a64db37",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioPreviewIn.label": {
+    "context": "Raccourcis clavier > commande audioPreviewIn ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Aller au point d'entrée ».",
+    "en": {
+      "sourceHash": "d6bd814fb259",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d6bd814fb259",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioPreviewOut.label": {
+    "context": "Raccourcis clavier > commande audioPreviewOut ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Aller au point de sortie ».",
+    "en": {
+      "sourceHash": "14df9d4a3cee",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "14df9d4a3cee",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioKeepSelection.label": {
+    "context": "Raccourcis clavier > commande audioKeepSelection ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Garder la sélection ».",
+    "en": {
+      "sourceHash": "739933a04dd2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "739933a04dd2",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioCutSelection.label": {
+    "context": "Raccourcis clavier > commande audioCutSelection ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Supprimer la sélection ».",
+    "en": {
+      "sourceHash": "10d2e66dda46",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "10d2e66dda46",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioUndo.label": {
+    "context": "Raccourcis clavier > commande audioUndo ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Annuler la modification ».",
+    "en": {
+      "sourceHash": "c138318dfd0f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c138318dfd0f",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioZoomIn.label": {
+    "context": "Raccourcis clavier > commande audioZoomIn ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Zoomer autour du curseur ».",
+    "en": {
+      "sourceHash": "18d329a0be29",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "18d329a0be29",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioZoomOut.label": {
+    "context": "Raccourcis clavier > commande audioZoomOut ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Dézoomer autour du curseur ».",
+    "en": {
+      "sourceHash": "ef736d791666",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ef736d791666",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioClose.label": {
+    "context": "Raccourcis clavier > commande audioClose ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Fermer l'éditeur audio ».",
+    "en": {
+      "sourceHash": "715308833770",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "715308833770",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.audioClose.readOnlyReason": {
+    "context": "Raccourcis clavier > commande audioClose ; explication sous la commande fixe : pourquoi la combinaison ne se personnalise pas ou comment exécuter le geste ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Fermer l'éditeur audio ».",
+    "en": {
+      "sourceHash": "9e05f09e277a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9e05f09e277a",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.imageClose.label": {
+    "context": "Raccourcis clavier > commande imageClose ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Fermer l'éditeur d'image ».",
+    "en": {
+      "sourceHash": "b9f274d5c842",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b9f274d5c842",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.imageClose.readOnlyReason": {
+    "context": "Raccourcis clavier > commande imageClose ; explication sous la commande fixe : pourquoi la combinaison ne se personnalise pas ou comment exécuter le geste ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Fermer l'éditeur d'image ».",
+    "en": {
+      "sourceHash": "9e05f09e277a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9e05f09e277a",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yNextItem.label": {
+    "context": "Raccourcis clavier > commande a11yNextItem ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Élément suivant (arbre, liste, menu) ».",
+    "en": {
+      "sourceHash": "dbb72fcc871c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dbb72fcc871c",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yNextItem.readOnlyReason": {
+    "context": "Raccourcis clavier > commande a11yNextItem ; explication sous la commande fixe : pourquoi la combinaison ne se personnalise pas ou comment exécuter le geste ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Élément suivant (arbre, listbox, menu) ».",
+    "en": {
+      "sourceHash": "b1becd2caf01",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b1becd2caf01",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yPrevItem.label": {
+    "context": "Raccourcis clavier > commande a11yPrevItem ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Élément précédent (arbre, liste, menu) ».",
+    "en": {
+      "sourceHash": "5fdd6ccee8e3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5fdd6ccee8e3",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yPrevItem.readOnlyReason": {
+    "context": "Raccourcis clavier > commande a11yPrevItem ; explication sous la commande fixe : pourquoi la combinaison ne se personnalise pas ou comment exécuter le geste ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Élément précédent (arbre, listbox, menu) ».",
+    "en": {
+      "sourceHash": "b1becd2caf01",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b1becd2caf01",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yFirstItem.label": {
+    "context": "Raccourcis clavier > commande a11yFirstItem ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Premier élément (liste) ».",
+    "en": {
+      "sourceHash": "1b27682ec3f0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1b27682ec3f0",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yFirstItem.readOnlyReason": {
+    "context": "Raccourcis clavier > commande a11yFirstItem ; explication sous la commande fixe : pourquoi la combinaison ne se personnalise pas ou comment exécuter le geste ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Premier élément (listbox) ».",
+    "en": {
+      "sourceHash": "b1becd2caf01",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b1becd2caf01",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yLastItem.label": {
+    "context": "Raccourcis clavier > commande a11yLastItem ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Dernier élément (liste) ».",
+    "en": {
+      "sourceHash": "50b6a3024d1d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "50b6a3024d1d",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yLastItem.readOnlyReason": {
+    "context": "Raccourcis clavier > commande a11yLastItem ; explication sous la commande fixe : pourquoi la combinaison ne se personnalise pas ou comment exécuter le geste ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Dernier élément (listbox) ».",
+    "en": {
+      "sourceHash": "b1becd2caf01",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b1becd2caf01",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yActivate.label": {
+    "context": "Raccourcis clavier > commande a11yActivate ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Activer / valider (bouton, option) ».",
+    "en": {
+      "sourceHash": "f4195b77e5f5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f4195b77e5f5",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yActivate.readOnlyReason": {
+    "context": "Raccourcis clavier > commande a11yActivate ; explication sous la commande fixe : pourquoi la combinaison ne se personnalise pas ou comment exécuter le geste ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Activer / valider (bouton, option) ».",
+    "en": {
+      "sourceHash": "b1becd2caf01",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b1becd2caf01",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yClose.label": {
+    "context": "Raccourcis clavier > commande a11yClose ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Fermer un menu, une fenêtre contextuelle ou un dialogue ».",
+    "en": {
+      "sourceHash": "d7df545bd3bd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d7df545bd3bd",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yClose.readOnlyReason": {
+    "context": "Raccourcis clavier > commande a11yClose ; explication sous la commande fixe : pourquoi la combinaison ne se personnalise pas ou comment exécuter le geste ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Fermer un menu / popover / dialogue ».",
+    "en": {
+      "sourceHash": "7ac7ef3232b7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7ac7ef3232b7",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yMultiSelect.label": {
+    "context": "Raccourcis clavier > commande a11yMultiSelect ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Étendre la sélection (arbre, diagramme) ».",
+    "en": {
+      "sourceHash": "b4c93eda299a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b4c93eda299a",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yMultiSelect.readOnlyReason": {
+    "context": "Raccourcis clavier > commande a11yMultiSelect ; explication sous la commande fixe : pourquoi la combinaison ne se personnalise pas ou comment exécuter le geste ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Étendre la sélection (arbre, diagramme) ».",
+    "en": {
+      "sourceHash": "b1becd2caf01",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b1becd2caf01",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yToggleSelect.label": {
+    "context": "Raccourcis clavier > commande a11yToggleSelect ; action effectuée par cette combinaison, libellé de ligne et de conflit ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Ajouter à la sélection (arbre, diagramme) ».",
+    "en": {
+      "sourceHash": "28c9d453564b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "28c9d453564b",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.a11yToggleSelect.readOnlyReason": {
+    "context": "Raccourcis clavier > commande a11yToggleSelect ; explication sous la commande fixe : pourquoi la combinaison ne se personnalise pas ou comment exécuter le geste ; phrase lisible dans la largeur de la liste, retour à la ligne permis. Commande concernée : « Ajouter à la sélection (arbre, diagramme) ».",
+    "en": {
+      "sourceHash": "a7a95eddcc3e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a7a95eddcc3e",
+      "status": "ai-reviewed"
+    }
+  },
+  "keyboard.key.shift": {
+    "context": "Raccourcis clavier et infobulles des commandes > touche Shift ; nom affiché dans une combinaison, sans modifier la détection ni les préférences enregistrées ; rester court.",
+    "maxLength": 12,
+    "en": {
+      "sourceHash": "4f12068c0156",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4f12068c0156",
+      "status": "ai-reviewed"
+    }
+  },
+  "keyboard.key.enter": {
+    "context": "Raccourcis clavier et infobulles des commandes > touche Enter ; nom affiché dans une combinaison, sans modifier le code clavier ni les préférences enregistrées ; rester court.",
+    "en": {
+      "sourceHash": "d9c7efe13095",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d9c7efe13095",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 12
+  },
+  "keyboard.key.space": {
+    "context": "Raccourcis clavier et infobulles des commandes > touche Space ; nom affiché dans une combinaison, sans modifier le code clavier ni les préférences enregistrées ; rester court.",
+    "en": {
+      "sourceHash": "7be5485ac3d0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7be5485ac3d0",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 12
+  },
+  "keyboard.key.escape": {
+    "context": "Raccourcis clavier et infobulles des commandes > touche Escape ; nom affiché dans une combinaison, sans modifier le code clavier ni les préférences enregistrées ; rester court.",
+    "en": {
+      "sourceHash": "7bd72d1deacb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7bd72d1deacb",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 12
+  },
+  "keyboard.key.delete": {
+    "context": "Raccourcis clavier et infobulles des commandes > touche Delete ; nom affiché dans une combinaison, sans modifier le code clavier ni les préférences enregistrées ; rester court.",
+    "en": {
+      "sourceHash": "d75883e0cf1e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d75883e0cf1e",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 12
+  },
+  "keyboard.key.click": {
+    "context": "Raccourcis clavier et infobulles des commandes > touche Click ; nom affiché dans une combinaison, sans modifier le code clavier ni les préférences enregistrées ; rester court.",
+    "en": {
+      "sourceHash": "35cdcd81f030",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "35cdcd81f030",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 12
+  },
+  "keyboard.key.drag": {
+    "context": "Raccourcis clavier et infobulles des commandes > touche Drag ; nom affiché dans une combinaison, sans modifier le code clavier ni les préférences enregistrées ; rester court.",
+    "en": {
+      "sourceHash": "05dbeda5ae48",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "05dbeda5ae48",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 12
+  },
+  "keyboard.tooltip.withShortcut": {
+    "context": "Infobulle de commande > texte complet suivi de la combinaison ; text est déjà traduit par l’appelant, shortcut est le nom des touches résolu à la lecture ; conserver les deux paramètres et la ponctuation.",
+    "en": {
+      "sourceHash": "04a1578f5192",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "04a1578f5192",
+      "status": "ai-reviewed"
+    }
+  },
+  "credits.documentation.errorTitle": {
+    "context": "À propos de Story Studio > dialogue d’échec d’ouverture du lien ; titre décrivant l’accès impossible ; largeur de la modale, texte explicatif avec retour à la ligne permis.",
+    "en": {
+      "sourceHash": "62127c61d1f8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "62127c61d1f8",
+      "status": "ai-reviewed"
+    }
+  },
+  "credits.documentation.errorMessage": {
+    "context": "À propos de Story Studio > dialogue d’échec ; error est la cause présentée par UserMessage, jamais l’objet brut ; détails techniques repliés séparément ; largeur de la modale, texte explicatif avec retour à la ligne permis.",
+    "en": {
+      "sourceHash": "77a5490d0c85",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "77a5490d0c85",
+      "status": "ai-reviewed"
+    }
+  },
+  "credits.modal.title": {
+    "context": "À propos de Story Studio > titre de la fenêtre des crédits ; largeur de la modale, texte explicatif avec retour à la ligne permis. Le paramètre appName est un nom propre stable fourni par le composant ; ne pas le traduire.",
+    "en": {
+      "sourceHash": "cb6f8c4f6b96",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cb6f8c4f6b96",
+      "status": "ai-reviewed"
+    }
+  },
+  "credits.origin.message": {
+    "context": "À propos de Story Studio > phrase présentant l’origine personnelle de l’application ; Armand est un prénom à conserver ; largeur de la modale, texte explicatif avec retour à la ligne permis. Le paramètre name est un nom propre stable fourni par le composant ; ne pas le traduire.",
+    "en": {
+      "sourceHash": "9c1cb5d9e4ad",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9c1cb5d9e4ad",
+      "status": "ai-reviewed"
+    }
+  },
+  "credits.creator.message": {
+    "context": "À propos de Story Studio > attribution de création ; hugs11 est un nom propre stable ; largeur de la modale, texte explicatif avec retour à la ligne permis. Le paramètre creator est un nom propre stable fourni par le composant ; ne pas le traduire.",
+    "en": {
+      "sourceHash": "b418aa18ff9e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b418aa18ff9e",
+      "status": "ai-reviewed"
+    }
+  },
+  "credits.documentation.label": {
+    "context": "À propos de Story Studio > libellé du lien HTTPS vers le site public de documentation ; largeur de la modale, texte explicatif avec retour à la ligne permis.",
+    "en": {
+      "sourceHash": "c205924de0fe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c205924de0fe",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "credits.thanks.title": {
+    "context": "À propos de Story Studio > titre précédant les personnes remerciées ; largeur de la modale, texte explicatif avec retour à la ligne permis.",
+    "en": {
+      "sourceHash": "a8e96c3672c9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a8e96c3672c9",
+      "status": "ai-reviewed"
+    }
+  },
+  "credits.thanks.message": {
+    "context": "À propos de Story Studio > liste de noms propres en gras avec attributions traduites ; composants nommés marian, jersou, dantsu, daneel, lucky, noms et logiciels inchangés ; largeur de la modale, texte explicatif avec retour à la ligne permis.",
+    "en": {
+      "sourceHash": "d6040f2f68c9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d6040f2f68c9",
+      "status": "ai-reviewed"
+    }
+  },
+  "keyboard.modal.title": {
+    "context": "Raccourcis clavier > titre de la modale de consultation et personnalisation ; largeur de la liste, explication sur plusieurs lignes permise.",
+    "en": {
+      "sourceHash": "6d0857349d36",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6d0857349d36",
+      "status": "ai-reviewed"
+    }
+  },
+  "keyboard.capture.instructions": {
+    "context": "Raccourcis clavier > instructions avant la liste ; Échap décrit la touche qui annule la saisie ; largeur de la liste, explication sur plusieurs lignes permise.",
+    "en": {
+      "sourceHash": "06286bbc3db3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "06286bbc3db3",
+      "status": "ai-reviewed"
+    }
+  },
+  "keyboard.search.placeholder": {
+    "context": "Raccourcis clavier > champ de recherche ; filtre les actions et les touches dans la langue active ; largeur de la liste, explication sur plusieurs lignes permise.",
+    "en": {
+      "sourceHash": "b28289eb5a7e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b28289eb5a7e",
+      "status": "ai-reviewed"
+    }
+  },
+  "keyboard.search.empty": {
+    "context": "Raccourcis clavier > résultat vide ; query est la saisie utilisateur à conserver verbatim ; largeur de la liste, explication sur plusieurs lignes permise.",
+    "en": {
+      "sourceHash": "68fe27c3b173",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "68fe27c3b173",
+      "status": "ai-reviewed"
+    }
+  },
+  "keyboard.scope.readOnly": {
+    "context": "Raccourcis clavier > badge de navigation standard ; les raccourcis ARIA sont fixes ; largeur de la liste, explication sur plusieurs lignes permise.",
+    "en": {
+      "sourceHash": "1750d77247ff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1750d77247ff",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "keyboard.scope.resetTitle": {
+    "context": "Raccourcis clavier > infobulle du bouton de section ; scope est le titre traduit de la portée, restaure seulement cette portée ; largeur de la liste, explication sur plusieurs lignes permise.",
+    "en": {
+      "sourceHash": "31f186612094",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "31f186612094",
+      "status": "ai-reviewed"
+    }
+  },
+  "keyboard.scope.resetAction": {
+    "context": "Raccourcis clavier > bouton de section ; remet les commandes personnalisables de cette portée aux valeurs par défaut ; largeur de la liste, explication sur plusieurs lignes permise.",
+    "en": {
+      "sourceHash": "5b35e0e35591",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5b35e0e35591",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "keyboard.shortcut.defaultLabel": {
+    "context": "Raccourcis clavier > sous-titre de la commande ; shortcut est la combinaison par défaut, pas celle personnalisée ; largeur de la liste, explication sur plusieurs lignes permise.",
+    "en": {
+      "sourceHash": "651037084bde",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "651037084bde",
+      "status": "ai-reviewed"
+    }
+  },
+  "keyboard.capture.waiting": {
+    "context": "Raccourcis clavier > bouton en capture ; attend la combinaison que l’utilisateur presse, Échap annule ; largeur de la liste, explication sur plusieurs lignes permise.",
+    "en": {
+      "sourceHash": "57939489dcc3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "57939489dcc3",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "keyboard.conflict.message": {
+    "context": "Raccourcis clavier > avertissement après capture refusée ; action et scope sont les clés de présentation résolues dans la langue active, aucune préférence modifiée ; largeur de la liste, explication sur plusieurs lignes permise.",
+    "en": {
+      "sourceHash": "f8d99e8e9c10",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f8d99e8e9c10",
+      "status": "ai-reviewed"
+    }
+  },
+  "keyboard.resetAll.action": {
+    "context": "Raccourcis clavier > bouton de bas de modale ; réinitialise toutes les commandes personnalisables ; largeur de la liste, explication sur plusieurs lignes permise.",
+    "en": {
+      "sourceHash": "9877873b182d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9877873b182d",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 40
+  },
+  "scope.catalogue.label": {
+    "context": "Fenêtre des raccourcis clavier : nom de la portée active dans l’écran Catalogue des packs.",
+    "maxLength": 32,
+    "en": {
+      "sourceHash": "b59b54e63c8d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b59b54e63c8d",
+      "status": "ai-reviewed"
+    }
+  },
+  "scope.catalogue.description": {
+    "context": "Fenêtre des raccourcis clavier : description de la portée Catalogue des packs.",
+    "en": {
+      "sourceHash": "c5e8833b1567",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c5e8833b1567",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.catalogueSearch.label": {
+    "context": "Fenêtre des raccourcis clavier : place le focus dans le champ de recherche du catalogue.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "ac34d0e000e6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ac34d0e000e6",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.catalogueSelectAll.label": {
+    "context": "Fenêtre des raccourcis clavier : sélectionne les fiches visibles du catalogue.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "c93ae462c7de",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c93ae462c7de",
+      "status": "ai-reviewed"
+    }
+  },
+  "shortcut.catalogueClearSelection.label": {
+    "context": "Fenêtre des raccourcis clavier : désélectionne toutes les fiches du catalogue.",
+    "maxLength": 40,
+    "en": {
+      "sourceHash": "d5a8ed547bf2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d5a8ed547bf2",
+      "status": "ai-reviewed"
+    }
+  }
+}

@@ -1,3 +1,6 @@
+import { CheckerTrans, useCheckerTranslation } from '../../i18n/useCheckerTranslation.js';
+import { presentTechnicalMessage } from '../../i18n/userMessage.js';
+import { UserMessage } from '../common/UserMessage.jsx';
 // Ce qu'un refus d'export a empêché.
 //
 // Le branchement se fait sur `kind`, et sur `preparation.error.kind` pour les
@@ -51,7 +54,10 @@ function StageList({ stageIds, stagePaths, onFocusPath }) {
   );
 }
 
+const CODE = { code: <code /> };
+
 function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnostics }) {
+  const { t } = useCheckerTranslation();
   // Intégré au rapport commun, le message y est déjà : ne pas le redire.
   const message = embedded ? null : refusal.message;
   switch (refusal.kind) {
@@ -59,13 +65,13 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
       return (
         <div>
           <p className="advanced-export__row-message">
-            Le projet n'a pas pu être relu, le pack n'a pas été produit.
+            {t('checker:refusal.decode.message')}
           </p>
           {refusal.codecError && (
             <p className="advanced-export__row-path">
-              <code>{refusal.codecError.code}</code> {refusal.codecError.path}
-              {' — trouvé : '}{refusal.codecError.found}
-              {' ; attendu : '}{refusal.codecError.expected}
+              <code>{refusal.codecError.code}</code> {t('checker:refusal.decode.codec', {
+                path: refusal.codecError.path, found: refusal.codecError.found, expected: refusal.codecError.expected,
+              })}
             </p>
           )}
         </div>
@@ -80,7 +86,7 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
               {refusal.integrityErrors.map((error, position) => (
                 <li key={`${error.code}-${error.path}-${position}`} className="advanced-export__row">
                   <p className="advanced-export__row-head"><code>{error.code}</code></p>
-                  <p className="advanced-export__row-message">{error.message}</p>
+                  <div className="advanced-export__row-message"><UserMessage value={error} /></div>
                   <p className="advanced-export__row-path"><code>{error.path}</code></p>
                 </li>
               ))}
@@ -92,7 +98,7 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
                 {refusal.diagnostics.map((diagnostic, position) => (
                   <li key={`${diagnostic.code}-${diagnostic.path}-${position}`} className="advanced-export__row">
                     <p className="advanced-export__row-head"><code>{diagnostic.code}</code></p>
-                    <p className="advanced-export__row-message">{diagnostic.message}</p>
+                    <div className="advanced-export__row-message"><UserMessage value={diagnostic} /></div>
                     <p className="advanced-export__row-path"><code>{diagnostic.path}</code></p>
                   </li>
                 ))}
@@ -101,7 +107,7 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
                 <p className="advanced-export__actions">
                   {/* La résolution existe déjà, dans le panneau de diagnostics :
                       ce refus y conduit au lieu d'en fabriquer une seconde. */}
-                  <Button size="sm" onClick={onOpenDiagnostics}>Ouvrir les résolutions</Button>
+                  <Button size="sm" onClick={onOpenDiagnostics}>{t('checker:refusal.resolutions.action')}</Button>
                 </p>
               )}
             </>
@@ -121,8 +127,7 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
       return (
         <div>
           <p className="advanced-export__row-message">
-            Le pack n'a pas été produit : {groups.length} média{groups.length > 1 ? 's sont' : ' est'} introuvable{groups.length > 1 ? 's' : ''}.
-            Pour chacun, les écrans qui l'utilisent sont listés.
+            {t('checker:refusal.media.message', { count: groups.length })}
           </p>
           <ul className="advanced-export__rows">
             {groups.map((group) => (
@@ -135,15 +140,14 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
                 <p className="advanced-export__row-message">{group.causeLabel}</p>
                 {group.byReferenceOnly ? (
                   <p className="advanced-export__row-message">
-                    Aucun ancien emplacement n'est connu : choisis le fichier depuis l'écran
-                    concerné.
+                    {t('checker:refusal.media.byReference')}
                   </p>
                 ) : group.lastKnownPath && (
                   <p className="advanced-export__row-path">
-                    dernier emplacement connu : <code>{group.lastKnownPath}</code>
+                    <CheckerTrans i18nKey="checker:refusal.media.lastKnown" components={{ path: <code>{group.lastKnownPath}</code> }} />
                   </p>
                 )}
-                {group.detail && <p className="advanced-export__row-path">{group.detail}</p>}
+                {group.detail && <p className="advanced-export__row-path">{presentTechnicalMessage(group.detail)}</p>}
                 <StageList stageIds={group.stageIds} stagePaths={stagePaths} onFocusPath={onFocusPath} />
               </li>
             ))}
@@ -156,8 +160,7 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
       return (
         <div>
           <p className="advanced-export__row-message">
-            Deux médias portent le même nom dans le pack. C'est un défaut de Story Studio,
-            pas du projet : le pack n'a pas été produit.
+            {t('checker:refusal.collision.message')}
           </p>
           <ul className="advanced-export__rows">
             {refusal.conflicts.map((conflict) => (
@@ -173,19 +176,24 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
       return (
         <div>
           <p className="advanced-export__row-message">
-            Les médias préparés ne correspondent pas à ceux du projet. Tes fichiers ne sont pas
-            en cause ; le pack n'a pas été produit.
+            {t('checker:refusal.oracle.message')}
           </p>
           <ul className="advanced-export__rows">
             {refusal.disagreements.map((disagreement, position) => (
               <li key={`${disagreement.assetRef}-${position}`} className="advanced-export__row">
                 <p className="advanced-export__row-head">
                   <code>{disagreement.assetRef}</code>
-                  {disagreement.stageUuid && <> — écran <code>{disagreement.stageUuid}</code></>}
+                  {disagreement.stageUuid && <>{' — '}<CheckerTrans i18nKey="checker:refusal.oracle.stage" components={{ stage: <code>{disagreement.stageUuid}</code> }} /></>}
                   {disagreement.kind && <> — {mediaFieldLabel(disagreement.kind)}</>}
                 </p>
                 <p className="advanced-export__row-message">
-                  attendu <code>{disagreement.expected}</code>, observé <code>{disagreement.observed}</code>
+                  <CheckerTrans
+                    i18nKey="checker:refusal.oracle.comparison"
+                    components={{
+                      expected: <code>{presentTechnicalMessage(disagreement.expected)}</code>,
+                      observed: <code>{presentTechnicalMessage(disagreement.observed)}</code>,
+                    }}
+                  />
                 </p>
               </li>
             ))}
@@ -196,7 +204,7 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
     case EXPORT_REFUSAL.CANCELLED:
       return (
         <p className="advanced-export__row-message">
-          Génération annulée : aucun pack n'a été produit et le projet est inchangé.
+          {t('checker:refusal.cancelled.message')}
         </p>
       );
 
@@ -204,7 +212,7 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
       return (
         <div>
           <p className="advanced-export__row-message">
-            L'écriture du pack a échoué. Le projet et tes fichiers d'origine restent intacts.
+            {t('checker:refusal.write.message')}
           </p>
           {refusal.path && <p className="advanced-export__row-path"><code>{refusal.path}</code></p>}
           {message && <p className="advanced-export__row-message">{message}</p>}
@@ -213,8 +221,7 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
                 annulation, le refus **devient** `output-write` pour ne pas
                 masquer le résidu. Le dire est le seul moyen que l'auteur aille
                 voir. */}
-            Un fichier temporaire <code>.partial</code> a pu rester dans le dossier de sortie :
-            tu peux le supprimer.
+            <CheckerTrans i18nKey="checker:refusal.write.partial" components={CODE} />
           </p>
         </div>
       );
@@ -224,7 +231,7 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
         <p className="advanced-export__row-message">
           {/* Rien n'a été demandé au moteur : la garde est locale, et le dire
               évite de laisser croire qu'il a refusé. */}
-          {message ? `${message} ` : ''}La génération n'a pas été lancée.
+          {message ? t('checker:refusal.request.withMessage', { message }) : t('checker:refusal.request.message')}
         </p>
       );
 
@@ -232,7 +239,7 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
     default:
       return (
         <p className="advanced-export__row-message">
-          La génération s'est interrompue sans explication précise.
+          {t('checker:refusal.untyped.message')}
           {message && <> <code>{message}</code></>}
         </p>
       );
@@ -242,6 +249,7 @@ function RefusalBody({ refusal, embedded, stagePaths, onFocusPath, onOpenDiagnos
 // `embedded` : peint sous le rapport commun de la file, qui porte déjà le titre
 // et le message du refus ; seul le détail utile à la correction reste.
 export function ExportRefusalReport({ refusal, embedded = false, stagePaths = null, onFocusPath = null, onOpenDiagnostics = null, onDismiss = null }) {
+  const { t } = useCheckerTranslation();
   if (!refusal) return null;
   return (
     <section
@@ -259,7 +267,7 @@ export function ExportRefusalReport({ refusal, embedded = false, stagePaths = nu
       />
       {onDismiss && (
         <p className="advanced-export__actions">
-          <Button size="sm" onClick={onDismiss}>Fermer</Button>
+          <Button size="sm" onClick={onDismiss}>{t('common:dialog.close.label')}</Button>
         </p>
       )}
     </section>

@@ -1,3 +1,4 @@
+import { translateGraph as t, presentGraphLandmarks, graphTranslationEngine } from '../../i18n/graphPresentation.js';
 // La capture de recette : le rendu **complet** de la surface, pas le seul PNG
 // du moteur.
 //
@@ -13,6 +14,7 @@
 // publié à cet instant.
 
 import { farLandmarkMarks, LANDMARK_KINDS } from './farLandmarks.js';
+import { getIntlLocale } from '../../i18n/language.js';
 import { readEngineColors } from './engines/engineColors.js';
 import { PORT_OVERHANG } from './engines/engineContract.js';
 import { actionCountFontPx, nodeLabelWidthPx } from './nodeOverlayMetrics.js';
@@ -89,18 +91,18 @@ function paintBadgeBackground(context, colors, draw) {
   context.restore();
 }
 
-function roleBadge(node) {
-  if (node.isEntry) return { text: 'RACINE', warning: false };
+function roleBadge(node, translator) {
+  if (node.isEntry) return { text: translator("graph:capture.entree.label"), warning: false };
   return null;
 }
 
 // `loadImage` est isolée pour que les essais puissent fournir une image déjà
 // décodée : un `Image` ne se charge pas hors navigateur.
-function loadImage(view, dataUrl) {
+function loadImage(view, dataUrl, translator = t) {
   return new Promise((resolve, reject) => {
     const image = new view.Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('Rendu du moteur illisible'));
+    image.onerror = () => reject(new Error(translator('graph:capture.engine.unreadable')));
     image.src = dataUrl;
   });
 }
@@ -124,6 +126,11 @@ export async function captureGraphSurface({
   decode = loadImage,
 }) {
   if (!engine || !view?.document) return null;
+  // Figer la présentation au déclenchement, avant l’export et le décodage asynchrones.
+  const translationEngine = graphTranslationEngine();
+  const language = translationEngine.resolvedLanguage ?? translationEngine.language;
+  const translator = translationEngine.getFixedT(language);
+  const locale = language === 'pseudo' ? 'fr' : language;
   const engineImage = await engine.exportImage();
   if (!engineImage) return null;
   const width = Math.max(1, Math.round(size?.width ?? 0));
@@ -134,12 +141,14 @@ export async function captureGraphSurface({
   const context = canvas.getContext('2d');
   if (!context) return engineImage;
 
-  const painted = await decode(view, engineImage);
+  const painted = await decode(view, engineImage, translator);
   context.drawImage(painted, 0, 0, width, height);
   paintOverlay(
     context,
     overlay ?? {},
     container ? readEngineColors(container, OVERLAY_COLOR_TOKENS) : FALLBACK_OVERLAY_COLORS,
+    translator,
+    locale,
   );
   return canvas.toDataURL('image/png');
 }
@@ -147,7 +156,7 @@ export async function captureGraphSurface({
 // Le dessin de la couche HTML, avec les mêmes règles que la feuille de style :
 // mêmes rayons, mêmes tailles de texte, mêmes tons de groupe. Ce n'est pas un
 // second langage visuel, c'est le même, transcrit une fois pour la capture.
-export function paintOverlay(context, overlay, colors = FALLBACK_OVERLAY_COLORS) {
+export function paintOverlay(context, overlay, colors = FALLBACK_OVERLAY_COLORS, translator = t, locale = getIntlLocale()) {
   const {
     detailLevel = 'full', nodes = [], groups = [], zoom = 1, bounds = null, viewport = null,
   } = overlay;
@@ -173,7 +182,7 @@ export function paintOverlay(context, overlay, colors = FALLBACK_OVERLAY_COLORS)
       context.save();
       context.fillStyle = tone;
       context.font = '800 10px "Space Grotesk", sans-serif';
-      context.fillText(String(group.id).toLocaleUpperCase('fr-FR'), group.x + 12, group.y + 18);
+      context.fillText(String(group.id).toLocaleUpperCase(locale), group.x + 12, group.y + 18);
       context.restore();
     }
   }
@@ -183,7 +192,7 @@ export function paintOverlay(context, overlay, colors = FALLBACK_OVERLAY_COLORS)
   // quand ils se gêneraient. C'est ce qui fait de la capture une preuve du
   // rendu plutôt qu'une seconde interprétation de la maquette.
   if (simplified) {
-    const marks = farLandmarkMarks(nodes, { bounds, viewport });
+    const marks = presentGraphLandmarks(farLandmarkMarks(nodes, { bounds, viewport }), 'graph:overlay.landmark.linkCount', translator);
     // Les étiquettes rangées dans la marge et leurs traits, sous les marques.
     for (const { node, label, callout } of marks) {
       if (!callout) continue;
@@ -256,7 +265,7 @@ export function paintOverlay(context, overlay, colors = FALLBACK_OVERLAY_COLORS)
   for (const node of nodes) {
     const left = node.x - node.width / 2;
     const top = node.y - node.height / 2;
-    const badge = roleBadge(node);
+    const badge = roleBadge(node, translator);
 
     if (node.kind === 'action' && full) {
       const fontPx = actionCountFontPx(zoom);

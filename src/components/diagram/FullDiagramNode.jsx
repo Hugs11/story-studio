@@ -1,3 +1,5 @@
+import { useTreeTranslation } from '../../i18n/useTreeTranslation.jsx';
+import { translateTree as t } from '../../i18n/treePresentation.js';
 // Noeud unitaire du diagramme complet (story, menu, zip, root, end-node).
 // Extrait de FullDiagramTree.jsx pour reduire la surface de l'orchestrateur.
 
@@ -15,6 +17,7 @@ import { toggleDiagramSelection } from './diagram/diagramSelection';
 import { useZipCover } from '../editors/useZipCover.js';
 
 function DiagramNodeTypeIcon({ entry }) {
+  useTreeTranslation();
   // Le diagramme ne replie pas ses Dossiers : il les dessine ouverts, comme
   // l'arbre le fait d'une ligne depliee. Le dessin vient de la table.
   return (
@@ -77,6 +80,7 @@ export function FullDiagramNode({
   rootImage,
   hasExpandedStoryGroup = false,
 }) {
+  useTreeTranslation();
   const compact = compactMode !== 'full';
   const showThumbnail = !compact
     || entry.type === 'story'
@@ -94,20 +98,20 @@ export function FullDiagramNode({
   const sequenceCount = entry.type === 'story' ? (entry.afterPlaybackSequence?.length ?? 0) : 0;
   const containerId = isRoot ? null : entry.type === 'menu' ? entry.id : undefined;
   const isDropTarget = containerId === dragOverContainerId && draggingId !== null;
-  const isForbiddenDepth = isDropTarget && dragBlockedReason === 'menu_depth_limit';
+  const isForbiddenDepth = isDropTarget && dragBlockedReason === 'VALIDATION_MENU_DEPTH_LIMIT';
   const isForbiddenCycle = isDropTarget && dragBlockedReason === 'menu_cycle';
   const isDragging = draggingId === entry.id;
   const isSelected = selectedIds ? selectedIds.has(entry.id) : selectedId === entry.id;
   const isCut = cutIds?.has(entry.id);
   const nodeColor = entry.treeColor ?? null;
   const canRegroupStories = (entry.type === 'menu' || entry.type === 'root') && hasExpandedStoryGroup;
-  const collapseLabel = 'Replier les histoires';
+  const collapseLabel = t("tree:diagram.stories.collapse");
   const dropLabel = isDropTarget
     ? isForbiddenDepth
       ? MENU_DEPTH_LIMIT_REACHED_MESSAGE
       : isForbiddenCycle
         ? MENU_CYCLE_MESSAGE
-        : (isRoot ? 'Deplacer a la racine' : 'Deplacer ici')
+        : (isRoot ? t("tree:diagram.drop.root") : t("tree:diagram.drop.here"))
     : null;
 
   function handleClick(e) {
@@ -153,7 +157,7 @@ export function FullDiagramNode({
           onSelect?.(entry.id);
         }
       }}
-      title={entry.name || '(sans nom)'}
+      title={entry.name || t('tree:navigation.name.fallback')}
     >
       {canRegroupStories ? (
         <Tooltip text={collapseLabel} className="fd-complete-node-regroup-wrap">
@@ -172,7 +176,7 @@ export function FullDiagramNode({
         </Tooltip>
       ) : null}
       <div className="fd-complete-node-actions">
-        <Tooltip text="Simuler depuis ce point">
+        <Tooltip text={t("tree:diagram.node.preview")}>
           <button
             type="button"
             className="fd-complete-node-action fd-complete-node-action--preview"
@@ -205,12 +209,12 @@ export function FullDiagramNode({
               : <span className={`fd-complete-node-placeholder ${entry.type === 'menu' ? 'fd-complete-node-placeholder--menu' : ''}`} aria-hidden="true" />}
           </>
         )}
-        {sequenceCount > 0 ? <span className="fd-complete-end-badge">Fin x{sequenceCount}</span> : null}
+        {sequenceCount > 0 ? <span className="fd-complete-end-badge">{t('tree:diagram.end.sequenceBadge', { count: sequenceCount })}</span> : null}
         {dropLabel ? <div className="fd-complete-drop-indicator">{dropLabel}</div> : null}
       </div>
       <div className="fd-complete-node-label">
         <div className="fd-complete-node-texts">
-          <span className="fd-complete-node-name">{entry.type === 'ref' ? (entry.label?.trim() || 'Lien') : (entry.name || '(sans nom)')}</span>
+          <span className="fd-complete-node-name">{entry.name || t('tree:navigation.name.fallback')}</span>
         </div>
       </div>
     </div>

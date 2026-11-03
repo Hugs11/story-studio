@@ -1,3 +1,8 @@
+import { graphPresentationError } from '../../i18n/graphPresentation.js';
+import { nextDefaultNodeName } from '../advancedAuthoring/defaultNodeNames.js';
+import { STAGE_KIND } from '../advancedGraphView/graphViewModel.js';
+import { withProjectMediaOutput } from '../projectMediaOutput.js';
+import { createProjectStorage, normalizeProjectStorage } from '../projectStorage.js';
 // Enveloppe du projet avancé : le seul endroit qui la fabrique et la modifie.
 //
 // Le payload d'auteur est une chaîne opaque. Aucune fonction de ce
@@ -37,7 +42,11 @@ function defaultEditorState() {
 // l'acquisition, et le répéter ici en fabriquerait une seconde.
 export function createAdvancedProject({
   payload,
+  officialProvenance = 'unknown',
+  officialOriginUuid = null,
+  containsOfficialContent = false,
   projectName = '',
+  storage = createProjectStorage(),
   packMetadata = null,
   editorState = null,
   mediaBindings = [],
@@ -51,6 +60,10 @@ export function createAdvancedProject({
     authoringMode: ADVANCED_AUTHORING_MODE,
     projectType: ADVANCED_PROJECT_TYPE,
     projectName,
+    officialProvenance,
+    ...(officialOriginUuid ? { officialOriginUuid } : {}),
+    ...(containsOfficialContent ? { containsOfficialContent: true } : {}),
+    storage: normalizeProjectStorage(storage),
     ...(packMetadata ? { packMetadata } : {}),
     ...(thumbnailImage ? { thumbnailImage } : {}),
     rootEntries: [],
@@ -106,7 +119,7 @@ export async function acquireCreatedAdvancedProject({
   projectName = '',
   invokeCommand = invokeTauri,
 } = {}) {
-  const payload = await invokeCommand('create_advanced_document', { title });
+  const payload = await invokeCommand('create_advanced_document', { title, initialStageName: nextDefaultNodeName(null, STAGE_KIND) });
   // Un nouveau projet graphe nomme son archive par convention, comme un projet
   // par menus : l'âge (3+ par défaut) est alors écrit dans `story.json`.
   return createAdvancedProject({
@@ -128,28 +141,26 @@ export async function acquireImportedAdvancedProject({
   packPath,
   assetsDir,
   workspaceDir,
+  storage = createProjectStorage(),
+  ephemeral = true,
   projectName = '',
   invokeCommand = invokeTauri,
 } = {}) {
-  const acquired = await invokeCommand('acquire_advanced_pack_document', {
-    zipPath: packPath,
-    destDir: assetsDir,
-    workspaceDir,
-  });
+  const acquired = await withProjectMediaOutput({ root: workspaceDir, storage, ephemeral }, async (output) => invokeCommand('acquire_advanced_pack_document', {
+    zipPath: packPath, destDir: assetsDir, ...await output.arguments(),
+  }), { invokeCommand });
   // La porte d'enveloppe juge les liaisons reçues comme elle jugerait celles d'un
   // fichier : le producteur n'est pas dispensé de la forme fermée du contrat.
   return createAdvancedProject({
     payload: acquired.payload,
+    officialProvenance: acquired.officialProvenance ?? 'unknown',
+    officialOriginUuid: acquired.officialOriginUuid,
+    storage,
     projectName,
     mediaBindings: acquired.mediaBindings,
     thumbnailImage: acquired.thumbnailImage ?? null,
   });
 }
-
-// Le bloc que « Vérifier un pack » écrivait dans les packs corrigés, jusqu'à la
-// 0.9.9. Aucun lecteur ne l'interprète ; il reste une extension opaque pour le
-// dialecte, mais c'est la nôtre : la trancher n'est pas une décision d'auteur.
-const OWN_LEGACY_EXTENSION_KEY = 'storyStudioMetadata';
 
 // Ce que l'atterrissage d'un pack repris règle avant l'installation du projet,
 // par les gestes d'auteur ordinaires — donc sous la même validation Rust que la
@@ -158,8 +169,6 @@ const OWN_LEGACY_EXTENSION_KEY = 'storyStudioMetadata';
 //
 // - Un pack repris est une nouvelle révision : sa version devient celle
 //   d'origine + 1 (2 sans version), la règle même de la chaîne Libre.
-// - Le bloc que Story Studio a lui-même écrit est préservé tel quel, au lieu
-//   de bloquer la génération sur une question que l'auteur n'a pas à se poser.
 // - Le titre est lu comme côté Libre (`getUnpackedPackDetails`) : un titre de
 //   convention (« 3+]Titre[by_Auteur_V5 ») rend son titre lisible au document,
 //   et son âge, son auteur… aux champs de nommage de l'enveloppe, en
@@ -186,12 +195,7 @@ export async function prepareImportedAdvancedProject(project, {
     version: presence.value(bumpPackVersion(current)),
     ...(readableTitle && readableTitle !== documentTitle ? { title: presence.value(readableTitle) } : {}),
   };
-  const gestures = [
-    advancedGestures.setDocumentMetadata(metadata),
-    ...(view?.opaqueMembers ?? [])
-      .filter((member) => member.scope === 'root' && member.key === OWN_LEGACY_EXTENSION_KEY)
-      .map((member) => advancedGestures.setOpaqueExportDisposition(member, 'preserve-untested')),
-  ];
+  const gestures = [advancedGestures.setDocumentMetadata(metadata)];
   let prepared = project;
   for (const gesture of gestures) {
     ({ project: prepared } = await applyAdvancedGesture(prepared, gesture, { invokeCommand }));
@@ -228,14 +232,17 @@ export async function assessAdvancedProjectReadiness(project, {
 // le projet rendu, où elle est recalculée et jamais mémorisée.
 export async function applyAdvancedGesture(project, gesture, { invokeCommand = invokeTauri } = {}) {
   if (gesture?.gesture === 'create-construction' && !DERIVED_CONSTRUCTION_CREATION_ENABLED) {
-    throw new Error('La création de constructions dérivées est indisponible.');
+    throw graphPresentationError(Error, 'graph:guard.construction.disabled');
   }
   const payload = readAuthoringPayload(project);
   if (payload === null) {
+    // eslint-disable-next-line i18next/no-literal-string -- Porte de schéma : code, chemin et preuve expected techniques ; message utilisateur codé séparément.
     throw new ProjectFormatError(
+      // eslint-disable-next-line i18next/no-literal-string -- Code technique de la porte d’enveloppe ; inchangé.
       'ADVANCED_CODEC_REQUIRED',
       '/authoring/payload',
       'absent',
+      // eslint-disable-next-line i18next/no-literal-string -- Evidence expected du schéma, distincte de la phrase utilisateur codée.
       "un projet avancé porteur d'un payload d'auteur",
     );
   }

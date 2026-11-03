@@ -1,0 +1,42 @@
+{
+  "planId": "opaque-plan",
+  "catalogueRevision": 12,
+  "expiresAt": 1900000000,
+  "action": "convertZip",
+  "targets": [
+    {
+      "ficheId": "fiche-a",
+      "exemplarId": "exemplar-a",
+      "expectedRevision": 12,
+      "sourcePath": "/packs/Before",
+      "sourceFormat": "studioDirectory",
+      "sourceToken": "content-and-identity",
+      "destinationPath": "/packs/After.zip",
+      "destinationToken": null,
+      "mode": "copy",
+      "changes": [],
+      "proposedName": "After.zip",
+      "renameDefaultChecked": false,
+      "conflicts": [],
+      "capability": {
+        "state": "available",
+        "reason": null
+      },
+      "destinationFormat": "zip",
+      "transfer": {
+        "sourcePath": "/packs/Before",
+        "exemplarId": "exemplar-a",
+        "sourceFormat": "studioDirectory",
+        "conversion": true,
+        "ignored": false,
+        "foreignDestination": false,
+        "sourceBytes": 128,
+        "outputBytes": 128,
+        "estimated": true
+      }
+    }
+  ],
+  "totalBytes": 128,
+  "requiredFreeBytes": 1048832,
+  "issues": []
+}

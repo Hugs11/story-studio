@@ -1,6 +1,10 @@
+import { Trans } from 'react-i18next';
+import { useTreeTranslation } from "../../i18n/useTreeTranslation.jsx";
+import { translateTree as t } from "../../i18n/treePresentation.js";
 import { memo, useEffect, useMemo, useState } from 'react';
 import { AudioField } from './AudioField';
 import { ImageField } from './ImageField';
+const CONTROL_LABELS = {"wheel": "tree:nativeGraph.control.wheel", "autoplay": "tree:nativeGraph.control.autoplay", "pause": "tree:nativeGraph.control.pause", "ok": "tree:nativeGraph.control.ok", "home": "tree:nativeGraph.control.home"};
 import { Toggle } from '../common/Toggle';
 import { basename } from '../../utils/fileUtils';
 import { optionSelectionCandidates, parseOptionSelection } from '../../store/optionSelection.js';
@@ -15,10 +19,10 @@ function stageId(stage) {
 
 function stageKind(stage) {
   const controls = stage?.controlSettings ?? {};
-  if (stage?.squareOne) return 'Départ';
-  if (controls.wheel && !controls.autoplay) return 'Choix';
-  if (controls.autoplay) return 'Lecture';
-  return 'Stage';
+  if (stage?.squareOne) return t("tree:nativeGraph.kind.start");
+  if (controls.wheel && !controls.autoplay) return t("tree:nativeGraph.kind.choice");
+  if (controls.autoplay) return t("tree:nativeGraph.kind.play");
+  return t("tree:nativeGraph.kind.stage");
 }
 
 function stageLabel(stage, index) {
@@ -27,7 +31,7 @@ function stageLabel(stage, index) {
   const suffix = stageId(stage).slice(0, 8);
   if (name && name !== 'Stage title') return name;
   if (audio) return audio.replace(/\.(mp3|ogg|wav|m4a)$/i, '');
-  return `${stageKind(stage)} ${index + 1}${suffix ? ` · ${suffix}` : ''}`;
+  return t("tree:nativeGraph.stage.name", { kind: stageKind(stage), number: index + 1, suffix: suffix ? ` · ${suffix}` : "" });
 }
 
 // Les destinations qu'une transition peut atteindre.
@@ -59,6 +63,7 @@ function updateStageInGraph(graph, selectedStageId, updater) {
 }
 
 export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChange }) {
+  useTreeTranslation();
   const stages = graph?.document?.stageNodes ?? [];
   const actions = graph?.document?.actionNodes ?? [];
   const [filter, setFilter] = useState('');
@@ -83,7 +88,7 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
         if (ay !== by) return ay - by;
         return (a.stage.position?.x ?? 0) - (b.stage.position?.x ?? 0);
       }),
-    [stages],
+    [stages, t("tree:nativeGraph.kind.stage")],
   );
   const visibleStages = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -125,7 +130,7 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
 
   function targetName(targetId) {
     const info = stageById.get(targetId);
-    return info ? stageLabel(info.stage, info.index) : (targetId || 'Destination inconnue');
+    return info ? stageLabel(info.stage, info.index) : (targetId || t("tree:nativeGraph.destination.unknown"));
   }
 
   if (!graph || stages.length === 0) return null;
@@ -133,18 +138,18 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
   return (
     <div className="native-graph-editor">
       <div className="native-graph-toolbar">
-        <div className="native-graph-stat"><strong>{stages.length}</strong><span>stages</span></div>
-        <div className="native-graph-stat"><strong>{actions.length}</strong><span>actions</span></div>
+        <div className="native-graph-stat"><Trans t={t} i18nKey="tree:nativeGraph.count.stages" count={stages.length} components={{ strong: <strong />, unit: <span /> }} /></div>
+        <div className="native-graph-stat"><Trans t={t} i18nKey="tree:nativeGraph.count.actions" count={actions.length} components={{ strong: <strong />, unit: <span /> }} /></div>
         <input
           className="field-input native-graph-filter"
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
-          placeholder="Filtrer les stages"
+          placeholder={t("tree:nativeGraph.filter.placeholder")}
         />
       </div>
 
       <div className="native-graph-layout">
-        <div className="native-graph-list" role="listbox" aria-label="Stages du graphe importé">
+        <div className="native-graph-list" role="listbox" aria-label={t("tree:nativeGraph.list.aria")}>
           {visibleStages.map(({ stage, index, id, label }) => (
             <button
               key={id}
@@ -162,7 +167,7 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
         {selectedStage ? (
           <div className="native-graph-detail">
             <div className="field-row">
-              <span className="field-label">Nom</span>
+              <span className="field-label">{t("tree:zip.name.label")}</span>
               <input
                 className="field-input"
                 value={selectedStage.name || ''}
@@ -175,7 +180,7 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
             <div className="sequence-controls">
               {['wheel', 'autoplay', 'pause', 'ok', 'home'].map((key) => (
                 <div className="sequence-control" key={key}>
-                  <span>{key}</span>
+                  <span>{t(CONTROL_LABELS[key])}</span>
                   <Toggle
                     on={!!selectedStage.controlSettings?.[key]}
                     onChange={(value) => updateControl(key, value)}
@@ -186,9 +191,7 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
 
             <div className="native-graph-media">
               <div>
-                <div className="media-col-header">
-                  Image
-                  <span className="media-col-subtitle">Image du stage</span>
+                <div className="media-col-header">{t("tree:media.image.label")}<span className="media-col-subtitle">{t("tree:nativeGraph.image.label")}</span>
                 </div>
                 <ImageField
                   compact
@@ -199,12 +202,11 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
                 />
               </div>
               <div>
-                <div className="media-col-header">
-                  Son
-                  <span className="media-col-subtitle">Audio du stage</span>
+                <div className="media-col-header">{t("tree:media.sound.label")}<span className="media-col-subtitle">{t("tree:nativeGraph.audio.label")}</span>
                 </div>
                 <AudioField
-                  label="Audio du stage"
+                  label={t("tree:nativeGraph.audio.label")}
+                  labelRef={{ key: "tree:nativeGraph.audio.label" }}
                   file={selectedStage.audio}
                   required={false}
                   ttsTextSuggestion={selectedStage.name || selectedLabel}
@@ -217,16 +219,16 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
 
             <div className="native-graph-targets">
               <div className="native-graph-target-group">
-                <span className="native-graph-target-title">OK</span>
+                <span className="native-graph-target-title">{t("tree:control.ok.short")}</span>
                 {okTargets.length > 0
                   ? okTargets.map((target) => <span className="native-graph-target" key={target}>{targetName(target)}</span>)
-                  : <span className="native-graph-target is-empty">Aucune destination</span>}
+                  : <span className="native-graph-target is-empty">{t("tree:navigation.destination.none")}</span>}
               </div>
               <div className="native-graph-target-group">
-                <span className="native-graph-target-title">Accueil</span>
+                <span className="native-graph-target-title">{t("tree:control.home.short")}</span>
                 {homeTargets.length > 0
                   ? homeTargets.map((target) => <span className="native-graph-target" key={target}>{targetName(target)}</span>)
-                  : <span className="native-graph-target is-empty">Aucune destination</span>}
+                  : <span className="native-graph-target is-empty">{t("tree:navigation.destination.none")}</span>}
               </div>
             </div>
           </div>

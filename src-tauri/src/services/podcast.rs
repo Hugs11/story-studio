@@ -4,12 +4,17 @@
 //! contrairement à ComfyUI/XTTS qui restent locaux). On valide donc explicitement le
 //! schéma (`http`/`https`) et on plafonne la taille des téléchargements.
 
+mod apple;
+
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 
 use crate::support::network::http_client;
 use crate::support::paths::path_for_frontend;
@@ -43,13 +48,28 @@ pub struct PodcastFeed {
 }
 
 fn validate_remote_url(url: &str) -> Result<reqwest::Url, String> {
-    let parsed = reqwest::Url::parse(url.trim()).map_err(|e| format!("URL invalide : {}", e))?;
+    let parsed = reqwest::Url::parse(url.trim()).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::PODCAST_INVALID_URL)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "URL invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     match parsed.scheme() {
         "http" | "https" => Ok(parsed),
-        other => Err(format!(
-            "Schéma d'URL non autorisé : {} (seuls http et https le sont).",
-            other
-        )),
+        other => Err({
+            let _msg_other = (other).to_string();
+            user_message::UserMessage::new(codes::PODCAST_URL_SCHEME_REFUSED)
+                .param("scheme", user_message::transport_param(_msg_other.clone()))
+                .with_detail(format!(
+                    "Schéma d'URL non autorisé : {_msg_other} (seuls http et https le sont).",
+                    _msg_other = user_message::transport_detail(&_msg_other),
+                ))
+                .into_transport()
+        }),
     }
 }
 
@@ -60,29 +80,76 @@ fn read_limited<R: Read>(mut reader: R, max: u64) -> Result<Vec<u8>, String> {
         .by_ref()
         .take(max + 1)
         .read_to_end(&mut buf)
-        .map_err(|e| format!("Lecture du contenu impossible : {}", e))?;
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::PODCAST_CONTENT_READ_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Lecture du contenu impossible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
     if buf.len() as u64 > max {
-        return Err(format!("Contenu trop volumineux (> {} octets).", max));
+        return Err({
+            let _msg_max = (max).to_string();
+            user_message::UserMessage::new(codes::PODCAST_CONTENT_TOO_LARGE_BYTES)
+                .param("max", user_message::transport_param(_msg_max.clone()))
+                .with_detail(format!(
+                    "Contenu trop volumineux (> {_msg_max} octets).",
+                    _msg_max = user_message::transport_detail(&_msg_max)
+                ))
+                .into_transport()
+        });
     }
     Ok(buf)
 }
 
 pub fn fetch_feed(url: &str) -> Result<PodcastFeed, String> {
+    fetch_feed_named(url, None)
+}
+
+pub fn fetch_feed_named(
+    url: &str,
+    proposed_episode_name: Option<&str>,
+) -> Result<PodcastFeed, String> {
     let parsed = validate_remote_url(url)?;
     let client = http_client(FEED_TIMEOUT)?;
+    let parsed = apple::resolve_feed_url(&client, parsed)?;
     let response = client
         .get(parsed)
         .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send()
-        .map_err(|e| format!("Impossible de récupérer le flux : {}", e))?;
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::PODCAST_FEED_FETCH_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de récupérer le flux : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
     if !response.status().is_success() {
-        return Err(format!("Le flux a répondu HTTP {}.", response.status()));
+        return Err({
+            let _msg_response = (response.status()).to_string();
+            user_message::UserMessage::new(codes::PODCAST_FEED_HTTP_ERROR)
+                .param(
+                    "response",
+                    user_message::transport_param(_msg_response.clone()),
+                )
+                .with_detail(format!(
+                    "Le flux a répondu HTTP {_msg_response}.",
+                    _msg_response = user_message::transport_detail(&_msg_response)
+                ))
+                .into_transport()
+        });
     }
     let bytes = read_limited(response, MAX_FEED_BYTES)?;
     let text = String::from_utf8_lossy(&bytes);
     // Certains flux exposent un BOM UTF-8 ou des espaces avant <?xml> : roxmltree les refuse.
     let cleaned = text.trim_start_matches('\u{feff}').trim_start();
-    parse_feed(cleaned)
+    parse_feed_named(cleaned, proposed_episode_name)
 }
 
 pub fn download_media(output_dir: &Path, url: &str, file_name: &str) -> Result<String, String> {
@@ -92,9 +159,30 @@ pub fn download_media(output_dir: &Path, url: &str, file_name: &str) -> Result<S
         .get(parsed.clone())
         .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send()
-        .map_err(|e| format!("Téléchargement impossible : {}", e))?;
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::PODCAST_DOWNLOAD_IMPOSSIBLE)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Téléchargement impossible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
     if !response.status().is_success() {
-        return Err(format!("Le serveur a répondu HTTP {}.", response.status()));
+        return Err({
+            let _msg_response = (response.status()).to_string();
+            user_message::UserMessage::new(codes::PODCAST_DOWNLOAD_HTTP_ERROR)
+                .param(
+                    "response",
+                    user_message::transport_param(_msg_response.clone()),
+                )
+                .with_detail(format!(
+                    "Le serveur a répondu HTTP {_msg_response}.",
+                    _msg_response = user_message::transport_detail(&_msg_response)
+                ))
+                .into_transport()
+        });
     }
 
     let content_type = response
@@ -106,25 +194,64 @@ pub fn download_media(output_dir: &Path, url: &str, file_name: &str) -> Result<S
     let ext = extension_for(content_type.as_deref(), &parsed);
     let stem = sanitize_stem(file_name);
 
-    fs::create_dir_all(output_dir)
-        .map_err(|e| format!("Création du dossier temporaire impossible : {}", e))?;
+    fs::create_dir_all(output_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::PODCAST_TEMP_FOLDER_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Création du dossier temporaire impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let dest = unique_path(output_dir, &stem, &ext);
 
     let bytes = read_limited(response, MAX_MEDIA_BYTES)?;
     if bytes.is_empty() {
-        return Err("Fichier téléchargé vide.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::PODCAST_DOWNLOADED_FILE_EMPTY)
+                .with_detail("Fichier téléchargé vide.".to_string())
+                .into_transport(),
+        );
     }
-    fs::write(&dest, &bytes).map_err(|e| format!("Écriture du fichier impossible : {}", e))?;
+    fs::write(&dest, &bytes).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::PODCAST_FILE_WRITE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Écriture du fichier impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     Ok(path_for_frontend(&dest))
 }
 
+#[cfg(test)]
 fn parse_feed(xml: &str) -> Result<PodcastFeed, String> {
-    let doc = roxmltree::Document::parse(xml).map_err(|e| format!("Flux RSS illisible : {}", e))?;
+    parse_feed_named(xml, None)
+}
+
+fn parse_feed_named(xml: &str, proposed_episode_name: Option<&str>) -> Result<PodcastFeed, String> {
+    let doc = roxmltree::Document::parse(xml).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::PODCAST_UNREADABLE_RSS_FEED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Flux RSS illisible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let channel = doc
         .root_element()
         .descendants()
         .find(|n| n.is_element() && n.tag_name().name() == "channel")
-        .ok_or_else(|| "Flux invalide : aucun <channel> RSS trouvé.".to_string())?;
+        .ok_or_else(|| {
+            user_message::UserMessage::new(codes::PODCAST_FEED_CHANNEL_MISSING)
+                .with_detail("Flux invalide : aucun <channel> RSS trouvé.".to_string())
+                .into_transport()
+        })?;
 
     let title = child_text(&channel, "title").unwrap_or_else(|| "Podcast".to_string());
     let feed_image = node_image(&channel);
@@ -135,13 +262,21 @@ fn parse_feed(xml: &str) -> Result<PodcastFeed, String> {
         .filter(|n| n.is_element() && n.tag_name().name() == "item")
         .enumerate()
     {
-        if let Some(episode) = parse_item(&item, index, feed_image.as_deref()) {
+        if let Some(episode) =
+            parse_item(&item, index, feed_image.as_deref(), proposed_episode_name)
+        {
             episodes.push(episode);
         }
     }
 
+    dedupe_episode_ids(&mut episodes);
+
     if episodes.is_empty() {
-        return Err("Aucun épisode audio trouvé dans ce flux.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::PODCAST_FEED_EPISODES_MISSING)
+                .with_detail("Aucun épisode audio trouvé dans ce flux.".to_string())
+                .into_transport(),
+        );
     }
 
     Ok(PodcastFeed {
@@ -155,6 +290,7 @@ fn parse_item(
     item: &roxmltree::Node,
     index: usize,
     feed_image: Option<&str>,
+    proposed_episode_name: Option<&str>,
 ) -> Option<PodcastEpisode> {
     let enclosure = child_by_local(item, "enclosure")?;
     let audio_url = enclosure.attribute("url").map(str::trim).unwrap_or("");
@@ -170,12 +306,16 @@ fn parse_item(
         .and_then(|s| s.trim().parse::<u64>().ok())
         .filter(|&n| n > 0);
 
-    let title = child_text(item, "title").unwrap_or_else(|| format!("Épisode {}", index + 1));
+    let title = child_text(item, "title").unwrap_or_else(|| {
+        proposed_episode_name
+            .unwrap_or("Épisode {{number}}")
+            .replace("{{number}}", &(index + 1).to_string())
+    });
     let pub_date = child_text(item, "pubDate");
     let duration = child_text(item, "duration"); // itunes:duration (nom local)
     let description = child_text(item, "description").or_else(|| child_text(item, "summary"));
     let image_url = node_image(item).or_else(|| feed_image.map(str::to_string));
-    let id = format!("{:x}", simple_hash(audio_url));
+    let id = stable_episode_id(item, audio_url);
 
     Some(PodcastEpisode {
         id,
@@ -188,6 +328,49 @@ fn parse_item(
         image_url,
         size_bytes,
     })
+}
+
+/// Uses the RSS item GUID when available; enclosure URLs can change when a host migrates media.
+/// SHA-256 keeps identifiers compact and stable across platforms and Rust versions.
+fn stable_episode_id(item: &roxmltree::Node, audio_url: &str) -> String {
+    let (kind, value) = child_text(item, "guid")
+        .map(|guid| ("guid", guid))
+        .unwrap_or_else(|| ("url", audio_url.to_string()));
+    format!("{}:{:x}", kind, Sha256::digest(value.as_bytes()))
+}
+
+/// Garantit l'unicité des identifiants du flux. Les flux sont classés du plus récent au plus
+/// ancien : la dernière occurrence (la plus ancienne) d'un identifiant le conserve, et les autres
+/// reçoivent un identifiant dérivé de l'identifiant + URL audio, puis + rang compté depuis la fin
+/// du flux si l'URL est aussi identique. Ajouter des items en tête ne change donc aucun
+/// identifiant existant.
+fn dedupe_episode_ids(episodes: &mut [PodcastEpisode]) {
+    let mut used: std::collections::HashSet<String> =
+        episodes.iter().map(|e| e.id.clone()).collect();
+    let mut seen = std::collections::HashSet::new();
+    let mut collisions: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for episode in episodes.iter_mut().rev() {
+        if seen.insert(episode.id.clone()) {
+            continue;
+        }
+        let kind = episode.id.split(':').next().unwrap_or("guid").to_string();
+        let rank = collisions.entry(episode.id.clone()).or_insert(0);
+        let new_id = loop {
+            let material = if *rank == 0 {
+                format!("{}\n{}", episode.id, episode.audio_url)
+            } else {
+                format!("{}\n{}\n{}", episode.id, episode.audio_url, *rank)
+            };
+            *rank += 1;
+            let candidate = format!("{}:{:x}", kind, Sha256::digest(material.as_bytes()));
+            if !used.contains(&candidate) {
+                break candidate;
+            }
+        };
+        used.insert(new_id.clone());
+        seen.insert(new_id.clone());
+        episode.id = new_id;
+    }
 }
 
 /// Premier enfant élément portant ce nom local (namespace ignoré, pour gérer iTunes).
@@ -295,13 +478,6 @@ fn unique_path(dir: &Path, stem: &str, ext: &str) -> PathBuf {
     candidate
 }
 
-fn simple_hash(value: &str) -> u64 {
-    use std::hash::{Hash, Hasher};
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    value.hash(&mut hasher);
-    hasher.finish()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -371,6 +547,124 @@ mod tests {
     }
 
     #[test]
+    fn guid_keeps_episode_identity_when_enclosure_url_changes() {
+        let first = r#"<rss version="2.0"><channel><title>x</title><item><guid>episode-42</guid><enclosure url="https://old.example/42.mp3" type="audio/mpeg"/></item></channel></rss>"#;
+        let migrated = r#"<rss version="2.0"><channel><title>x</title><item><guid>episode-42</guid><enclosure url="https://cdn.example/episode/42.mp3" type="audio/mpeg"/></item></channel></rss>"#;
+        let first_id = &parse_feed(first).expect("parse first feed").episodes[0].id;
+        let migrated_id = &parse_feed(migrated).expect("parse migrated feed").episodes[0].id;
+
+        assert_eq!(first_id, migrated_id);
+        assert!(first_id.starts_with("guid:"));
+    }
+
+    #[test]
+    fn guid_distinguishes_episodes_with_the_same_enclosure_url() {
+        let feed = r#"<rss version="2.0"><channel><title>x</title><item><guid>episode-a</guid><enclosure url="https://example.com/audio.mp3" type="audio/mpeg"/></item><item><guid>episode-b</guid><enclosure url="https://example.com/audio.mp3" type="audio/mpeg"/></item></channel></rss>"#;
+        let parsed = parse_feed(feed).expect("parse feed");
+
+        assert_ne!(parsed.episodes[0].id, parsed.episodes[1].id);
+    }
+
+    #[test]
+    fn enclosure_url_fallback_is_stable_when_guid_is_missing() {
+        let feed = r#"<rss version="2.0"><channel><title>x</title><item><enclosure url="https://example.com/audio.mp3" type="audio/mpeg"/></item></channel></rss>"#;
+        let first_id = &parse_feed(feed).expect("parse first feed").episodes[0].id;
+        let second_id = &parse_feed(feed).expect("parse second feed").episodes[0].id;
+
+        assert_eq!(first_id, second_id);
+        assert!(first_id.starts_with("url:"));
+    }
+
+    fn feed_ids(items: &str) -> Vec<String> {
+        let xml = format!(
+            r#"<rss version="2.0"><channel><title>x</title>{}</channel></rss>"#,
+            items
+        );
+        parse_feed(&xml)
+            .expect("parse feed")
+            .episodes
+            .into_iter()
+            .map(|e| e.id)
+            .collect()
+    }
+
+    fn item(guid: Option<&str>, url: &str) -> String {
+        let guid = guid
+            .map(|g| format!("<guid>{g}</guid>"))
+            .unwrap_or_default();
+        format!(r#"<item>{guid}<enclosure url="{url}" type="audio/mpeg"/></item>"#)
+    }
+
+    #[test]
+    fn unique_guid_id_is_unchanged() {
+        let ids = feed_ids(&item(Some("g1"), "https://e.com/a.mp3"));
+        let expected = format!("guid:{:x}", Sha256::digest(b"g1"));
+        assert_eq!(ids, vec![expected]);
+    }
+
+    #[test]
+    fn duplicate_guid_gives_distinct_stable_ids() {
+        let items = [
+            item(Some("dup"), "https://e.com/a.mp3"),
+            item(Some("dup"), "https://e.com/b.mp3"),
+            item(Some("dup"), "https://e.com/c.mp3"),
+        ]
+        .concat();
+        let ids = feed_ids(&items);
+        let unique: std::collections::HashSet<_> = ids.iter().collect();
+        assert_eq!(unique.len(), 3);
+        assert_eq!(ids[2], format!("guid:{:x}", Sha256::digest(b"dup")));
+        assert_eq!(ids, feed_ids(&items));
+    }
+
+    #[test]
+    fn duplicate_guid_and_url_gives_distinct_stable_ids() {
+        let items = [
+            item(Some("dup"), "https://e.com/a.mp3"),
+            item(Some("dup"), "https://e.com/a.mp3"),
+            item(Some("dup"), "https://e.com/a.mp3"),
+        ]
+        .concat();
+        let ids = feed_ids(&items);
+        let unique: std::collections::HashSet<_> = ids.iter().collect();
+        assert_eq!(unique.len(), 3);
+        assert_eq!(ids, feed_ids(&items));
+    }
+
+    #[test]
+    fn prepending_item_keeps_existing_ids_with_duplicate_guid() {
+        let old = [
+            item(Some("dup"), "https://e.com/b.mp3"),
+            item(Some("dup"), "https://e.com/a.mp3"),
+        ]
+        .concat();
+        let new = format!("{}{}", item(Some("dup"), "https://e.com/c.mp3"), old);
+        let old_ids = feed_ids(&old);
+        let new_ids = feed_ids(&new);
+        assert_eq!(&new_ids[1..], &old_ids[..]);
+        assert!(!old_ids.contains(&new_ids[0]));
+    }
+
+    #[test]
+    fn prepending_item_keeps_existing_ids_with_duplicate_guid_and_url() {
+        let same = item(Some("dup"), "https://e.com/a.mp3");
+        let old = same.repeat(2);
+        let new = same.repeat(3);
+        let old_ids = feed_ids(&old);
+        let new_ids = feed_ids(&new);
+        assert_eq!(&new_ids[1..], &old_ids[..]);
+        let unique: std::collections::HashSet<_> = new_ids.iter().collect();
+        assert_eq!(unique.len(), 3);
+    }
+
+    #[test]
+    fn missing_guid_keeps_url_fallback_id() {
+        let ids = feed_ids(&item(None, "https://e.com/a.mp3"));
+        let expected = format!("url:{:x}", Sha256::digest(b"https://e.com/a.mp3"));
+        assert_eq!(ids, vec![expected]);
+    }
+
+    #[test]
     fn extension_from_content_type_then_url() {
         let url = reqwest::Url::parse("https://example.com/path/file.weird").unwrap();
         assert_eq!(extension_for(Some("audio/mpeg"), &url), "mp3");
@@ -395,5 +689,23 @@ mod tests {
         assert_eq!(sanitize_stem("a/b\\c:d?"), "a_b_c_d_");
         assert_eq!(sanitize_stem("   "), "episode");
         assert!(sanitize_stem(&"x".repeat(200)).chars().count() <= 80);
+    }
+}
+
+#[cfg(test)]
+mod proposed_names_tests {
+    #[test]
+    fn proposed_episode_names_preserve_authored_titles_and_default_french() {
+        let xml = r#"<rss><channel><title>Auteur</title><item><enclosure url="https://example.com/a.mp3" type="audio/mpeg" /></item><item><title>Titre auteur</title><enclosure url="https://example.com/b.mp3" type="audio/mpeg" /></item></channel></rss>"#;
+        let original = super::parse_feed(xml).expect("historical parser");
+        assert_eq!(original.episodes[0].title, "Épisode 1");
+        for template in ["Episode {{number}}", "Episodio {{number}}"] {
+            let feed = super::parse_feed_named(xml, Some(template)).expect("named parser");
+            assert_eq!(feed.episodes[0].title, template.replace("{{number}}", "1"));
+            assert_eq!(feed.episodes[1].title, "Titre auteur");
+            assert_eq!(feed.title, "Auteur");
+            assert_eq!(feed.episodes[0].id, original.episodes[0].id);
+            assert_eq!(feed.episodes[0].audio_url, original.episodes[0].audio_url);
+        }
     }
 }

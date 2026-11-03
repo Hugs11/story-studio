@@ -28,7 +28,11 @@ fn document_with(stage_extra: &str, root_extra: &str, transition: &str) -> Strin
 }
 
 #[test]
-fn opaque_extensions_are_captured_at_every_known_scope_without_automatic_emission() {
+fn unknown_keys_are_ignored_at_every_scope_like_the_menu_editor() {
+    // Comme l'éditeur par menus, le graphe ignore une clé inconnue (le
+    // `duration` de STUdio, une extension tierce) : ni capturée, ni
+    // diagnostiquée, ni réémise. Seuls les alias connus et `image`/`official`
+    // restent tracés, pour leur règle de non-émission.
     let raw = document_with(
         "",
         "",
@@ -54,34 +58,36 @@ fn opaque_extensions_are_captured_at_every_known_scope_without_automatic_emissio
         2
     );
     assert!(decoded.context.editor_positions.is_empty());
-    for (scope, key) in [
-        (ExtensionScope::Root, "storyStudioMetadata"),
-        (ExtensionScope::Stage, "duration"),
-        (ExtensionScope::Action, "vendorAction"),
-        (ExtensionScope::Transition, "vendorTransition"),
-        (ExtensionScope::ControlSettings, "vendorControl"),
-        (ExtensionScope::Position, "vendorPosition"),
+    for key in [
+        "storyStudioMetadata",
+        "duration",
+        "vendorAction",
+        "vendorTransition",
+        "vendorControl",
+        "vendorPosition",
     ] {
         assert!(
-            decoded.context.opaque_members.iter().any(|member| {
-                member.scope == scope
-                    && member.key == key
-                    && member.kind == OpaqueMemberKind::UnknownExtension
-                    && member.export_disposition.is_none()
-            }),
-            "extension manquante {scope:?}/{key}"
+            !decoded
+                .context
+                .opaque_members
+                .iter()
+                .any(|member| member.key == key),
+            "clé inconnue capturée : {key}"
         );
     }
-
-    let fraction = decoded
+    assert!(decoded
         .context
         .opaque_members
         .iter()
-        .find(|member| member.key == "vendorControl")
-        .and_then(|member| member.value.get("fraction"))
-        .and_then(serde_json::Value::as_f64)
-        .expect("fraction in nested extension");
-    assert_eq!(fraction.to_bits(), (-990.4606467901111_f64).to_bits());
+        .all(|member| member.kind != OpaqueMemberKind::UnknownExtension));
+    let mut tracked = decoded
+        .context
+        .opaque_members
+        .iter()
+        .map(|member| member.key.as_str())
+        .collect::<Vec<_>>();
+    tracked.sort_unstable();
+    assert_eq!(tracked, ["id", "image", "official", "uuid"]);
 
     let standard = serde_json::to_value(&decoded.document).expect("serialize typed document");
     assert!(standard.get("storyStudioMetadata").is_none());
@@ -97,9 +103,6 @@ fn opaque_extensions_are_captured_at_every_known_scope_without_automatic_emissio
 
     let saved_payload = serde_json::to_value(&decoded).expect("save authoring payload");
     assert!(saved_payload.get("sourceValue").is_none());
-    assert!(saved_payload["context"]["opaqueMembers"]
-        .as_array()
-        .is_some_and(|members| members.len() >= 9));
     let restored: crate::native_pack::DecodedStoryDocument =
         serde_json::from_value(saved_payload).expect("reopen authoring payload");
     assert_eq!(
@@ -121,7 +124,7 @@ fn known_aliases_and_never_emitted_root_members_keep_their_provenance() {
         ("id", OpaqueMemberKind::KnownAlias),
         ("uuid", OpaqueMemberKind::KnownAlias),
         ("image", OpaqueMemberKind::KnownNeverEmitted),
-        ("official", OpaqueMemberKind::KnownNeverEmitted),
+        ("official", OpaqueMemberKind::OutputDecisionOnly),
     ] {
         assert!(decoded.context.opaque_members.iter().any(|member| {
             member.key == key
@@ -157,37 +160,29 @@ fn a_divergent_known_alias_stays_untested_without_an_implicit_disposition() {
 
 #[test]
 fn opaque_members_are_anchored_to_source_identity_not_array_index() {
+    // Un alias divergent est le membre opaque de nœud que le décodeur capture
+    // encore ; les clés inconnues sont ignorées.
     let raw = document_with(
-        r#", "stageSpecific":{"looksLikeId":"11111111-2222-3333-4444-555566667777"}"#,
+        r#", "id":"alias-divergent""#,
         "",
         r#"{"actionNode":"action-1","optionIndex":0}"#,
     );
-    let mut decoded = decode_story_document(&raw).expect("decode anchored extension");
-    let path = decoded
+    let mut decoded = decode_story_document(&raw).expect("decode anchored alias");
+    let member = decoded
         .context
         .opaque_members
         .iter()
-        .find(|member| member.key == "stageSpecific")
-        .expect("stage extension")
-        .path
-        .clone();
-    let opaque_value = decoded
-        .context
-        .opaque_members
-        .iter()
-        .find(|member| member.key == "stageSpecific")
-        .expect("stage extension")
-        .value
+        .find(|member| member.scope == ExtensionScope::Stage && member.key == "id")
+        .expect("stage alias")
         .clone();
     decoded.document.stage_nodes.reverse();
     decoded.document.stage_nodes[0].uuid = "remapped-only-on-export-copy".to_string();
 
-    assert!(path.contains("@uuid=11111111-2222-3333-4444-555566667777#0"));
-    assert!(!path.contains("/0/"));
-    assert_eq!(
-        opaque_value["looksLikeId"],
-        "11111111-2222-3333-4444-555566667777"
-    );
+    assert!(member
+        .path
+        .contains("@uuid=11111111-2222-3333-4444-555566667777#0"));
+    assert!(!member.path.contains("/0/"));
+    assert_eq!(member.value, serde_json::json!("alias-divergent"));
 }
 
 #[test]

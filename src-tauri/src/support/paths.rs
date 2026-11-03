@@ -1,6 +1,53 @@
 //! Helpers de normalisation de chemins partagés entre commandes Tauri.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+/// Remove only Windows' verbatim disk/UNC prefix, preserving native path data.
+/// Other platforms and other Windows prefixes are returned unchanged.
+pub(crate) fn without_verbatim_prefix(path: PathBuf) -> PathBuf {
+    #[cfg(windows)]
+    {
+        use std::{
+            ffi::OsString,
+            os::windows::ffi::{OsStrExt, OsStringExt},
+            path::{Component, Prefix},
+        };
+        let Some(Component::Prefix(prefix)) = path.components().next() else {
+            return path;
+        };
+        let units: Vec<u16> = path.as_os_str().encode_wide().collect();
+        match prefix.kind() {
+            Prefix::VerbatimDisk(_) => PathBuf::from(OsString::from_wide(&units[4..])),
+            Prefix::VerbatimUNC(_, _) => {
+                let mut normal = vec![b'\\' as u16, b'\\' as u16];
+                normal.extend_from_slice(&units[8..]);
+                PathBuf::from(OsString::from_wide(&normal))
+            }
+            _ => path,
+        }
+    }
+    #[cfg(not(windows))]
+    path
+}
+
+/// Fixtures must not inherit system TEMP aliases (macOS /var, Windows 8.3
+/// names or junctions), including when exercising ancestor link guards.
+#[cfg(test)]
+pub(crate) fn canonical_temp_dir() -> std::path::PathBuf {
+    without_verbatim_prefix(std::env::temp_dir().canonicalize().expect("canonical TEMP"))
+}
+
+/// Directory ancestors to inspect on disk. A Windows drive or UNC prefix by
+/// itself (the last item of Path::ancestors) is not a directory path. Keep all
+/// real ancestors, including the root and relative paths, for link checks.
+pub(crate) fn filesystem_ancestors(path: &Path) -> impl Iterator<Item = &Path> {
+    path.ancestors().filter(|ancestor| {
+        !matches!(
+            ancestor.components().next_back(),
+            Some(std::path::Component::Prefix(_))
+        )
+    })
+}
 
 /// Retire le préfixe UNC `\\?\` de Windows que `fs::canonicalize` ajoute systématiquement,
 /// afin de rendre le chemin compatible avec :
@@ -33,6 +80,70 @@ pub fn path_for_frontend(path: impl AsRef<Path>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn native_paths_remove_only_verbatim_disk_and_unc_prefixes() {
+        for (input, expected) in [
+            (r"\\?\C:\Users\name\..\file", r"C:\Users\name\..\file"),
+            (r"\\?\UNC\srv\share\file", r"\\srv\share\file"),
+            (r"C:\regular\file", r"C:\regular\file"),
+            (r"\\.\device", r"\\.\device"),
+            (r"\\?\Volume{abc}\file", r"\\?\Volume{abc}\file"),
+        ] {
+            assert_eq!(
+                without_verbatim_prefix(input.into()),
+                PathBuf::from(expected)
+            );
+        }
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn native_paths_are_unchanged_on_other_platforms() {
+        for input in ["/home/name/../file", "relative/file", r"\\?\C:\file", ""] {
+            let path = PathBuf::from(input);
+            assert_eq!(without_verbatim_prefix(path.clone()), path);
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn native_paths_preserve_non_utf8_names() {
+        use std::{ffi::OsString, os::unix::ffi::OsStringExt};
+        let path = PathBuf::from(OsString::from_vec(b"/tmp/name-\xff".to_vec()));
+        assert_eq!(without_verbatim_prefix(path.clone()), path);
+    }
+
+    #[test]
+    fn filesystem_ancestors_keep_every_real_directory() {
+        let root = std::env::temp_dir().canonicalize().unwrap();
+        let path = root.join("child");
+        let ancestors: Vec<_> = filesystem_ancestors(&path).collect();
+        assert_eq!(ancestors[0], path);
+        assert_eq!(ancestors[1], root);
+        assert!(ancestors.last().unwrap().has_root());
+        assert_eq!(
+            filesystem_ancestors(Path::new("relative")).collect::<Vec<_>>(),
+            Path::new("relative").ancestors().collect::<Vec<_>>()
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn filesystem_ancestors_stop_at_drive_and_unc_roots() {
+        for (path, root) in [
+            (r"C:\child", r"C:\"),
+            (r"\\?\C:\child", r"\\?\C:\"),
+            (r"\\server\share\child", r"\\server\share\"),
+            (r"\\?\UNC\server\share\child", r"\\?\UNC\server\share\"),
+        ] {
+            assert_eq!(
+                filesystem_ancestors(Path::new(path)).last().unwrap(),
+                Path::new(root)
+            );
+        }
+    }
 
     #[test]
     fn strips_windows_unc_prefix() {

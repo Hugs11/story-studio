@@ -1,4 +1,5 @@
 import { basename, joinPath, pathKey } from '../utils/fileUtils.js';
+import { getIntlLocale } from '../i18n/language.js';
 import { walkProjectMediaReferences } from './projectModel/index.js';
 import { readMediaBindings } from './projectModel/mediaBindings.js';
 import { MANAGED_PROJECT_DIRS } from './workspaceDirs.js';
@@ -37,7 +38,7 @@ export function collectMissingMedia(project, statusByPath = {}) {
     if (ref.label && !current.labels.includes(ref.label)) current.labels.push(ref.label);
     byPath.set(key, current);
   }
-  return [...byPath.values()].sort((a, b) => a.fileName.localeCompare(b.fileName, 'fr'));
+  return [...byPath.values()].sort((a, b) => a.fileName.localeCompare(b.fileName, getIntlLocale()));
 }
 
 function normalizeReplacementMap(replacements = {}) {

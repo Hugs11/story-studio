@@ -13,9 +13,11 @@
 //! clé de tâche, conversion, hachages, couverture — part de l'instantané, et de
 //! lui seul.
 
+use crate::support::user_message::{codes, UserMessage};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
+use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 use sha2::{Digest, Sha256};
@@ -106,12 +108,26 @@ pub(crate) fn media_destinations(document: &StoryDocument) -> Vec<MediaDestinati
 }
 
 /// Résout, copie et valide chaque référence du document.
+#[cfg(test)]
 pub(crate) fn inventory_media(
     document: &StoryDocument,
     bindings: &[AdvancedMediaBinding],
     workspace: &AdvancedWorkspace,
     ffmpeg: &Path,
     deadline: Duration,
+) -> Result<Vec<InventoriedMedia>, InventoryError> {
+    inventory_media_with_cancel(document, bindings, workspace, ffmpeg, deadline, None)
+}
+
+/// On cancellation, no partial inventory is used: the preparation checks the
+/// same one-way signal before planning or executing any conversion.
+pub(crate) fn inventory_media_with_cancel(
+    document: &StoryDocument,
+    bindings: &[AdvancedMediaBinding],
+    workspace: &AdvancedWorkspace,
+    ffmpeg: &Path,
+    deadline: Duration,
+    cancel: Option<&AtomicBool>,
 ) -> Result<Vec<InventoriedMedia>, InventoryError> {
     let destinations = media_destinations(document);
     let mut ordered_refs: Vec<&str> = Vec::new();
@@ -145,13 +161,20 @@ pub(crate) fn inventory_media(
     // elle lit **son** fichier source et écrit **son** instantané, à une adresse
     // dérivée de son propre contenu. Deux références ne peuvent pas se gêner.
     let (snapshots, resolution_failures) = partition_map_parallel(&ordered_refs, |asset_ref| {
+        if super::is_cancelled(cancel) {
+            return Ok(None);
+        }
         let kind = destinations
             .iter()
             .find(|destination| destination.asset_ref == **asset_ref)
             .map(|destination| destination.kind)
             .expect("une référence vient d'une destination");
-        resolve_and_snapshot(asset_ref, kind, bindings, workspace)
+        resolve_and_snapshot(asset_ref, kind, bindings, workspace).map(Some)
     });
+    if super::is_cancelled(cancel) {
+        return Ok(Vec::new());
+    }
+    let snapshots: Vec<_> = snapshots.into_iter().flatten().collect();
 
     // Les deux natures de défaut restent distinctes, et l'ordre d'entrée est
     // conservé : le message de refus ne dépend pas de la vitesse des disques.
@@ -181,8 +204,14 @@ pub(crate) fn inventory_media(
     // **décodant le média jusqu'au bout**. Une centaine de médias, c'est une
     // centaine de décodages — qui n'ont aucune raison de s'attendre.
     let (inventoried, invalid) = partition_map_parallel(&snapshots, |snapshot| {
-        validate_snapshot(snapshot.clone(), workspace, ffmpeg, deadline)
+        if super::is_cancelled(cancel) {
+            return Ok(None);
+        }
+        validate_snapshot(snapshot.clone(), workspace, ffmpeg, deadline).map(Some)
     });
+    if super::is_cancelled(cancel) {
+        return Ok(Vec::new());
+    }
     if !invalid.is_empty() {
         return Err(InventoryError::Unavailable(fill_destinations(
             invalid,
@@ -190,7 +219,7 @@ pub(crate) fn inventory_media(
             bindings,
         )));
     }
-    Ok(inventoried)
+    Ok(inventoried.into_iter().flatten().collect())
 }
 
 #[derive(Clone)]
@@ -230,7 +259,7 @@ fn resolve_and_snapshot(
     else {
         return Err(refuse(
             MediaCause::BindingAbsent,
-            "aucune liaison ne porte cette référence".to_string(),
+            UserMessage::new(codes::GRAPH_REFERENCE_BINDING_MISSING).into_transport(),
         ));
     };
     let Some(path) = binding
@@ -240,7 +269,7 @@ fn resolve_and_snapshot(
     else {
         return Err(refuse(
             MediaCause::PathNull,
-            "la liaison ne désigne aucun fichier".to_string(),
+            UserMessage::new(codes::VALIDATION_MEDIA_BINDING_FILE_MISSING).into_transport(),
         ));
     };
 
@@ -257,7 +286,7 @@ fn resolve_and_snapshot(
     if metadata.is_dir() {
         return Err(refuse(
             MediaCause::NotRegular,
-            "la liaison désigne un répertoire".to_string(),
+            UserMessage::new(codes::VALIDATION_MEDIA_BINDING_DIRECTORY).into_transport(),
         ));
     }
     // La garde de chemins est la même que celle du mode Libre. Une référence
@@ -292,7 +321,7 @@ fn resolve_and_snapshot(
         let _ = fs::remove_file(&staging);
         return Err(refuse(
             MediaCause::Empty,
-            "le fichier ne porte aucun octet".to_string(),
+            UserMessage::new(codes::GENERATION_OUTPUT_FILE_EMPTY).into_transport(),
         ));
     }
 
@@ -425,7 +454,7 @@ fn validate_snapshot(
             if width == 0 || height == 0 {
                 return Err(refuse(
                     MediaCause::Undecodable,
-                    "l'image décodée est vide".to_string(),
+                    UserMessage::new(codes::GENERATION_DECODED_IMAGE_EMPTY).into_transport(),
                 ));
             }
             let detected_source_format = format.map(image_format_label).unwrap_or("unknown");

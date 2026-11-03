@@ -32,5 +32,5 @@ test('media library import extracts embedded audio cover as a standalone image',
     'persisted:C:/temp/metadata_123.png',
     'copied:C:/images/cover.jpg',
   ]);
-  assert.ok(phases.includes('Extraction de la jaquette...'));
+  assert.ok(phases.includes('Extraction de la jaquette…'));
 });

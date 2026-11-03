@@ -1,11 +1,14 @@
+use crate::support::user_message::{codes, UserMessage};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::domain::project::Project;
-use crate::domain::project_limits::validate_project_menu_depth;
+use crate::domain::project_limits::{
+    validate_project_has_no_legacy_link, validate_project_menu_depth,
+};
 use crate::domain::validation::validate_project_for_generation;
 use crate::native_pack::graph_copy::{graph_copy_of_project, verify_graph_copy, GraphCopy};
 use crate::native_pack::simulation::{project_story_for_simulation, SimulationProjection};
@@ -36,9 +39,12 @@ fn ensure_bounded_json_nesting(input: &str) -> Result<(), String> {
             b'{' | b'[' => {
                 depth += 1;
                 if depth > MAX_PROJECT_JSON_NESTING {
-                    return Err(format!(
-                        "JSON invalide : imbrication technique supérieure à {MAX_PROJECT_JSON_NESTING}."
-                    ));
+                    return Err(UserMessage::new(codes::IMPORT_DOCUMENT_JSON_DEPTH_LIMIT)
+                        .param(
+                            "max_project_json_nesting",
+                            (MAX_PROJECT_JSON_NESTING).to_string(),
+                        )
+                        .into_transport());
                 }
             }
             b'}' | b']' => depth = depth.saturating_sub(1),
@@ -48,18 +54,25 @@ fn ensure_bounded_json_nesting(input: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn parse_project_json(project_json: &str) -> Result<Project, String> {
+pub(crate) fn parse_project_json(project_json: &str) -> Result<Project, String> {
     ensure_bounded_json_nesting(project_json)?;
     let mut deserializer = serde_json::Deserializer::from_str(project_json);
     deserializer.disable_recursion_limit();
     let project = serde::Deserialize::deserialize(&mut deserializer).map_err(|error| {
         log::error!(target: "generation", "generate_pack: JSON invalide : {}", error);
-        format!("JSON invalide : {error}")
+        UserMessage::new(codes::IMPORT_DOCUMENT_JSON_INVALID)
+            .param("reason", (error).to_string())
+            .with_detail((error).to_string())
+            .into_transport()
     })?;
-    deserializer
-        .end()
-        .map_err(|error| format!("JSON invalide : {error}"))?;
+    deserializer.end().map_err(|error| {
+        UserMessage::new(codes::IMPORT_DOCUMENT_JSON_INVALID)
+            .param("reason", (error).to_string())
+            .with_detail((error).to_string())
+            .into_transport()
+    })?;
     validate_project_menu_depth(&project)?;
+    validate_project_has_no_legacy_link(&project)?;
     Ok(project)
 }
 
@@ -87,7 +100,10 @@ pub async fn generate_pack(
     cancel_state: State<'_, Arc<GenerationCancelState>>,
     project_json: String,
     output_folder: String,
-) -> Result<NativePackGenerationResult, String> {
+) -> Result<
+    crate::services::catalogue::open::generation::Published<NativePackGenerationResult>,
+    UserMessage,
+> {
     let project = parse_project_json(&project_json)?;
     validate_project_for_generation(&project).map_err(|e| {
         log::error!(target: "generation", "generate_pack: validation refusee : {}", e);
@@ -101,10 +117,22 @@ pub async fn generate_pack(
     cancel_state.cancelled.store(false, Ordering::SeqCst);
     let cancel_state = cancel_state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        run_generate_pack_sync(app, cancel_state, project, output_folder)
+        // Declared to the catalogue watcher before the engine writes: the
+        // archive name is only known at the end, so the folder is declared.
+        let write = crate::services::catalogue::writes::OwnWrite::begin(
+            crate::services::catalogue::writes::Declaration::new("generation")
+                .subtree(&output_folder),
+        );
+        let result = run_generate_pack_sync(app, cancel_state, project, output_folder);
+        write.finish(&result, |done| vec![done.zip_path.clone().into()]);
+        result.map(|done| {
+            let path = std::path::PathBuf::from(&done.zip_path);
+            crate::services::catalogue::open::generation::Published::capture(done, &path)
+        })
     })
     .await
     .map_err(|e| e.to_string())?
+    .map_err(UserMessage::from)
 }
 
 /// Projette un projet hiérarchique dans le graphe à plat que le simulateur joue,
@@ -127,7 +155,12 @@ pub async fn project_pack_for_simulation(
     let project = parse_project_json(&project_json)?;
     tauri::async_runtime::spawn_blocking(move || project_story_for_simulation(&project))
         .await
-        .map_err(|error| format!("Projection interrompue : {error}"))?
+        .map_err(|error| {
+            UserMessage::new(codes::GRAPH_PROJECTION_TASK_INTERRUPTED)
+                .param("reason", (error).to_string())
+                .with_detail((error).to_string())
+                .into_transport()
+        })?
 }
 
 /// Copie graphe d'un projet par menus : payload d'auteur et liaisons, tirés de
@@ -137,7 +170,12 @@ pub async fn copy_project_to_graph(project_json: String) -> Result<GraphCopy, St
     let project = parse_project_json(&project_json)?;
     tauri::async_runtime::spawn_blocking(move || graph_copy_of_project(&project))
         .await
-        .map_err(|error| format!("Copie interrompue : {error}"))?
+        .map_err(|error| {
+            UserMessage::new(codes::EXPORT_COPY_TASK_INTERRUPTED)
+                .param("reason", (error).to_string())
+                .with_detail((error).to_string())
+                .into_transport()
+        })?
 }
 
 /// Garde de fidélité de la copie graphe, appelée sur le payload final, juste
@@ -150,7 +188,12 @@ pub async fn verify_project_graph_copy(
     let project = parse_project_json(&project_json)?;
     tauri::async_runtime::spawn_blocking(move || verify_graph_copy(&project, &payload))
         .await
-        .map_err(|error| format!("Vérification interrompue : {error}"))?
+        .map_err(|error| {
+            UserMessage::new(codes::EXPORT_VERIFY_TASK_INTERRUPTED)
+                .param("reason", (error).to_string())
+                .with_detail((error).to_string())
+                .into_transport()
+        })?
 }
 
 #[tauri::command]
@@ -159,7 +202,10 @@ pub fn cancel_generate_pack(
     cancel_state: State<'_, Arc<GenerationCancelState>>,
 ) -> Result<(), String> {
     cancel_state.cancelled.store(true, Ordering::SeqCst);
-    let _ = app.emit("generate-log", "⏹ Annulation demandée…".to_string());
+    let _ = app.emit(
+        "generate-log",
+        UserMessage::new(codes::GENERATION_CANCEL_REQUESTED),
+    );
     log::warn!(target: "generation", "generate_pack cancellation requested");
     Ok(())
 }
@@ -171,15 +217,20 @@ fn run_generate_pack_sync(
     output_folder: String,
 ) -> Result<NativePackGenerationResult, String> {
     let emit = |msg: &str| {
-        let _ = app.emit("generate-log", msg.to_string());
+        let _ = app.emit("generate-log", UserMessage::from(msg.to_string()));
     };
     let should_cancel = || cancel_state.cancelled.load(Ordering::SeqCst);
+    let identity = crate::native_pack::output_identity::for_project(
+        &project,
+        Some(&*app.state::<crate::services::catalogue::CatalogueState>()),
+    )?;
     run_generation(&emit, &should_cancel, |emit, should_cancel| {
-        crate::native_pack::generate_native_pack_v1_with_cancel(
+        crate::native_pack::generate_with_identity(
             &project,
             &output_folder,
             emit,
             should_cancel,
+            &identity,
         )
     })
 }
@@ -231,12 +282,17 @@ fn emit_audio_warnings(warnings: &[NativeGenerationWarning], emit: &dyn Fn(&str)
     if warnings.is_empty() {
         return;
     }
-    emit(&format!(
-        "⚠️  Pack généré avec {} avertissement(s) audio :",
-        warnings.len()
-    ));
+    emit(
+        &UserMessage::new(codes::GENERATION_PACK_AUDIO_WARNINGS)
+            .param("warnings", (warnings.len()).to_string())
+            .into_transport(),
+    );
     for warning in warnings {
-        emit(&format!("  ⚠️  {}", warning.message));
+        emit(
+            &UserMessage::new(codes::GENERATION_LOG_AUDIO_WARNING)
+                .param("warning_message", (warning.message).to_string())
+                .into_transport(),
+        );
         log::warn!(target: "generation_audio",
             "{} role='{}' initial={:.1} LUFS final={} gain={:.1} dB limiting={:.1} dB",
             warning.code,
@@ -250,11 +306,11 @@ fn emit_audio_warnings(warnings: &[NativeGenerationWarning], emit: &dyn Fn(&str)
             warning.expected_limiting_db,
         );
     }
-    emit("   Le ZIP est utilisable ; vérifie de préférence ces passages sur la Lunii.");
+    emit(&UserMessage::new(codes::GENERATION_ZIP_DEVICE_CHECK_ADVISED).into_transport());
 }
 
 fn validate_zip_and_emit(zip_path: &str, emit: &dyn Fn(&str)) {
-    emit("🔍 Validation format Lunii (contrôle non bloquant)...");
+    emit(&UserMessage::new(codes::GENERATION_LUNII_VALIDATION_OBSERVED).into_transport());
     let report = validate_lunii_zip(zip_path);
     let warn_count = report
         .issues
@@ -268,30 +324,46 @@ fn validate_zip_and_emit(zip_path: &str, emit: &dyn Fn(&str)) {
         .count();
     if report.valid {
         if warn_count > 0 {
-            emit(&format!("✅ ZIP valide ({} avertissement(s))", warn_count));
+            emit(
+                &UserMessage::new(codes::GENERATION_ZIP_VALIDATION_WARNINGS)
+                    .param("warn_count", (warn_count).to_string())
+                    .into_transport(),
+            );
             for issue in &report.issues {
-                emit(&format!("  ⚠️  {} : {}", issue.code, issue.message));
+                emit(
+                    &UserMessage::new(codes::GENERATION_LOG_ARCHIVE_WARNING)
+                        .param("issue_code", (issue.code).to_string())
+                        .param("issue_message", (issue.message).to_string())
+                        .into_transport(),
+                );
                 log::warn!(target: "lunii_validator",
                     "post-gen warn [{}]: {}", issue.code, issue.message);
             }
         } else {
-            emit("✅ ZIP valide — aucune erreur détectée.");
+            emit(&UserMessage::new(codes::GENERATION_ZIP_VALIDATION_SUCCESS).into_transport());
         }
         log::info!(target: "lunii_validator",
             "post-gen ok: warnings={} errors={}", warn_count, err_count);
     } else {
-        emit(&format!(
-            "⚠️  ZIP généré avec {} erreur(s) de validation non bloquante.",
-            err_count
-        ));
-        emit("   Le fichier a été créé, mais il est conseillé de tester le pack sur l'appareil ou dans le simulateur.");
+        emit(
+            &UserMessage::new(codes::GENERATION_ZIP_VALIDATION_ERRORS)
+                .param("err_count", (err_count).to_string())
+                .into_transport(),
+        );
+        emit(&UserMessage::new(codes::GENERATION_PACK_DEVICE_TEST_ADVISED).into_transport());
         for issue in &report.issues {
             let icon = if issue.severity == "error" {
                 "❌"
             } else {
                 "⚠️ "
             };
-            emit(&format!("  {} {} : {}", icon, issue.code, issue.message));
+            emit(
+                &UserMessage::new(codes::GENERATION_LOG_ARCHIVE_ISSUE)
+                    .param("icon", (icon).to_string())
+                    .param("issue_code", (issue.code).to_string())
+                    .param("issue_message", (issue.message).to_string())
+                    .into_transport(),
+            );
             log::warn!(target: "lunii_validator",
                 "post-gen issue [{}/{}]: {}", issue.severity, issue.code, issue.message);
         }
@@ -341,9 +413,10 @@ mod tests {
     fn a_cancellation_reported_by_the_engine_stays_a_cancellation() {
         let should_cancel = || true;
         let outcome = run_generation(&|_| {}, &should_cancel, |_, _| {
-            Err("Génération annulée.".to_string())
+            Err(crate::support::user_message::generation_cancelled().into_transport())
         });
-        assert_eq!(outcome.err().as_deref(), Some("Génération annulée."));
+        let error: UserMessage = serde_json::from_str(&outcome.unwrap_err()).unwrap();
+        assert_eq!(error.code, codes::GENERATION_CANCELLED);
     }
 
     fn nested_project_json(depth: usize) -> String {
@@ -406,7 +479,10 @@ mod tests {
         );
         let error = ensure_bounded_json_nesting(&excessive)
             .expect_err("une structure JSON arbitrairement profonde doit être refusée");
-        assert!(error.contains("imbrication technique"));
+        assert!(crate::support::user_message::contains_code(
+            &error,
+            "IMPORT_DOCUMENT_JSON_DEPTH_LIMIT"
+        ));
     }
 
     #[test]

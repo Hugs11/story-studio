@@ -217,3 +217,83 @@ test('un projet de l’éditeur par menus, rempli par ses champs, part à la gé
   assert.equal(project.projectType, 'pack');
   checkFixture('menus', project);
 });
+
+test('Appliquer les métadonnées écrit le traitement audio dans globalOptions seulement', async (t) => {
+  const editor = await mountEditor(t);
+  editor.newProject('pack');
+  const before = editor.store.project;
+  const originalAudio = { ...before.globalOptions };
+  await editor.generation.handleSavePackMetadata({
+    ...before.packMetadata,
+    title: 'Pack audio',
+    harmonizeLoudness: false,
+    silenceMode: 'add',
+  });
+  editor.render();
+
+  const after = editor.store.project;
+  assert.equal(after.packMetadata.title, 'Pack audio');
+  assert.equal(after.globalOptions.harmonizeLoudness, false);
+  assert.equal(after.globalOptions.silenceMode, 'add');
+  assert.equal(after.globalOptions.autoNext, originalAudio.autoNext);
+  assert.equal('harmonizeLoudness' in after.packMetadata, false);
+  assert.equal('silenceMode' in after.packMetadata, false);
+  assert.deepEqual(before.globalOptions, originalAudio, 'la version précédente du projet reste intacte');
+});
+
+test('la durée personnalisée du pack traverse la fiche et le projet remis au générateur', async (t) => {
+  const editor = await mountEditor(t);
+  editor.newProject('pack');
+  const before = editor.store.project;
+  editor.store.updateRootMedia('rootImage', `${MEDIA}/couverture.png`);
+  editor.store.updateRootMedia('rootAudio', `${MEDIA}/titre.wav`);
+  const menuId = editor.mutations.handleAddMenu(null);
+  editor.mutations.handleUpdateMenu({ audio: `${MEDIA}/dossier.wav` }, menuId);
+  editor.mutations.handleUpdateMenu({ image: `${MEDIA}/dossier.png`, autoGenerateImage: false }, menuId);
+  await editor.session.dispatchFiles(menuId, [`${MEDIA}/histoire-1.wav`]);
+  editor.render();
+  const story = editor.store.project.rootEntries[0].children[0];
+  editor.mutations.handleUpdateItem({ itemImage: `${MEDIA}/histoire-1.png`, autoGenerateImage: false }, story.id);
+  editor.mutations.handleUpdateItem(createStorySelectionAudioUpdate(`${MEDIA}/histoire-1-titre.wav`), story.id);
+  editor.render();
+
+  await editor.saveAndGenerate({
+    title: 'Pack audio',
+    leadingSilenceSec: 0.8,
+    trailingSilenceSec: 1.25,
+  });
+
+  const sent = exportedProject(editor);
+  assert.equal(editor.store.project.globalOptions.leadingSilenceSec, 0.8);
+  assert.equal(editor.store.project.globalOptions.trailingSilenceSec, 1.25);
+  assert.equal(sent.globalOptions.leadingSilenceSec, 0.8);
+  assert.equal(sent.globalOptions.trailingSilenceSec, 1.25);
+  assert.deepEqual(sent.globalOptions.addSilenceDurationSec, { start: 0.8, end: 1.25 });
+  assert.equal(before.globalOptions.leadingSilenceSec ?? null, null);
+  assert.equal(before.globalOptions.trailingSilenceSec ?? null, null);
+});
+
+test('reprendre les préférences efface les durées personnalisées du pack', async (t) => {
+  const editor = await mountEditor(t);
+  editor.newProject('pack');
+  const original = editor.store.project;
+  await editor.generation.handleSavePackMetadata({
+    ...original.packMetadata,
+    leadingSilenceSec: 0.8,
+    trailingSilenceSec: 1.25,
+  });
+  editor.render();
+  const overridden = editor.store.project;
+
+  await editor.generation.handleSavePackMetadata({
+    ...overridden.packMetadata,
+    leadingSilenceSec: null,
+    trailingSilenceSec: null,
+  });
+  editor.render();
+
+  assert.equal(editor.store.project.globalOptions.leadingSilenceSec ?? null, null);
+  assert.equal(editor.store.project.globalOptions.trailingSilenceSec ?? null, null);
+  assert.equal(overridden.globalOptions.leadingSilenceSec, 0.8);
+  assert.equal(overridden.globalOptions.trailingSilenceSec, 1.25);
+});

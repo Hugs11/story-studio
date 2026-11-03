@@ -1,3 +1,5 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
@@ -77,14 +79,30 @@ pub(crate) fn measure_edge_silence(ffmpeg: &Path, input: &Path) -> Result<EdgeMe
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
     apply_no_window(&mut cmd);
-    let out = cmd
-        .output()
-        .map_err(|e| format!("Impossible de lancer FFmpeg : {}", e))?;
+    let out = cmd.output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_ASSEMBLY_FFMPEG_START_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer FFmpeg : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if !out.status.success() {
-        return Err(format!(
-            "Mesure des silences échouée : {}",
-            compact_ffmpeg_error(&out.stderr)
-        ));
+        return Err({
+            let ffmpeg_error_message = (compact_ffmpeg_error(&out.stderr)).to_string();
+            user_message::UserMessage::new(codes::FILES_SILENCE_MEASUREMENT_FAILED)
+                .param(
+                    "toolError",
+                    user_message::transport_param(ffmpeg_error_message.clone()),
+                )
+                .with_detail(format!(
+                    "Mesure des silences échouée : {ffmpeg_error_message}",
+                    ffmpeg_error_message = user_message::transport_detail(&ffmpeg_error_message)
+                ))
+                .into_transport()
+        });
     }
     Ok(edges_from_envelope(&parse_rms_envelope(
         &String::from_utf8_lossy(&out.stderr),
@@ -309,7 +327,9 @@ fn compact_ffmpeg_error(stderr: &[u8]) -> String {
         .filter(|line| !line.is_empty())
         .collect();
     if lines.is_empty() {
-        return "erreur inconnue".to_string();
+        return user_message::UserMessage::new(codes::FILES_UNKNOWN_ERROR)
+            .with_detail("erreur inconnue".to_string())
+            .into_transport();
     }
     let start = lines.len().saturating_sub(5);
     lines[start..].join("\n")

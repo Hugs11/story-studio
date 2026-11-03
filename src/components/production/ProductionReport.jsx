@@ -1,3 +1,6 @@
+import { translateProduction } from '../../i18n/productionPresentation.js';
+import { useTranslation } from 'react-i18next';
+import { presentUserMessage } from '../../i18n/userMessage.js';
 // Le rapport de production, peint **une seule fois** pour les deux éditeurs.
 //
 // Ce composant ne connaît pas la file de rendu : il reçoit le rapport
@@ -23,14 +26,15 @@ import './ProductionReport.css';
 // est là, c'est le contrôle qui s'évalue », et « Refusée » doit se lire « il n'y
 // a pas de pack ».
 function ProductionGates({ gates }) {
-  if (gates.note) return <p className="production-report__note">{gates.note}</p>;
+  const { t } = useTranslation('production');
+  if (gates.note) return <p className="production-report__note">{t(gates.note)}</p>;
   if (gates.entries.length === 0) return null;
 
   return (
     <div className="production-report__gates">
       <p className="production-report__gates-title">
-        Contrôles d'archive
-        {gates.observing ? <span className="production-report__gates-mode"> — en observation</span> : null}
+        {t('production:report.archiveChecks.title')}
+        {gates.observing ? <span className="production-report__gates-mode">{t('production:report.archiveChecks.observing')}</span> : null}
       </p>
       <ul className="production-report__gates-list">
         {gates.entries.map(gate => (
@@ -56,40 +60,40 @@ function ProductionGates({ gates }) {
       {/* La production a eu lieu. Le dire sous la liste, et pas seulement dans
           un libellé de verdict, évite de faire lire un refus là où il n'y en a
           pas eu. */}
-      {gates.notice ? <p className="production-report__note">{gates.notice}</p> : null}
+      {gates.notice ? <p className="production-report__note">{t(gates.notice)}</p> : null}
     </div>
   );
 }
 
 function warningMessage(warning) {
-  if (typeof warning === 'string') return warning;
-  return String(warning?.message ?? warning ?? 'Avertissement');
+  return presentUserMessage(warning).message;
 }
 
 function warningDetails(warning) {
   const measurements = [
     Number.isFinite(warning?.initialIntegratedLufs)
-      ? `départ ${warning.initialIntegratedLufs.toFixed(1)} LUFS`
+      ? translateProduction('production:report.measurement.initial', { value: warning.initialIntegratedLufs.toFixed(1) })
       : null,
     Number.isFinite(warning?.finalIntegratedLufs)
-      ? `sortie ${warning.finalIntegratedLufs.toFixed(1)} LUFS`
+      ? translateProduction('production:report.measurement.final', { value: warning.finalIntegratedLufs.toFixed(1) })
       : null,
     Number.isFinite(warning?.gainDb)
-      ? `gain ${warning.gainDb >= 0 ? '+' : ''}${warning.gainDb.toFixed(1)} dB`
+      ? translateProduction('production:report.measurement.gain', { value: `${warning.gainDb >= 0 ? '+' : ''}${warning.gainDb.toFixed(1)}` })
       : null,
     Number.isFinite(warning?.expectedLimitingDb) && warning.expectedLimitingDb > 0
-      ? `limitation ${warning.expectedLimitingDb.toFixed(1)} dB`
+      ? translateProduction('production:report.measurement.limiting', { value: warning.expectedLimitingDb.toFixed(1) })
       : null,
   ].filter(Boolean);
   return measurements.join(' · ');
 }
 
 function ProductionWarnings({ warnings }) {
+  const { t } = useTranslation('production');
   if (warnings.length === 0) return null;
   return (
     <div className="production-report__warnings" role="status">
       <p className="production-report__warnings-title">
-        Pack produit avec {warnings.length} avertissement{warnings.length > 1 ? 's' : ''}
+        {t('production:report.warnings.count', { count: warnings.length })}
       </p>
       {warnings.map((warning, index) => (
         <p className="production-report__warning" key={`${warning?.code ?? 'warning'}-${warning?.role ?? index}`}>
@@ -98,7 +102,7 @@ function ProductionWarnings({ warnings }) {
         </p>
       ))}
       <p className="production-report__warning-advice">
-        Le pack est utilisable ; ces points restent à vérifier.
+        {t('production:report.warnings.advice')}
       </p>
     </div>
   );
@@ -114,6 +118,7 @@ export function ProductionReport({
   // file de rendu en a un). Le rapport ne le redouble pas.
   showHeading = true,
 }) {
+  const { t } = useTranslation('production');
   // Le journal suit sa dernière ligne. Sans cela, l'auteur d'un gros pack voit
   // le début d'un travail qui avance : le suivi est la seule chose que la
   // progression apporte, et il est perdu dès la première page.
@@ -130,20 +135,20 @@ export function ProductionReport({
   const hasProgress = progress.lines.length > 0;
 
   return (
-    <section className={`production-report is-${status}`} aria-label="Rapport de production">
+    <section className={`production-report is-${status}`} aria-label={t('production:report.section.label')}>
       {showHeading ? (
         <p className="production-report__status" role="status" aria-live="polite">
           <span className={`production-report__badge is-${status}`}>{report.statusLabel}</span>
-          {cancel.requested ? <span className="production-report__hint">Annulation demandée…</span> : null}
+          {cancel.requested ? <span className="production-report__hint">{t('production:report.cancel.requested')}</span> : null}
         </p>
       ) : null}
 
       {hasProgress ? (
         <div className="production-report__progress">
           <p className="production-report__count">
-            {progress.count} étape{progress.count > 1 ? 's' : ''} journalisée{progress.count > 1 ? 's' : ''}
+            {t('production:report.progress.count', { count: progress.count })}
           </p>
-          <pre ref={logRef} className="production-report__log" aria-label="Journal de la production">
+          <pre ref={logRef} className="production-report__log" aria-label={t('production:report.log.label')}>
             {progress.lines.join('\n')}
           </pre>
           {progress.note ? <p className="production-report__note">{progress.note}</p> : null}
@@ -153,7 +158,7 @@ export function ProductionReport({
       {cancel.available && onCancel ? (
         <div className="production-report__actions">
           <Button size="sm" onClick={onCancel} disabled={cancel.requested}>
-            Annuler la production
+            {t('production:report.cancel.action')}
           </Button>
         </div>
       ) : null}
@@ -176,7 +181,7 @@ export function ProductionReport({
       ) : null}
 
       {status === PRODUCTION_STATUS.IDLE && !hasProgress ? (
-        <p className="production-report__note">Aucune production lancée.</p>
+        <p className="production-report__note">{t('production:report.idle.note')}</p>
       ) : null}
 
       {details}

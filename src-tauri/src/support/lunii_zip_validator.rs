@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, UserMessage};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::io::Read;
@@ -41,7 +42,10 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
             return fatal(
                 zip_path,
                 "ZIP_OPEN_FAILED",
-                format!("Impossible d'ouvrir le ZIP : {}", e),
+                UserMessage::new(codes::ZIP_OPEN_FAILED)
+                    .param("reason", (e).to_string())
+                    .with_detail((e).to_string())
+                    .into_transport(),
             )
         }
     };
@@ -52,7 +56,10 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
             return fatal(
                 zip_path,
                 "ZIP_INVALID",
-                format!("Archive ZIP invalide : {}", e),
+                UserMessage::new(codes::ZIP_INVALID)
+                    .param("reason", (e).to_string())
+                    .with_detail((e).to_string())
+                    .into_transport(),
             )
         }
     };
@@ -71,7 +78,7 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
     if !names.iter().any(|n| n == "story.json") {
         issues.push(err(
             "MISSING_STORY_JSON",
-            "story.json absent de la racine du ZIP.",
+            UserMessage::new(codes::MISSING_STORY_JSON).into_transport(),
         ));
         return report(zip_path, issues);
     }
@@ -84,7 +91,10 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
                 return fatal(
                     zip_path,
                     "STORY_JSON_READ_ERROR",
-                    format!("Lecture story.json impossible : {}", e),
+                    UserMessage::new(codes::STORY_JSON_READ_ERROR)
+                        .param("reason", (e).to_string())
+                        .with_detail((e).to_string())
+                        .into_transport(),
                 )
             }
         };
@@ -93,7 +103,10 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
             return fatal(
                 zip_path,
                 "STORY_JSON_READ_ERROR",
-                format!("Lecture story.json impossible : {}", e),
+                UserMessage::new(codes::STORY_JSON_READ_ERROR)
+                    .param("reason", (e).to_string())
+                    .with_detail((e).to_string())
+                    .into_transport(),
             );
         }
         s
@@ -104,18 +117,32 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
         Err(e) => {
             issues.push(err(
                 "STORY_JSON_INVALID",
-                format!("story.json JSON invalide : {}", e),
+                UserMessage::new(codes::STORY_JSON_INVALID)
+                    .param("reason", (e).to_string())
+                    .with_detail((e).to_string())
+                    .into_transport(),
             ));
             return report(zip_path, issues);
         }
     };
 
     // ── 3. Champs obligatoires ────────────────────────────────────────────────
-    for field in &["format", "version", "title", "stageNodes", "actionNodes"] {
+    for (field, code) in [
+        ("format", codes::MISSING_FIELD_FORMAT),
+        ("version", codes::MISSING_FIELD_VERSION),
+        ("title", codes::MISSING_FIELD_TITLE),
+        ("stageNodes", codes::MISSING_FIELD_STAGENODES),
+        ("actionNodes", codes::MISSING_FIELD_ACTIONNODES),
+    ] {
         if story.get(field).is_none() {
             issues.push(err(
-                &format!("MISSING_FIELD_{}", field.to_uppercase()),
-                format!("Champ obligatoire manquant dans story.json : '{}'", field),
+                code,
+                UserMessage::new(code)
+                    .with_detail(format!(
+                        "Champ obligatoire manquant dans story.json : '{}'",
+                        field
+                    ))
+                    .into_transport(),
             ));
         }
     }
@@ -126,10 +153,9 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
         if tail.is_empty() || tail.parse::<u32>().is_err() {
             issues.push(err(
                 "INVALID_FORMAT_FIELD",
-                format!(
-                    "Champ 'format' invalide : '{}' (attendu : 'v1', 'v2', …)",
-                    fmt
-                ),
+                UserMessage::new(codes::INVALID_FORMAT_FIELD)
+                    .param("format", (fmt).to_string())
+                    .into_transport(),
             ));
         }
     }
@@ -144,7 +170,7 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
     if zip_assets.is_empty() {
         issues.push(warn(
             "NO_ASSETS_DIR",
-            "Aucun fichier dans assets/ — le ZIP semble vide.",
+            UserMessage::new(codes::NO_ASSETS_DIR).into_transport(),
         ));
     }
 
@@ -158,23 +184,29 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
             if node.get("uuid").and_then(|v| v.as_str()).is_none() {
                 issues.push(err(
                     "SNODE_MISSING_UUID",
-                    format!("stageNodes[{i}] : 'uuid' manquant."),
+                    UserMessage::new(codes::SNODE_MISSING_UUID)
+                        .param("i", (i).to_string())
+                        .into_transport(),
                 ));
             }
 
             match node.get("audio") {
                 None => issues.push(err(
                     "SNODE_MISSING_AUDIO",
-                    format!("stageNodes[{i}] ({id}) : 'audio' manquant."),
+                    UserMessage::new(codes::SNODE_MISSING_AUDIO)
+                        .param("i", (i).to_string())
+                        .param("id", (id).to_string())
+                        .into_transport(),
                 )),
                 Some(value) if value.is_null() => {}
                 Some(value) => {
                     let Some(audio) = value.as_str() else {
                         issues.push(err(
                             "SNODE_INVALID_AUDIO",
-                            format!(
-                                "stageNodes[{i}] ({id}) : 'audio' doit etre une chaine ou null."
-                            ),
+                            UserMessage::new(codes::SNODE_INVALID_AUDIO)
+                                .param("i", (i).to_string())
+                                .param("id", (id).to_string())
+                                .into_transport(),
                         ));
                         continue;
                     };
@@ -184,7 +216,11 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
                     if !zip_assets.contains(audio) {
                         issues.push(err(
                             "MISSING_AUDIO_ASSET",
-                            format!("stageNodes[{i}] ({id}) : assets/{audio} absent du ZIP."),
+                            UserMessage::new(codes::MISSING_AUDIO_ASSET)
+                                .param("i", (i).to_string())
+                                .param("id", (id).to_string())
+                                .param("audio", (audio).to_string())
+                                .into_transport(),
                         ));
                     } else {
                         referenced_audio.push(audio.to_string());
@@ -196,7 +232,11 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
                 if !image.is_empty() && !zip_assets.contains(image) {
                     issues.push(err(
                         "MISSING_IMAGE_ASSET",
-                        format!("stageNodes[{i}] ({id}) : assets/{image} absent du ZIP."),
+                        UserMessage::new(codes::MISSING_IMAGE_ASSET)
+                            .param("i", (i).to_string())
+                            .param("id", (id).to_string())
+                            .param("image", (image).to_string())
+                            .into_transport(),
                     ));
                 }
             }
@@ -206,14 +246,21 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
                     if cs.get(ctrl).is_none() {
                         issues.push(warn(
                             "SNODE_MISSING_CONTROL",
-                            format!("stageNodes[{i}] ({id}) controlSettings : '{ctrl}' manquant."),
+                            UserMessage::new(codes::SNODE_MISSING_CONTROL)
+                                .param("i", (i).to_string())
+                                .param("id", (id).to_string())
+                                .param("ctrl", (ctrl).to_string())
+                                .into_transport(),
                         ));
                     }
                 }
             } else {
                 issues.push(err(
                     "SNODE_MISSING_CONTROL_SETTINGS",
-                    format!("stageNodes[{i}] ({id}) : 'controlSettings' manquant."),
+                    UserMessage::new(codes::SNODE_MISSING_CONTROL_SETTINGS)
+                        .param("i", (i).to_string())
+                        .param("id", (id).to_string())
+                        .into_transport(),
                 ));
             }
         }
@@ -225,13 +272,17 @@ pub fn validate_lunii_zip(zip_path: &str) -> LuniiZipValidationReport {
             if node.get("id").and_then(|v| v.as_str()).is_none() {
                 issues.push(err(
                     "ANODE_MISSING_ID",
-                    format!("actionNodes[{i}] : 'id' manquant."),
+                    UserMessage::new(codes::ANODE_MISSING_ID)
+                        .param("i", (i).to_string())
+                        .into_transport(),
                 ));
             }
             if node.get("options").and_then(|v| v.as_array()).is_none() {
                 issues.push(err(
                     "ANODE_MISSING_OPTIONS",
-                    format!("actionNodes[{i}] : 'options' manquant."),
+                    UserMessage::new(codes::ANODE_MISSING_OPTIONS)
+                        .param("i", (i).to_string())
+                        .into_transport(),
                 ));
             }
         }
@@ -282,7 +333,9 @@ fn check_mp3_headers(bytes: &[u8], name: &str, issues: &mut Vec<ValidationIssue>
     if bytes.len() < 10 {
         issues.push(err(
             "AUDIO_TOO_SHORT",
-            format!("{name} : fichier audio trop court."),
+            UserMessage::new(codes::AUDIO_TOO_SHORT)
+                .param("name", (name).to_string())
+                .into_transport(),
         ));
         return;
     }
@@ -290,7 +343,9 @@ fn check_mp3_headers(bytes: &[u8], name: &str, issues: &mut Vec<ValidationIssue>
     let Some(offset) = find_mpeg_sync(bytes) else {
         issues.push(warn(
             "AUDIO_NO_MPEG_FRAME",
-            format!("{name} : aucun frame MPEG trouvé."),
+            UserMessage::new(codes::AUDIO_NO_MPEG_FRAME)
+                .param("name", (name).to_string())
+                .into_transport(),
         ));
         return;
     };
@@ -323,7 +378,10 @@ fn check_mp3_headers(bytes: &[u8], name: &str, issues: &mut Vec<ValidationIssue>
         if sr != 44100 {
             issues.push(err(
                 "AUDIO_WRONG_SAMPLE_RATE",
-                format!("{name} : sample rate {sr}Hz (attendu 44100Hz)."),
+                UserMessage::new(codes::AUDIO_WRONG_SAMPLE_RATE)
+                    .param("name", (name).to_string())
+                    .param("sr", (sr).to_string())
+                    .into_transport(),
             ));
         }
     }
@@ -338,7 +396,10 @@ fn check_mp3_headers(bytes: &[u8], name: &str, issues: &mut Vec<ValidationIssue>
         };
         issues.push(err(
             "AUDIO_NOT_MONO",
-            format!("{name} : audio {mode} (attendu mono)."),
+            UserMessage::new(codes::AUDIO_NOT_MONO)
+                .param("name", (name).to_string())
+                .param("mode", (mode).to_string())
+                .into_transport(),
         ));
     }
 }

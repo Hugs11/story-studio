@@ -1,4 +1,7 @@
+import { graphTranslationEngine } from '../../i18n/graphPresentation.js';
+import { useTranslation } from 'react-i18next';
 import { HelpHint } from '../common/HelpHint';
+import { Select } from '../common/Select';
 import { Dices } from '../icons/LucideLocal.jsx';
 import { positionText } from './connectionRows.jsx';
 
@@ -10,11 +13,12 @@ import { positionText } from './connectionRows.jsx';
 // Pourquoi on choisit un point de départ alors que la liste a déjà son ordre :
 // la question que se pose l'auteur, au même mot près partout où ce choix se
 // fait.
-export const LANDING_HELP = 'La liste garde l’ordre que vous lui avez donné. Ce réglage dit seulement sur quel choix on tombe en arrivant par ce chemin ; en tournant la molette, on retrouve ensuite l’ordre de la liste.';
+export const LANDING_HELP = 'graph:landing.order.help';
 
 export function ActionSelectionFields({
   id, options, index, selection, onChange, disabled,
 }) {
+  const { t } = useTranslation('graph', { i18n: graphTranslationEngine() });
   if (options.length <= 1) return null;
 
   const random = selection === 'random';
@@ -22,7 +26,7 @@ export function ActionSelectionFields({
 
   return (
     <fieldset className="advanced-selection-mode">
-      <legend>Point de départ dans la liste <HelpHint text={LANDING_HELP} /></legend>
+      <legend>{t("graph:landing.start.legend")}{' '}<HelpHint text={t(LANDING_HELP)} /></legend>
       <label className={`advanced-selection-mode__option${!random ? ' is-selected' : ''}`}>
         <input
           type="radio"
@@ -32,26 +36,25 @@ export function ActionSelectionFields({
           disabled={disabled}
           onChange={() => onChange('0')}
         />
-        <span>Toujours le même choix</span>
+        <span>{t("graph:landing.fixed.label")}</span>
       </label>
       {!random && (
-        <label className="advanced-selection-mode__fixed" htmlFor={selectId}>
-          <span>Commence sur</span>
-          <select
+        <div className="advanced-selection-mode__fixed">
+          <span id={`${selectId}-label`}>{t("graph:landing.fixed.start")}</span>
+          <Select
             id={selectId}
+            aria-labelledby={`${selectId}-label`}
             value={selection}
             disabled={disabled}
-            onChange={(event) => onChange(event.target.value)}
-          >
-            {options.map((option, rank) => (
-              <option key={option.optionId} value={String(rank)}>
-                {positionText(rank, options.length)} · {option.target.stagePath
-                  ? index.byPath.get(option.target.stagePath)?.label.label ?? option.target.stageUuid
-                  : 'Écran à choisir'}
-              </option>
-            ))}
-          </select>
-        </label>
+            onChange={onChange}
+            options={options.map((option, rank) => ({
+              value: String(rank),
+              label: `${positionText(rank, options.length)} · ${option.target.stagePath
+                ? index.byPath.get(option.target.stagePath)?.label.label ?? option.target.stageUuid
+                : t("graph:landing.target.fallback")}`,
+            }))}
+          />
+        </div>
       )}
       <label className={`advanced-selection-mode__option${random ? ' is-selected' : ''}`}>
         <input
@@ -63,7 +66,7 @@ export function ActionSelectionFields({
           onChange={() => onChange('random')}
         />
         <Dices aria-hidden="true" />
-        <span>Un choix au hasard, à chaque fois</span>
+        <span>{t("graph:landing.random.label")}</span>
       </label>
     </fieldset>
   );

@@ -1,3 +1,4 @@
+import { projectStorageDiskCommands } from './projectStorageDiskCommands.mjs';
 // Banc d'essai disque de `projectIO.js`.
 //
 // Ce que ce harnais double, et rien d'autre : la WebView, les dialogues de
@@ -124,7 +125,7 @@ export async function createDiskHarness({ commands = {} } = {}) {
     calls.push({ cmd, target });
     const failure = failureFor(cmd, target);
     if (failure) throw new Error(failure);
-    const handler = commands[cmd] ?? fsCommands[cmd] ?? pathCommands[cmd] ?? dialogCommands[cmd];
+    const handler = commands[cmd] ?? projectStorageDiskCommands[cmd] ?? fsCommands[cmd] ?? pathCommands[cmd] ?? dialogCommands[cmd];
     if (!handler) throw new Error(`Commande non doublée : ${cmd}`);
     return handler(args, options);
   };

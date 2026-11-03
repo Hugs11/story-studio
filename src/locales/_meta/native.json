@@ -1,0 +1,480 @@
+{
+  "file.image.filterLabel": {
+    "context": "Dialogue natif de sélection de fichier > filtre image, affiché au moment de l’ouverture ; extensions et options techniques inchangées.",
+    "en": {
+      "sourceHash": "1aa4cb0bcca7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1aa4cb0bcca7",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.referenceImage.filterLabel": {
+    "context": "Dialogue natif de sélection de fichier > filtre referenceImage, affiché au moment de l’ouverture ; extensions et options techniques inchangées.",
+    "en": {
+      "sourceHash": "e872cb850266",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e872cb850266",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.audio.filterLabel": {
+    "context": "Dialogue natif de sélection de fichier > filtre audio, affiché au moment de l’ouverture ; extensions et options techniques inchangées.",
+    "en": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bc1b88907d3b",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.archive.filterLabel": {
+    "context": "Dialogue natif de sélection de fichier > filtre archive, affiché au moment de l’ouverture ; extensions et options techniques inchangées.",
+    "en": {
+      "sourceHash": "480a8816adab",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "480a8816adab",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.archives.filterLabel": {
+    "context": "Dialogue natif de sélection de fichier > filtre archives, affiché au moment de l’ouverture ; extensions et options techniques inchangées.",
+    "en": {
+      "sourceHash": "ac3274fde0a3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ac3274fde0a3",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.audioArchive.filterLabel": {
+    "context": "Dialogue natif de sélection de fichier > filtre audioArchive, affiché au moment de l’ouverture ; extensions et options techniques inchangées.",
+    "en": {
+      "sourceHash": "023bb06356ca",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "023bb06356ca",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.media.filterLabel": {
+    "context": "Dialogue natif de sélection de fichier > filtre media, affiché au moment de l’ouverture ; extensions et options techniques inchangées.",
+    "en": {
+      "sourceHash": "39428d77f490",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "39428d77f490",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.comfyApi.filterLabel": {
+    "context": "Dialogue natif de sélection de fichier > filtre comfyApi, affiché au moment de l’ouverture ; extensions et options techniques inchangées.",
+    "en": {
+      "sourceHash": "561b7cfebbe2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "561b7cfebbe2",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.comfyConfig.filterLabel": {
+    "context": "Dialogue natif de sélection de fichier > filtre comfyConfig, affiché au moment de l’ouverture ; extensions et options techniques inchangées.",
+    "en": {
+      "sourceHash": "b5e176f5e8c3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b5e176f5e8c3",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.workspace.title": {
+    "context": "Import > project.workspace.title ; dialogue système de sélection/enregistrement ; enregistrement disque, jamais microphone ; extensions inchangées.",
+    "en": {
+      "sourceHash": "502c2a00e9a5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "502c2a00e9a5",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.file.filterLabel": {
+    "context": "Import > project.file.filterLabel ; dialogue système de sélection/enregistrement ; enregistrement disque, jamais microphone ; extensions inchangées.",
+    "en": {
+      "sourceHash": "4bead15a29cf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4bead15a29cf",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.save.title": {
+    "context": "Import > project.save.title ; dialogue système de sélection/enregistrement ; enregistrement disque, jamais microphone ; extensions inchangées.",
+    "en": {
+      "sourceHash": "fa37745267c7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fa37745267c7",
+      "status": "ai-reviewed"
+    }
+  },
+  "project.saveCopy.title": {
+    "context": "Import > project.saveCopy.title ; dialogue système de sélection/enregistrement ; enregistrement disque, jamais microphone ; extensions inchangées.",
+    "en": {
+      "sourceHash": "6e997427e2fb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6e997427e2fb",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.folder.title": {
+    "context": "Dialogue natif de choix de dossier ouvert depuis Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) ; titre de la fenêtre système, résolu à l’ouverture.",
+    "en": {
+      "sourceHash": "f65b0a304f01",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f65b0a304f01",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.file.title": {
+    "context": "Dialogue natif de choix de fichier ouvert depuis Dialogue « Médias introuvables » (relier des fichiers déplacés ou renommés) ; {{name}} = nom du fichier manquant.",
+    "en": {
+      "sourceHash": "7fd7a3d55a1e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7fd7a3d55a1e",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.project.filterLabel": {
+    "context": "Dialogue natif « Retrouver le projet » d’un suivi de médias > filtre de fichiers .mbah, résolu à l’ouverture ; extension inchangée.",
+    "en": {
+      "sourceHash": "f5715171c520",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f5715171c520",
+      "status": "ai-reviewed"
+    }
+  },
+  "transfer.prompt.message_one": {
+    "context": "Dialogue natif (ask) proposé à l’enregistrement quand des fichiers liés au projet sont hors de l’emplacement de travail ; texte résolu à l’ouverture > message ; {{files}} = liste « • nom » ; « fichiers-importes/ » est un nom de dossier technique à garder ; « emplacement de travail » = Workspace folder / Cartella di lavoro. Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "ca809f29ac95",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ca809f29ac95",
+      "status": "ai-reviewed"
+    }
+  },
+  "transfer.prompt.message_many": {
+    "context": "Dialogue natif (ask) proposé à l’enregistrement quand des fichiers liés au projet sont hors de l’emplacement de travail ; texte résolu à l’ouverture > message ; {{files}} = liste « • nom » ; « fichiers-importes/ » est un nom de dossier technique à garder ; « emplacement de travail » = Workspace folder / Cartella di lavoro. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "5042603767d4",
+      "status": "ai-reviewed"
+    }
+  },
+  "transfer.prompt.message_other": {
+    "context": "Dialogue natif (ask) proposé à l’enregistrement quand des fichiers liés au projet sont hors de l’emplacement de travail ; texte résolu à l’ouverture > message ; {{files}} = liste « • nom » ; « fichiers-importes/ » est un nom de dossier technique à garder ; « emplacement de travail » = Workspace folder / Cartella di lavoro. Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "5042603767d4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5042603767d4",
+      "status": "ai-reviewed"
+    }
+  },
+  "transfer.prompt.more_one": {
+    "context": "Dialogue natif (ask) proposé à l’enregistrement quand des fichiers liés au projet sont hors de l’emplacement de travail ; texte résolu à l’ouverture > dernière ligne de la liste quand plus de cinq fichiers sont concernés. Forme plurielle « one » (count transmis).",
+    "en": {
+      "sourceHash": "60f0041e2ad6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "60f0041e2ad6",
+      "status": "ai-reviewed"
+    }
+  },
+  "transfer.prompt.more_many": {
+    "context": "Dialogue natif (ask) proposé à l’enregistrement quand des fichiers liés au projet sont hors de l’emplacement de travail ; texte résolu à l’ouverture > dernière ligne de la liste quand plus de cinq fichiers sont concernés. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
+    "it": {
+      "sourceHash": "af651cfe3b2f",
+      "status": "ai-reviewed"
+    }
+  },
+  "transfer.prompt.more_other": {
+    "context": "Dialogue natif (ask) proposé à l’enregistrement quand des fichiers liés au projet sont hors de l’emplacement de travail ; texte résolu à l’ouverture > dernière ligne de la liste quand plus de cinq fichiers sont concernés. Forme plurielle « other » (count transmis).",
+    "en": {
+      "sourceHash": "af651cfe3b2f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "af651cfe3b2f",
+      "status": "ai-reviewed"
+    }
+  },
+  "transfer.prompt.title": {
+    "context": "Dialogue natif (ask) proposé à l’enregistrement quand des fichiers liés au projet sont hors de l’emplacement de travail ; texte résolu à l’ouverture > titre de la fenêtre système.",
+    "en": {
+      "sourceHash": "67fac25e530c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "67fac25e530c",
+      "status": "ai-reviewed"
+    }
+  },
+  "transfer.prompt.confirm": {
+    "context": "Dialogue natif (ask) proposé à l’enregistrement quand des fichiers liés au projet sont hors de l’emplacement de travail ; texte résolu à l’ouverture > bouton de confirmation.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "ddf0176b9ff3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ddf0176b9ff3",
+      "status": "ai-reviewed"
+    }
+  },
+  "transfer.prompt.later": {
+    "context": "Dialogue natif (ask) proposé à l’enregistrement quand des fichiers liés au projet sont hors de l’emplacement de travail ; texte résolu à l’ouverture > bouton d’annulation : la question sera reposée plus tard.",
+    "maxLength": 16,
+    "en": {
+      "sourceHash": "bed263def52c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bed263def52c",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.pack.filterLabel": {
+    "context": "Dialogue natif d’ouverture du vérificateur > nom du filtre des fichiers .zip/.7z (glossaire §3.0).",
+    "en": {
+      "sourceHash": "5cac3848ccf7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5cac3848ccf7",
+      "status": "ai-reviewed"
+    }
+  },
+  "checker.pack.title": {
+    "context": "Dialogue natif d’ouverture du vérificateur > titre de la fenêtre.",
+    "en": {
+      "sourceHash": "811f53f66115",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "811f53f66115",
+      "status": "ai-reviewed"
+    }
+  },
+  "checker.output.title": {
+    "context": "Dialogue natif de dossier du vérificateur > titre : où créer le ZIP corrigé.",
+    "en": {
+      "sourceHash": "f353c5ef64a6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f353c5ef64a6",
+      "status": "ai-reviewed"
+    }
+  },
+  "checker.report.html.filterLabel": {
+    "context": "Dialogue natif d’export du vérificateur > nom du filtre .html.",
+    "en": {
+      "sourceHash": "ce9bb745f6ce",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ce9bb745f6ce",
+      "status": "ai-reviewed"
+    }
+  },
+  "checker.report.markdown.filterLabel": {
+    "context": "Dialogue natif d’export du vérificateur > nom du filtre .md.",
+    "en": {
+      "sourceHash": "d6f046666b7a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d6f046666b7a",
+      "status": "ai-reviewed"
+    }
+  },
+  "checker.report.log.filterLabel": {
+    "context": "Dialogue natif d’export du vérificateur > nom du filtre .txt du journal.",
+    "en": {
+      "sourceHash": "6b631e73a425",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6b631e73a425",
+      "status": "ai-reviewed"
+    }
+  },
+  "checker.report.json.filterLabel": {
+    "context": "Dialogue natif d’export du vérificateur > nom du filtre .json.",
+    "en": {
+      "sourceHash": "e222a57e072d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e222a57e072d",
+      "status": "ai-reviewed"
+    }
+  },
+  "export.output.title": {
+    "context": "Dialogue natif de l’éditeur graphe > titre du choix du dossier où produire le pack.",
+    "en": {
+      "sourceHash": "0915f862e9e8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0915f862e9e8",
+      "status": "ai-reviewed"
+    }
+  },
+  "settings.consolidate.directoryTitle": {
+    "en": {
+      "sourceHash": "f3e3ef8f6107",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f3e3ef8f6107",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > settings > consolidate ; directoryTitle : « Choisir le dossier de consolidation ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "file.image.title": {
+    "context": "Dialogue natif > titre à l’ouverture ; file.image.title",
+    "en": {
+      "sourceHash": "cc028fbfe4e1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cc028fbfe4e1",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.referenceImage.title": {
+    "context": "Dialogue natif > titre à l’ouverture ; file.referenceImage.title",
+    "en": {
+      "sourceHash": "2b9b916c8fcb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2b9b916c8fcb",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.audio.title": {
+    "context": "Dialogue natif > titre à l’ouverture ; file.audio.title",
+    "en": {
+      "sourceHash": "776c91005ef2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "776c91005ef2",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.archive.title": {
+    "context": "Dialogue natif > titre à l’ouverture ; file.archive.title",
+    "en": {
+      "sourceHash": "56d3aa337bfd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "56d3aa337bfd",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.archives.title": {
+    "context": "Dialogue natif > titre à l’ouverture ; file.archives.title",
+    "en": {
+      "sourceHash": "4fc9818c2dfc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4fc9818c2dfc",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.audioArchive.title": {
+    "context": "Dialogue natif > titre à l’ouverture ; file.audioArchive.title",
+    "en": {
+      "sourceHash": "ef02777a1e50",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ef02777a1e50",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.media.title": {
+    "context": "Dialogue natif > titre à l’ouverture ; file.media.title",
+    "en": {
+      "sourceHash": "86003c5a7d73",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "86003c5a7d73",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.comfyApi.title": {
+    "context": "Dialogue natif > titre à l’ouverture ; file.comfyApi.title",
+    "en": {
+      "sourceHash": "77034bb000d9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "77034bb000d9",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.comfyConfig.title": {
+    "context": "Dialogue natif > titre à l’ouverture ; file.comfyConfig.title",
+    "en": {
+      "sourceHash": "8f4a15b46ca9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8f4a15b46ca9",
+      "status": "ai-reviewed"
+    }
+  },
+  "file.folder.title": {
+    "context": "Dialogue natif > titre à l’ouverture ; file.folder.title",
+    "en": {
+      "sourceHash": "8b3e35234cda",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8b3e35234cda",
+      "status": "ai-reviewed"
+    }
+  }
+}

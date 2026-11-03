@@ -2,6 +2,8 @@
 //! pas les formats). Le parsing JSON est isolé (`parse_list_json`, pur et testé) ;
 //! l'exécution du binaire reste fine.
 
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::time::Duration;
@@ -11,7 +13,7 @@ use serde_json::Value;
 use super::error::{classify_failure, YoutubeError};
 use super::info_cache;
 use super::process::run_command_with_timeout;
-use super::tool::{pace_analysis, Ytdlp, SLEEP_REQUESTS};
+use super::tool::{pace_analysis, ToolMode, Ytdlp, SLEEP_REQUESTS};
 use super::{YoutubeAudioLanguages, YoutubeList, YoutubeVideo};
 
 /// Taille fixe d'une page. La borne protège chaque appel sans imposer de
@@ -26,9 +28,22 @@ const AUDIO_LANGUAGE_CHUNK_SIZE: usize = 10;
 /// Valide qu'une URL est bien une URL YouTube (HTTP/HTTPS sur un domaine YouTube).
 /// Évite d'utiliser yt-dlp comme téléchargeur générique d'un site arbitraire.
 pub(super) fn validate_youtube_url(url: &str) -> Result<(), String> {
-    let parsed = reqwest::Url::parse(url.trim()).map_err(|e| format!("URL invalide : {}", e))?;
+    let parsed = reqwest::Url::parse(url.trim()).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::YOUTUBE_INVALID_URL)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "URL invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if !matches!(parsed.scheme(), "http" | "https") {
-        return Err("Seules les URL http/https sont autorisées.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::YOUTUBE_URL_SCHEME_REFUSED)
+                .with_detail("Seules les URL http/https sont autorisées.".to_string())
+                .into_transport(),
+        );
     }
     let host = parsed.host_str().unwrap_or("").to_ascii_lowercase();
     let ok = host == "youtu.be"
@@ -39,7 +54,11 @@ pub(super) fn validate_youtube_url(url: &str) -> Result<(), String> {
     if ok {
         Ok(())
     } else {
-        Err("Cette adresse n'est pas une URL YouTube.".to_string())
+        Err(
+            user_message::UserMessage::new(codes::YOUTUBE_URL_HOST_INVALID)
+                .with_detail("Cette adresse n'est pas une URL YouTube.".to_string())
+                .into_transport(),
+        )
     }
 }
 
@@ -49,14 +68,39 @@ pub fn fetch_list(
     custom: Option<&str>,
     url: &str,
     page: usize,
+    mode: ToolMode,
     emit: &dyn Fn(&str),
+) -> Result<YoutubeList, YoutubeError> {
+    fetch_list_named(home, output_dir, custom, url, page, mode, emit, None)
+}
+
+// Un nom facultatif de plus ; la signature historique reste disponible aux autres appelants.
+#[allow(clippy::too_many_arguments)]
+pub fn fetch_list_named(
+    home: &Path,
+    output_dir: &Path,
+    custom: Option<&str>,
+    url: &str,
+    page: usize,
+    mode: ToolMode,
+    emit: &dyn Fn(&str),
+    proposed_video_name: Option<&str>,
 ) -> Result<YoutubeList, YoutubeError> {
     let natural_series_order = is_channel_source(url)?;
     let listing_url = normalize_listing_url(url)?;
     let (start, end_with_sentinel) = page_window(page, LIST_PAGE_SIZE)?;
-    let ytdlp = Ytdlp::prepare(home, custom, emit)?;
+    let (ytdlp, tools) = Ytdlp::prepare_for(mode, home, custom, emit)?;
 
-    emit(&format!("Lecture des vidéos — page {}…", page));
+    emit(&{
+        let _msg_page = (page).to_string();
+        user_message::UserMessage::new(codes::YOUTUBE_READING_VIDEOS_PAGE)
+            .param("page", user_message::transport_param(_msg_page.clone()))
+            .with_detail(format!(
+                "Lecture des vidéos — page {_msg_page}…",
+                _msg_page = user_message::transport_detail(&_msg_page)
+            ))
+            .into_transport()
+    });
     let mut cmd = ytdlp.command();
     cmd.args([
         "-J",
@@ -66,20 +110,28 @@ pub fn fetch_list(
         &listing_url,
     ]);
 
-    let output = run_command_with_timeout(cmd, LIST_TIMEOUT, "Lecture YouTube")?;
+    let output = run_command_with_timeout(
+        cmd,
+        LIST_TIMEOUT,
+        codes::YOUTUBE_READING_SERVICE_LABEL_TRANSPORT,
+    )?;
     if !output.status.success() {
         return Err(classify_failure(
             &String::from_utf8_lossy(&output.stderr),
-            "yt-dlp n'a pas pu lire cette URL",
+            codes::YOUTUBE_YTDLP_URL_READ_FAILED_TRANSPORT,
         ));
     }
 
     // Une vidéo seule est déjà analysée en entier : son téléchargement pourra
     // réutiliser cette analyse.
     info_cache::store(&info_cache::info_dir(output_dir), &output.stdout);
-    let value: Value = serde_json::from_slice(&output.stdout)
-        .map_err(|_| "Réponse yt-dlp illisible (JSON invalide).".to_string())?;
-    let mut list = parse_list_json(value, page, LIST_PAGE_SIZE);
+    let value: Value = serde_json::from_slice(&output.stdout).map_err(|_| {
+        user_message::UserMessage::new(codes::YOUTUBE_YTDLP_RESPONSE_JSON_INVALID)
+            .with_detail("Réponse yt-dlp illisible (JSON invalide).".to_string())
+            .into_transport()
+    })?;
+    let mut list = parse_list_json_named(value, page, LIST_PAGE_SIZE, proposed_video_name);
+    list.tools = tools;
     if natural_series_order {
         reorder_numbered_series(&mut list.videos);
         let first_source_index = page
@@ -89,9 +141,12 @@ pub fn fetch_list(
         assign_selection_keys(&mut list.videos, first_source_index);
     }
     if list.videos.is_empty() {
-        return Err("Aucune vidéo exploitable trouvée pour cette URL."
-            .to_string()
-            .into());
+        return Err(
+            user_message::UserMessage::new(codes::YOUTUBE_USABLE_VIDEO_MISSING)
+                .with_detail("Aucune vidéo exploitable trouvée pour cette URL.".to_string())
+                .into_transport()
+                .into(),
+        );
     }
     Ok(list)
 }
@@ -131,11 +186,22 @@ pub fn fetch_audio_languages(
     let mut analyzed = 0;
 
     for chunk in urls.chunks(AUDIO_LANGUAGE_CHUNK_SIZE) {
-        emit(&format!(
-            "Analyse des pistes audio ({}/{})…",
-            analyzed,
-            urls.len()
-        ));
+        emit(&{
+            let _msg_analyzed = (analyzed).to_string();
+            let _msg_urls = (urls.len()).to_string();
+            user_message::UserMessage::new(codes::YOUTUBE_ANALYZING_AUDIO_TRACKS)
+                .param(
+                    "analyzed",
+                    user_message::transport_param(_msg_analyzed.clone()),
+                )
+                .param("urls", user_message::transport_param(_msg_urls.clone()))
+                .with_detail(format!(
+                    "Analyse des pistes audio ({_msg_analyzed}/{_msg_urls})…",
+                    _msg_analyzed = user_message::transport_detail(&_msg_analyzed),
+                    _msg_urls = user_message::transport_detail(&_msg_urls)
+                ))
+                .into_transport()
+        });
         pace_analysis();
         let mut cmd = ytdlp.command();
         cmd.args([
@@ -149,7 +215,11 @@ pub fn fetch_audio_languages(
         cmd.args(chunk);
         analyzed += chunk.len();
 
-        match run_command_with_timeout(cmd, AUDIO_LANGUAGE_TIMEOUT, "Analyse audio YouTube") {
+        match run_command_with_timeout(
+            cmd,
+            AUDIO_LANGUAGE_TIMEOUT,
+            codes::YOUTUBE_AUDIO_ANALYSIS_LABEL_TRANSPORT,
+        ) {
             Ok(output) => {
                 for line in output.stdout.split(|byte| *byte == b'\n') {
                     info_cache::store(&info_dir, line);
@@ -158,7 +228,7 @@ pub fn fetch_audio_languages(
                 if !output.status.success() {
                     let failure = classify_failure(
                         &String::from_utf8_lossy(&output.stderr),
-                        "Analyse des pistes audio impossible",
+                        codes::YOUTUBE_AUDIO_TRACK_ANALYSIS_IMPOSSIBLE_TRANSPORT,
                     );
                     if failure.is_blocked() {
                         return Err(failure);
@@ -201,7 +271,16 @@ pub(super) fn parse_audio_language_lines(output: &[u8]) -> Vec<YoutubeAudioLangu
 /// numérotation, auquel cas une correction locale est utile.
 pub(super) fn is_channel_source(url: &str) -> Result<bool, String> {
     validate_youtube_url(url)?;
-    let parsed = reqwest::Url::parse(url.trim()).map_err(|e| format!("URL invalide : {}", e))?;
+    let parsed = reqwest::Url::parse(url.trim()).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::YOUTUBE_INVALID_URL)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "URL invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let path = parsed.path().trim_end_matches('/');
     let has_playlist = parsed
         .query_pairs()
@@ -220,8 +299,16 @@ pub(super) fn is_channel_source(url: &str) -> Result<bool, String> {
 /// continus. Un onglet explicitement fourni par l'utilisateur reste inchangé.
 pub(super) fn normalize_listing_url(url: &str) -> Result<String, String> {
     validate_youtube_url(url)?;
-    let mut parsed =
-        reqwest::Url::parse(url.trim()).map_err(|e| format!("URL invalide : {}", e))?;
+    let mut parsed = reqwest::Url::parse(url.trim()).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::YOUTUBE_INVALID_URL)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "URL invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let segments: Vec<_> = parsed
         .path_segments()
         .map(|parts| parts.filter(|part| !part.is_empty()).collect())
@@ -279,22 +366,42 @@ pub(super) fn normalize_listing_url(url: &str) -> Result<String, String> {
 /// connaître la taille totale de la source.
 pub(super) fn page_window(page: usize, page_size: usize) -> Result<(usize, usize), String> {
     if page == 0 || page_size == 0 {
-        return Err("La page YouTube demandée est invalide.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::YOUTUBE_REQUESTED_YOUTUBE_PAGE_INVALID)
+                .with_detail("La page YouTube demandée est invalide.".to_string())
+                .into_transport(),
+        );
     }
     let start = page
         .checked_sub(1)
         .and_then(|index| index.checked_mul(page_size))
         .and_then(|offset| offset.checked_add(1))
-        .ok_or_else(|| "La page YouTube demandée est trop éloignée.".to_string())?;
-    let end_with_sentinel = start
-        .checked_add(page_size)
-        .ok_or_else(|| "La page YouTube demandée est trop éloignée.".to_string())?;
+        .ok_or_else(|| {
+            user_message::UserMessage::new(codes::YOUTUBE_REQUESTED_PAGE_LIMIT)
+                .with_detail("La page YouTube demandée est trop éloignée.".to_string())
+                .into_transport()
+        })?;
+    let end_with_sentinel = start.checked_add(page_size).ok_or_else(|| {
+        user_message::UserMessage::new(codes::YOUTUBE_REQUESTED_PAGE_LIMIT)
+            .with_detail("La page YouTube demandée est trop éloignée.".to_string())
+            .into_transport()
+    })?;
     Ok((start, end_with_sentinel))
 }
 
 /// Convertit la sortie JSON yt-dlp en `YoutubeList` (pur, sans réseau). Gère la
 /// vidéo seule, la playlist et la chaîne (playlists imbriquées aplaties).
+#[cfg(test)]
 pub(super) fn parse_list_json(value: Value, page: usize, page_size: usize) -> YoutubeList {
+    parse_list_json_named(value, page, page_size, None)
+}
+
+fn parse_list_json_named(
+    value: Value,
+    page: usize,
+    page_size: usize,
+    proposed_video_name: Option<&str>,
+) -> YoutubeList {
     let title = channel_tab_title(&value).or_else(|| {
         value
             .get("title")
@@ -306,8 +413,8 @@ pub(super) fn parse_list_json(value: Value, page: usize, page_size: usize) -> Yo
     let mut videos = Vec::new();
     let collect_limit = page_size.saturating_add(1);
     if value.get("entries").is_some() {
-        collect_entries(&value, collect_limit, &mut videos);
-    } else if let Some(video) = build_video(&value) {
+        collect_entries(&value, collect_limit, &mut videos, proposed_video_name);
+    } else if let Some(video) = build_video(&value, proposed_video_name) {
         videos.push(video);
     }
 
@@ -331,6 +438,7 @@ pub(super) fn parse_list_json(value: Value, page: usize, page_size: usize) -> Yo
         page,
         page_size,
         has_next,
+        tools: None,
     }
 }
 
@@ -349,7 +457,12 @@ fn channel_tab_title(value: &Value) -> Option<String> {
 
 /// Parcourt `entries`, aplatit les playlists imbriquées et s'arrête à la borne
 /// de la page courante (sentinelle comprise).
-fn collect_entries(node: &Value, limit: usize, out: &mut Vec<YoutubeVideo>) {
+fn collect_entries(
+    node: &Value,
+    limit: usize,
+    out: &mut Vec<YoutubeVideo>,
+    proposed_video_name: Option<&str>,
+) {
     let Some(entries) = node.get("entries").and_then(Value::as_array) else {
         return;
     };
@@ -358,14 +471,14 @@ fn collect_entries(node: &Value, limit: usize, out: &mut Vec<YoutubeVideo>) {
             return;
         }
         if entry.get("entries").is_some() {
-            collect_entries(entry, limit, out);
-        } else if let Some(video) = build_video(entry) {
+            collect_entries(entry, limit, out, proposed_video_name);
+        } else if let Some(video) = build_video(entry, proposed_video_name) {
             out.push(video);
         }
     }
 }
 
-fn build_video(entry: &Value) -> Option<YoutubeVideo> {
+fn build_video(entry: &Value, proposed_video_name: Option<&str>) -> Option<YoutubeVideo> {
     let id = entry.get("id").and_then(Value::as_str);
     let audio_url = watch_url(entry, id)?;
     let title = entry
@@ -373,7 +486,7 @@ fn build_video(entry: &Value) -> Option<YoutubeVideo> {
         .and_then(Value::as_str)
         .map(str::to_string)
         .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "Vidéo".to_string());
+        .unwrap_or_else(|| proposed_video_name.unwrap_or("Vidéo").to_string());
     let audio_languages_resolved = entry.get("formats").and_then(Value::as_array).is_some();
     Some(YoutubeVideo {
         id: id.unwrap_or("").to_string(),
@@ -546,5 +659,28 @@ pub(super) fn format_duration(seconds: Option<f64>) -> Option<String> {
         Some(format!("{}:{:02}:{:02}", h, m, s))
     } else {
         Some(format!("{}:{:02}", m, s))
+    }
+}
+
+#[cfg(test)]
+mod proposed_names_tests {
+    #[test]
+    fn proposed_video_names_do_not_replace_authored_titles_or_reorder_videos() {
+        let input = serde_json::json!({"title":"Auteur", "entries":[
+            {"id":"first"}, {"id":"second", "title":"Titre auteur"},
+            {"entries":[{"id":"third", "title":""}]}
+        ]});
+        let original = super::parse_list_json(input.clone(), 1, 400);
+        assert_eq!(original.videos[0].title, "Vidéo");
+        let named = super::parse_list_json_named(input, 1, 400, Some("Video"));
+        assert_eq!(named.title, "Auteur");
+        assert_eq!(named.videos[0].title, "Video");
+        assert_eq!(named.videos[1].title, "Titre auteur");
+        assert_eq!(named.videos[2].title, "Video");
+        assert_eq!(
+            named.videos.iter().map(|v| &v.id).collect::<Vec<_>>(),
+            original.videos.iter().map(|v| &v.id).collect::<Vec<_>>()
+        );
+        assert_eq!(named.videos[0].audio_url, original.videos[0].audio_url);
     }
 }

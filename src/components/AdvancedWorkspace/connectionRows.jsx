@@ -57,6 +57,6 @@ export function positionText(rank, count) {
 // d'un Écran (`okTransition`, `homeTransition`). « OK » laisserait croire que
 // seule la touche compte ; une pastille « Suite » ne se lisait pas.
 export const OPENER_SLOT_LABELS = {
-  ok: 'Par la suite du parcours de',
-  home: 'Par le bouton Accueil de',
+  ok: 'graph:connections.route.label',
+  home: 'graph:connections.home.label',
 };

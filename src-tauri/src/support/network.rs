@@ -1,3 +1,6 @@
+pub(crate) mod bounded;
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::net::{IpAddr, Ipv6Addr};
 use std::time::Duration;
 
@@ -10,32 +13,60 @@ pub(crate) fn http_client(timeout: Duration) -> Result<reqwest::blocking::Client
     reqwest::blocking::Client::builder()
         .timeout(timeout)
         .build()
-        .map_err(|e| format!("Impossible de créer le client HTTP : {}", e))
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::FILES_HTTP_CLIENT_CREATE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de créer le client HTTP : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })
 }
 
 /// Construit un client HTTP public qui valide aussi les redirections. Utilisé
 /// pour les artefacts épinglés téléchargés depuis des hôtes officiels.
 pub(crate) fn public_download_client(
     timeout: Duration,
-    service: &'static str,
+    service: &str,
 ) -> Result<reqwest::blocking::Client, String> {
+    let service = service.to_string();
     reqwest::blocking::Client::builder()
         .timeout(timeout)
         .redirect(reqwest::redirect::Policy::custom(move |attempt| {
             let next = attempt.url().as_str();
             if attempt.previous().len() >= 10 {
-                return attempt.error(std::io::Error::other(format!(
-                    "Trop de redirections pendant le téléchargement {}.",
-                    service
-                )));
+                return attempt.error(std::io::Error::other({
+                    let _msg_service = (service).to_string();
+                    user_message::UserMessage::new(codes::FILES_DOWNLOAD_REDIRECT_LIMIT)
+                        .param(
+                            "service",
+                            user_message::transport_param(_msg_service.clone()),
+                        )
+                        .with_detail(format!(
+                            "Trop de redirections pendant le téléchargement {_msg_service}.",
+                            _msg_service = user_message::transport_detail(&_msg_service),
+                        ))
+                        .into_transport()
+                }));
             }
-            match require_public_download_url(next, service) {
+            match require_public_download_url(next, &service) {
                 Ok(()) => attempt.follow(),
                 Err(err) => attempt.error(std::io::Error::other(err)),
             }
         }))
         .build()
-        .map_err(|e| format!("Impossible de créer le client HTTP : {}", e))
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::FILES_HTTP_CLIENT_CREATE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de créer le client HTTP : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                ))
+                .into_transport()
+        })
 }
 
 fn is_allowed_local_host(host: &str) -> bool {
@@ -75,35 +106,101 @@ const ALLOWED_DOWNLOAD_HOSTS: &[&str] = &[
 /// (catalogue Piper) ; cette vérification est une défense supplémentaire avant
 /// toute requête réseau sortante.
 pub(crate) fn require_public_download_url(url: &str, service: &str) -> Result<(), String> {
-    let parsed = Url::parse(url).map_err(|e| format!("URL {} invalide : {}", service, e))?;
+    let parsed = Url::parse(url).map_err(|e| {
+        let _msg_service = (service).to_string();
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_INVALID_URL)
+            .param(
+                "service",
+                user_message::transport_param(_msg_service.clone()),
+            )
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "URL {_msg_service} invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+                _msg_service = user_message::transport_detail(&_msg_service)
+            ))
+            .into_transport()
+    })?;
     if parsed.scheme() != "https" {
-        return Err(format!(
-            "URL {} refusée : seul HTTPS est autorisé (reçu : {}).",
-            service,
-            parsed.scheme()
-        ));
+        return Err({
+            let _msg_service = (service).to_string();
+            let _msg_parsed_scheme = (parsed.scheme()).to_string();
+            user_message::UserMessage::new(
+                codes::FILES_URL_HTTPS_REQUIRED,
+            )
+                .param("service", user_message::transport_param(_msg_service.clone()))
+                .param(
+                    "parsedScheme",
+                    user_message::transport_param(_msg_parsed_scheme.clone()),
+                )
+                .with_detail(format!(
+                    "URL {_msg_service} refusée : seul HTTPS est autorisé (reçu : {_msg_parsed_scheme}).",
+                    _msg_parsed_scheme = user_message::transport_detail(&_msg_parsed_scheme),
+                    _msg_service = user_message::transport_detail(&_msg_service),
+                ))
+                .into_transport()
+        });
     }
     let host = parsed.host_str().unwrap_or("");
     let allowed = ALLOWED_DOWNLOAD_HOSTS
         .iter()
         .any(|&allowed| host == allowed || host.ends_with(&format!(".{}", allowed)));
     if !allowed {
-        return Err(format!(
-            "URL {} refusée : hôte non officiel ({}).",
-            service, host
-        ));
+        return Err({
+            let _msg_service = (service).to_string();
+            let _msg_host = (host).to_string();
+            user_message::UserMessage::new(codes::FILES_URL_REFUSED_UNOFFICIAL_HOST)
+                .param(
+                    "service",
+                    user_message::transport_param(_msg_service.clone()),
+                )
+                .param("host", user_message::transport_param(_msg_host.clone()))
+                .with_detail(format!(
+                    "URL {_msg_service} refusée : hôte non officiel ({_msg_host}).",
+                    _msg_host = user_message::transport_detail(&_msg_host),
+                    _msg_service = user_message::transport_detail(&_msg_service)
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }
 
 pub(crate) fn require_local_url(url: &str, service: &str) -> Result<(), String> {
-    let parsed = Url::parse(url).map_err(|e| format!("URL {} invalide : {}", service, e))?;
+    let parsed = Url::parse(url).map_err(|e| {
+        let _msg_service = (service).to_string();
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_INVALID_URL)
+            .param(
+                "service",
+                user_message::transport_param(_msg_service.clone()),
+            )
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "URL {_msg_service} invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+                _msg_service = user_message::transport_detail(&_msg_service)
+            ))
+            .into_transport()
+    })?;
     let host = parsed.host_str().unwrap_or("");
     if !is_allowed_local_host(host) {
-        return Err(format!(
-            "URL {} refusée : seuls localhost et les IP privées du réseau local sont autorisés (reçu : {}).",
-            service, host
-        ));
+        return Err({
+            let _msg_service = (service).to_string();
+            let _msg_host = (host).to_string();
+            user_message::UserMessage::new(
+                codes::FILES_URL_PRIVATE_NETWORK_REQUIRED,
+            )
+                .param("service", user_message::transport_param(_msg_service.clone()))
+                .param("host", user_message::transport_param(_msg_host.clone()))
+                .with_detail(format!(
+                    "URL {_msg_service} refusée : seuls localhost et les IP privées du réseau local sont autorisés (reçu : {_msg_host}).",
+                    _msg_host = user_message::transport_detail(&_msg_host),
+                    _msg_service = user_message::transport_detail(&_msg_service),
+                ))
+                .into_transport()
+        });
     }
     Ok(())
 }

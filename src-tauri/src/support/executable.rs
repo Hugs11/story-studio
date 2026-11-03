@@ -1,3 +1,5 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::path::Path;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -54,8 +56,16 @@ pub(crate) fn validate_executable_file(
     path: &Path,
     target: ExecutableTarget,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(path)
-        .map_err(|error| format!("Lecture de l'exécutable impossible : {error}"))?;
+    let bytes = std::fs::read(path).map_err(|error| {
+        let _msg_error = (error).to_string();
+        user_message::UserMessage::new(codes::FILES_EXECUTABLE_READ_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Lecture de l'exécutable impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     validate_executable_bytes(&bytes, target)
 }
 
@@ -68,15 +78,44 @@ pub(crate) fn validate_executable_bytes(
         ExecutableFormat::Elf => elf_architectures(bytes),
         ExecutableFormat::MachO => macho_architectures(bytes),
     }
-    .ok_or_else(|| format!("Format exécutable invalide : {:?} attendu.", target.format))?;
+    .ok_or_else(|| {
+        let _msg_target_format = format!("{:?}", target.format);
+        user_message::UserMessage::new(codes::FILES_INVALID_EXECUTABLE_FORMAT_EXPECTED)
+            .param(
+                "targetFormat",
+                user_message::transport_param(_msg_target_format.clone()),
+            )
+            .with_detail(format!(
+                "Format exécutable invalide : {_msg_target_format} attendu.",
+                _msg_target_format = user_message::transport_detail(&_msg_target_format)
+            ))
+            .into_transport()
+    })?;
 
     if architectures.contains(&target.architecture) {
         Ok(())
     } else {
-        Err(format!(
-            "Architecture exécutable incompatible : {:?} attendue, trouvé {:?}.",
-            target.architecture, architectures
-        ))
+        Err({
+            let _msg_target_architecture = format!("{:?}", target.architecture);
+            let _msg_architectures = format!("{:?}", architectures);
+            user_message::UserMessage::new(
+                codes::FILES_EXECUTABLE_ARCHITECTURE_MISMATCH,
+            )
+                .param(
+                    "targetArchitecture",
+                    user_message::transport_param(_msg_target_architecture.clone()),
+                )
+                .param(
+                    "architectures",
+                    user_message::transport_param(_msg_architectures.clone()),
+                )
+                .with_detail(format!(
+                    "Architecture exécutable incompatible : {_msg_target_architecture} attendue, trouvé {_msg_architectures}.",
+                    _msg_architectures = user_message::transport_detail(&_msg_architectures),
+                    _msg_target_architecture = user_message::transport_detail(&_msg_target_architecture),
+                ))
+                .into_transport()
+        })
     }
 }
 

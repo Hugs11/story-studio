@@ -69,7 +69,9 @@ pub(super) fn source_document() -> Value {
                 "okTransition": {"actionNode": "action-1", "optionIndex": 0},
                 "homeTransition": null,
                 "position": {"x": 12.5, "y": 40000},
-                "vendorMarker": {"keep": 1}
+                // Alias divergent : seul membre opaque de nœud encore capturé
+                // depuis que les clés inconnues sont ignorées à l'import.
+                "id": "renard-alias-divergent"
             },
             {
                 "uuid": TARGET,
@@ -124,7 +126,7 @@ fn garnish_context(payload: &mut DecodedStoryDocument) {
     crate::native_pack::authoring::set_opaque_export_disposition(
         payload,
         &entry,
-        "vendorMarker",
+        "id",
         0,
         OpaqueExportDisposition::PreserveUntested,
     )
@@ -147,6 +149,7 @@ fn garnish_context(payload: &mut DecodedStoryDocument) {
             reason: "Identité d'entrée bridge-compatible.".to_string(),
         });
     payload.context.diagnostics.push(ImportDiagnostic {
+        params: serde_json::Map::new(),
         severity: DiagnosticSeverity::Warning,
         code: "SYNTHETIC_WITNESS".to_string(),
         path: format!("/stageNodes/@uuid={TARGET}#0"),
@@ -349,4 +352,16 @@ fn the_starting_document_is_intact_and_stays_the_reference() {
     assert_eq!(start.context.editor_positions.len(), 1);
     assert_eq!(start.context.export_qualifications.len(), 1);
     assert_eq!(start.context.diagnostics.len(), 1);
+}
+
+#[test]
+fn gesture_user_message_preserves_arbitrary_non_identity_error_codes() {
+    let message = UserMessage::new(codes::CATALOG_ALREADY_OPEN).param("reason", "synthetic");
+    let error = super::metadata::identity_change_error(message.clone());
+    assert_eq!(error.code, message.code);
+    assert_eq!(error.params, message.params);
+    assert!(!crate::support::user_message::contains_code(
+        &error.message,
+        codes::OFFICIAL_IDENTITY_LOCKED
+    ));
 }

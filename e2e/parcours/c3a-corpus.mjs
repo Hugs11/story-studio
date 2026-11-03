@@ -21,7 +21,7 @@
 //   SS_E2E_C3A_DETERMINISM_COUNT(défaut 5, pris parmi les Editable)
 //   SS_E2E_C3A_MIN_7Z           (défaut 3)
 //   SS_E2E_C3A_RELAUNCH_EVERY   (défaut 6 packs)
-//   SS_E2E_C3A_REPORT_DIR       (clé c3aReportDir ; défaut e2e/artifacts/corpus)
+//   SS_E2E_C3A_REPORT_DIR       (sous workDir ; défaut <run>/corpus-reports)
 //
 // Argument `--reduit` (`node e2e/run.mjs c3a-corpus --reduit`) : remplace le
 // tirage aléatoire par taille (`spreadArchives`) par le corpus réduit
@@ -53,21 +53,22 @@
 //                               dépassé : relevé `timeout`, relance de l'app, on continue
 //   SS_E2E_C3A_LIMIT=<n>        mini-série : par catégorie ET par format (.zip / .7z),
 //                               les n plus petites archives (puis tri par chemin)
-//   SS_E2E_C3A_REPORT_DIR       clé c3cReportDir ; défaut e2e/artifacts/corpus-complet
+//   SS_E2E_C3A_REPORT_DIR       sous workDir ; défaut <run>/corpus-reports
 //                               (c3c-corpus.jsonl, c3c-determinisme.jsonl, progress.json)
 // progress.json (battement de cœur, réécrit au début et à la fin de chaque chaîne) :
 // { startedAt, updatedAt, done, total, current:{relPath,editor,step}, okCount,
 //   failCount, lastError }.
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, extname, join } from 'node:path';
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { config, appDataDirs } from '../lib/config.mjs';
 import { launchApp } from '../lib/launch.mjs';
 import { createRun } from '../lib/run-context.mjs';
-import { closeFunnel, generatePack, goHome, importPack, modalWithText, returnHome } from '../lib/actions.mjs';
+import { closeFunnel, generatePack, goHome, importPack, modalWithText, returnHome, waitValidationSettled } from '../lib/actions.mjs';
 import { dropFiles } from '../lib/drop.mjs';
 import { allArchivesSorted, corpusRelPath, spreadArchives } from '../lib/corpus.mjs';
-import { reducedArchivesUnder } from '../lib/reduced-corpus.mjs';
+import { observeBlocking, correctDiagnostic } from '../lib/diagnostics.mjs';
+import { reducedEntries, reducedArchivesUnder } from '../lib/reduced-corpus.mjs';
 import { inventory, inventoryDiff, readbackPack, readStoryJson, samePackContent } from '../lib/oracles.mjs';
 
 const EDITABLE_DIR = '01 - Editable';
@@ -148,8 +149,7 @@ const packTimeoutMs = Number(process.env.SS_E2E_C3A_PACK_TIMEOUT_MS || 15 * 60_0
 const limitPerFormat = Number(process.env.SS_E2E_C3A_LIMIT || 0);
 const resume = process.env.SS_E2E_C3A_RESUME === '1';
 const keepDir = process.env.SS_E2E_C3A_KEEP_DIR || '';
-const reportDirFor = (tout) => tout ? config.c3cReportDir : config.c3aReportDir;
-let reportDir = reportDirFor(false);
+let reportDir;
 
 function jsonlPath(_ctx, name) {
   const dir = reportDir;
@@ -164,8 +164,16 @@ function appendRecord(path, record) {
 export async function run(args = []) {
   const tout = args.includes('--tout');
   const useReducedCorpus = !tout && args.includes('--reduit');
-  reportDir = reportDirFor(tout);
   const ctx = createRun('c3a-corpus');
+  reportDir = ctx.dir('corpus-reports');
+  if (process.env.SS_E2E_C3A_REPORT_DIR) {
+    const requested = resolve(process.env.SS_E2E_C3A_REPORT_DIR);
+    const fromWork = relative(resolve(config.workDir), requested);
+    if (fromWork === '..' || fromWork.startsWith('..' + (process.platform === 'win32' ? '\\' : '/')) || isAbsolute(fromWork)) {
+      throw new Error('SS_E2E_C3A_REPORT_DIR doit rester sous workDir');
+    }
+    reportDir = requested;
+  }
   const workspaceDir = ctx.dir('workspace');
   const prefix = tout ? 'c3c' : 'c3a';
   const corpusRecords = jsonlPath(ctx, `${prefix}-corpus.jsonl`);
@@ -274,6 +282,8 @@ export async function run(args = []) {
 
     events.setStep(label);
     const faultsBefore = events.faults().length;
+    const expectation = useReducedCorpus && category === 'lecture-seule'
+      ? reducedEntries().find(entry => entry.absPath === sourcePath)?.expect : null;
     const record = {
       category, index, editor, sourceName, ext, sizeBytes: statSync(sourcePath).size,
       relPath: corpusRelPath(sourcePath),
@@ -308,6 +318,27 @@ export async function run(args = []) {
     let genResult = null;
     if (record.importOk) {
       try {
+        if (expectation?.generate === 'bloque') {
+          record.expectedBlocking = expectation.blocking;
+          record.blocking = await observeBlocking(page, expectation.blocking,
+            join(ctx.dir('projets', category, String(index)), 'avant-correction.mbah'), outDir);
+          ctx.check(label + ' : blocage manifeste avec codes exacts et aucun export', record.blocking.ok, record.blocking);
+          if (!record.blocking.ok) throw new Error('Blocage différent du manifeste');
+          if (!expectation.afterFix) {
+            record.faultsNew = events.faults().slice(faultsBefore);
+            record.expectedBlockOk = true;
+            record.durationMs = Date.now() - startedAt;
+            appendRecord(corpusRecords, record);
+            await ctx.shot(page, label + '-blocage-attendu');
+            await returnHome(page);
+            return record;
+          }
+          record.resolution = expectation.afterFix.resolution;
+          await correctDiagnostic(page, record.resolution);
+          const after = await waitValidationSettled(page);
+          ctx.check(label + ' : correction explicite supprime tous les blocages', after.settled && after.count === 0, after);
+          if (!after.settled || after.count !== 0) throw new Error('Blocage persistant après correction');
+        }
         beat('génération');
         genResult = await generatePack(page, outDir, { uuid: 'keep' });
         record.durationMs = Date.now() - startedAt;
@@ -407,6 +438,19 @@ export async function run(args = []) {
       record.expectedByCategory = EXPECTED_BY_CATEGORY[category] ?? null;
       record.openVerdictExpected = record.expectedByCategory
         ? record.expectedByCategory.includes(record.openVerdict) : null;
+    }
+    const expectation = useReducedCorpus ? reducedEntries().find(entry => entry.absPath === sourcePath)?.expect : null;
+    if (expectation) {
+      record.expectedOpen = expectation.open;
+      record.expectedMessage = expectation.message ?? null;
+      const actualText = await funnel.textContent().catch(() => '');
+      record.manifestVerdictOk = String(expectation.open).startsWith('refus:enveloppe')
+        ? record.verdict === 'enveloppe' : record.verdict === 'refus';
+      record.manifestMessageOk = !expectation.message || actualText.includes(expectation.message);
+      ctx.check(label + ' : verdict et message conformes au manifeste', record.manifestVerdictOk && record.manifestMessageOk, {
+        expectedOpen: record.expectedOpen, expectedMessage: record.expectedMessage, verdict: record.verdict,
+        actualText,
+      });
     }
     record.durationMs = Date.now() - startedAt;
     await ctx.shot(page, `${label}-verdict`);
@@ -528,7 +572,7 @@ export async function run(args = []) {
             withDeterminism: editor === 'menus' && toutDeterminism.has(job.index) })));
         if (editor === 'menus') { menusRan = true; totalMenus += 1; if (rec.readbackOk) okMenus += 1; }
         else if (editor === 'graphe' && job.category === 'editable') { totalGraphe += 1; if (rec.readbackOk) okGraphe += 1; }
-        else if (editor === 'graphe') { totalReadonly += 1; if (rec.readbackOk) okReadonly += 1; }
+        else if (editor === 'graphe') { totalReadonly += 1; if (rec.readbackOk || rec.expectedBlockOk) okReadonly += 1; }
         else { totalImportError += 1; if (rec.verdict !== 'timeout') verdictImportError += 1; }
         if (editor !== 'menus') await maybeRelaunch(`${job.category}-${job.index}`);
       }
@@ -560,7 +604,7 @@ export async function run(args = []) {
 
     for (let i = 0; i < readonlySample.length; i += 1) {
       const rec = await runChain('lecture-seule', i, readonlySample[i], 'graphe');
-      totalReadonly += 1; if (rec.readbackOk) okReadonly += 1;
+      totalReadonly += 1; if (rec.readbackOk || rec.expectedBlockOk) okReadonly += 1;
       await maybeRelaunch(`lecture-seule-${i}`);
     }
 
@@ -572,7 +616,7 @@ export async function run(args = []) {
     if (!tout) {
     ctx.check(`chaîne menus (Editable) : réussite`, okMenus === totalMenus, { okMenus, totalMenus });
     ctx.check(`chaîne graphe (Editable) : réussite`, okGraphe === totalGraphe, { okGraphe, totalGraphe });
-    ctx.check(`chaîne graphe (Lecture seule) : réussite`, okReadonly === totalReadonly, { okReadonly, totalReadonly });
+    ctx.check(`chaîne graphe (Lecture seule) : conformité au manifeste`, okReadonly === totalReadonly, { okReadonly, totalReadonly });
     }
     if (totalImportError) {
       ctx.check(`Erreur import : un verdict pour chaque pack`, verdictImportError === totalImportError, { verdictImportError, totalImportError });

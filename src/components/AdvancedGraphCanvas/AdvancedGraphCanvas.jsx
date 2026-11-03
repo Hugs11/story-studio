@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import { translateGraph as t, graphTranslationEngine } from '../../i18n/graphPresentation.js';
 // La surface avancée du banc d'essai : canvas au centre, recherche à gauche,
 // inspecteur en lecture à droite.
 //
@@ -15,6 +17,8 @@
 // trois panneaux, aucun geste d'auteur.
 
 import { useCallback, useRef, useState } from 'react';
+
+import { UserMessage } from '../common/UserMessage.jsx';
 
 import { ENGINE_IDS } from './engines/index.js';
 import { DEFAULT_EDGE_VISIBILITY } from './engines/engineContract.js';
@@ -38,6 +42,7 @@ export default function AdvancedGraphCanvas({
   // L'application ne la pose pas ; seule la recette du banc s'en sert.
   surfaceRef = null,
 }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const view = useAdvancedGraphView({ payload, projectDescriptor, projectEpoch, bridge });
   const [edgeVisibility, setEdgeVisibility] = useState(() => ({ ...DEFAULT_EDGE_VISIBILITY }));
   const focusRef = useRef(null);
@@ -57,11 +62,11 @@ export default function AdvancedGraphCanvas({
   if (view.status === 'failed') {
     return (
       <div className="advanced-canvas advanced-canvas--error" role="alert">
-        <h2>Lecture impossible</h2>
+        <h2>{t("graph:canvas.unableToRead.label")}</h2>
         {/* Les refus du codec ressortent tels quels, avec leur code et leur
             chemin : ils ne sont pas réécrits en codes de vue. */}
-        <p><code>{view.error?.code ?? 'ERREUR'}</code> {view.error?.path}</p>
-        <p>{view.error?.message ?? String(view.error)}</p>
+        <p><code>{view.error?.code ?? t('graph:canvas.error.fallbackCode')}</code> {view.error?.path}</p>
+        <p><UserMessage value={view.error} /></p>
       </div>
     );
   }

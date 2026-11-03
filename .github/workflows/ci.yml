@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 0.9.10]
+    # Manual run on any branch of the development repository: push a `ci-*` tag.
+    tags: ["ci-*"]
     paths-ignore:
       - "docs/**"
       - "*.md"
@@ -68,6 +70,7 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: "1.96.0"
           components: clippy,rustfmt
 
       - name: Cache cargo
@@ -112,8 +115,14 @@ jobs:
       - name: Check version consistency
         run: npm run check:version
 
+      - name: Check official UUID digest format
+        run: npm run check:official-uuid-digests
+
       - name: Lint frontend and scripts
         run: npm run lint
+
+      - name: Check translation coverage
+        run: npm run check:i18n
 
       - name: JavaScript tests
         run: node --test scripts/*.test.mjs
@@ -128,6 +137,12 @@ jobs:
       - name: Rust tests
         working-directory: src-tauri
         run: cargo test --all-targets
+
+      # Les exemples du graphe passent par le vrai moteur Rust (collage,
+      # préparation, copie standard). Le script réutilise src-tauri/target et
+      # les dépendances déjà récupérées (cargo --offline), ainsi que dist/.
+      - name: Graph examples through the native engine
+        run: npm run test:examples-native
 
       - name: Clippy
         working-directory: src-tauri

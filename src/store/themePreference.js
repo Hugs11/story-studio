@@ -1,9 +1,9 @@
 import { KEYS, read as readSetting, write as writeSetting } from './persistentSettings';
 
 export const THEME_OPTIONS = [
-  { value: 'system', label: 'Système' },
-  { value: 'dark', label: 'Sombre' },
-  { value: 'light', label: 'Clair' },
+  { value: 'system', labelKey: 'settings:interface.theme.system' },
+  { value: 'dark', labelKey: 'settings:interface.theme.dark' },
+  { value: 'light', labelKey: 'settings:interface.theme.light' },
 ];
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';

@@ -1,15 +1,21 @@
+import { presentStoredError } from '../../i18n/userMessage.js';
+import { presentMedia } from '../../i18n/mediaPresentation.js';
+import { useMediaTranslation } from '../../i18n/useMediaTranslation.js';
+import { useProjectContext } from '../../store/ProjectContext';
 import { useState, useRef, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Mic } from '../icons/LucideLocal';
 import { Button } from '../common/Button';
-import { sanitizeProjectPrefix } from '../../utils/projectPrefix';
+import { beginProjectMediaOutput } from '../../store/projectMediaOutput';
 import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
 import './RecordModal.css';
 
 const COUNTDOWN_SECONDS = 3;
 
-export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }) {
+export function RecordModal({ workspaceDir, onSaved, onClose }) {
+  const { t } = useMediaTranslation();
+  const { mediaStorage } = useProjectContext();
   const [phase, setPhase] = useState('countdown'); // countdown | recording | preview | saving | error
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [duration, setDuration] = useState(0);
@@ -18,17 +24,17 @@ export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }
   const [previewPosition, setPreviewPosition] = useState(0);
   const [previewError, setPreviewError] = useState(null);
   const [recordingName, setRecordingName] = useState(() => {
-    const prefix = sanitizeProjectPrefix(projectName);
-    const stamp = Date.now();
-    return prefix ? `${prefix}__rec_${stamp}` : `rec_${stamp}`;
+    return `rec_${Date.now()}`;
   });
 
   const mediaRecorderRef = useRef(null);
+  const mediaOutputRef = useRef(null);
   const chunksRef = useRef([]);
   const blobRef = useRef(null);
   const audioRef = useRef(null);
   const timerRef = useRef(null);
   const closedRef = useRef(false);
+  const savingRef = useRef(false);
 
   // Countdown → démarrage enregistrement
   useEffect(() => {
@@ -54,6 +60,7 @@ export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }
     closedRef.current = false;
     return () => {
       closedRef.current = true;
+      if (!savingRef.current) mediaOutputRef.current?.release();
       releaseRecording();
       stopPreview();
     };
@@ -66,6 +73,7 @@ export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }
   function handleClose() {
     if (phase === 'saving') return;
     closedRef.current = true;
+    mediaOutputRef.current?.release();
     releaseRecording();
     stopPreview();
     onClose?.();
@@ -83,6 +91,9 @@ export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }
   async function startRecording() {
     let stream = null;
     try {
+      mediaOutputRef.current?.release();
+      mediaOutputRef.current = beginProjectMediaOutput(mediaStorage ?? { root: workspaceDir, ephemeral: true });
+      await mediaOutputRef.current.arguments();
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (closedRef.current) {
         stream.getTracks().forEach(track => track.stop());
@@ -102,9 +113,11 @@ export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }
       mediaRecorderRef.current = mr;
       setPhase('recording');
     } catch (e) {
+      mediaOutputRef.current?.release();
       stream?.getTracks().forEach(track => track.stop());
       if (closedRef.current) return;
-      setError(`Impossible d'accéder au micro : ${e.message}`);
+      // Descripteur : la cause technique du navigateur reste un paramètre brut.
+      setError({ key: 'media:record.microphone.failed', params: { detail: e.message } });
       setPhase('error');
     }
   }
@@ -142,12 +155,12 @@ export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }
         if (audioRef.current !== a) return;
         stopPreview();
         setPreviewStatus('error');
-        setPreviewError(`Lecture impossible : ${e.message}`);
+        setPreviewError({ key: 'media:record.preview.failed', params: { detail: e.message } });
       });
     } catch (e) {
       stopPreview();
       setPreviewStatus('error');
-      setPreviewError(`Lecture impossible : ${e.message}`);
+      setPreviewError({ key: 'media:record.preview.failed', params: { detail: e.message } });
     }
   }
 
@@ -174,16 +187,23 @@ export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }
     if (!blobRef.current) return;
     stopPreview();
     setPhase('saving');
+    savingRef.current = true;
+    const output = mediaOutputRef.current;
     try {
       const safeName = recordingName.trim().replace(/[<>:"/\\|?*\[\]+]/g, '_') || `rec_${Date.now()}`;
       const filename = safeName.endsWith('.webm') ? safeName : `${safeName}.webm`;
       const arrayBuffer = await blobRef.current.arrayBuffer();
       const data = Array.from(new Uint8Array(arrayBuffer));
-      const path = await invoke('save_recording', { workspaceDir, filename, data });
-      onSaved?.(path);
+      const path = await invoke('save_recording', { ...await output.arguments(), filename, data });
+      if (!closedRef.current) onSaved?.(path);
     } catch (e) {
-      setError(`Écriture du fichier impossible : ${e}`);
-      setPhase('error');
+      if (!closedRef.current) {
+        setError({ userMessage: e, prefix: { key: 'media:record.write.failedPrefix' } });
+        setPhase('error');
+      }
+    } finally {
+      savingRef.current = false;
+      output?.release();
     }
   }
 
@@ -195,7 +215,7 @@ export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }
     <div className="modal-overlay">
       <div className="modal-box record-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <span>Enregistrement audio</span>
+          <span>{t('media:record.title')}</span>
           <Button variant="icon" className="modal-close" onClick={handleClose} disabled={phase === 'saving'}>×</Button>
         </div>
 
@@ -203,7 +223,7 @@ export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }
           {phase === 'countdown' && (
             <>
               <div className="record-countdown">{countdown}</div>
-              <div className="record-hint">Prépare-toi…</div>
+              <div className="record-hint">{t('media:record.countdown.hint')}</div>
             </>
           )}
 
@@ -211,7 +231,7 @@ export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }
             <>
               <div className="record-pulse" />
               <div className="record-timer">{formatDuration(duration)}</div>
-              <Button variant="danger" onClick={stopRecording}>⏹ Arrêter</Button>
+              <Button variant="danger" onClick={stopRecording}>{t('media:record.stop.action')}</Button>
             </>
           )}
 
@@ -220,45 +240,45 @@ export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }
               <div className="record-preview-icon">
                 <Mic className="record-preview-icon-svg" strokeWidth={2} absoluteStrokeWidth />
               </div>
-              <div className="record-hint">Durée : {formatDuration(duration)}</div>
+              <div className="record-hint">{t('media:record.duration.label', { duration: formatDuration(duration) })}</div>
               {previewStatus !== 'idle' && previewStatus !== 'error' && (
                 <div className="record-hint" role="status">
-                  {previewStatus === 'loading' && 'Chargement de l’aperçu…'}
-                  {previewStatus === 'playing' && `Lecture : ${formatDuration(Math.floor(previewPosition))} / ${formatDuration(duration)}`}
-                  {previewStatus === 'paused' && `En pause à ${formatDuration(Math.floor(previewPosition))}`}
-                  {previewStatus === 'ended' && 'Lecture terminée'}
+                  {previewStatus === 'loading' && t('media:record.preview.loading')}
+                  {previewStatus === 'playing' && t('media:record.preview.playing', { position: formatDuration(Math.floor(previewPosition)), duration: formatDuration(duration) })}
+                  {previewStatus === 'paused' && t('media:record.preview.paused', { position: formatDuration(Math.floor(previewPosition)) })}
+                  {previewStatus === 'ended' && t('media:record.preview.ended')}
                 </div>
               )}
-              {previewError && <div className="record-hint" role="alert" style={{ color: '#E24B4A' }}>{previewError}</div>}
+              {previewError && <div className="record-hint" role="alert" style={{ color: '#E24B4A' }}>{presentMedia(previewError)}</div>}
               <div className="record-name-field">
                 <input
                   className="record-name-input"
                   value={recordingName}
                   onChange={(e) => setRecordingName(e.target.value)}
-                  placeholder="Nom du fichier"
+                  placeholder={t('media:record.name.placeholder')}
                   spellCheck={false}
                 />
                 <span className="record-name-ext">.webm</span>
               </div>
               <div className="record-actions">
                 <Button onClick={playPreview} disabled={previewStatus === 'loading' || previewStatus === 'playing'}>
-                  {previewStatus === 'paused' ? '▶ Reprendre' : '▶ Écouter'}
+                  {previewStatus === 'paused' ? t('media:record.preview.resume') : t('media:record.preview.listen')}
                 </Button>
-                <Button onClick={pausePreview} disabled={previewStatus !== 'playing'}>⏸ Pause</Button>
-                <Button onClick={retry}>↺ Recommencer</Button>
-                <Button variant="primary" onClick={confirm}>✓ Utiliser</Button>
+                <Button onClick={pausePreview} disabled={previewStatus !== 'playing'}>{t('media:record.preview.pause')}</Button>
+                <Button onClick={retry}>{t('media:record.retry.action')}</Button>
+                <Button variant="primary" onClick={confirm}>{t('media:record.use.action')}</Button>
               </div>
             </>
           )}
 
           {phase === 'saving' && (
-            <div className="record-hint">Écriture du fichier…</div>
+            <div className="record-hint">{t('media:record.saving.progress')}</div>
           )}
 
           {phase === 'error' && (
             <>
-              <div className="record-hint" style={{ color: '#E24B4A' }}>{error}</div>
-              <Button onClick={handleClose}>Fermer</Button>
+              <div className="record-hint" style={{ color: '#E24B4A' }}>{presentStoredError(error)}</div>
+              <Button onClick={handleClose}>{t('common:dialog.close.label')}</Button>
             </>
           )}
         </div>

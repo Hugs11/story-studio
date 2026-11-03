@@ -142,12 +142,6 @@
   border-left: 1px solid color-mix(in srgb, var(--borderLt) 62%, transparent);
 }
 
-.structure-actions-leading {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding-left: 4px;
-}
-
 .structure-actions-bar--panel .structure-actions-trailing {
   margin-left: auto;
   padding-left: 12px;

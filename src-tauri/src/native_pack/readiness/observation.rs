@@ -21,8 +21,8 @@ use super::super::authoring::{
 };
 use super::super::{
     classify_stage_id, stable_node_paths, validate_graph_document_integrity, DecodedStoryDocument,
-    OpaqueMemberKind, OptionSelection, PackIdentityOrigin, Position, StageNode, StoryDecodeError,
-    StoryDocument, Transition, ValueOrigin,
+    OptionSelection, PackIdentityOrigin, Position, StageNode, StoryDecodeError, StoryDocument,
+    Transition, ValueOrigin,
 };
 use super::contract::{ContractLine, DimensionId, LineTreatment};
 use super::{
@@ -90,7 +90,6 @@ pub(super) fn observe(payload: &DecodedStoryDocument) -> Observed {
     observe_known_omissions(&graph, &mut observations);
     observe_positions(payload, &graph, &mut observations);
     observe_enriched_markers(&graph, &mut observations);
-    observe_extensions(payload, &mut observations);
     observe_root_duplicates(payload, &mut observations);
 
     let (dimensions, unevaluated) = observations.finish();
@@ -968,38 +967,7 @@ fn observe_enriched_markers(graph: &Graph<'_>, observations: &mut Observations) 
     }
 }
 
-/// Ligne 27 — extensions inconnues, quel que soit le niveau.
-fn observe_extensions(payload: &DecodedStoryDocument, observations: &mut Observations) {
-    let unknown = payload
-        .context
-        .opaque_members
-        .iter()
-        .filter(|member| member.kind == OpaqueMemberKind::UnknownExtension)
-        .collect::<Vec<_>>();
-    let Some(first) = unknown.first() else {
-        return;
-    };
-    let scopes = {
-        let mut scopes = unknown
-            .iter()
-            .map(|member| format!("{:?}", member.scope))
-            .collect::<Vec<_>>();
-        scopes.sort();
-        scopes.dedup();
-        scopes
-    };
-    observations.record(
-        ContractLine::UnknownExtension,
-        format!("{}/{}", first.path.trim_end_matches('/'), first.key),
-        format!(
-            "{} extension(s) inconnue(s) capturées aux niveaux {} ; leur disposition d'export reste explicite.",
-            unknown.len(),
-            scopes.join(", ")
-        ),
-    );
-}
-
-/// Ligne 28 — doublon de clé racine connue, retenu last-wins.
+/// Ligne 27 — doublon de clé racine connue, retenu last-wins.
 fn observe_root_duplicates(payload: &DecodedStoryDocument, observations: &mut Observations) {
     let duplicates = payload
         .context

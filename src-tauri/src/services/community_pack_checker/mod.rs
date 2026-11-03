@@ -1,3 +1,5 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 mod audio;
 mod image;
 mod models;
@@ -12,7 +14,7 @@ pub use models::{
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 
@@ -43,20 +45,51 @@ pub fn analyze_pack_with_log(zip_path: &Path, emit: &dyn Fn(&str)) -> ReportMode
     let pack_name = pack_name_from_path(zip_path);
     let zip_path_string = path_for_frontend(zip_path);
     let mut report = empty_report(&pack_name, &zip_path_string);
-    emit(&format!("Analyse demandée pour {}", pack_name));
-    report
-        .technical_log
-        .push(format!("[OK] Analyse demandée pour {}", pack_name));
+    emit(&{
+        let _msg_pack_name = (pack_name).to_string();
+        user_message::UserMessage::new(codes::CHECKER_ANALYSIS_REQUESTED_LABEL)
+            .param(
+                "packName",
+                user_message::transport_param(_msg_pack_name.clone()),
+            )
+            .with_detail(format!(
+                "Analyse demandée pour {_msg_pack_name}",
+                _msg_pack_name = user_message::transport_detail(&_msg_pack_name)
+            ))
+            .into_transport()
+    });
+    report.technical_log.push({
+        let _msg_pack_name = (pack_name).to_string();
+        user_message::UserMessage::new(codes::CHECKER_ANALYSIS_REQUESTED_LOG)
+            .param(
+                "packName",
+                user_message::transport_param(_msg_pack_name.clone()),
+            )
+            .with_detail(format!(
+                "[OK] Analyse demandée pour {_msg_pack_name}",
+                _msg_pack_name = user_message::transport_detail(&_msg_pack_name)
+            ))
+            .into_transport()
+    });
 
     let temp_dir = unique_pack_workspace("checker");
     if let Err(err) = fs::create_dir_all(&temp_dir) {
         report.issues.push(issue(
             PackValidationSeverity::Error,
             "metadata",
-            "Dossier temporaire",
-            format!("Impossible de préparer l'analyse : {}", err),
+            codes::CHECKER_TEMP_FOLDER_LABEL_TRANSPORT,
+            {
+                let _msg_error = (err).to_string();
+                user_message::UserMessage::new(codes::CHECKER_ANALYSIS_PREPARATION_FAILED)
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Impossible de préparer l'analyse : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                    ))
+                    .into_transport()
+            },
         ));
-        emit("Impossible de préparer le dossier temporaire.");
+        emit(codes::CHECKER_TEMP_FOLDER_PREPARE_FAILED_TRANSPORT);
         return finalize_report_with_log(report, true, emit);
     }
 
@@ -73,6 +106,7 @@ pub fn create_fixed_pack(
     create_fixed_pack_with_log(zip_path, None, metadata_patch, None, &|_| {})
 }
 
+#[cfg(test)]
 pub fn create_fixed_pack_with_log(
     zip_path: &Path,
     output_dir: Option<&Path>,
@@ -87,6 +121,33 @@ pub fn create_fixed_pack_with_log(
         metadata_patch,
         correction_selection,
         emit,
+        None,
+    )
+}
+
+// A requested official UUID also establishes origin (L2); only an already
+// official source constrains the requested UUID to its previous value.
+fn correction_identity<
+    C: crate::services::official_packs::OfficialCatalogue<Error = user_message::UserMessage>,
+>(
+    current: &str,
+    requested: &str,
+    catalogue: Option<&C>,
+) -> Result<crate::native_pack::output_identity::OutputIdentity, user_message::UserMessage> {
+    let provenance =
+        crate::domain::official_provenance::imported_provenance_with_catalogue(current, catalogue);
+    crate::native_pack::output_identity::decide(
+        crate::native_pack::output_identity::ContentIdentity {
+            provenance,
+            uuid: requested,
+            origin_uuid: (provenance
+                == crate::domain::official_provenance::OfficialProvenance::Official)
+                .then_some(current),
+        },
+        crate::native_pack::output_identity::OutputForm::Rewritten,
+        &[],
+        false,
+        catalogue,
     )
 }
 
@@ -97,8 +158,9 @@ pub(crate) fn create_fixed_pack_with_source_log(
     metadata_patch: Option<PackMetadataPatchModel>,
     correction_selection: Option<PackCorrectionSelectionModel>,
     emit: &dyn Fn(&str),
+    catalogue: Option<&crate::services::catalogue::CatalogueState>,
 ) -> Result<FixedPackResultModel, String> {
-    emit("Analyse préparatoire du pack source...");
+    emit(codes::CHECKER_SOURCE_ANALYSIS_START_TRANSPORT);
     let report = analyze_pack_with_log(zip_path, emit);
     let correction_selection = correction_selection.unwrap_or_default();
     let optional_audio_silences_fixed = correction_selection
@@ -120,22 +182,70 @@ pub(crate) fn create_fixed_pack_with_source_log(
         .map(metadata_patch_has_changes)
         .unwrap_or(false);
     if audio_items.is_empty() && image_items.is_empty() && !metadata_will_change {
-        emit("Aucune correction automatique disponible.");
-        return Err("Aucune correction automatique disponible pour ce pack.".to_string());
+        emit(codes::CHECKER_CORRECTION_UNAVAILABLE_LABEL_TRANSPORT);
+        return Err(
+            user_message::UserMessage::new(codes::CHECKER_CORRECTION_UNAVAILABLE_PACK)
+                .with_detail("Aucune correction automatique disponible pour ce pack.".to_string())
+                .into_transport(),
+        );
     }
 
-    emit(&format!(
-        "Corrections à appliquer : {} automatique(s), {} suggestion(s) facultative(s) sélectionnée(s) ; {} audio, {} image, métadonnées {}.",
-        automatic_corrections_applied,
-        optional_audio_silences_fixed,
-        audio_items.len(),
-        image_items.len(),
-        if metadata_will_change { "oui" } else { "non" }
-    ));
-    let mut doc = read_pack_doc(zip_path)?;
+    emit(&{
+        let automatic_correction_count = (automatic_corrections_applied).to_string();
+        let optional_silence_fix_count = (optional_audio_silences_fixed).to_string();
+        let _msg_audio_items = (audio_items.len()).to_string();
+        let _msg_image_items = (image_items.len()).to_string();
+        let metadata_changed_label = (if metadata_will_change {
+            codes::LABEL_BOOLEAN_YES_TRANSPORT
+        } else {
+            codes::LABEL_BOOLEAN_NO_TRANSPORT
+        })
+        .to_string();
+        user_message::UserMessage::new(
+            codes::CHECKER_CORRECTIONS_SELECTION_SUMMARY,
+        )
+            .param(
+                "automaticCorrectionsApplied",
+                user_message::transport_param(automatic_correction_count.clone()),
+            )
+            .param(
+                "optionalAudioSilencesFixed",
+                user_message::transport_param(optional_silence_fix_count.clone()),
+            )
+            .param("audioItems", user_message::transport_param(_msg_audio_items.clone()))
+            .param("imageItems", user_message::transport_param(_msg_image_items.clone()))
+            .param("metadataChanged", user_message::transport_param(metadata_changed_label.clone()))
+            .with_detail(format!(
+                "Corrections à appliquer : {automatic_correction_count} automatique(s), {optional_silence_fix_count} suggestion(s) facultative(s) sélectionnée(s) ; {_msg_audio_items} audio, {_msg_image_items} image, métadonnées {metadata_changed_label}.",
+                _msg_audio_items = user_message::transport_detail(&_msg_audio_items),
+                automatic_correction_count = user_message::transport_detail(&automatic_correction_count),
+                _msg_image_items = user_message::transport_detail(&_msg_image_items),
+                optional_silence_fix_count = user_message::transport_detail(&optional_silence_fix_count),
+                metadata_changed_label = user_message::transport_detail(&metadata_changed_label),
+            ))
+            .into_transport()
+    });
+    let mut doc = read_pack_doc(zip_path).map_err(user_message::UserMessage::into_transport)?;
+    let current = pack_identity_from_story(&doc.story).unwrap_or_default();
+    let requested = metadata_patch
+        .as_ref()
+        .and_then(|p| p.uuid.as_deref())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or(&current);
+    let identity = correction_identity(&current, requested, catalogue)
+        .map_err(user_message::UserMessage::into_transport)?;
     let temp_dir = unique_pack_workspace("fix");
-    fs::create_dir_all(&temp_dir)
-        .map_err(|e| format!("Impossible de créer le dossier temporaire : {}", e))?;
+    fs::create_dir_all(&temp_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::CHECKER_TEMP_FOLDER_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de créer le dossier temporaire : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+            ))
+            .into_transport()
+    })?;
 
     let fixed_result = (|| -> Result<FixedPackResultModel, String> {
         let mut used_asset_names = doc.asset_names.clone();
@@ -145,7 +255,7 @@ pub(crate) fn create_fixed_pack_with_source_log(
         let ffmpeg = if audio_items.is_empty() {
             None
         } else {
-            emit("Recherche de FFmpeg pour les corrections audio...");
+            emit(codes::CHECKER_FFMPEG_CORRECTION_SEARCH_TRANSPORT);
             Some(get_ffmpeg_path()?)
         };
 
@@ -189,16 +299,27 @@ pub(crate) fn create_fixed_pack_with_source_log(
             &original_to_new_image,
         );
         if let Some(patch) = metadata_patch.as_ref() {
-            emit("Application des métadonnées au story.json...");
+            emit(codes::CHECKER_METADATA_APPLY_START_TRANSPORT);
             apply_metadata_patch(&mut doc.story, patch)?;
         }
+        identity.apply(&mut doc.story);
         let fixed_zip_path =
             unique_fixed_zip_path(source_path, output_dir, metadata_patch.as_ref());
-        emit(&format!(
-            "Écriture du ZIP corrigé : {}",
-            fixed_zip_path.display()
-        ));
+        emit(&{
+            let _msg_fixed_zip_path = (fixed_zip_path.display()).to_string();
+            user_message::UserMessage::new(codes::CHECKER_CORRECTED_ZIP_WRITE)
+                .param(
+                    "fixedZipPath",
+                    user_message::transport_param(_msg_fixed_zip_path.clone()),
+                )
+                .with_detail(format!(
+                    "Écriture du ZIP corrigé : {_msg_fixed_zip_path}",
+                    _msg_fixed_zip_path = user_message::transport_detail(&_msg_fixed_zip_path)
+                ))
+                .into_transport()
+        });
         write_fixed_zip(
+            &identity,
             zip_path,
             &fixed_zip_path,
             &doc.story,
@@ -206,7 +327,7 @@ pub(crate) fn create_fixed_pack_with_source_log(
             &original_to_new_audio,
             &original_to_new_image,
         )?;
-        emit("ZIP corrigé finalisé.");
+        emit(codes::CHECKER_CORRECTED_ZIP_FINALIZED_TRANSPORT);
 
         Ok(FixedPackResultModel {
             source_zip_path: path_for_frontend(source_path),
@@ -246,11 +367,27 @@ fn build_audio_fix_plans(
 ) -> Result<Vec<PlannedAudioFix>, String> {
     let maximum_selections = report.audio_items.len().saturating_mul(2);
     if selection.optional_audio_silences.len() > maximum_selections {
-        return Err(format!(
-            "Trop de suggestions audio sélectionnées : {} reçue(s), {} maximum pour ce pack.",
-            selection.optional_audio_silences.len(),
-            maximum_selections
-        ));
+        return Err({
+            let selected_silence_fix_count = (selection.optional_audio_silences.len()).to_string();
+            let _msg_maximum_selections = (maximum_selections).to_string();
+            user_message::UserMessage::new(
+                codes::CHECKER_AUDIO_SELECTION_LIMIT,
+            )
+                .param(
+                    "selectionCount",
+                    user_message::transport_param(selected_silence_fix_count.clone()),
+                )
+                .param(
+                    "maximumSelections",
+                    user_message::transport_param(_msg_maximum_selections.clone()),
+                )
+                .with_detail(format!(
+                    "Trop de suggestions audio sélectionnées : {selected_silence_fix_count} reçue(s), {_msg_maximum_selections} maximum pour ce pack.",
+                    _msg_maximum_selections = user_message::transport_detail(&_msg_maximum_selections),
+                    selected_silence_fix_count = user_message::transport_detail(&selected_silence_fix_count),
+                ))
+                .into_transport()
+        });
     }
     let selected: HashSet<_> = selection.optional_audio_silences.into_iter().collect();
     for requested in &selected {
@@ -265,10 +402,27 @@ fn build_audio_fix_plans(
                 && issue.auto_fix_available
         });
         if !is_current_suggestion {
-            return Err(format!(
-                "Suggestion audio inconnue ou obsolète : {} ({:?}).",
-                requested.file_path, requested.edge
-            ));
+            return Err({
+                let _msg_requested_file_path = (requested.file_path).to_string();
+                let _msg_requested_edge = format!("{:?}", requested.edge);
+                user_message::UserMessage::new(
+                    codes::CHECKER_AUDIO_SUGGESTION_STALE,
+                )
+                    .param(
+                        "requestedFilePath",
+                        user_message::transport_param(_msg_requested_file_path.clone()),
+                    )
+                    .param(
+                        "requestedEdge",
+                        user_message::transport_param(_msg_requested_edge.clone()),
+                    )
+                    .with_detail(format!(
+                        "Suggestion audio inconnue ou obsolète : {_msg_requested_file_path} ({_msg_requested_edge}).",
+                        _msg_requested_edge = user_message::transport_detail(&_msg_requested_edge),
+                        _msg_requested_file_path = user_message::transport_detail(&_msg_requested_file_path),
+                    ))
+                    .into_transport()
+            });
         }
     }
 
@@ -317,10 +471,21 @@ fn prepare_fixed_assets_parallel(
     if audio_workers + image_workers == 0 {
         return Ok(Vec::new());
     }
-    emit(&format!(
-        "Préparation des corrections en parallèle : {} worker(s) max.",
-        correction_worker_count()
-    ));
+    emit(&{
+        let _msg_correction_worker_count = (correction_worker_count()).to_string();
+        user_message::UserMessage::new(
+            codes::CHECKER_CORRECTIONS_PARALLEL_START,
+        )
+            .param(
+                "correctionWorkerCount",
+                user_message::transport_param(_msg_correction_worker_count.clone()),
+            )
+            .with_detail(format!(
+                "Préparation des corrections en parallèle : {_msg_correction_worker_count} worker(s) max.",
+                _msg_correction_worker_count = user_message::transport_detail(&_msg_correction_worker_count),
+            ))
+            .into_transport()
+    });
 
     let (progress_tx, progress_rx) = mpsc::channel::<String>();
     let prepared: Result<Vec<PreparedFixedAsset>, String> = std::thread::scope(|scope| {
@@ -342,9 +507,11 @@ fn prepare_fixed_assets_parallel(
         for message in progress_rx {
             emit(&message);
         }
-        handle
-            .join()
-            .map_err(|_| "Correction parallèle interrompue.".to_string())?
+        handle.join().map_err(|_| {
+            user_message::UserMessage::new(codes::CHECKER_CORRECTIONS_PARALLEL_INTERRUPTED)
+                .with_detail("Correction parallèle interrompue.".to_string())
+                .into_transport()
+        })?
     });
 
     prepared
@@ -360,9 +527,33 @@ fn prepare_one_fixed_audio(
 ) -> Result<PreparedFixedAsset, String> {
     let item = &planned.item;
     let Some(short_name) = item.file_path.strip_prefix("assets/") else {
-        return Err(format!("Chemin audio inattendu : {}", item.file_path));
+        return Err({
+            let _msg_item_file_path = (item.file_path).to_string();
+            user_message::UserMessage::new(codes::CHECKER_AUDIO_PATH_UNEXPECTED)
+                .param(
+                    "itemFilePath",
+                    user_message::transport_param(_msg_item_file_path.clone()),
+                )
+                .with_detail(format!(
+                    "Chemin audio inattendu : {_msg_item_file_path}",
+                    _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path)
+                ))
+                .into_transport()
+        });
     };
-    let _ = progress_tx.send(format!("Correction audio : {}", item.file_path));
+    let _ = progress_tx.send({
+        let _msg_item_file_path = (item.file_path).to_string();
+        user_message::UserMessage::new(codes::CHECKER_AUDIO_CORRECTION_LABEL)
+            .param(
+                "itemFilePath",
+                user_message::transport_param(_msg_item_file_path.clone()),
+            )
+            .with_detail(format!(
+                "Correction audio : {_msg_item_file_path}",
+                _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path)
+            ))
+            .into_transport()
+    });
     let bytes = read_zip_entry_bytes(zip_path, &item.file_path)?;
     let input_path = temp_dir.join(safe_temp_name(
         short_name,
@@ -372,20 +563,58 @@ fn prepare_one_fixed_audio(
         short_name,
         &format!("fixed_audio_{}.mp3", index),
     ));
-    fs::write(&input_path, &bytes)
-        .map_err(|e| format!("Impossible de préparer {} : {}", item.file_path, e))?;
+    fs::write(&input_path, &bytes).map_err(|e| {
+        let _msg_item_file_path = (item.file_path).to_string();
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::CHECKER_CORRECTION_PREPARE_FAILED)
+            .param(
+                "itemFilePath",
+                user_message::transport_param(_msg_item_file_path.clone()),
+            )
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de préparer {_msg_item_file_path} : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+                _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path)
+            ))
+            .into_transport()
+    })?;
     audio::fix_audio_file(
-        ffmpeg.ok_or_else(|| "FFmpeg requis pour les corrections audio.".to_string())?,
+        ffmpeg.ok_or_else(|| {
+            user_message::UserMessage::new(codes::CHECKER_AUDIO_FFMPEG_REQUIRED)
+                .with_detail("FFmpeg requis pour les corrections audio.".to_string())
+                .into_transport()
+        })?,
         &input_path,
         &output_path,
         item,
         planned.plan,
     )?;
-    let fixed_bytes =
-        fs::read(&output_path).map_err(|e| format!("Lecture audio corrigé impossible : {}", e))?;
+    let fixed_bytes = fs::read(&output_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::CHECKER_CORRECTED_AUDIO_READ_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Lecture audio corrigé impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+            ))
+            .into_transport()
+    })?;
     let _ = fs::remove_file(&input_path);
     let _ = fs::remove_file(&output_path);
-    let _ = progress_tx.send(format!("Audio corrigé : {}", item.file_path));
+    let _ = progress_tx.send({
+        let _msg_item_file_path = (item.file_path).to_string();
+        user_message::UserMessage::new(codes::CHECKER_CORRECTED_AUDIO_LABEL)
+            .param(
+                "itemFilePath",
+                user_message::transport_param(_msg_item_file_path.clone()),
+            )
+            .with_detail(format!(
+                "Audio corrigé : {_msg_item_file_path}",
+                _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path)
+            ))
+            .into_transport()
+    });
     Ok(PreparedFixedAsset::Audio {
         original_short: short_name.to_string(),
         desired_name: asset_name_with_extension(short_name, "mp3"),
@@ -399,12 +628,48 @@ fn prepare_one_fixed_image(
     progress_tx: &mpsc::Sender<String>,
 ) -> Result<PreparedFixedAsset, String> {
     let Some(short_name) = item.file_path.strip_prefix("assets/") else {
-        return Err(format!("Chemin image inattendu : {}", item.file_path));
+        return Err({
+            let _msg_item_file_path = (item.file_path).to_string();
+            user_message::UserMessage::new(codes::CHECKER_IMAGE_PATH_UNEXPECTED)
+                .param(
+                    "itemFilePath",
+                    user_message::transport_param(_msg_item_file_path.clone()),
+                )
+                .with_detail(format!(
+                    "Chemin image inattendu : {_msg_item_file_path}",
+                    _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path)
+                ))
+                .into_transport()
+        });
     };
-    let _ = progress_tx.send(format!("Correction image : {}", item.file_path));
+    let _ = progress_tx.send({
+        let _msg_item_file_path = (item.file_path).to_string();
+        user_message::UserMessage::new(codes::CHECKER_IMAGE_CORRECTION_LABEL)
+            .param(
+                "itemFilePath",
+                user_message::transport_param(_msg_item_file_path.clone()),
+            )
+            .with_detail(format!(
+                "Correction image : {_msg_item_file_path}",
+                _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path)
+            ))
+            .into_transport()
+    });
     let bytes = read_zip_entry_bytes(zip_path, &item.file_path)?;
     let fixed_bytes = image::fix_image_bytes(&bytes)?;
-    let _ = progress_tx.send(format!("Image corrigée : {}", item.file_path));
+    let _ = progress_tx.send({
+        let _msg_item_file_path = (item.file_path).to_string();
+        user_message::UserMessage::new(codes::CHECKER_CORRECTED_IMAGE_LABEL)
+            .param(
+                "itemFilePath",
+                user_message::transport_param(_msg_item_file_path.clone()),
+            )
+            .with_detail(format!(
+                "Image corrigée : {_msg_item_file_path}",
+                _msg_item_file_path = user_message::transport_detail(&_msg_item_file_path)
+            ))
+            .into_transport()
+    });
     Ok(PreparedFixedAsset::Image {
         original_short: short_name.to_string(),
         desired_name: asset_name_with_extension(short_name, "png"),
@@ -418,24 +683,30 @@ fn analyze_pack_inner(
     mut report: ReportModel,
     emit: &dyn Fn(&str),
 ) -> ReportModel {
-    emit("Lecture du ZIP et de story.json...");
+    emit(codes::CHECKER_ZIP_STORY_READ_START_TRANSPORT);
     let doc = match read_pack_doc(zip_path) {
         Ok(doc) => {
-            emit("ZIP et story.json lus.");
-            report
-                .technical_log
-                .push("[OK] Lecture du ZIP et de story.json".to_string());
+            emit(codes::CHECKER_ZIP_STORY_READ_LABEL_TRANSPORT);
+            report.technical_log.push(
+                user_message::UserMessage::new(codes::CHECKER_ZIP_STORY_READ_DONE)
+                    .with_detail("[OK] Lecture du ZIP et de story.json".to_string())
+                    .into_transport(),
+            );
             doc
         }
         Err(err) => {
             report.issues.push(issue(
                 PackValidationSeverity::Error,
                 "structure",
-                "Lecture du pack",
+                codes::CHECKER_PACK_READING_LABEL_TRANSPORT,
                 friendly_zip_error(&err),
             ));
-            report.technical_log.push(format!("[ERROR] {}", err));
-            emit("Lecture du pack impossible.");
+            report.technical_log.push(
+                user_message::UserMessage::new(codes::CHECKER_LOG_ERROR)
+                    .param("error", user_message::transport_param(err.into_transport()))
+                    .into_transport(),
+            );
+            emit(codes::CHECKER_PACK_READ_FAILED_TRANSPORT);
             return finalize_report_with_log(report, true, emit);
         }
     };
@@ -457,6 +728,13 @@ fn analyze_pack_inner(
     // L'identité que l'appareil connaît : celle de l'Écran d'entrée, que la
     // plupart des packs STUdio portent sans `uuid` de tête.
     report.pack_uuid = pack_identity_from_story(&doc.story).unwrap_or_default();
+    report.official_provenance =
+        crate::domain::official_provenance::imported_provenance(&report.pack_uuid, None)
+            .expect("no catalogue lookup");
+    report.identity_locked = crate::domain::official_provenance::is_official_origin::<
+        crate::services::catalogue::CatalogueState,
+    >(report.official_provenance, &report.pack_uuid, None)
+    .expect("no catalogue lookup");
     report.pack_version = doc
         .story
         .get("version")
@@ -464,9 +742,9 @@ fn analyze_pack_inner(
         .and_then(|value| u32::try_from(value).ok())
         .unwrap_or(1);
 
-    emit("Vérification des métadonnées et du nom du pack...");
+    emit(codes::CHECKER_METADATA_CHECK_START_TRANSPORT);
     validate_title(&doc, zip_path, &mut report);
-    emit("Vérification de la structure et des références...");
+    emit(codes::CHECKER_STRUCTURE_CHECK_START_TRANSPORT);
     validate_structure(&doc, zip_path, temp_dir, &mut report);
     analyze_audio(&doc, zip_path, temp_dir, &mut report, emit);
     analyze_images(&doc, zip_path, &mut report, emit);
@@ -485,8 +763,8 @@ fn validate_title(doc: &LoadedPackDoc, zip_path: &Path, report: &mut ReportModel
         report.issues.push(issue(
             PackValidationSeverity::Error,
             "title",
-            "Titre du pack",
-            "Le titre du pack est vide.",
+            codes::CHECKER_PACK_TITLE_LABEL_TRANSPORT,
+            codes::CHECKER_PACK_TITLE_EMPTY_TRANSPORT,
         ));
         report.title_summary.errors += 1;
         return;
@@ -496,8 +774,8 @@ fn validate_title(doc: &LoadedPackDoc, zip_path: &Path, report: &mut ReportModel
         report.issues.push(issue(
             PackValidationSeverity::Warning,
             "title",
-            "Titre du pack",
-            "Le titre contient des espaces ou caractères à vérifier.",
+            codes::CHECKER_PACK_TITLE_LABEL_TRANSPORT,
+            codes::CHECKER_PACK_TITLE_CHARS_WARNING_TRANSPORT,
         ));
         has_warning = true;
     }
@@ -506,9 +784,9 @@ fn validate_title(doc: &LoadedPackDoc, zip_path: &Path, report: &mut ReportModel
         .and_then(|value| value.to_str())
         .unwrap_or("");
     let convention_source = if parse_community_convention_name(file_stem) {
-        Some("nom du fichier ZIP")
+        Some(codes::CHECKER_ZIP_FILENAME_LABEL_TRANSPORT)
     } else if parse_community_convention_name(title) {
-        Some("titre du pack")
+        Some(codes::CHECKER_PACK_TITLE_CONTEXT_TRANSPORT)
     } else {
         None
     };
@@ -516,18 +794,24 @@ fn validate_title(doc: &LoadedPackDoc, zip_path: &Path, report: &mut ReportModel
         report.issues.push(issue(
             PackValidationSeverity::Ok,
             "title",
-            "Convention communautaire",
-            format!(
-                "Le pack respecte la convention communautaire via le {}.",
-                source
-            ),
+            codes::CHECKER_NAMING_CONVENTION_LABEL_TRANSPORT,
+            {
+                let _msg_source = (source).to_string();
+                user_message::UserMessage::new(codes::CHECKER_NAMING_CONVENTION_MATCHED)
+                    .param("source", user_message::transport_param(_msg_source.clone()))
+                    .with_detail(format!(
+                        "Le pack respecte la convention communautaire via le {_msg_source}.",
+                        _msg_source = user_message::transport_detail(&_msg_source),
+                    ))
+                    .into_transport()
+            },
         ));
     } else {
         report.issues.push(issue(
             PackValidationSeverity::Warning,
             "title",
-            "Convention communautaire",
-            "Le nom du pack ne semble pas suivre la convention communautaire.",
+            codes::CHECKER_NAMING_CONVENTION_LABEL_TRANSPORT,
+            codes::CHECKER_NAMING_CONVENTION_UNMATCHED_TRANSPORT,
         ));
         has_warning = true;
     }
@@ -578,15 +862,15 @@ fn validate_structure(
         report.issues.push(issue(
             PackValidationSeverity::Info,
             "nightMode",
-            "Mode nuit",
-            "Mode nuit détecté dans le pack.",
+            codes::CHECKER_NIGHT_MODE_LABEL_TRANSPORT,
+            codes::CHECKER_NIGHT_MODE_DETECTED_TRANSPORT,
         ));
     } else {
         report.issues.push(issue(
             PackValidationSeverity::Info,
             "nightMode",
-            "Mode nuit",
-            "Aucun mode nuit détecté. Ce n'est pas bloquant.",
+            codes::CHECKER_NIGHT_MODE_LABEL_TRANSPORT,
+            codes::CHECKER_NIGHT_MODE_ABSENT_TRANSPORT,
         ));
     }
 
@@ -596,8 +880,17 @@ fn validate_structure(
             report.issues.push(issue(
                 PackValidationSeverity::Error,
                 "structure",
-                "Structure du pack",
-                format!("Champ obligatoire manquant dans story.json : {}.", field),
+                codes::CHECKER_PACK_STRUCTURE_LABEL_TRANSPORT,
+                {
+                    let _msg_field = (field).to_string();
+                    user_message::UserMessage::new(codes::CHECKER_STORY_FIELD_MISSING)
+                        .param("field", user_message::transport_param(_msg_field.clone()))
+                        .with_detail(format!(
+                            "Champ obligatoire manquant dans story.json : {_msg_field}.",
+                            _msg_field = user_message::transport_detail(&_msg_field),
+                        ))
+                        .into_transport()
+                },
             ));
         }
     }
@@ -610,8 +903,8 @@ fn validate_structure(
         report.issues.push(issue(
             PackValidationSeverity::Error,
             "structure",
-            "Structure du pack",
-            "La liste des étapes est absente ou invalide.",
+            codes::CHECKER_PACK_STRUCTURE_LABEL_TRANSPORT,
+            codes::CHECKER_STAGE_LIST_INVALID_TRANSPORT,
         ));
     }
     if doc
@@ -623,8 +916,8 @@ fn validate_structure(
         report.issues.push(issue(
             PackValidationSeverity::Error,
             "structure",
-            "Structure du pack",
-            "La liste des actions est absente ou invalide.",
+            codes::CHECKER_PACK_STRUCTURE_LABEL_TRANSPORT,
+            codes::CHECKER_ACTION_LIST_INVALID_TRANSPORT,
         ));
     }
 
@@ -632,13 +925,14 @@ fn validate_structure(
     validate_action_targets(doc, report);
     validate_story_studio_editability(zip_path, temp_dir, report);
 
-    report.technical_log.push(format!(
-        "[OK] {} stages, {} actions, {} audio(s), {} image(s)",
-        report.structure_summary.stage_count,
-        report.structure_summary.action_count,
-        report.structure_summary.referenced_audio_count,
-        report.structure_summary.referenced_image_count
-    ));
+    report.technical_log.push(
+        user_message::UserMessage::new(codes::CHECKER_STRUCTURE_COUNTS)
+            .param("stages", report.structure_summary.stage_count)
+            .param("actions", report.structure_summary.action_count)
+            .param("audio", report.structure_summary.referenced_audio_count)
+            .param("images", report.structure_summary.referenced_image_count)
+            .into_transport(),
+    );
 }
 
 fn validate_asset_presence(doc: &LoadedPackDoc, report: &mut ReportModel) {
@@ -648,13 +942,36 @@ fn validate_asset_presence(doc: &LoadedPackDoc, report: &mut ReportModel) {
                 PackValidationSeverity::Error,
                 "structure",
                 &asset_ref.stage_name,
-                "Un audio référencé est absent du ZIP.",
+                codes::CHECKER_REFERENCED_AUDIO_MISSING_TRANSPORT,
             );
             entry.file_path = Some(format!("assets/{}", asset_ref.asset_name));
-            entry.technical_details = Some(format!(
-                "stageNodes[{}] ({}) référence {}.",
-                asset_ref.stage_index, asset_ref.stage_id, asset_ref.asset_name
-            ));
+            entry.technical_details = Some({
+                let _msg_asset_ref_stage_index = (asset_ref.stage_index).to_string();
+                let _msg_asset_ref_stage_id = (asset_ref.stage_id).to_string();
+                let _msg_asset_ref_asset_name = (asset_ref.asset_name).to_string();
+                user_message::UserMessage::new(
+                    codes::CHECKER_STAGE_REFERENCES_LABEL,
+                )
+                    .param(
+                        "stageIndex",
+                        user_message::transport_param(_msg_asset_ref_stage_index.clone()),
+                    )
+                    .param(
+                        "stageId",
+                        user_message::transport_param(_msg_asset_ref_stage_id.clone()),
+                    )
+                    .param(
+                        "assetName",
+                        user_message::transport_param(_msg_asset_ref_asset_name.clone()),
+                    )
+                    .with_detail(format!(
+                        "stageNodes[{_msg_asset_ref_stage_index}] ({_msg_asset_ref_stage_id}) référence {_msg_asset_ref_asset_name}.",
+                        _msg_asset_ref_asset_name = user_message::transport_detail(&_msg_asset_ref_asset_name),
+                        _msg_asset_ref_stage_id = user_message::transport_detail(&_msg_asset_ref_stage_id),
+                        _msg_asset_ref_stage_index = user_message::transport_detail(&_msg_asset_ref_stage_index),
+                    ))
+                    .into_transport()
+            });
             report.issues.push(entry);
         }
     }
@@ -664,13 +981,36 @@ fn validate_asset_presence(doc: &LoadedPackDoc, report: &mut ReportModel) {
                 PackValidationSeverity::Error,
                 "structure",
                 &asset_ref.stage_name,
-                "Une image référencée est absente du ZIP.",
+                codes::CHECKER_REFERENCED_IMAGE_MISSING_TRANSPORT,
             );
             entry.file_path = Some(format!("assets/{}", asset_ref.asset_name));
-            entry.technical_details = Some(format!(
-                "stageNodes[{}] ({}) référence {}.",
-                asset_ref.stage_index, asset_ref.stage_id, asset_ref.asset_name
-            ));
+            entry.technical_details = Some({
+                let _msg_asset_ref_stage_index = (asset_ref.stage_index).to_string();
+                let _msg_asset_ref_stage_id = (asset_ref.stage_id).to_string();
+                let _msg_asset_ref_asset_name = (asset_ref.asset_name).to_string();
+                user_message::UserMessage::new(
+                    codes::CHECKER_STAGE_REFERENCES_LABEL,
+                )
+                    .param(
+                        "stageIndex",
+                        user_message::transport_param(_msg_asset_ref_stage_index.clone()),
+                    )
+                    .param(
+                        "stageId",
+                        user_message::transport_param(_msg_asset_ref_stage_id.clone()),
+                    )
+                    .param(
+                        "assetName",
+                        user_message::transport_param(_msg_asset_ref_asset_name.clone()),
+                    )
+                    .with_detail(format!(
+                        "stageNodes[{_msg_asset_ref_stage_index}] ({_msg_asset_ref_stage_id}) référence {_msg_asset_ref_asset_name}.",
+                        _msg_asset_ref_asset_name = user_message::transport_detail(&_msg_asset_ref_asset_name),
+                        _msg_asset_ref_stage_id = user_message::transport_detail(&_msg_asset_ref_stage_id),
+                        _msg_asset_ref_stage_index = user_message::transport_detail(&_msg_asset_ref_stage_index),
+                    ))
+                    .into_transport()
+            });
             report.issues.push(entry);
         }
     }
@@ -686,8 +1026,8 @@ fn validate_asset_presence(doc: &LoadedPackDoc, report: &mut ReportModel) {
             let mut entry = issue(
                 PackValidationSeverity::Info,
                 "structure",
-                "Fichier non référencé",
-                "Un fichier est présent dans assets/ mais n'est pas référencé par story.json.",
+                codes::CHECKER_UNREFERENCED_FILE_TITLE_TRANSPORT,
+                codes::CHECKER_UNREFERENCED_FILE_DESCRIPTION_TRANSPORT,
             );
             entry.file_path = Some(format!("assets/{}", asset));
             report.issues.push(entry);
@@ -716,8 +1056,8 @@ fn validate_action_targets(doc: &LoadedPackDoc, report: &mut ReportModel) {
         report.issues.push(issue(
             PackValidationSeverity::Error,
             "structure",
-            "Structure du pack",
-            "Le point de départ du pack est introuvable.",
+            codes::CHECKER_PACK_STRUCTURE_LABEL_TRANSPORT,
+            codes::CHECKER_ENTRY_STAGE_MISSING_TRANSPORT,
         ));
     }
 
@@ -733,8 +1073,21 @@ fn validate_action_targets(doc: &LoadedPackDoc, report: &mut ReportModel) {
             report.issues.push(issue(
                 PackValidationSeverity::Error,
                 "structure",
-                "Structure du pack",
-                format!("Action {} sans liste de destinations.", action_index + 1),
+                codes::CHECKER_PACK_STRUCTURE_LABEL_TRANSPORT,
+                {
+                    let _msg_action_index_1 = (action_index + 1).to_string();
+                    user_message::UserMessage::new(codes::CHECKER_ACTION_DESTINATIONS_MISSING)
+                        .param(
+                            "actionNumber",
+                            user_message::transport_param(_msg_action_index_1.clone()),
+                        )
+                        .with_detail(format!(
+                            "Action {_msg_action_index_1} sans liste de destinations.",
+                            _msg_action_index_1 =
+                                user_message::transport_detail(&_msg_action_index_1),
+                        ))
+                        .into_transport()
+                },
             ));
             continue;
         };
@@ -743,11 +1096,19 @@ fn validate_action_targets(doc: &LoadedPackDoc, report: &mut ReportModel) {
                 report.issues.push(issue(
                     PackValidationSeverity::Error,
                     "structure",
-                    "Structure du pack",
-                    format!(
-                        "Une destination de navigation est introuvable : {}.",
-                        target
-                    ),
+                    codes::CHECKER_PACK_STRUCTURE_LABEL_TRANSPORT,
+                    {
+                        let _msg_target = (target).to_string();
+                        user_message::UserMessage::new(
+                            codes::CHECKER_NAVIGATION_DESTINATION_MISSING,
+                        )
+                        .param("target", user_message::transport_param(_msg_target.clone()))
+                        .with_detail(format!(
+                            "Une destination de navigation est introuvable : {_msg_target}.",
+                            _msg_target = user_message::transport_detail(&_msg_target),
+                        ))
+                        .into_transport()
+                    },
                 ));
             }
         }
@@ -777,15 +1138,39 @@ fn validate_action_targets(doc: &LoadedPackDoc, report: &mut ReportModel) {
                     .and_then(|value| value.as_str())
                     .filter(|value| !value.trim().is_empty())
                     .map(str::to_string)
-                    .unwrap_or_else(|| format!("Élément {}", stage_index + 1));
+                    .unwrap_or_else(|| {
+                        let _msg_stage_index_1 = (stage_index + 1).to_string();
+                        user_message::UserMessage::new(codes::CHECKER_STRUCTURE_ELEMENT_LABEL)
+                            .param(
+                                "stageNumber",
+                                user_message::transport_param(_msg_stage_index_1.clone()),
+                            )
+                            .with_detail(format!(
+                                "Élément {_msg_stage_index_1}",
+                                _msg_stage_index_1 =
+                                    user_message::transport_detail(&_msg_stage_index_1)
+                            ))
+                            .into_transport()
+                    });
                 report.issues.push(issue(
                     PackValidationSeverity::Error,
                     "structure",
                     stage_label,
-                    format!(
-                        "Une transition de navigation pointe vers une action introuvable : {}.",
-                        action_node
-                    ),
+                    {
+                    let _msg_action_node = (action_node).to_string();
+                    user_message::UserMessage::new(
+                        codes::CHECKER_TRANSITION_ACTION_MISSING,
+                    )
+                        .param(
+                            "actionNodeId",
+                            user_message::transport_param(_msg_action_node.clone()),
+                        )
+                        .with_detail(format!(
+                            "Une transition de navigation pointe vers une action introuvable : {_msg_action_node}.",
+                            _msg_action_node = user_message::transport_detail(&_msg_action_node),
+                        ))
+                        .into_transport()
+                    },
                 ));
             }
         }
@@ -797,48 +1182,101 @@ fn validate_story_studio_editability(zip_path: &Path, _temp_dir: &Path, report: 
     match pack_reader::classify_pack_editability(&zip_string) {
         Ok(editability) if editability.authoring_editable => {
             report.structure_summary.story_studio_editable = true;
-            report.technical_log.push(format!(
-                "[OK] Structure éditable dans Story Studio : {} entrée(s), nativeGraph={}",
-                editability.projected_entry_count, editability.has_native_graph
-            ));
+            report.technical_log.push({
+                let projected_entry_count = (editability.projected_entry_count).to_string();
+                let has_native_graph = (editability.has_native_graph).to_string();
+                user_message::UserMessage::new(
+                    codes::CHECKER_AUTHORING_EDITABLE_LOG,
+                )
+                    .param(
+                        "projectedEntryCount",
+                        user_message::transport_param(projected_entry_count.clone()),
+                    )
+                    .param(
+                        "hasNativeGraph",
+                        user_message::transport_param(has_native_graph.clone()),
+                    )
+                    .with_detail(format!(
+                        "[OK] Structure éditable dans Story Studio : {projected_entry_count} entrée(s), nativeGraph={has_native_graph}",
+                        has_native_graph = user_message::transport_detail(&has_native_graph),
+                        projected_entry_count = user_message::transport_detail(&projected_entry_count),
+                    ))
+                    .into_transport()
+                });
         }
         Ok(editability) => {
             report.structure_summary.story_studio_editable = false;
             let mut entry = issue(
                 PackValidationSeverity::Warning,
                 "structure",
-                "Édition Story Studio",
-                "Cette structure peut être valide pour la Lunii mais Story Studio ne la classe pas authoring-editable.",
+                codes::CHECKER_AUTHORING_EDITING_LABEL_TRANSPORT,
+                codes::CHECKER_AUTHORING_CLASSIFICATION_REFUSED_TRANSPORT,
             );
             entry.technical_details = Some(editability.reason.clone());
             report.issues.push(entry);
-            report.technical_log.push(format!(
-                "[WARN] Édition Story Studio refusée : {} ({} entrée(s), roundTripFaithful={}, usesGraphProjection={}, nativeGraph={}, écarts={})",
-                editability.reason,
-                editability.projected_entry_count,
-                editability.round_trip_faithful,
-                editability.uses_graph_projection,
-                editability.has_native_graph,
-                editability
+            report.technical_log.push({
+                let _msg_editability_reason = (editability.reason).to_string();
+                let projected_entry_count = (editability.projected_entry_count).to_string();
+                let _msg_editability_round_trip_faithful = (editability.round_trip_faithful).to_string();
+                let uses_graph_projection = (editability.uses_graph_projection).to_string();
+                let has_native_graph = (editability.has_native_graph).to_string();
+                let fidelity_gap_count = (editability
                     .fidelity
                     .as_ref()
                     .map(|fidelity| fidelity.gaps.len())
-                    .unwrap_or(0),
-            ));
+                    .unwrap_or(0)).to_string(); user_message::UserMessage::new(
+                        codes::CHECKER_AUTHORING_REFUSAL_LOG,
+                    )
+    .param("reason", user_message::transport_param(_msg_editability_reason.clone()))
+    .param(
+        "projectedEntryCount",
+        user_message::transport_param(projected_entry_count.clone()),
+    )
+    .param(
+        "roundTripFaithful",
+        user_message::transport_param(_msg_editability_round_trip_faithful.clone()),
+    )
+    .param(
+        "usesGraphProjection",
+        user_message::transport_param(uses_graph_projection.clone()),
+    )
+    .param(
+        "hasNativeGraph",
+        user_message::transport_param(has_native_graph.clone()),
+    )
+    .param("differenceCount", user_message::transport_param(fidelity_gap_count.clone()))
+    .with_detail(format!(
+        "[WARN] Édition Story Studio refusée : {_msg_editability_reason} ({projected_entry_count} entrée(s), roundTripFaithful={_msg_editability_round_trip_faithful}, usesGraphProjection={uses_graph_projection}, nativeGraph={has_native_graph}, écarts={fidelity_gap_count})",
+        has_native_graph = user_message::transport_detail(&has_native_graph),
+        projected_entry_count = user_message::transport_detail(&projected_entry_count),
+        _msg_editability_reason = user_message::transport_detail(&_msg_editability_reason),
+        _msg_editability_round_trip_faithful = user_message::transport_detail(&_msg_editability_round_trip_faithful),
+        uses_graph_projection = user_message::transport_detail(&uses_graph_projection),
+        fidelity_gap_count = user_message::transport_detail(&fidelity_gap_count),
+    ))
+    .into_transport()
+});
         }
         Err(err) => {
             report.structure_summary.story_studio_editable = false;
             let mut entry = issue(
                 PackValidationSeverity::Warning,
                 "structure",
-                "Édition Story Studio",
-                "Cette structure peut être valide pour la Lunii mais non éditable dans Story Studio.",
+                codes::CHECKER_AUTHORING_EDITING_LABEL_TRANSPORT,
+                codes::CHECKER_AUTHORING_EDITING_REFUSED_TRANSPORT,
             );
             entry.technical_details = Some(err.clone());
             report.issues.push(entry);
-            report
-                .technical_log
-                .push(format!("[WARN] Rapport d'éditabilité impossible : {}", err));
+            report.technical_log.push({
+                let _msg_error = (err).to_string();
+                user_message::UserMessage::new(codes::CHECKER_EDITABILITY_REPORT_FAILED)
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "[WARN] Rapport d'éditabilité impossible : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                    ))
+                    .into_transport()
+            });
         }
     }
 }
@@ -853,22 +1291,40 @@ fn analyze_audio(
     let unique_refs = first_refs_by_asset(&doc.audio_refs);
     report.audio_summary.total = unique_refs.len();
     if unique_refs.is_empty() {
-        emit("Aucun audio référencé à analyser.");
+        emit(codes::CHECKER_REFERENCED_AUDIO_ABSENT_TRANSPORT);
         return;
     }
-    emit(&format!(
-        "Analyse audio FFmpeg : {} fichier(s)...",
-        unique_refs.len()
-    ));
+    emit(&{
+        let _msg_unique_refs = (unique_refs.len()).to_string();
+        user_message::UserMessage::new(codes::CHECKER_AUDIO_ANALYSIS_START)
+            .param(
+                "uniqueRefs",
+                user_message::transport_param(_msg_unique_refs.clone()),
+            )
+            .with_detail(format!(
+                "Analyse audio FFmpeg : {_msg_unique_refs} fichier(s)...",
+                _msg_unique_refs = user_message::transport_detail(&_msg_unique_refs),
+            ))
+            .into_transport()
+    });
     let ffmpeg = match get_ffmpeg_path() {
         Ok(path) => path,
         Err(err) => {
-            emit("FFmpeg introuvable pour l'analyse audio.");
+            emit(codes::CHECKER_ANALYSIS_FFMPEG_MISSING_TRANSPORT);
             report.issues.push(issue(
                 PackValidationSeverity::Error,
                 "audio",
-                "Analyse audio",
-                format!("FFmpeg est introuvable : {}", err),
+                codes::CHECKER_AUDIO_ANALYSIS_LABEL_TRANSPORT,
+                {
+                    let _msg_error = (err).to_string();
+                    user_message::UserMessage::new(codes::CHECKER_FFMPEG_TOOL_MISSING)
+                        .param("error", user_message::transport_param(_msg_error.clone()))
+                        .with_detail(format!(
+                            "FFmpeg est introuvable : {_msg_error}",
+                            _msg_error = user_message::transport_detail(&_msg_error),
+                        ))
+                        .into_transport()
+                },
             ));
             return;
         }
@@ -900,10 +1356,27 @@ fn analyze_audio(
             report.audio_items.push(item);
         }
     }
-    emit(&format!(
-        "Analyse audio terminée : {} OK, {} à corriger.",
-        report.audio_summary.ok, report.audio_summary.auto_fixable
-    ));
+    emit(&{
+        let _msg_report_audio_summary_ok = (report.audio_summary.ok).to_string();
+        let audio_auto_fixable_count = (report.audio_summary.auto_fixable).to_string();
+        user_message::UserMessage::new(
+            codes::CHECKER_AUDIO_ANALYSIS_DONE,
+        )
+            .param(
+                "conformingAudioCount",
+                user_message::transport_param(_msg_report_audio_summary_ok.clone()),
+            )
+            .param(
+                "fixableAudioCount",
+                user_message::transport_param(audio_auto_fixable_count.clone()),
+            )
+            .with_detail(format!(
+                "Analyse audio terminée : {_msg_report_audio_summary_ok} OK, {audio_auto_fixable_count} à corriger.",
+                audio_auto_fixable_count = user_message::transport_detail(&audio_auto_fixable_count),
+                _msg_report_audio_summary_ok = user_message::transport_detail(&_msg_report_audio_summary_ok),
+            ))
+            .into_transport()
+    });
 }
 
 fn analyze_one_audio(
@@ -931,7 +1404,18 @@ fn analyze_one_audio(
                         PackValidationSeverity::Error,
                         "audio",
                         &asset_ref.stage_name,
-                        format!("Impossible de préparer l'audio pour analyse : {}", err),
+                        {
+                            let _msg_error = (err).to_string();
+                            user_message::UserMessage::new(
+                                codes::CHECKER_AUDIO_ANALYSIS_PREPARE_FAILED,
+                            )
+                            .param("error", user_message::transport_param(_msg_error.clone()))
+                            .with_detail(format!(
+                                "Impossible de préparer l'audio pour analyse : {_msg_error}",
+                                _msg_error = user_message::transport_detail(&_msg_error),
+                            ))
+                            .into_transport()
+                        },
                     )],
                 );
             }
@@ -951,7 +1435,16 @@ fn analyze_one_audio(
                 PackValidationSeverity::Error,
                 "audio",
                 &asset_ref.stage_name,
-                format!("Lecture audio impossible : {}", err),
+                {
+                    let _msg_error = (err).to_string();
+                    user_message::UserMessage::new(codes::CHECKER_AUDIO_READ_FAILED)
+                        .param("error", user_message::transport_param(_msg_error.clone()))
+                        .with_detail(format!(
+                            "Lecture audio impossible : {_msg_error}",
+                            _msg_error = user_message::transport_detail(&_msg_error),
+                        ))
+                        .into_transport()
+                },
             )],
         ),
     }
@@ -966,13 +1459,22 @@ fn analyze_images(
     let unique_refs = first_refs_by_asset(&doc.image_refs);
     report.image_summary.total = unique_refs.len();
     if unique_refs.is_empty() {
-        emit("Aucune image référencée à analyser.");
+        emit(codes::CHECKER_REFERENCED_IMAGE_ABSENT_TRANSPORT);
         return;
     }
-    emit(&format!(
-        "Analyse images : {} fichier(s)...",
-        unique_refs.len()
-    ));
+    emit(&{
+        let _msg_unique_refs = (unique_refs.len()).to_string();
+        user_message::UserMessage::new(codes::CHECKER_IMAGE_ANALYSIS_START)
+            .param(
+                "uniqueRefs",
+                user_message::transport_param(_msg_unique_refs.clone()),
+            )
+            .with_detail(format!(
+                "Analyse images : {_msg_unique_refs} fichier(s)...",
+                _msg_unique_refs = user_message::transport_detail(&_msg_unique_refs)
+            ))
+            .into_transport()
+    });
 
     let results: Vec<(Option<ImageValidationItem>, Vec<PackValidationIssue>)> =
         run_in_analysis_pool(|| {
@@ -993,10 +1495,27 @@ fn analyze_images(
             report.image_items.push(item);
         }
     }
-    emit(&format!(
-        "Analyse images terminée : {} OK, {} à corriger.",
-        report.image_summary.ok, report.image_summary.auto_fixable
-    ));
+    emit(&{
+        let _msg_report_image_summary_ok = (report.image_summary.ok).to_string();
+        let image_auto_fixable_count = (report.image_summary.auto_fixable).to_string();
+        user_message::UserMessage::new(
+            codes::CHECKER_IMAGE_ANALYSIS_DONE,
+        )
+            .param(
+                "conformingImageCount",
+                user_message::transport_param(_msg_report_image_summary_ok.clone()),
+            )
+            .param(
+                "fixableImageCount",
+                user_message::transport_param(image_auto_fixable_count.clone()),
+            )
+            .with_detail(format!(
+                "Analyse images terminée : {_msg_report_image_summary_ok} OK, {image_auto_fixable_count} à corriger.",
+                image_auto_fixable_count = user_message::transport_detail(&image_auto_fixable_count),
+                _msg_report_image_summary_ok = user_message::transport_detail(&_msg_report_image_summary_ok),
+            ))
+            .into_transport()
+    });
 }
 
 fn analyze_one_image(
@@ -1020,7 +1539,16 @@ fn analyze_one_image(
                 PackValidationSeverity::Error,
                 "image",
                 &asset_ref.stage_name,
-                format!("Lecture image impossible : {}", err),
+                {
+                    let _msg_error = (err).to_string();
+                    user_message::UserMessage::new(codes::CHECKER_IMAGE_READ_FAILED)
+                        .param("error", user_message::transport_param(_msg_error.clone()))
+                        .with_detail(format!(
+                            "Lecture image impossible : {_msg_error}",
+                            _msg_error = user_message::transport_detail(&_msg_error),
+                        ))
+                        .into_transport()
+                },
             )],
         ),
     }
@@ -1103,18 +1631,51 @@ fn finalize_report(mut report: ReportModel, fatal: bool) -> ReportModel {
     } else {
         PackValidationVerdict::Valid
     };
-    report
-        .technical_log
-        .push(format!("[OK] Verdict calculé : {:?}", report.verdict));
+    report.technical_log.push({
+        let _msg_report_verdict = format!("{:?}", report.verdict);
+        user_message::UserMessage::new(codes::CHECKER_VERDICT_CALCULATED_LOG)
+            .param(
+                "verdict",
+                user_message::transport_param(_msg_report_verdict.clone()),
+            )
+            .with_detail(format!(
+                "[OK] Verdict calculé : {_msg_report_verdict}",
+                _msg_report_verdict = user_message::transport_detail(&_msg_report_verdict)
+            ))
+            .into_transport()
+    });
     report
 }
 
 fn finalize_report_with_log(report: ReportModel, fatal: bool, emit: &dyn Fn(&str)) -> ReportModel {
     let report = finalize_report(report, fatal);
-    emit(&format!(
-        "Rapport prêt : {} erreur(s), {} avertissement(s), {} correction(s).",
-        report.summary.errors, report.summary.warnings, report.corrections_available
-    ));
+    emit(&{
+        let _msg_report_summary_errors = (report.summary.errors).to_string();
+        let _msg_report_summary_warnings = (report.summary.warnings).to_string();
+        let _msg_report_corrections_available = (report.corrections_available).to_string();
+        user_message::UserMessage::new(
+            codes::CHECKER_REPORT_READY_SUMMARY,
+        )
+            .param(
+                "errorCount",
+                user_message::transport_param(_msg_report_summary_errors.clone()),
+            )
+            .param(
+                "warningCount",
+                user_message::transport_param(_msg_report_summary_warnings.clone()),
+            )
+            .param(
+                "correctionCount",
+                user_message::transport_param(_msg_report_corrections_available.clone()),
+            )
+            .with_detail(format!(
+                "Rapport prêt : {_msg_report_summary_errors} erreur(s), {_msg_report_summary_warnings} avertissement(s), {_msg_report_corrections_available} correction(s).",
+                _msg_report_corrections_available = user_message::transport_detail(&_msg_report_corrections_available),
+                _msg_report_summary_errors = user_message::transport_detail(&_msg_report_summary_errors),
+                _msg_report_summary_warnings = user_message::transport_detail(&_msg_report_summary_warnings),
+            ))
+            .into_transport()
+    });
     report
 }
 
@@ -1123,6 +1684,8 @@ fn empty_report(pack_name: &str, zip_path: &str) -> ReportModel {
         pack_name: pack_name.to_string(),
         pack_title: String::new(),
         pack_description: String::new(),
+        official_provenance: Default::default(),
+        identity_locked: false,
         pack_uuid: String::new(),
         pack_version: 1,
         zip_path: zip_path.to_string(),
@@ -1158,9 +1721,17 @@ fn metadata_patch_has_changes(patch: &PackMetadataPatchModel) -> bool {
         || patch.naming_mode.is_some()
 }
 
-fn apply_metadata_patch(
+pub(crate) fn apply_metadata_patch(
     story: &mut serde_json::Value,
     patch: &PackMetadataPatchModel,
+) -> Result<(), String> {
+    apply_metadata_patch_with_catalogue(story, patch, None)
+}
+
+pub(crate) fn apply_metadata_patch_with_catalogue(
+    story: &mut serde_json::Value,
+    patch: &PackMetadataPatchModel,
+    catalogue: Option<&crate::services::catalogue::CatalogueState>,
 ) -> Result<(), String> {
     if let Some(uuid) = patch
         .uuid
@@ -1168,6 +1739,14 @@ fn apply_metadata_patch(
         .map(str::trim)
         .filter(|value| !value.is_empty())
     {
+        let current = pack_identity_from_story(story).unwrap_or_default();
+        crate::domain::official_provenance::check_identity_change(
+            Default::default(),
+            &current,
+            uuid,
+            catalogue,
+        )
+        .map_err(user_message::UserMessage::into_transport)?;
         apply_pack_identity(story, uuid)?;
     }
     let Some(object) = story.as_object_mut() else {
@@ -1215,7 +1794,12 @@ fn apply_metadata_patch(
 /// STUdio : il reçoit d'abord un UUID neuf, et ses références le suivent.
 fn apply_pack_identity(story: &mut serde_json::Value, identity: &str) -> Result<(), String> {
     if let Some(refusal) = pack_identity_refusal(identity) {
-        return Err(refusal);
+        return Err(
+            user_message::UserMessage::new(codes::PACK_IDENTITY_UNREADABLE)
+                .param("identity", identity)
+                .with_detail(refusal)
+                .into_transport(),
+        );
     }
     if pack_identity_from_story(story).as_deref() == Some(identity) {
         return Ok(());
@@ -1224,7 +1808,11 @@ fn apply_pack_identity(story: &mut serde_json::Value, identity: &str) -> Result<
         .get("stageNodes")
         .and_then(|value| value.as_array())
         .ok_or_else(|| {
-            "story.json sans stageNodes : l'identité ne peut pas être posée.".to_string()
+            user_message::UserMessage::new(codes::CHECKER_IDENTITY_STAGES_MISSING)
+                .with_detail(
+                    "story.json sans stageNodes : l'identité ne peut pas être posée.".to_string(),
+                )
+                .into_transport()
         })?;
     let entries: Vec<usize> = stages
         .iter()
@@ -1234,8 +1822,12 @@ fn apply_pack_identity(story: &mut serde_json::Value, identity: &str) -> Result<
         .collect();
     let [entry_index] = entries[..] else {
         return Err(
-            "Le pack n'a pas un seul Écran d'entrée : son identité ne peut pas être posée."
-                .to_string(),
+            user_message::UserMessage::new(codes::CHECKER_IDENTITY_ENTRY_AMBIGUOUS)
+                .with_detail(
+                    "Le pack n'a pas un seul Écran d'entrée : son identité ne peut pas être posée."
+                        .to_string(),
+                )
+                .into_transport(),
         );
     };
     let entry_id = stages[entry_index]
@@ -1304,6 +1896,7 @@ fn rename_stage(story: &mut serde_json::Value, index: usize, from: &str, to: &st
 }
 
 fn write_fixed_zip(
+    identity: &crate::native_pack::output_identity::OutputIdentity,
     source_zip: &Path,
     output_zip: &Path,
     story: &serde_json::Value,
@@ -1311,40 +1904,228 @@ fn write_fixed_zip(
     audio_replacements: &HashMap<String, String>,
     image_replacements: &HashMap<String, String>,
 ) -> Result<(), String> {
-    let source_file = fs::File::open(source_zip)
-        .map_err(|e| format!("Impossible d'ouvrir le ZIP source : {}", e))?;
-    let mut source_archive =
-        zip::ZipArchive::new(source_file).map_err(|e| format!("ZIP source invalide : {}", e))?;
+    let source_file = fs::File::open(source_zip).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::CHECKER_SOURCE_ZIP_OPEN_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible d'ouvrir le ZIP source : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    let source_archive = zip::ZipArchive::new(source_file).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::CHECKER_SOURCE_ZIP_INVALID)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "ZIP source invalide : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if let Some(parent) = output_zip.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Impossible de créer le dossier de sortie : {}", e))?;
+        fs::create_dir_all(parent).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::CHECKER_OUTPUT_FOLDER_CREATE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de créer le dossier de sortie : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                ))
+                .into_transport()
+        })?;
     }
-    let output_file = fs::File::create(output_zip)
-        .map_err(|e| format!("Impossible de créer {} : {}", output_zip.display(), e))?;
-    let mut writer = zip::ZipWriter::new(output_file);
+    let output_file = fs::File::create(output_zip).map_err(|e| {
+        let _msg_output_zip = (output_zip.display()).to_string();
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::CHECKER_OUTPUT_FILE_CREATE_FAILED)
+            .param(
+                "outputZip",
+                user_message::transport_param(_msg_output_zip.clone()),
+            )
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de créer {_msg_output_zip} : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+                _msg_output_zip = user_message::transport_detail(&_msg_output_zip)
+            ))
+            .into_transport()
+    })?;
+    write_fixed_zip_to_cancellable(
+        identity,
+        source_archive,
+        output_file,
+        Some(serialize_metadata_story(story)?),
+        fixed_assets,
+        audio_replacements,
+        image_replacements,
+        None,
+        &std::sync::atomic::AtomicBool::new(false),
+    )
+}
+
+/// Shared story serialization for archive and directory metadata changes.
+pub(crate) fn serialize_metadata_story(story: &serde_json::Value) -> Result<String, String> {
+    serde_json::to_string_pretty(story).map_err(|e| {
+        user_message::UserMessage::new(codes::CHECKER_STORY_ENCODE_FAILED)
+            .param("error", e.to_string())
+            .with_detail(e.to_string())
+            .into_transport()
+    })
+}
+
+#[cfg(test)]
+pub(crate) fn write_metadata_zip(
+    source: &Path,
+    output: fs::File,
+    story: Option<&str>,
+    cover: Option<&[u8]>,
+    cancel: &std::sync::atomic::AtomicBool,
+) -> Result<(), String> {
+    let identity = crate::native_pack::output_identity::for_path(
+        source,
+        crate::native_pack::output_identity::OutputForm::Rewritten,
+        None,
+    )
+    .map_err(user_message::UserMessage::into_transport)?;
+    write_metadata_zip_authorized(&identity, source, output, story, cover, cancel)
+}
+
+/// Metadata-only boundary: never invokes analysis or media correction.
+pub(crate) fn write_metadata_zip_authorized(
+    identity: &crate::native_pack::output_identity::OutputIdentity,
+    source: &Path,
+    output: fs::File,
+    story: Option<&str>,
+    cover: Option<&[u8]>,
+    cancel: &std::sync::atomic::AtomicBool,
+) -> Result<(), String> {
+    let archive = zip::ZipArchive::new(fs::File::open(source).map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())?;
+    write_fixed_zip_to_cancellable(
+        identity,
+        archive,
+        output,
+        story.map(str::to_owned),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        cover,
+        cancel,
+    )
+}
+
+#[cfg(test)]
+#[allow(clippy::too_many_arguments)]
+fn write_fixed_zip_to(
+    source_archive: zip::ZipArchive<fs::File>,
+    output_file: fs::File,
+    story: Option<String>,
+    fixed_assets: &HashMap<String, Vec<u8>>,
+    audio_replacements: &HashMap<String, String>,
+    image_replacements: &HashMap<String, String>,
+    cover: Option<&[u8]>,
+) -> Result<(), String> {
+    let value = story
+        .as_deref()
+        .map(serde_json::from_str)
+        .transpose()
+        .map_err(|e| e.to_string())?
+        .unwrap_or_else(|| serde_json::json!({}));
+    let identity = crate::native_pack::output_identity::for_story(
+        &value,
+        crate::native_pack::output_identity::OutputForm::Rewritten,
+        None,
+    )
+    .map_err(user_message::UserMessage::into_transport)?;
+    write_fixed_zip_to_cancellable(
+        &identity,
+        source_archive,
+        output_file,
+        story,
+        fixed_assets,
+        audio_replacements,
+        image_replacements,
+        cover,
+        &std::sync::atomic::AtomicBool::new(false),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn write_fixed_zip_to_cancellable(
+    identity: &crate::native_pack::output_identity::OutputIdentity,
+    mut source_archive: zip::ZipArchive<fs::File>,
+    output_file: fs::File,
+    story: Option<String>,
+    fixed_assets: &HashMap<String, Vec<u8>>,
+    audio_replacements: &HashMap<String, String>,
+    image_replacements: &HashMap<String, String>,
+    cover: Option<&[u8]>,
+    cancel: &std::sync::atomic::AtomicBool,
+) -> Result<(), String> {
+    let story = story.map(|text| identity.serialize(&text)).transpose()?;
+    let mut writer = zip::ZipWriter::new(crate::support::imported_pack::cancellation::Writer {
+        inner: output_file,
+        cancel,
+        stage: "metadataZipWrite",
+    });
     let opts = zip::write::SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated);
     let mut written = HashSet::new();
 
-    writer
-        .start_file("story.json", opts)
-        .map_err(|e| format!("ZIP story.json : {}", e))?;
-    let story_bytes = serde_json::to_string_pretty(story)
-        .map_err(|e| format!("Sérialisation story.json impossible : {}", e))?;
-    writer
-        .write_all(story_bytes.as_bytes())
-        .map_err(|e| format!("Écriture story.json impossible : {}", e))?;
-    written.insert("story.json".to_string());
-
+    if let Some(story_bytes) = story {
+        writer.start_file("story.json", opts).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::CHECKER_STORY_ZIP_WRITE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "ZIP story.json : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
+        writer.write_all(story_bytes.as_bytes()).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::CHECKER_STORY_WRITE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Écriture story.json impossible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
+        written.insert("story.json".to_string());
+    }
+    if let Some(bytes) = cover {
+        writer
+            .start_file("thumbnail.png", opts)
+            .map_err(|e| e.to_string())?;
+        writer.write_all(bytes).map_err(|e| e.to_string())?;
+        written.insert("thumbnail.png".into());
+    }
     for index in 0..source_archive.len() {
-        let mut entry = source_archive
-            .by_index(index)
-            .map_err(|e| format!("Lecture ZIP index {} impossible : {}", index, e))?;
+        let entry = source_archive.by_index(index).map_err(|e| {
+            let _msg_index = (index).to_string();
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::CHECKER_REWRITE_ZIP_INDEX_FAILED)
+                .param("index", user_message::transport_param(_msg_index.clone()))
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Lecture ZIP index {_msg_index} impossible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                    _msg_index = user_message::transport_detail(&_msg_index),
+                ))
+                .into_transport()
+        })?;
         if entry.is_dir() {
             continue;
         }
         let entry_name = entry.name().replace('\\', "/");
-        if entry_name == "story.json" {
+        if entry_name == "story.json" && written.contains("story.json") {
+            continue;
+        }
+        if entry_name == "thumbnail.png" && cover.is_some() {
             continue;
         }
         let replacement_short = entry_name.strip_prefix("assets/").and_then(|short| {
@@ -1357,45 +2138,109 @@ fn write_fixed_zip(
             if let Some(bytes) = fixed_assets.get(&new_short) {
                 let new_entry_name = format!("assets/{}", new_short);
                 if written.insert(new_entry_name.clone()) {
-                    writer
-                        .start_file(&new_entry_name, opts)
-                        .map_err(|e| format!("ZIP {} : {}", new_entry_name, e))?;
-                    writer
-                        .write_all(bytes)
-                        .map_err(|e| format!("Écriture {} impossible : {}", new_entry_name, e))?;
+                    writer.start_file(&new_entry_name, opts).map_err(|e| {
+                        let _msg_new_entry_name = (new_entry_name).to_string();
+                        let _msg_error = (e).to_string();
+                        user_message::UserMessage::new(codes::CHECKER_REWRITE_ZIP_READ_FAILED)
+                            .param(
+                                "newEntryName",
+                                user_message::transport_param(_msg_new_entry_name.clone()),
+                            )
+                            .param("error", user_message::transport_param(_msg_error.clone()))
+                            .with_detail(format!(
+                                "ZIP {_msg_new_entry_name} : {_msg_error}",
+                                _msg_error = user_message::transport_detail(&_msg_error),
+                                _msg_new_entry_name =
+                                    user_message::transport_detail(&_msg_new_entry_name)
+                            ))
+                            .into_transport()
+                    })?;
+                    writer.write_all(bytes).map_err(|e| {
+                        let _msg_new_entry_name = (new_entry_name).to_string();
+                        let _msg_error = (e).to_string();
+                        user_message::UserMessage::new(codes::CHECKER_REWRITE_ASSET_WRITE_FAILED)
+                            .param(
+                                "newEntryName",
+                                user_message::transport_param(_msg_new_entry_name.clone()),
+                            )
+                            .param("error", user_message::transport_param(_msg_error.clone()))
+                            .with_detail(format!(
+                                "Écriture {_msg_new_entry_name} impossible : {_msg_error}",
+                                _msg_error = user_message::transport_detail(&_msg_error),
+                                _msg_new_entry_name =
+                                    user_message::transport_detail(&_msg_new_entry_name),
+                            ))
+                            .into_transport()
+                    })?;
                 }
             }
             continue;
         }
-        let mut bytes = Vec::new();
-        entry
-            .read_to_end(&mut bytes)
-            .map_err(|e| format!("Lecture {} impossible : {}", entry_name, e))?;
         if written.insert(entry_name.clone()) {
             writer
-                .start_file(&entry_name, opts)
-                .map_err(|e| format!("ZIP {} : {}", entry_name, e))?;
-            writer
-                .write_all(&bytes)
-                .map_err(|e| format!("Écriture {} impossible : {}", entry_name, e))?;
+                .raw_copy_file_rename(entry, entry_name)
+                .map_err(|e| {
+                    user_message::UserMessage::new(codes::CHECKER_ZIP_FINALIZE_FAILED)
+                        .param("error", e.to_string())
+                        .with_detail(e.to_string())
+                        .into_transport()
+                })?;
         }
     }
 
     for (short, bytes) in fixed_assets {
         let entry_name = format!("assets/{}", short);
         if written.insert(entry_name.clone()) {
-            writer
-                .start_file(&entry_name, opts)
-                .map_err(|e| format!("ZIP {} : {}", entry_name, e))?;
-            writer
-                .write_all(bytes)
-                .map_err(|e| format!("Écriture {} impossible : {}", entry_name, e))?;
+            writer.start_file(&entry_name, opts).map_err(|e| {
+                let _msg_entry_name = (entry_name).to_string();
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(codes::CHECKER_REWRITE_ASSET_ZIP_FAILED)
+                    .param(
+                        "entryName",
+                        user_message::transport_param(_msg_entry_name.clone()),
+                    )
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "ZIP {_msg_entry_name} : {_msg_error}",
+                        _msg_entry_name = user_message::transport_detail(&_msg_entry_name),
+                        _msg_error = user_message::transport_detail(&_msg_error)
+                    ))
+                    .into_transport()
+            })?;
+            writer.write_all(bytes).map_err(|e| {
+                let _msg_entry_name = (entry_name).to_string();
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(codes::CHECKER_REWRITE_BYTES_WRITE_FAILED)
+                    .param(
+                        "entryName",
+                        user_message::transport_param(_msg_entry_name.clone()),
+                    )
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Écriture {_msg_entry_name} impossible : {_msg_error}",
+                        _msg_entry_name = user_message::transport_detail(&_msg_entry_name),
+                        _msg_error = user_message::transport_detail(&_msg_error),
+                    ))
+                    .into_transport()
+            })?;
         }
     }
 
     writer
         .finish()
-        .map_err(|e| format!("Finalisation ZIP impossible : {}", e))?;
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::CHECKER_ZIP_FINALIZE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Finalisation ZIP impossible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?
+        .inner
+        .sync_all()
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -1410,11 +2255,15 @@ fn unique_fixed_zip_path(
     let stem = metadata_patch
         .and_then(convention_zip_stem)
         .or_else(|| {
-            source
-                .file_stem()
-                .and_then(|value| value.to_str())
-                .filter(|value| !value.trim().is_empty())
-                .map(|value| format!("{} - corrigé", value))
+            // Un dossier garde son nom entier : « Histoire v1.2 » n'a pas d'extension.
+            (if source.is_dir() {
+                source.file_name()
+            } else {
+                source.file_stem()
+            })
+            .and_then(|value| value.to_str())
+            .filter(|value| !value.trim().is_empty())
+            .map(|value| format!("{} - corrigé", value))
         })
         .unwrap_or_else(|| "pack - corrigé".to_string());
     let first = parent.join(format!("{}.zip", stem));
@@ -1621,20 +2470,24 @@ fn has_forbidden_filename_char(value: &str) -> bool {
 
 fn parse_community_convention_name(raw: &str) -> bool {
     let value = raw.trim();
-    let digits_len = value
-        .chars()
-        .take_while(|ch| ch.is_ascii_digit())
-        .map(char::len_utf8)
-        .sum::<usize>();
-    if digits_len == 0 {
+    let Some((prefix, rest)) = value.split_once("+]") else {
         return false;
     };
-    let Some(rest) = value.get(digits_len..) else {
-        return false;
+    let digits = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+    let valid = if let Some((min, max)) = prefix.split_once('-') {
+        (min.is_empty() || digits(min))
+            && digits(max)
+            && min
+                .parse::<u64>()
+                .ok()
+                .zip(max.parse::<u64>().ok())
+                .is_none_or(|(a, b)| a <= b)
+    } else {
+        digits(prefix)
     };
-    let Some(rest) = rest.strip_prefix("+]") else {
+    if !valid {
         return false;
-    };
+    }
     let core = rest
         .split("[by_")
         .next()
@@ -1644,12 +2497,90 @@ fn parse_community_convention_name(raw: &str) -> bool {
     !core.is_empty()
 }
 
-fn friendly_zip_error(err: &str) -> String {
-    if err.contains("story.json") {
-        "Le pack ne contient pas de story.json lisible à la racine.".to_string()
-    } else if err.contains("Archive ZIP invalide") {
-        "Le fichier n'est pas un ZIP lisible.".to_string()
-    } else {
-        format!("Le pack est invalide ou illisible : {}", err)
+fn friendly_zip_error(err: &user_message::UserMessage) -> String {
+    use crate::support::user_message::codes;
+    match err.code.as_str() {
+        codes::CHECKER_STORY_UNREADABLE => {
+            user_message::UserMessage::new(codes::CHECKER_STORY_UNREADABLE)
+                .with_detail(
+                    "Le pack ne contient pas de story.json lisible à la racine.".to_string(),
+                )
+                .into_transport()
+        }
+        codes::CHECKER_ZIP_INVALID => user_message::UserMessage::new(codes::CHECKER_ZIP_INVALID)
+            .with_detail("Le fichier n'est pas un ZIP lisible.".to_string())
+            .into_transport(),
+        _ => {
+            let _msg_error = (err).to_string();
+            user_message::UserMessage::new(codes::CHECKER_PACK_INVALID_UNREADABLE)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Le pack est invalide ou illisible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                ))
+                .into_transport()
+        }
+    }
+}
+
+#[cfg(test)]
+mod message_classification_tests {
+    use super::*;
+    use crate::support::user_message::{codes, UserMessage};
+    #[test]
+    fn missing_zip_preserves_the_coded_open_failure() {
+        let path = std::env::temp_dir().join(format!(
+            "story-studio-missing-zip-{}.zip",
+            uuid::Uuid::new_v4()
+        ));
+        let error = match zip_doc::read_pack_doc(&path) {
+            Err(error) => error,
+            Ok(_) => panic!("missing ZIP was accepted"),
+        };
+        assert_eq!(error.code, codes::CHECKER_PACK_UNREADABLE);
+        let shown: UserMessage = serde_json::from_str(&friendly_zip_error(&error)).unwrap();
+        assert_eq!(shown.code, codes::CHECKER_PACK_INVALID_UNREADABLE);
+        assert_eq!(
+            shown.params["error"]["code"],
+            codes::CHECKER_ZIP_OPEN_FAILED
+        );
+        assert!(shown.params["error"]["params"]["error"]
+            .as_str()
+            .is_some_and(|value| !value.is_empty()));
+    }
+
+    #[test]
+    fn friendly_zip_errors_are_independent_of_french_text() {
+        for (code, expected) in [
+            (
+                codes::CHECKER_STORY_UNREADABLE,
+                codes::CHECKER_STORY_UNREADABLE,
+            ),
+            (codes::CHECKER_ZIP_INVALID, codes::CHECKER_ZIP_INVALID),
+        ] {
+            assert_eq!(
+                serde_json::from_str::<UserMessage>(&friendly_zip_error(
+                    &UserMessage::new(code).with_detail("texte changé sans mots-clés")
+                ))
+                .unwrap()
+                .code,
+                expected
+            );
+            assert_eq!(
+                serde_json::from_str::<UserMessage>(&friendly_zip_error(
+                    &UserMessage::new(code).with_detail("story.json Archive ZIP invalide")
+                ))
+                .unwrap()
+                .code,
+                expected
+            );
+        }
+        let message: UserMessage = serde_json::from_str(&friendly_zip_error(
+            &UserMessage::new(codes::CHECKER_PACK_UNREADABLE)
+                .with_detail("story.json Archive ZIP invalide"),
+        ))
+        .unwrap();
+        assert_eq!(message.code, codes::CHECKER_PACK_INVALID_UNREADABLE);
+        assert_eq!(message.params["error"], "story.json Archive ZIP invalide");
     }
 }

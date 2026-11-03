@@ -1,3 +1,4 @@
+import { translateImport as t } from '../../i18n/importPresentation.js';
 /**
  * Les règles de l'écran de choix d'une archive enveloppe, séparées de son
  * rendu : ce qui est sélectionnable, ce qu'on peut continuer, et comment un
@@ -17,10 +18,10 @@ export const BUNDLE_CHILD_STATUS = {
 };
 
 const VERDICT_LABELS = {
-  [BUNDLE_CHILD_STATUS.editable]: 'Modifiable',
-  [BUNDLE_CHILD_STATUS.readOnly]: 'Lecture seule',
-  [BUNDLE_CHILD_STATUS.unsupported]: 'Non supporté',
-  [BUNDLE_CHILD_STATUS.error]: 'Illisible',
+  [BUNDLE_CHILD_STATUS.editable]: 'import:bundle.verdict.editable',
+  [BUNDLE_CHILD_STATUS.readOnly]: 'import:bundle.verdict.readOnly',
+  [BUNDLE_CHILD_STATUS.unsupported]: 'import:bundle.verdict.unsupported',
+  [BUNDLE_CHILD_STATUS.error]: 'import:bundle.verdict.error',
 };
 
 export function isChildSelectable(child) {
@@ -53,12 +54,12 @@ export function describeChildVerdict(child) {
   // Le motif du classifieur est un diagnostic : l'auteur lit le message
   // public, le texte brut reste consultable en infobulle.
   const presented = rawReason
-    ? presentImportError(rawReason, REASON_CONTEXTS[status] ?? 'open')
+    ? presentImportError(child?.reasonCode ? { code: child.reasonCode, params: {}, detail: rawReason } : rawReason, REASON_CONTEXTS[status] ?? 'open')
     : { message: '', technicalDetail: '' };
   return {
     status,
-    label: VERDICT_LABELS[status] ?? VERDICT_LABELS[BUNDLE_CHILD_STATUS.error],
-    reason: presented.message,
+    get label() { return t(VERDICT_LABELS[status] ?? VERDICT_LABELS[BUNDLE_CHILD_STATUS.error]); },
+    get reason() { return presented.message; },
     technicalDetail: presented.technicalDetail,
   };
 }
@@ -67,15 +68,15 @@ export function describeChildVerdict(child) {
 export function formatChildSize(sizeBytes) {
   const bytes = Number(sizeBytes);
   if (!Number.isFinite(bytes) || bytes < 0) return '';
-  if (bytes < 1024) return `${bytes} o`;
-  const units = ['Ko', 'Mo', 'Go'];
+  if (bytes < 1024) return t('import:bundle.size.bytes', { size: bytes });
+  const units = ['import:bundle.size.kilobytes', 'import:bundle.size.megabytes', 'import:bundle.size.gigabytes'];
   let value = bytes / 1024;
   let unit = 0;
   while (value >= 1024 && unit < units.length - 1) {
     value /= 1024;
     unit += 1;
   }
-  return `${value >= 10 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
+  return t(units[unit], { size: value >= 10 ? Math.round(value) : value.toFixed(1) });
 }
 
 /**

@@ -1,3 +1,5 @@
+import { graphTranslationEngine } from '../../i18n/graphPresentation.js';
+import { useTranslation } from 'react-i18next';
 // Réparer un compte de racines faux.
 //
 // Ouvert seulement depuis « À corriger », quand le document a zéro ou plusieurs
@@ -19,6 +21,7 @@ import { NodePicker } from './NodePicker.jsx';
 const PICKER_ID = 'advanced-square-one-repair';
 
 export function SquareOneRepairForm({ index, disabled, onGesture, onClose }) {
+  const { t } = useTranslation('graph', { i18n: graphTranslationEngine() });
   const [stagePath, setStagePath] = useState(null);
   const entry = stagePath ? index?.byPath.get(stagePath) ?? null : null;
   const chosen = entry?.kind === STAGE_KIND ? entry : null;
@@ -32,12 +35,9 @@ export function SquareOneRepairForm({ index, disabled, onGesture, onClose }) {
   };
 
   return (
-    <div className="advanced-field__form" role="group" aria-label="Choisir l’Écran racine">
-      <p className="advanced-field__note">
-        Le pack doit avoir un seul Écran racine : c’est par lui que l’écoute commence.
-        L’Écran choisi le devient, et les autres cessent de l’être.
-      </p>
-      <label htmlFor={PICKER_ID}>Écran racine</label>
+    <div className="advanced-field__form" role="group" aria-label={t("graph:entry.repair.aria")}>
+      <p className="advanced-field__note">{t("graph:entry.repair.description")}</p>
+      <label htmlFor={PICKER_ID}>{t("graph:entry.repair.label")}</label>
       <NodePicker
         id={PICKER_ID}
         index={index}
@@ -47,10 +47,8 @@ export function SquareOneRepairForm({ index, disabled, onGesture, onClose }) {
         disabled={disabled}
       />
       <div className="advanced-field__actions">
-        <Button size="sm" variant="primary" disabled={!chosen || disabled} onClick={apply}>
-          Définir comme racine
-        </Button>
-        <Button size="sm" onClick={onClose}>Annuler</Button>
+        <Button size="sm" variant="primary" disabled={!chosen || disabled} onClick={apply}>{t("graph:entry.repair.apply")}</Button>
+        <Button size="sm" onClick={onClose}>{t("common:dialog.cancel.label")}</Button>
       </div>
     </div>
   );

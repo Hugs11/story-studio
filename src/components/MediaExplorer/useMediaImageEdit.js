@@ -3,8 +3,10 @@ import { readImageEditMetadata } from '../../store/imageEditMetadata';
 import { getEditedImageTags } from '../../store/mediaLibrary';
 import { pathKey } from '../../utils/fileUtils';
 import { logger } from '../../utils/logger';
+import { translateMedia } from '../../i18n/mediaPresentation.js';
 
-const SUCCESS_MESSAGE = 'Image modifiée créée dans Médias';
+// Descripteur retenu dans l'état ; le toast le résout à l'affichage.
+const SUCCESS_MESSAGE = { key: 'media:imageEdit.created.notice' };
 
 export function useMediaImageEdit({
   workspaceDir,
@@ -15,7 +17,7 @@ export function useMediaImageEdit({
   showErrorDialog,
 }) {
   const [editSession, setEditSession] = useState(null);
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState(null);
   const requestIdRef = useRef(0);
   const mountedRef = useRef(true);
   const editSessionRef = useRef(null);
@@ -39,7 +41,7 @@ export function useMediaImageEdit({
 
   useEffect(() => {
     if (!notice) return undefined;
-    const timer = window.setTimeout(() => setNotice(''), 2600);
+    const timer = window.setTimeout(() => setNotice(null), 2600);
     return () => window.clearTimeout(timer);
   }, [notice]);
 
@@ -47,8 +49,8 @@ export function useMediaImageEdit({
     if (!item || item.kind !== 'image' || !item.exists) return;
     if (!workspaceDir?.trim() || !onMediaCreated) {
       showErrorDialog?.({
-        title: 'Création impossible',
-        message: 'Aucun dossier de projet durable n’est disponible. L’image source reste inchangée.',
+        get title() { return translateMedia('media:imageEdit.unavailable.title'); },
+        get message() { return translateMedia('media:imageEdit.unavailable.message'); },
         variant: 'warning',
       });
       return;

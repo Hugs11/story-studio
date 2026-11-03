@@ -376,43 +376,32 @@ test('the advanced silent-selection toggle and audio updates remain mutually exc
   assert.equal(isStorySelectionAudioRequired(clearedAudio), true);
 });
 
-function buildProjectWithRef(refOverride) {
-  return buildProject({
-    rootEntries: [
-      {
-        id: 'story-1',
-        type: 'story',
-        name: 'Histoire 1',
-        audio: 'D:/projet/story1.mp3',
-        itemAudio: 'D:/projet/story1-title.mp3',
-        itemImage: 'D:/projet/story1-title.png',
-      },
-      { id: 'ref-1', type: 'ref', ...refOverride },
-    ],
+// L'ancien nœud Lien (`type: 'ref'`) est retiré : l'ouverture et la
+// normalisation le refusent (`legacyLinkProjectRefusal.test.mjs`). S'il
+// atteignait quand même la validation, il serait un type non pris en charge,
+// jamais un choix jouable.
+test('an old link entry is an unsupported entry type', () => {
+  const project = buildProject();
+  const issues = getProjectValidationIssues({
+    ...project,
+    rootEntries: [...project.rootEntries, { id: 'ref-1', type: 'ref', target: 'story:story-1' }],
   });
-}
-
-test('a ref to an existing story raises no ref issue and is not "unsupported"', () => {
-  const issues = getProjectValidationIssues(buildProjectWithRef({ target: 'story:story-1' }));
-  const refIssues = issues.filter((i) => i.id === 'ref-1');
-  assert.equal(refIssues.length, 0, `aucune issue ref attendue, reçu: ${JSON.stringify(refIssues)}`);
-});
-
-test('a ref to a missing target is flagged as an error', () => {
-  const issues = getProjectValidationIssues(buildProjectWithRef({ target: 'story:does-not-exist' }));
   const err = find(issues, (i) => i.id === 'ref-1' && i.status === 'error');
-  assert.ok(err, `une erreur de cible introuvable est attendue, reçu: ${JSON.stringify(issues)}`);
+  assert.ok(err, `une erreur de type non pris en charge est attendue, reçu: ${JSON.stringify(issues)}`);
+  assert.match(err.text, /non pris en charge/);
 });
 
-test('a ref without a target is flagged as an error', () => {
-  const issues = getProjectValidationIssues(buildProjectWithRef({}));
-  const err = find(issues, (i) => i.id === 'ref-1' && i.status === 'error' && /Référence sans cible/.test(i.text));
-  assert.ok(err, `une erreur "référence sans cible" est attendue, reçu: ${JSON.stringify(issues)}`);
-});
-
-test('a ref to a stale shared story is treated as a missing target', () => {
+test('a destination to a stale shared story is treated as a missing target', () => {
   const project = buildProject({
-    rootEntries: [{ id: 'ref-1', type: 'ref', target: 'story:shared-story' }],
+    rootEntries: [{
+      id: 'story-1',
+      type: 'story',
+      name: 'Histoire 1',
+      audio: 'D:/projet/story1.mp3',
+      itemAudio: 'D:/projet/story1-title.mp3',
+      itemImage: 'D:/projet/story1-title.png',
+      returnAfterPlay: 'story:shared-story',
+    }],
     sharedEntries: [
       {
         id: 'shared-story',
@@ -426,7 +415,7 @@ test('a ref to a stale shared story is treated as a missing target', () => {
   });
 
   const issues = getProjectValidationIssues(project);
-  const missing = find(issues, (i) => i.id === 'ref-1' && /destination histoire introuvable/.test(i.text));
+  const missing = find(issues, (i) => i.id === 'story-1' && /destination histoire introuvable/.test(i.text));
   assert.ok(missing, `erreur cible absente attendue, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
 });
 
@@ -459,7 +448,7 @@ test('une histoire à la racine sans Accueil ni mode de fin demande d’activer 
   assert.equal(issues[0].id, 'a');
   assert.equal(issues[0].status, 'error');
   assert.match(issues[0].text, /^Histoire a — Fin sans sortie/);
-  assert.match(issues[0].text, /activez le bouton Accueil de cette histoire/);
+  assert.match(issues[0].text, /active le bouton Accueil de cette histoire/);
 });
 
 test('Accueil actif, « Rester sur l’écran » ou « Enchaîner » laissent une sortie', () => {

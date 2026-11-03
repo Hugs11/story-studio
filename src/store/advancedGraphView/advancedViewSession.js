@@ -1,3 +1,4 @@
+import { translateGraph as t } from '../../i18n/graphPresentation.js';
 // La session de vue de l'éditeur avancé : fraîcheur, cache et ancrages réunis.
 //
 // Elle est **sans framework** — aucun import React — pour que tout ce que le
@@ -116,7 +117,7 @@ export function createAdvancedViewSession({
       now, setTimer, clearTimer,
       onFailure: (error, state) => {
         if (writer !== bound) return;
-        notices = [...notices, { kind: 'cache-failure', message: String(error?.message ?? error), disarmed: state.disarmed }];
+        notices = [...notices, { kind: 'cache-failure', message: error, disarmed: state.disarmed }];
         onCacheFailure(error, state);
         emit();
       },
@@ -195,7 +196,7 @@ export function createAdvancedViewSession({
         cached = await readViewCache({ project: descriptor, fingerprint });
       } catch (error) {
         if (!current()) return { installed: false };
-        notices = [...notices, { kind: 'cache-unreadable', message: String(error?.message ?? error) }];
+        notices = [...notices, { kind: 'cache-unreadable', message: error }];
       }
       if (!current()) return { installed: false };
       // Une interaction pendant l'ouverture prime sur le cache relu.
@@ -216,7 +217,7 @@ export function createAdvancedViewSession({
     },
 
     noteViewEvent(event, patch = {}) {
-      if (!VIEW_EVENT_VALUES.has(event)) throw new Error(`Événement de vue inconnu : ${event}`);
+      if (!VIEW_EVENT_VALUES.has(event)) throw new Error(t("graph:view.unknownViewEvent.label", { event: event }));
       ticket = advanceTicket(ticket, event);
       if (Object.hasOwn(patch, 'viewport')) viewport = patch.viewport ? { ...patch.viewport } : null;
       if (Object.hasOwn(patch, 'selection')) storedSelection = {

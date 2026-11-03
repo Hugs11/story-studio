@@ -1,3 +1,6 @@
+import { useCommonTranslation } from '../../i18n/commonPresentation.js';
+import { presentUserMessage, presentStoredError } from '../../i18n/userMessage.js';
+import { TechnicalDetail } from '../../components/common/UserMessage.jsx';
 // Le simulateur de graphe à plat — Écrans, Actions, options, boucles.
 //
 // Il s'appelait `ZipSimulator` tant qu'il n'avait qu'une provenance. Il en a
@@ -21,7 +24,7 @@ import { useLuniiChromeControls } from './useLuniiChromeControls';
 import { disposeAudioPlayerRef } from '../../utils/audioPlayer';
 import { createMediaRequestLifecycle } from './mediaRequestLifecycle';
 import { getCircularSelectionIndex } from './navigationResolvers';
-import { mediaRequestKey, packFlatGraph, resolveInitialStage } from './flatGraph.js';
+import { MEDIA_FROM_CONSULTATION, mediaRequestKey, packFlatGraph, resolveInitialStage } from './flatGraph.js';
 import { createFlatAudio, loadFlatMedia } from './flatMedia.js';
 import { createOptionDrawSource, resolveTransitionEntry } from '../../store/optionSelection.js';
 
@@ -38,8 +41,10 @@ export function FlatSimulator({
   onClose = null,
   dragHandleProps = null,
 }) {
+  const { t } = useCommonTranslation();
   const [graph, setGraph] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [loadErrorDetail, setLoadErrorDetail] = useState('');
   const [stageId, setStageId] = useState(null);
   const [entryStageId, setEntryStageId] = useState(null); // Écran de départ effectif
   const [context, setContext] = useState(null); // { actionNodeId, optionIdx }
@@ -56,6 +61,10 @@ export function FlatSimulator({
   const { timeline, seekTo } = useAudioTimeline(audioRef);
   const chromeControls = useLuniiChromeControls();
   const { autoPlaybackEnabled } = chromeControls;
+  // Le transport d'une consultation du catalogue, injecté par sa source : ses
+  // médias ne sont ni des fichiers ni des assets d'archive désignés par chemin.
+  const consultationMediaRef = useRef(null);
+  consultationMediaRef.current = source?.kind === 'consultation' ? source.media ?? null : null;
   const audioLifecycleRef = useRef(null);
   if (!audioLifecycleRef.current) {
     audioLifecycleRef.current = createMediaRequestLifecycle({
@@ -63,7 +72,10 @@ export function FlatSimulator({
         disposeAudioPlayerRef(audioRef);
       },
       load(request) {
-        return loadFlatMedia(request);
+        const consultationMedia = consultationMediaRef.current;
+        return consultationMedia && request.kind === MEDIA_FROM_CONSULTATION
+          ? consultationMedia.loadAudio(request)
+          : loadFlatMedia(request);
       },
       createResource(loaded) {
         return createFlatAudio(loaded);
@@ -73,7 +85,6 @@ export function FlatSimulator({
         // en silence plutôt que d'interrompre l'écoute.
         if (!audio) return;
         audioRef.current = audio;
-        audio.play().catch(e => logger.error('flat-simulator:audio-play-error', e));
       },
       discardResource(audio) {
         audio?.destroy();
@@ -88,6 +99,9 @@ export function FlatSimulator({
   // simulateur Libre ? Si oui, la couverture est sautée et Home y revient.
   const zipPath = source?.kind === 'pack' ? source.zipPath : null;
   const documentGraph = source?.kind === 'document' ? source.graph : null;
+  // Une consultation arrive déjà assemblée, comme le document : figée.
+  const consultationGraph = source?.kind === 'consultation' ? source.graph : null;
+  const presetGraph = documentGraph ?? consultationGraph;
   const fromProject = source?.fromProject === true;
   const startId = source?.startId ?? null;
 
@@ -95,6 +109,7 @@ export function FlatSimulator({
   useEffect(() => {
     let cancelled = false;
     setLoadError(null);
+    setLoadErrorDetail('');
     setGraph(null);
     setStageId(null);
     setEntryStageId(null);
@@ -115,8 +130,8 @@ export function FlatSimulator({
     // Le document en cours est déjà assemblé, et il est **figé** à l'ouverture :
     // l'auteur écoute l'état qu'il a lancé, pas un graphe qui se remplace sous
     // ses pieds à chaque frappe.
-    if (documentGraph) {
-      install(documentGraph);
+    if (presetGraph) {
+      install(presetGraph);
       return undefined;
     }
     if (!zipPath) return undefined;
@@ -126,15 +141,19 @@ export function FlatSimulator({
         if (cancelled) return;
         const story = typeof json === 'string' ? JSON.parse(json) : json;
         const built = packFlatGraph(story, zipPath);
-        if (!built.entryId) throw new Error('Nœud de départ (squareOne) introuvable');
+        if (!built.entryId) throw new Error(t('common:simulator.entry.missing'));
         install(built);
       })
-      .catch(e => { if (!cancelled) setLoadError(String(e?.message ?? e)); });
+      .catch(e => { if (!cancelled) {
+        const presented = presentUserMessage(e);
+        setLoadError(e);
+        setLoadErrorDetail(presented.technicalDetail);
+      } });
     return () => { cancelled = true; };
   // reason: réinstaller uniquement quand la source change ; les setters
   // useState sont stables.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zipPath, documentGraph, startId, fromProject]);
+  }, [zipPath, presetGraph, startId, fromProject]);
 
   const currentStage = graph?.stages.get(stageId);
   const audioKey = mediaRequestKey(currentStage?.audio);
@@ -158,12 +177,20 @@ export function FlatSimulator({
     let current = true;
     setPaused(false);
     setSilentStageId(null);
-    void lifecycle.request(currentStage?.audio ?? null).then((outcome) => {
+    void lifecycle.request(currentStage?.audio ?? null).then(async (outcome) => {
       if (!current || !mountedRef.current) return;
       // `applied` sans lecteur : `createFlatAudio` a rendu `null` pour un
       // fichier que le disque ne rend plus.
       if (outcome === 'error' || (outcome === 'applied' && !audioRef.current)) {
         setSilentStageId(stageId);
+      } else if (outcome === 'applied' && audioRef.current) {
+        try {
+          await audioRef.current.play();
+        } catch (error) {
+          if (!current || !mountedRef.current) return;
+          logger.error('flat-simulator:audio-play-error', error);
+          setSilentStageId(stageId);
+        }
       }
     });
     return () => {
@@ -182,6 +209,9 @@ export function FlatSimulator({
     if (!currentStage.controlSettings?.autoplay || !autoPlaybackEnabled) return;
     const t = currentStage.okTransition;
     if (!t) return;
+    let active = true;
+    let advanced = false;
+    let attachedAudio = null;
 
     function advance() {
       if (!mountedRef.current) return;
@@ -197,46 +227,50 @@ export function FlatSimulator({
       setContext({ actionNodeId: t.actionNode, optionIdx: entry.index, slot: 'ok' });
     }
 
+    function advanceOnce() {
+      if (!active || advanced || !mountedRef.current) return;
+      if (attachedAudio && attachedAudio !== audioRef.current) return;
+      advanced = true;
+      advance();
+    }
+
     // Pas d'audio sur cet Écran, ou un audio qui ne se jouera pas → avancer
     // après 300ms
     if (!currentStage.audio || silentStageId === stageId) {
-      const timer = setTimeout(advance, 300);
-      return () => clearTimeout(timer);
+      const timer = setTimeout(advanceOnce, 300);
+      return () => { active = false; clearTimeout(timer); };
     }
 
     // Cet Écran a un audio, et son chargement est asynchrone. On sonde toutes
     // les 100ms jusqu'à ce que `audioRef.current` soit défini, puis on attache
     // l'écouteur 'ended'. Jamais d'avance prématurée.
     let pollTimer;
-    let waited = 0;
-    const maxWait = 15000; // 15s max (sécurité si l'audio ne charge jamais)
 
     function tryAttach() {
-      if (!mountedRef.current) return;
+      if (!active || !mountedRef.current) return;
       const audio = audioRef.current;
       if (audio) {
+        attachedAudio = audio;
         if (audio.ended) {
-          advance();
+          advanceOnce();
         } else {
-          audio.addEventListener('ended', advance, { once: true });
+          audio.addEventListener('ended', advanceOnce, { once: true });
           // Un décodage qui échoue n'émet jamais `ended`.
-          audio.addEventListener('error', advance, { once: true });
+          audio.addEventListener('error', advanceOnce, { once: true });
         }
         return;
       }
-      waited += 100;
-      if (waited < maxWait) {
-        pollTimer = setTimeout(tryAttach, 100);
-      }
+      pollTimer = setTimeout(tryAttach, 100);
     }
 
     pollTimer = setTimeout(tryAttach, 100);
 
     return () => {
+      active = false;
       clearTimeout(pollTimer);
-      if (audioRef.current) {
-        audioRef.current.removeEventListener('ended', advance);
-        audioRef.current.removeEventListener('error', advance);
+      if (attachedAudio) {
+        attachedAudio.removeEventListener('ended', advanceOnce);
+        attachedAudio.removeEventListener('error', advanceOnce);
       }
     };
   // reason: réévaluer l'autoplay sur changement d'Écran/graphe/réglage, ou
@@ -322,21 +356,19 @@ export function FlatSimulator({
   // ── Affichage ──
   if (loadError) return (
     <div style={{ padding: 24, color: '#E24B4A', fontSize: 13, lineHeight: 1.6 }}>
-      <div style={{ fontWeight: 600, marginBottom: 8 }}>Erreur de chargement</div>
-      <div>{loadError}</div>
+      <div style={{ fontWeight: 600, marginBottom: 8 }}>{t('common:simulator.load.error')}</div>
+      <div>{presentStoredError(loadError)}<TechnicalDetail value={loadErrorDetail} /></div>
       <div style={{ marginTop: 8, color: 'var(--muted)', fontSize: 11 }}>{zipPath}</div>
     </div>
   );
   if (!graph) return (
-    <div style={{ padding: 24, color: 'var(--muted)', fontSize: 13 }}>
-      Chargement du pack…
-    </div>
+    <div style={{ padding: 24, color: 'var(--muted)', fontSize: 13 }}>{t('common:simulator.pack.loading')}</div>
   );
   if (!currentStage) return (
     <div style={{ padding: 24, color: 'var(--muted)', fontSize: 13, lineHeight: 1.6 }}>
       {documentGraph
-        ? 'Aucun Écran de départ. Choisissez l’Écran racine depuis « À corriger », ou lancez l’écoute depuis l’Écran sélectionné.'
-        : 'Ce pack n’a pas d’Écran de départ.'}
+        ? t('common:simulator.document.noEntry')
+        : t('common:simulator.pack.noEntry')}
     </div>
   );
 
@@ -354,12 +386,12 @@ export function FlatSimulator({
 
   const posLabel = siblings.length > 1
     ? `${context.optionIdx + 1} / ${siblings.length}`
-    : (currentStage.squareOne ? graph.title ? 'Couverture' : '' : '▶');
+    : (currentStage.squareOne ? graph.title ? t('common:simulator.cover.label') : '' : '▶');
 
   return (
     <LuniiShell
       image={currentStage.image
-        ? <FlatImage request={currentStage.image} />
+        ? <FlatImage request={currentStage.image} loadUrl={consultationMediaRef.current?.loadImageUrl ?? null} />
         : <div className="lunii-story-img lunii-story-img--empty" />
       }
       title={displayTitle}

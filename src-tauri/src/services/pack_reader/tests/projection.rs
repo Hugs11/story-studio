@@ -331,16 +331,15 @@ fn branching_graph_projection_uses_shared_entries_without_native_graph() {
         .and_then(|value| value.as_array())
         .expect("branches");
     assert_eq!(branches.len(), 2);
+    // La convergence vers le titre partagé n'a pas de nœud dans l'arbre : chaque
+    // branche reste vide et la projection consigne ses deux arêtes hors arbre.
     for branch in branches {
-        let children = branch
+        assert!(branch
             .get("children")
             .and_then(|value| value.as_array())
-            .expect("branch children");
-        assert_eq!(
-            children[0].get("target").and_then(|value| value.as_str()),
-            Some("story:hub-title")
-        );
+            .is_none_or(|children| children.is_empty()));
     }
+    assert_eq!(result["outOfTreeEdgeCount"], 2);
 }
 
 #[test]

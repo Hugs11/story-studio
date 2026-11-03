@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, MessageLabel, UserMessage};
 use std::collections::{HashMap, HashSet};
 
 pub(super) fn assign_return_targets(
@@ -305,7 +306,7 @@ pub(super) fn push_unresolved_transition(
     field: &str,
     target_stage_id: Option<&str>,
     target_stage_name: Option<&str>,
-    detail: &str,
+    detail: &MessageLabel,
 ) {
     if field == "returnOnHome" && target_stage_name == Some("Cloche retour") {
         return;
@@ -315,17 +316,33 @@ pub(super) fn push_unresolved_transition(
     let target_label = target_stage_name
         .filter(|name| !name.trim().is_empty())
         .or(target_stage_id);
+    let label_param = entry_name
+        .map(|name| serde_json::Value::String(name.to_string()))
+        .unwrap_or_else(|| {
+            serde_json::to_value(UserMessage::new(codes::IMPORT_LABEL_ENTRY)).unwrap()
+        });
     let message = match target_label {
-        Some(target) => format!("{label} — {detail} vers « {target} » non modelisee."),
-        None => format!("{label} — {detail} non modelisee."),
+        Some(target) => UserMessage::new(codes::IMPORT_TRANSITION_UNMODELED_WITH_TARGET)
+            .param("label", label_param)
+            .param("detail", detail.value())
+            .param("target", target)
+            .with_detail(format!(
+                "{label} — {detail} vers « {target} » non modelisee."
+            )),
+        None => UserMessage::new(codes::IMPORT_TRANSITION_UNMODELED)
+            .param("label", label_param)
+            .param("detail", detail.value())
+            .with_detail(format!("{label} — {detail} non modelisee.")),
     };
+    let legacy_message = message.detail.clone().unwrap_or_default();
     unresolved_transitions.push(serde_json::json!({
         "entryId": entry_id,
         "entryName": entry_name,
         "field": field,
         "targetStageId": target_stage_id,
         "targetStageName": target_stage_name,
-        "message": message,
+        "message": legacy_message,
+        "userMessage": message,
     }));
 }
 
@@ -432,7 +449,11 @@ pub(super) fn resolve_entry_return_targets(
                             .get("name")
                             .and_then(|value| value.as_str())
                             .unwrap_or("?");
-                        let detail = format!("destination OK de l'etape « {step_name} »");
+                        let detail = MessageLabel::new(
+                            format!("destination OK de l'etape « {step_name} »"),
+                            UserMessage::new(codes::IMPORT_LABEL_STEP_OK)
+                                .param("stepName", step_name),
+                        );
                         push_unresolved_transition(
                             unresolved_transitions,
                             entry_id.as_deref(),
@@ -452,7 +473,11 @@ pub(super) fn resolve_entry_return_targets(
                             .get("name")
                             .and_then(|value| value.as_str())
                             .unwrap_or("?");
-                        let detail = format!("destination Home de l'etape « {step_name} »");
+                        let detail = MessageLabel::new(
+                            format!("destination Home de l'etape « {step_name} »"),
+                            UserMessage::new(codes::IMPORT_LABEL_STEP_HOME)
+                                .param("stepName", step_name),
+                        );
                         push_unresolved_transition(
                             unresolved_transitions,
                             entry_id.as_deref(),
@@ -482,7 +507,11 @@ pub(super) fn resolve_entry_return_targets(
                         .get("name")
                         .and_then(|value| value.as_str())
                         .unwrap_or("?");
-                    let detail = format!("destination Home de l'etape Â« {step_name} Â»");
+                    let detail = MessageLabel::new(
+                        format!("destination Home de l'etape Â« {step_name} Â»"),
+                        UserMessage::new(codes::IMPORT_LABEL_STEP_HOME_LEGACY)
+                            .param("stepName", step_name),
+                    );
                     push_unresolved_transition(
                         unresolved_transitions,
                         entry_id.as_deref(),
@@ -514,7 +543,10 @@ pub(super) fn resolve_entry_return_targets(
                             "returnAfterPlay",
                             Some(&target_id),
                             stage_names.get(&target_id).map(String::as_str),
-                            "destination de retour apres lecture",
+                            &MessageLabel::literal(
+                                "destination de retour apres lecture",
+                                codes::IMPORT_LABEL_AFTER_PLAY,
+                            ),
                         );
                     }
                 } else {
@@ -525,7 +557,10 @@ pub(super) fn resolve_entry_return_targets(
                         "returnAfterPlay",
                         Some(&stage_id),
                         stage_names.get(&stage_id).map(String::as_str),
-                        "destination de retour apres lecture",
+                        &MessageLabel::literal(
+                            "destination de retour apres lecture",
+                            codes::IMPORT_LABEL_AFTER_PLAY,
+                        ),
                     );
                 }
             } else if let Some(target_id) = return_stage_id {
@@ -541,7 +576,10 @@ pub(super) fn resolve_entry_return_targets(
                         "returnAfterPlay",
                         Some(&target_id),
                         stage_names.get(&target_id).map(String::as_str),
-                        "destination de retour apres lecture",
+                        &MessageLabel::literal(
+                            "destination de retour apres lecture",
+                            codes::IMPORT_LABEL_AFTER_PLAY,
+                        ),
                     );
                 }
             }
@@ -559,7 +597,10 @@ pub(super) fn resolve_entry_return_targets(
                         "returnOnHome",
                         Some(&stage_id),
                         stage_names.get(&stage_id).map(String::as_str),
-                        "destination du bouton Accueil",
+                        &MessageLabel::literal(
+                            "destination du bouton Accueil",
+                            codes::IMPORT_LABEL_HOME_BUTTON,
+                        ),
                     );
                 }
             } else if return_on_home_none {
@@ -580,7 +621,10 @@ pub(super) fn resolve_entry_return_targets(
                         "returnOnHome",
                         Some(&target_id),
                         stage_names.get(&target_id).map(String::as_str),
-                        "destination du bouton Accueil",
+                        &MessageLabel::literal(
+                            "destination du bouton Accueil",
+                            codes::IMPORT_LABEL_HOME_BUTTON,
+                        ),
                     );
                 }
             }
@@ -604,7 +648,10 @@ pub(super) fn resolve_entry_return_targets(
                     "titleReturnOnHome",
                     Some(stage_id),
                     stage_names.get(stage_id).map(String::as_str),
-                    "destination Accueil du titre",
+                    &MessageLabel::literal(
+                        "destination Accueil du titre",
+                        codes::IMPORT_LABEL_TITLE_HOME,
+                    ),
                 );
             }
             if let Some(target) = prompt_ok_stage_id.as_deref().and_then(|stage_id| {
@@ -619,7 +666,10 @@ pub(super) fn resolve_entry_return_targets(
                     "afterPlaybackPromptOkTarget",
                     Some(stage_id),
                     stage_names.get(stage_id).map(String::as_str),
-                    "destination OK du prompt final",
+                    &MessageLabel::literal(
+                        "destination OK du prompt final",
+                        codes::IMPORT_LABEL_PROMPT_OK,
+                    ),
                 );
             }
             if let Some(target) = prompt_home_stage_id.as_deref().and_then(|stage_id| {
@@ -634,7 +684,10 @@ pub(super) fn resolve_entry_return_targets(
                     "afterPlaybackPromptHomeTarget",
                     Some(stage_id),
                     stage_names.get(stage_id).map(String::as_str),
-                    "destination Home du prompt final",
+                    &MessageLabel::literal(
+                        "destination Home du prompt final",
+                        codes::IMPORT_LABEL_PROMPT_HOME,
+                    ),
                 );
             }
         }
@@ -664,7 +717,10 @@ pub(super) fn resolve_entry_return_targets(
                 "returnOnHome",
                 Some(stage_id),
                 stage_names.get(stage_id).map(String::as_str),
-                "destination Accueil du menu",
+                &MessageLabel::literal(
+                    "destination Accueil du menu",
+                    codes::IMPORT_LABEL_MENU_HOME,
+                ),
             );
         }
     }

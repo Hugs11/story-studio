@@ -431,7 +431,7 @@ fn active_home_looping_to_its_own_stage_is_still_refused() {
     let (_, document) = aggregate(imported);
     let error = document.expect_err("un Accueil actif qui boucle reste refusé");
     assert!(
-        error.contains("homeTransition ramène l'écran sur lui-même"),
+        crate::support::user_message::contains_code(&error, "VALIDATION_STAGE_HOME_LOOP"),
         "{error}"
     );
 }

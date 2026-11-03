@@ -32,7 +32,6 @@ function useStructureNodeColor() {
 }
 
 export function StructurePanel({
-  canvasActionsAvailable = false,
   project,
   projectType,
   selectedId,
@@ -44,6 +43,7 @@ export function StructurePanel({
   hoveredNodeId,
   onNodeHoverChange,
   onSelectNode,
+  onOpenAutoNextSettings,
   onSelectionChange,
   onFocusTreeSearch,
   onSimulateNode,
@@ -80,23 +80,26 @@ export function StructurePanel({
     return projectIndex.parentMenuById.get(selectedId) ?? null;
   }, [projectIndex, projectType, selectedId]);
 
+  const canAddStories = projectType === 'pack';
+  const hasActionsBar = canAddStories || projectType === 'simple';
+
   return (
     <div className="structure-panel">
-      {projectType === 'pack' ? (
+      {hasActionsBar ? (
         <div className="structure-panel-header structure-panel-header--actions" {...headerDragHandleProps}>
           <StructureActionsBar
             variant="panel"
             targetMenuId={structureActionTargetMenuId}
-            onAddStory={canvasActionsAvailable ? null : onAddStoryToMenu}
-            onAddFolder={canvasActionsAvailable ? null : onAddMenu}
-            onImportFolder={canvasActionsAvailable ? null : onImportFolder}
-            onImportPodcast={canvasActionsAvailable ? null : onImportPodcast}
-            onImportYoutube={canvasActionsAvailable ? null : onImportYoutube}
-            onRecord={canvasActionsAvailable ? null : onRecord}
-            onGenerateStoryTts={canvasActionsAvailable ? null : onGenerateStoryTts}
+            onAddStory={canAddStories ? onAddStoryToMenu : null}
+            onAddFolder={canAddStories ? onAddMenu : null}
+            onImportFolder={canAddStories ? onImportFolder : null}
+            onImportPodcast={canAddStories ? onImportPodcast : null}
+            onImportYoutube={canAddStories ? onImportYoutube : null}
+            onRecord={canAddStories ? onRecord : null}
+            onGenerateStoryTts={canAddStories ? onGenerateStoryTts : null}
             canRecord={canRecord}
             canGenerateStoryTts={canGenerateStoryTts}
-            onLaunchSimulator={canvasActionsAvailable ? null : onSimulateRoot}
+            onLaunchSimulator={onSimulateRoot}
             trailing={(
               <>
                 <StructureSearchButton
@@ -118,7 +121,7 @@ export function StructurePanel({
           />
         </div>
       ) : null}
-      {projectType === 'pack' ? null : (
+      {hasActionsBar ? null : (
         <div className="structure-panel-header structure-panel-header--empty" {...headerDragHandleProps} />
       )}
       <TreePanel
@@ -129,6 +132,7 @@ export function StructurePanel({
         selectedId={selectedId}
         selectedIds={selectedIds}
         onSelect={onSelectNode ?? onSelect}
+        onOpenAutoNextSettings={onOpenAutoNextSettings}
         onSelectionChange={onSelectionChange}
         selectionRevealRequest={selectionRevealRequest}
         hoveredNodeId={hoveredNodeId}

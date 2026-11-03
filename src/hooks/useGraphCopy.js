@@ -1,3 +1,4 @@
+import { releaseProjectAccess } from '../store/projectSessionAccess.js';
 import { exists } from '@tauri-apps/plugin-fs';
 import { getPackAudioEdgeSilenceSettings } from '../config/audioProcessing.js';
 import { buildGraphCopy } from '../store/graphCopy.js';
@@ -38,9 +39,9 @@ export function useGraphCopy({
     }),
     writeNewFile: writeNewProjectFile,
     openCopy: async (path) => {
-      const result = await loadProjectFromPath(path);
-      await onBeforeProjectReplaced?.();
-      await applyLoadedProject(result);
+      const result = await loadProjectFromPath(path, { editorAccess: true });
+      try { await onBeforeProjectReplaced?.(); await applyLoadedProject(result); }
+      catch (error) { await releaseProjectAccess(result.accessToken).catch(() => {}); throw error; }
       logger.info(`graph-copy:opened path='${path}'`);
     },
   });

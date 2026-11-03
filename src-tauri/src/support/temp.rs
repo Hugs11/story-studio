@@ -1,7 +1,66 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{LazyLock, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{cmp::Reverse, io::ErrorKind};
+
+// Only workspaces created by this process may receive an assembly.
+struct LiveSession {
+    path: PathBuf,
+    proof: String,
+}
+const SESSION_OWNER_FILE: &str = ".session-owner";
+static LIVE_SESSIONS: LazyLock<Mutex<HashMap<String, LiveSession>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn write_session_owner(session: &Path, proof: &str) -> Result<(), String> {
+    fs::write(session.join(SESSION_OWNER_FILE), proof)
+        .map_err(|e| session_failure(codes::FILES_SESSION_FOLDER_CREATE_FAILED, e))
+}
+
+fn session_failure(code: &'static str, cause: impl std::fmt::Display) -> String {
+    let cause = cause.to_string();
+    user_message::UserMessage::new(code)
+        .param("error", user_message::transport_param(cause.clone()))
+        .with_detail(user_message::transport_detail(&cause))
+        .into_transport()
+}
+
+pub(crate) fn with_live_session<T>(
+    root: &Path,
+    id: &str,
+    action: impl FnOnce(&Path) -> Result<T, user_message::UserMessage>,
+) -> Result<T, user_message::UserMessage> {
+    let invalid = || user_message::UserMessage::new(codes::CATALOG_ASSEMBLY_SESSION_INVALID);
+    let sessions = LIVE_SESSIONS.lock().map_err(|_| invalid())?;
+    let session = sessions.get(id).ok_or_else(invalid)?;
+    let path = &session.path;
+    let canonical = fs::canonicalize(path).map_err(|_| invalid())?;
+    let root = fs::canonicalize(root).map_err(|_| invalid())?;
+    if canonical != *path || canonical.parent() != Some(root.as_path()) {
+        return Err(invalid());
+    }
+    let marker = canonical.join(SESSION_OWNER_FILE);
+    let metadata = fs::symlink_metadata(&marker).map_err(|_| invalid())?;
+    if !metadata.is_file()
+        || metadata.len() > 100
+        || fs::read_to_string(&marker).map_err(|_| invalid())? != session.proof
+    {
+        return Err(invalid());
+    }
+    let imports = canonical.join("fichiers-importes");
+    let metadata = fs::symlink_metadata(&imports).map_err(|_| invalid())?;
+    if !metadata.is_dir()
+        || fs::canonicalize(&imports).map_err(|_| invalid())?.parent() != Some(canonical.as_path())
+    {
+        return Err(invalid());
+    }
+    // Keep cleanup serialized with the complete transfer.
+    action(&canonical)
+}
 
 use crate::support::paths::path_for_frontend;
 
@@ -45,18 +104,52 @@ pub fn app_cache_subdir(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, S
     app.path()
         .app_cache_dir()
         .map(|path| path.join(name))
-        .map_err(|error| format!("Dossier cache de Story Studio inaccessible : {error}"))
+        .map_err(|error| {
+            let _msg_error = (error).to_string();
+            user_message::UserMessage::new(codes::FILES_APP_CACHE_INACCESSIBLE)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Dossier cache de Story Studio inaccessible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })
 }
 
 fn canonical_session_root(root: &Path) -> Result<PathBuf, String> {
-    fs::create_dir_all(root)
-        .map_err(|e| format!("Dossier temporaire de Story Studio inaccessible : {}", e))?;
-    fs::canonicalize(root)
-        .map_err(|e| format!("Dossier temporaire de Story Studio inaccessible : {}", e))
+    fs::create_dir_all(root).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_APP_TEMP_INACCESSIBLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Dossier temporaire de Story Studio inaccessible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    fs::canonicalize(root).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_APP_TEMP_INACCESSIBLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Dossier temporaire de Story Studio inaccessible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })
 }
 
 fn canonical_existing(path: &Path) -> Result<PathBuf, String> {
-    fs::canonicalize(path).map_err(|e| format!("Chemin temporaire inaccessible : {}", e))
+    fs::canonicalize(path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_TEMPORARY_PATH_INACCESSIBLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Chemin temporaire inaccessible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })
 }
 
 pub fn is_session_workspace_dir(root: &Path, path: &Path) -> Result<bool, String> {
@@ -86,42 +179,94 @@ pub fn create_session_workspace(root: &Path) -> Result<String, String> {
             }
             Err(error) if error.kind() == ErrorKind::AlreadyExists => continue,
             Err(error) => {
-                return Err(format!(
-                    "Impossible de creer le dossier de session : {}",
-                    error
-                ));
+                return Err({
+                    let _msg_error = (error).to_string();
+                    user_message::UserMessage::new(codes::FILES_SESSION_FOLDER_CREATE_FAILED)
+                        .param("error", user_message::transport_param(_msg_error.clone()))
+                        .with_detail(format!(
+                            "Impossible de creer le dossier de session : {_msg_error}",
+                            _msg_error = user_message::transport_detail(&_msg_error),
+                        ))
+                        .into_transport()
+                });
             }
         }
     }
-    let session_dir = session_dir
-        .ok_or_else(|| "Impossible de creer un dossier de session unique.".to_string())?;
+    let session_dir = session_dir.ok_or_else(|| {
+        user_message::UserMessage::new(codes::FILES_SESSION_NAME_EXHAUSTED)
+            .with_detail("Impossible de creer un dossier de session unique.".to_string())
+            .into_transport()
+    })?;
     for dir_name in SESSION_WORKSPACE_DIRS {
         fs::create_dir_all(session_dir.join(dir_name)).map_err(|e| {
-            format!(
-                "Impossible de creer le sous-dossier de session {} : {}",
-                dir_name, e
-            )
+            let _msg_dir_name = (dir_name).to_string();
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::FILES_SESSION_SUBFOLDER_CREATE_FAILED)
+                .param(
+                    "dirName",
+                    user_message::transport_param(_msg_dir_name.clone()),
+                )
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de creer le sous-dossier de session {_msg_dir_name} : {_msg_error}",
+                    _msg_dir_name = user_message::transport_detail(&_msg_dir_name),
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
         })?;
     }
 
     if !is_session_workspace_dir(&root, &session_dir)? {
-        return Err("Dossier de session hors du cache de Story Studio.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::FILES_SESSION_PATH_OUTSIDE)
+                .with_detail("Dossier de session hors du cache de Story Studio.".to_string())
+                .into_transport(),
+        );
     }
 
     let session_dir = canonical_existing(&session_dir)?;
-    Ok(path_for_frontend(&session_dir))
+    let id = path_for_frontend(&session_dir);
+    let proof = uuid::Uuid::new_v4().to_string();
+    write_session_owner(&session_dir, &proof)?;
+    LIVE_SESSIONS
+        .lock()
+        .map_err(|e| session_failure(codes::FILES_SESSION_FOLDER_CREATE_FAILED, e))?
+        .insert(
+            id.clone(),
+            LiveSession {
+                path: session_dir,
+                proof,
+            },
+        );
+    Ok(id)
 }
 
 pub fn cleanup_session_workspace(root: &Path, path: &str) -> Result<(), String> {
+    let mut sessions = LIVE_SESSIONS
+        .lock()
+        .map_err(|e| session_failure(codes::FILES_SESSION_FOLDER_CLEAN_FAILED, e))?;
+    sessions.remove(path);
     let session_dir = PathBuf::from(path);
     if !session_dir.exists() {
         return Ok(());
     }
     if !is_session_workspace_dir(root, &session_dir)? {
-        return Err("Refus de supprimer un dossier hors session Story Studio.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::FILES_SESSION_DELETE_OUTSIDE)
+                .with_detail("Refus de supprimer un dossier hors session Story Studio.".to_string())
+                .into_transport(),
+        );
     }
-    fs::remove_dir_all(&session_dir)
-        .map_err(|e| format!("Impossible de nettoyer le dossier de session : {}", e))
+    fs::remove_dir_all(&session_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_SESSION_FOLDER_CLEAN_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de nettoyer le dossier de session : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })
 }
 
 pub fn cleanup_orphan_session_workspaces(root: &Path, max_age: std::time::Duration) {
@@ -150,7 +295,11 @@ pub fn cleanup_orphan_session_workspaces(root: &Path, max_age: std::time::Durati
         let Ok(modified) = meta.modified() else {
             continue;
         };
-        if modified < cutoff {
+        let live = LIVE_SESSIONS
+            .lock()
+            .map(|sessions| sessions.values().any(|session| session.path == path))
+            .unwrap_or(true);
+        if modified < cutoff && !live {
             let _ = cleanup_session_workspace(&root, &path.to_string_lossy());
         }
     }
@@ -203,6 +352,7 @@ pub fn list_session_recoveries(root: &Path) -> Vec<SessionRecovery> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::support::user_message::MessageTransportAssertions as _;
 
     fn test_session_root(label: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
@@ -211,6 +361,52 @@ mod tests {
             std::process::id(),
             now_nanos()
         ))
+    }
+
+    #[test]
+    fn session_owner_write_failure_is_a_coded_message() {
+        let root = test_session_root("owner-failure");
+        fs::create_dir_all(root.join(SESSION_OWNER_FILE)).unwrap();
+        let error = write_session_owner(&root, "proof").unwrap_err();
+        let message: serde_json::Value = serde_json::from_str(&error).unwrap();
+        assert_eq!(message["code"], codes::FILES_SESSION_FOLDER_CREATE_FAILED);
+        assert!(message["params"]["error"].is_string());
+        assert!(!message["detail"].as_str().unwrap().is_empty());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn session_registry_failures_match_frontend_transport_fixture() {
+        let fixtures: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+            "../../../scripts/fixtures/catalogue/session-errors.json"
+        ))
+        .unwrap();
+        for fixture in fixtures {
+            let code = if fixture["code"] == codes::FILES_SESSION_FOLDER_CREATE_FAILED {
+                codes::FILES_SESSION_FOLDER_CREATE_FAILED
+            } else {
+                codes::FILES_SESSION_FOLDER_CLEAN_FAILED
+            };
+            let transport = session_failure(code, "registry unavailable");
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&transport).unwrap(),
+                fixture
+            );
+        }
+        // Exercise the poison error without poisoning the process registry.
+        let local = std::sync::Mutex::new(());
+        let _ = std::panic::catch_unwind(|| {
+            let _guard = local.lock().unwrap();
+            panic!("injected poison");
+        });
+        let error = local.lock().unwrap_err();
+        let message: serde_json::Value = serde_json::from_str(&session_failure(
+            codes::FILES_SESSION_FOLDER_CLEAN_FAILED,
+            error,
+        ))
+        .unwrap();
+        assert_eq!(message["code"], codes::FILES_SESSION_FOLDER_CLEAN_FAILED);
+        assert!(!message["detail"].as_str().unwrap().is_empty());
     }
 
     #[test]
@@ -264,7 +460,7 @@ mod tests {
         let dir = root.join("story_studio_not_a_session");
         fs::create_dir_all(&dir).expect("create temp dir");
         let err = cleanup_session_workspace(&root, &dir.to_string_lossy()).unwrap_err();
-        assert!(err.contains("Refus"));
+        assert!(err.contains_any_code(&[codes::FILES_SESSION_DELETE_OUTSIDE]));
         fs::remove_dir_all(root).expect("manual cleanup");
     }
 }

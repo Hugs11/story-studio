@@ -1,3 +1,5 @@
+import { useTreeTranslation } from "../../i18n/useTreeTranslation.jsx";
+import { translateTree as t } from "../../i18n/treePresentation.js";
 import { memo, useState } from 'react';
 import { AudioField } from './AudioField';
 import { ImageField } from './ImageField';
@@ -27,6 +29,13 @@ import {
 } from '../../store/storyTitleStage';
 import './EditorPanel.css';
 
+// Noms automatiques déjà persistés : reconnaissance stable, sans consulter le catalogue.
+// eslint-disable-next-line i18next/no-literal-string -- noms de création FR/EN/IT conservés comme données historiques
+const AUTOMATIC_STORY_NAMES = new Set(['Nouvelle histoire', 'New story', 'Nuova storia']);
+function isAutomaticStoryName(name) {
+  return !name || AUTOMATIC_STORY_NAMES.has(name);
+}
+
 // ─── Navigation helpers (used for computed props only) ────────────────────────
 
 function resolveNavigationTargetId(target, currentMenuId = null) {
@@ -39,32 +48,48 @@ function resolveNavigationTargetId(target, currentMenuId = null) {
   return decodeNavigationMenuId(normalized);
 }
 
-function targetNameById(allMenus, allStories, targetId, fallback = 'destination introuvable') {
-  if (targetId === 'root') return NAV_ROOT_LABEL;
-  if (targetId === NAV_TARGET_NEXT_STORY) return 'Histoire suivante';
+function targetNameById(allMenus, allStories, targetId, fallback = t("tree:navigation.destination.missing")) {
+  if (targetId === 'root') return t(NAV_ROOT_LABEL);
+  if (targetId === NAV_TARGET_NEXT_STORY) return t("tree:navigation.nextStory.label");
   if (!targetId) return fallback;
   if (isStoryNavigationTarget(targetId)) {
     const storyId = decodeNavigationStoryId(targetId);
     const storyName = allStories.find((s) => s.id === storyId)?.name || fallback;
     return isStoryHomeStepNavigationTarget(targetId)
-      ? `Retour de fin — ${storyName}`
+      ? t("tree:story.navigation.endReturn", { name: storyName })
       : isStoryPlayNavigationTarget(targetId)
-      ? `Lecture directe — ${storyName}`
-      : `Titre — ${storyName}`;
+      ? t("tree:story.navigation.direct", { name: storyName })
+      : t("tree:story.navigation.title", { name: storyName });
   }
   return allMenus.find((menu) => menu.id === targetId)?.name || fallback;
 }
 
 function buildInheritedReturnLabel(parentMenu, allMenus, allStories, autoNextEffective) {
   if (!parentMenu) return null;
-  if (autoNextEffective) return 'Lecture de l’histoire suivante';
+  if (autoNextEffective) return t("tree:navigation.nextStory.playback");
   const inheritedTargetId = parentMenu.returnAfterPlay ?? null;
   if (!inheritedTargetId || isCurrentMenuNavigationTarget(inheritedTargetId)) {
-    return `Revient à ${parentMenu.name || 'ce dossier'}`;
+    return t("tree:story.navigation.return", { name: parentMenu.name || t("tree:navigation.folder.fallback") });
   }
-  if (isRootNavigationTarget(inheritedTargetId)) return `Revient à ${NAV_ROOT_LABEL}`;
+  if (isRootNavigationTarget(inheritedTargetId)) return t("tree:story.navigation.return", { name: t(NAV_ROOT_LABEL) });
   const name = targetNameById(allMenus, allStories, resolveNavigationTargetId(inheritedTargetId, parentMenu.id));
-  return `Revient à ${name}`;
+  return t("tree:story.navigation.return", { name });
+}
+
+// Icône de l'option « Revient à … » : celle de la cible réellement héritée (dossier, racine, histoire).
+function buildInheritedReturnKind(parentMenu, autoNextEffective) {
+  if (!parentMenu) return null;
+  if (autoNextEffective) return 'story';
+  const inheritedTargetId = parentMenu.returnAfterPlay ?? null;
+  if (!inheritedTargetId || isCurrentMenuNavigationTarget(inheritedTargetId)) return 'menu';
+  const targetId = resolveNavigationTargetId(inheritedTargetId, parentMenu.id);
+  if (targetId === 'root') return 'root';
+  if (targetId === NAV_TARGET_NEXT_STORY) return 'story';
+  if (targetId && isStoryNavigationTarget(targetId)) {
+    if (isStoryHomeStepNavigationTarget(targetId)) return 'story_home_step';
+    return isStoryPlayNavigationTarget(targetId) ? 'story_play' : 'story';
+  }
+  return 'menu';
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -80,6 +105,7 @@ export const StoryEditor = memo(function StoryEditor({
   afterPlayFocus = null,
   onAfterPlayFocusConsumed,
 }) {
+  useTreeTranslation();
   const { onExtractAudioEmbeddedImage } = useProjectContext();
 
   const autoNext = project?.globalOptions?.autoNext ?? false;
@@ -94,6 +120,7 @@ export const StoryEditor = memo(function StoryEditor({
   const inheritedReturnLabel = buildInheritedReturnLabel(
     parentMenu, allMenus, allStories, autoNextEffective && !isLastInMenu,
   );
+  const inheritedReturnKind = buildInheritedReturnKind(parentMenu, autoNextEffective && !isLastInMenu);
   const explicitSilentSelection = isExplicitSilentStoryTitle(node);
   const selectionAudioRequired = isStorySelectionAudioRequired(node);
   const [textImgModal, setTextImgModal] = useState(null);
@@ -113,7 +140,7 @@ export const StoryEditor = memo(function StoryEditor({
     const embeddedImage = await onExtractAudioEmbeddedImage?.(path);
     onUpdate({
       audio: path,
-      ...((!node.name || node.name === 'Nouvelle histoire') ? { name: autoName } : {}),
+      ...(isAutomaticStoryName(node.name) ? { name: autoName } : {}),
       ...(!node.itemImage && embeddedImage ? { itemImage: embeddedImage } : {}),
     });
   }
@@ -123,26 +150,24 @@ export const StoryEditor = memo(function StoryEditor({
       {/* Card : L'histoire (nom intégré) */}
       <div className="card">
         <div className="card-title-row">
-          <div className="card-title">L'histoire</div>
-          <div className="card-copy card-copy--inline">Nom, image et audios — comment cette histoire apparaît dans le menu et ce qui est joué.</div>
+          <div className="card-title">{t("tree:story.card.title")}</div>
+          <div className="card-copy card-copy--inline">{t("tree:story.card.description")}</div>
         </div>
 
         <div className="field-row" style={{ marginBottom: 0 }}>
-          <span className="field-label">Nom</span>
+          <span className="field-label">{t("tree:zip.name.label")}</span>
           <input
             className="field-input"
             value={node.name || ''}
             onChange={(e) => onUpdate({ name: e.target.value })}
-            placeholder="Nom de l'histoire"
+            placeholder={t("tree:story.name.label")}
           />
         </div>
         <div className="card-sep" />
 
         <div className="media-split">
           <div className="media-split-left">
-            <div className="media-col-header">
-              Image
-              <span className="media-col-subtitle">Image affichée dans le menu de sélection</span>
+            <div className="media-col-header">{t("tree:media.image.label")}<span className="media-col-subtitle">{t("tree:story.image.description")}</span>
             </div>
             <ImageField
               fieldId={`${node.id}:itemImage`}
@@ -150,9 +175,9 @@ export const StoryEditor = memo(function StoryEditor({
               extraActions={[
                 {
                   key: 'generate-text',
-                  label: 'Générer une image-titre',
+                  label: t("tree:image.title.generate"),
                   onClick: handleRegenerate,
-                  title: "Créer une image-titre à partir du nom de l'histoire",
+                  title: t("tree:story.image.generateHint"),
                 },
               ]}
               onPick={(f) => onUpdate({ itemImage: f, autoGenerateImage: false })}
@@ -161,29 +186,31 @@ export const StoryEditor = memo(function StoryEditor({
           </div>
           <div className="media-split-divider" />
           <div className="media-split-right">
-            <div className="media-col-header">
-              Son
-              <span className="media-col-subtitle">Audio de sélection puis lecture de l'histoire</span>
+            <div className="media-col-header">{t("tree:media.sound.label")}<span className="media-col-subtitle">{t("tree:story.audio.subtitle")}</span>
             </div>
             <div className="media-col-stack">
               <AudioField
-                label="Audio de sélection"
+                label={t("tree:story.selection.audio")}
+                labelRef={{ key: "tree:story.selection.audio" }}
                 description={explicitSilentSelection
-                  ? 'Optionnel — ce titre de sélection peut rester silencieux'
-                  : "Énoncé quand l'enfant parcourt les histoires"}
+                  ? t("tree:story.selection.optional")
+                  : t("tree:story.selection.description")}
                 file={node.itemAudio}
                 required={selectionAudioRequired}
-                emptyBadge={explicitSilentSelection ? 'Écran silencieux' : null}
+                emptyBadge={explicitSilentSelection ? t("tree:story.selection.silentBadge") : null}
                 ttsTextSuggestion={node.name || ''}
+                // eslint-disable-next-line i18next/no-literal-string -- repli technique du nom de fichier audio, pas un libellé UI
                 ttsFilenameHint={`selection-${node.name || 'histoire'}`}
                 xttsTarget={{ kind: 'story', entryId: node.id, field: 'itemAudio' }}
                 onPick={(f) => onUpdate(createStorySelectionAudioUpdate(f))}
                 onClear={() => onUpdate(createStorySelectionAudioUpdate(null))}
               />
               <AudioField
-                label="Histoire complète"
-                description="Écoutée quand l'enfant valide son choix"
+                label={t("tree:story.narrative.label")}
+                labelRef={{ key: "tree:story.narrative.label" }}
+                description={t("tree:story.narrative.description")}
                 file={node.audio}
+                // eslint-disable-next-line i18next/no-literal-string -- repli technique du nom de fichier audio, pas un libellé UI
                 ttsFilenameHint={`histoire-complete-${node.name || 'histoire'}`}
                 xttsTarget={{ kind: 'story', entryId: node.id, field: 'audio' }}
                 onPick={handleStoryAudioPick}
@@ -213,6 +240,7 @@ export const StoryEditor = memo(function StoryEditor({
         allStories={allStories}
         project={project}
         inheritedReturnLabel={inheritedReturnLabel}
+        inheritedReturnKind={inheritedReturnKind}
         onUpdate={onUpdate}
         afterPlayFocus={afterPlayFocus}
         onAfterPlayFocusConsumed={onAfterPlayFocusConsumed}
@@ -224,14 +252,12 @@ export const StoryEditor = memo(function StoryEditor({
             className="card-danger-trash"
             type="button"
             onClick={onDelete}
-            aria-label="Supprimer cette histoire"
+            aria-label={t("tree:story.delete.action")}
           >
             <Trash2 className="card-danger-icon" />
           </button>
-          <span className="card-danger-title">Supprimer cette histoire</span>
-          <p className="card-danger-desc">
-            L'histoire et ses transitions sont retirées du pack. Ses fichiers restent dans la médiathèque, sans être supprimés du disque.
-          </p>
+          <span className="card-danger-title">{t("tree:story.delete.action")}</span>
+          <p className="card-danger-desc">{t("tree:story.delete.description")}</p>
         </div>
       </div>
 

@@ -107,7 +107,7 @@ test('zip unpack promotion ignores graph shared entries', () => {
     project,
     menuId: null,
     itemId: 'zip-1',
-    entries: [{ id: 'ref-hub', type: 'ref', target: 'story:hub' }],
+    entries: [{ id: 'to-hub', type: 'story', name: 'Vers le hub', returnAfterPlay: 'story:hub' }],
     sharedEntries: [{ id: 'hub', type: 'story', name: 'Hub', audio: 'C:/packs/hub.mp3' }],
     zipPath: project.rootEntries[0].zipPath,
     zipName: project.rootEntries[0].name,
@@ -115,7 +115,7 @@ test('zip unpack promotion ignores graph shared entries', () => {
     savedDuringUnpack: true,
   });
 
-  assert.equal(nextProject.rootEntries[0].target, 'story:hub');
+  assert.equal(nextProject.rootEntries[0].returnAfterPlay, 'story:hub');
   assert.equal(Object.hasOwn(nextProject, 'sharedEntries'), false);
 });
 

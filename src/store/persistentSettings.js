@@ -1,4 +1,15 @@
 export const KEYS = Object.freeze({
+  ACTIVE_LUNII_ID: 'storyStudio.activeLuniiId',
+  LUNII_PANEL_COLLAPSED: 'storyStudio.luniiPanelCollapsed',
+  LUNII_PANEL_WIDTH: 'storyStudio.luniiPanelWidth',
+  CATALOGUE_FICHE_PANEL_VISIBLE: 'storyStudio.catalogueFichePanelVisible',
+  CATALOGUE_STARTUP_PAGE: 'storyStudio.catalogueStartupPage',
+  CATALOGUE_FICHE_WIDTH: 'storyStudio.catalogueFicheWidth',
+  CATALOGUE_VIEW: 'storyStudio.catalogueView',
+  CATALOGUE_CARD_DENSITY: 'storyStudio.catalogueCardDensity',
+  CATALOGUE_COL_WIDTHS: 'storyStudio.catalogueColWidths.v1',
+  CATALOGUE_VISIBLE_COLS: 'storyStudio.catalogueVisibleCols.v1',
+  CATALOGUE_SORT: 'storyStudio.catalogueSort',
   RELEASE_NOTES_SEEN: 'storyStudio.releaseNotesSeen',
   COPY_FILES: 'copyImportedFiles',
   AUTOSAVE_ENABLED: 'autoSaveEnabled',
@@ -28,7 +39,11 @@ export const KEYS = Object.freeze({
   LAST_COMFY_WORKFLOW_API_DIR: 'lastComfyWorkflowApiDir',
   LAST_COMFY_WORKFLOW_CONFIG_DIR: 'lastComfyWorkflowConfigDir',
   RECENT_PROJECTS: 'recentProjects',
+  MEDIA_SUBSCRIPTIONS_REGISTRY: 'storyStudio.mediaSubscriptionsRegistry',
+  MEDIA_SUBSCRIPTIONS_REGISTRY_BACKUP: 'storyStudio.mediaSubscriptionsRegistry.unreadableBackup',
   MEDIA_TAGS_VERSION: 'mediaTagsVersion',
+  UI_LANGUAGE: 'storyStudio.uiLanguage',
+  UI_LANGUAGE_ANNOUNCEMENT: 'storyStudio.uiLanguageAnnouncement',
   THEME: 'storyStudioThemePreference',
   SELECTION_OPENS_SETTINGS: 'storyStudio.selectionOpensSettings',
   VERBOSE_LOGGING: 'storyStudio.verboseLogging',
@@ -99,6 +114,8 @@ const EDITOR_LAYOUT_KEYS = Object.freeze({
 
 export function editorLayoutKeys(scope) {
   const keys = EDITOR_LAYOUT_KEYS[scope];
+  // Identifiant de programmation invalide : exception interne, jamais une notification utilisateur.
+  // eslint-disable-next-line i18next/no-literal-string
   if (!keys) throw new Error(`Périmètre de disposition inconnu : ${scope}`);
   return keys;
 }
@@ -124,16 +141,27 @@ export function read(key, { defaultValue = null, parse } = {}) {
   }
 }
 
+/** Écrit une valeur ; rend `false` si le stockage local la refuse (quota, accès). */
 export function write(key, value, { serialize } = {}) {
   try {
-    storage()?.setItem(key, serialize ? serialize(value) : value);
-  } catch {}
+    const target = storage();
+    if (!target) return false;
+    target.setItem(key, serialize ? serialize(value) : value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function remove(key) {
   try {
     storage()?.removeItem(key);
   } catch {}
+}
+
+// Détecter avant les migrations, qui écrivent leurs réglages par défaut.
+export function hasExistingSettings() {
+  return Object.values(KEYS).some((key) => key !== KEYS.UI_LANGUAGE_ANNOUNCEMENT && read(key) != null);
 }
 
 // Migrations ponctuelles des réglages persistés, appelées au boot (main.jsx)

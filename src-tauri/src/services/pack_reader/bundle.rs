@@ -7,6 +7,8 @@
 //! une seconde vérité : l'écran de choix afficherait un verdict que la suite du
 //! parcours ne confirmerait pas.
 
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use serde::Serialize;
 
 use super::extraction::classify_pack_editability;
@@ -50,6 +52,8 @@ pub struct InspectedBundleChild {
     pub size_bytes: u64,
     pub status: BundleChildStatus,
     pub reason: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason_code: Option<&'static str>,
     /// Faux uniquement quand l'enfant n'a pas pu être lu. Un enfant en lecture
     /// seule ou non supporté reste sélectionnable : le funnel lui propose la
     /// simulation ou l'Éditeur avancé, comme pour un pack fourni seul.
@@ -92,16 +96,32 @@ pub fn inspect_pack_archive<P: Fn(usize, usize)>(
 }
 
 fn classify_child(child: &BundleChildEntry) -> InspectedBundleChild {
-    let (status, reason) = match child
+    let (status, reason, reason_code) = match child
         .absolute
         .to_str()
-        .ok_or_else(|| "Chemin temporaire non Unicode.".to_string())
+        .ok_or_else(|| {
+            user_message::UserMessage::new(codes::IMPORT_NON_UNICODE_TEMPORARY_PATH)
+                .with_detail("Chemin temporaire non Unicode.".to_string())
+                .into_transport()
+        })
         .and_then(classify_pack_editability)
     {
-        Ok(report) if report.authoring_editable => (BundleChildStatus::Editable, report.reason),
-        Ok(report) if report.read_only_inspectable => (BundleChildStatus::ReadOnly, report.reason),
-        Ok(report) => (BundleChildStatus::Unsupported, report.reason),
-        Err(error) => (BundleChildStatus::Error, error),
+        Ok(report) if report.authoring_editable => (
+            BundleChildStatus::Editable,
+            report.reason,
+            report.reason_code,
+        ),
+        Ok(report) if report.read_only_inspectable => (
+            BundleChildStatus::ReadOnly,
+            report.reason,
+            report.reason_code,
+        ),
+        Ok(report) => (
+            BundleChildStatus::Unsupported,
+            report.reason,
+            report.reason_code,
+        ),
+        Err(error) => (BundleChildStatus::Error, error, None),
     };
     InspectedBundleChild {
         child_id: child.child_id.clone(),
@@ -109,6 +129,7 @@ fn classify_child(child: &BundleChildEntry) -> InspectedBundleChild {
         size_bytes: child.size_bytes,
         selectable: status != BundleChildStatus::Error,
         reason,
+        reason_code,
         status,
     }
 }

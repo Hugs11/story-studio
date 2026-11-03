@@ -54,7 +54,7 @@ test('l’entrée garde son étiquette, et aucun nom ne se pose sur son anneau',
     node('/entree', { isEntry: true, label: 'Accueil' }),
     node('/carrefour', { isHub: true, degree: 31, label: 'Carrefour', x: 110, y: 104 }),
   ]));
-  assert.equal(marks.get('/entree').label, 'RACINE');
+  assert.equal(marks.get('/entree').label, 'ENTRÉE');
   assert.equal(marks.get('/entree').isTag, true);
   assert.equal(marks.get('/carrefour').label, null);
 
@@ -111,7 +111,7 @@ test('les grands menus serrés contre la racine gardent leur nom, à côté', ()
     assert.notEqual(marks.get(path).label, null, `${path} garde son nom`);
   }
   assert.equal(marks.get('/m3').placement, 'right');
-  assert.equal(marks.get('/racine').label, 'RACINE');
+  assert.equal(marks.get('/racine').label, 'ENTRÉE');
 });
 
 test('deux carrefours assez éloignés gardent tous deux leur nom', () => {
@@ -169,7 +169,7 @@ test('une nuée de nœuds à corriger ne laisse que les repères de navigation',
   assert.equal(marks.length, 2, 'les diagnostics sont regroupés dans la pastille de la barre');
   assert.deepEqual(
     named.map((mark) => mark.label).sort(),
-    ['Action 20 · 27 liens', 'RACINE'],
+    ['Action 20 · 27 liens', 'ENTRÉE'],
     'seuls l’entrée et le carrefour écrivent quelque chose',
   );
 });
@@ -195,7 +195,7 @@ test('avec de la marge, chaque carrefour a son étiquette reliée à son point',
     assert.ok(mark.callout.x > wide.bounds.x2 || mark.callout.x < wide.bounds.x1);
   }
   // La racine garde son étiquette contre son anneau.
-  assert.equal(marks.get('/racine').label, 'RACINE');
+  assert.equal(marks.get('/racine').label, 'ENTRÉE');
   assert.equal(marks.get('/racine').callout, null);
 });
 

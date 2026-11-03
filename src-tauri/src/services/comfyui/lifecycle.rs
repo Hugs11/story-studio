@@ -1,4 +1,8 @@
 use super::*;
+use crate::support::user_message;
+use crate::support::user_message::codes;
+#[cfg(test)]
+use crate::support::user_message::MessageTransportAssertions as _;
 use std::ffi::OsString;
 
 #[derive(Debug, PartialEq)]
@@ -54,10 +58,19 @@ fn build_launcher_command(
     }
 
     if !executable {
-        return Err(format!(
-            "Le script de démarrage ComfyUI n'est pas exécutable : {}",
-            launcher_path
-        ));
+        return Err({
+            let _msg_launcher_path = (launcher_path).to_string();
+            user_message::UserMessage::new(codes::COMFYUI_LAUNCHER_NOT_EXECUTABLE)
+                .param(
+                    "launcherPath",
+                    user_message::transport_param(_msg_launcher_path.clone()),
+                )
+                .with_detail(format!(
+                    "Le script de démarrage ComfyUI n'est pas exécutable : {_msg_launcher_path}",
+                    _msg_launcher_path = user_message::transport_detail(&_msg_launcher_path),
+                ))
+                .into_transport()
+        });
     }
 
     Ok(LauncherCommand {
@@ -82,26 +95,61 @@ fn launcher_is_executable(metadata: &fs::Metadata) -> bool {
 
 fn validated_launcher_command(launcher_path: &str) -> Result<LauncherCommand, String> {
     if launcher_path.trim().is_empty() {
-        return Err("Script de démarrage ComfyUI non configuré dans les Préférences.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::COMFYUI_LAUNCHER_NOT_CONFIGURED)
+                .with_detail(
+                    "Script de démarrage ComfyUI non configuré dans les Préférences.".to_string(),
+                )
+                .into_transport(),
+        );
     }
     let path = PathBuf::from(launcher_path);
     let metadata = fs::symlink_metadata(&path).map_err(|_| {
-        format!(
-            "Script de démarrage ComfyUI introuvable : {}",
-            launcher_path
-        )
+        let _msg_launcher_path = (launcher_path).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_LAUNCHER_NOT_FOUND)
+            .param(
+                "launcherPath",
+                user_message::transport_param(_msg_launcher_path.clone()),
+            )
+            .with_detail(format!(
+                "Script de démarrage ComfyUI introuvable : {_msg_launcher_path}",
+                _msg_launcher_path = user_message::transport_detail(&_msg_launcher_path)
+            ))
+            .into_transport()
     })?;
     if metadata.file_type().is_symlink() {
-        return Err(format!(
-            "Le script de démarrage ComfyUI ne peut pas être un lien symbolique : {}",
-            launcher_path
-        ));
+        return Err({
+            let _msg_launcher_path = (launcher_path).to_string();
+            user_message::UserMessage::new(
+                codes::COMFYUI_LAUNCHER_SYMLINK_FORBIDDEN,
+            )
+                .param(
+                    "launcherPath",
+                    user_message::transport_param(_msg_launcher_path.clone()),
+                )
+                .with_detail(format!(
+                    "Le script de démarrage ComfyUI ne peut pas être un lien symbolique : {_msg_launcher_path}",
+                    _msg_launcher_path = user_message::transport_detail(&_msg_launcher_path),
+                ))
+                .into_transport()
+        });
     }
     if !metadata.is_file() {
-        return Err(format!(
-            "Le script de démarrage ComfyUI doit être un fichier régulier : {}",
-            launcher_path
-        ));
+        return Err({
+            let _msg_launcher_path = (launcher_path).to_string();
+            user_message::UserMessage::new(
+                codes::COMFYUI_LAUNCHER_NOT_REGULAR,
+            )
+                .param(
+                    "launcherPath",
+                    user_message::transport_param(_msg_launcher_path.clone()),
+                )
+                .with_detail(format!(
+                    "Le script de démarrage ComfyUI doit être un fichier régulier : {_msg_launcher_path}",
+                    _msg_launcher_path = user_message::transport_detail(&_msg_launcher_path),
+                ))
+                .into_transport()
+        });
     }
 
     build_launcher_command(
@@ -132,9 +180,16 @@ pub(super) fn start_comfyui(launcher_path: &str) -> Result<(), String> {
         cmd.creation_flags(CREATE_NO_WINDOW);
     }
 
-    cmd.spawn()
-        .map(|_| ())
-        .map_err(|e| format!("Impossible de lancer ComfyUI : {}", e))
+    cmd.spawn().map(|_| ()).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_STARTUP_PROCESS_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer ComfyUI : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })
 }
 
 pub fn ensure_comfyui_sync(settings: &ComfyUiSettings) -> Result<(), String> {
@@ -143,14 +198,27 @@ pub fn ensure_comfyui_sync(settings: &ComfyUiSettings) -> Result<(), String> {
         return Ok(());
     }
     if !settings.auto_start {
-        return Err(format!(
-            "ComfyUI inaccessible sur {}. Lance ComfyUI ou active le démarrage automatique dans les Preferences.",
-            settings.server_url
-        ));
+        return Err({
+            let _msg_settings_server_url = (settings.server_url).to_string();
+            user_message::UserMessage::new(
+                codes::COMFYUI_SERVER_START_REQUIRED,
+            )
+                .param(
+                    "serverUrl",
+                    user_message::transport_param(_msg_settings_server_url.clone()),
+                )
+                .with_detail(format!(
+                    "ComfyUI inaccessible sur {_msg_settings_server_url}. Lance ComfyUI ou active le démarrage automatique dans les Preferences.",
+                    _msg_settings_server_url = user_message::transport_detail(&_msg_settings_server_url),
+                ))
+                .into_transport()
+        });
     }
     start_comfyui(&settings.launcher_path)?;
     // Flux prend 2-3 minutes à charger — on attend jusqu'à 180s.
-    let mut last_err = "ComfyUI démarré mais ne répond pas encore.".to_string();
+    let mut last_err = user_message::UserMessage::new(codes::COMFYUI_SERVER_START_PENDING)
+        .with_detail("ComfyUI démarré mais ne répond pas encore.".to_string())
+        .into_transport();
     for _ in 0..180 {
         std::thread::sleep(Duration::from_secs(1));
         match check_health_sync(&settings.server_url) {
@@ -159,18 +227,39 @@ pub fn ensure_comfyui_sync(settings: &ComfyUiSettings) -> Result<(), String> {
             Err(e) => last_err = e,
         }
     }
-    Err(format!(
-        "ComfyUI ne répond toujours pas après 3 minutes. {}",
-        last_err
-    ))
+    Err({
+        let _msg_last_err = (last_err).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_SERVER_START_TIMEOUT)
+            .param(
+                "lastError",
+                user_message::transport_param(_msg_last_err.clone()),
+            )
+            .with_detail(format!(
+                "ComfyUI ne répond toujours pas après 3 minutes. {_msg_last_err}",
+                _msg_last_err = user_message::transport_detail(&_msg_last_err),
+            ))
+            .into_transport()
+    })
 }
 
 pub fn check_health_sync(server_url: &str) -> Result<bool, String> {
     let client = http_client(Duration::from_secs(5))?;
-    let response = client
-        .get(join_url(server_url, "/"))
-        .send()
-        .map_err(|e| format!("ComfyUI inaccessible sur {} : {}", server_url, e))?;
+    let response = client.get(join_url(server_url, "/")).send().map_err(|e| {
+        let _msg_server_url = (server_url).to_string();
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::COMFYUI_SERVER_UNREACHABLE)
+            .param(
+                "serverUrl",
+                user_message::transport_param(_msg_server_url.clone()),
+            )
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "ComfyUI inaccessible sur {_msg_server_url} : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+                _msg_server_url = user_message::transport_detail(&_msg_server_url)
+            ))
+            .into_transport()
+    })?;
     Ok(response.status().is_success())
 }
 
@@ -227,7 +316,7 @@ mod tests {
     fn non_executable_non_shell_launcher_is_rejected() {
         let error = build_launcher_command("/opt/comfy/launcher.py", "linux", false)
             .expect_err("reject non executable");
-        assert!(error.contains("pas exécutable"));
+        assert!(error.contains_any_code(&[codes::COMFYUI_LAUNCHER_NOT_EXECUTABLE]));
     }
 
     #[test]
@@ -237,10 +326,10 @@ mod tests {
         let missing = dir.join("missing.sh");
         assert!(validated_launcher_command(missing.to_str().expect("utf8"))
             .expect_err("missing")
-            .contains("introuvable"));
+            .contains_any_code(&[codes::COMFYUI_LAUNCHER_NOT_FOUND]));
         assert!(validated_launcher_command(dir.to_str().expect("utf8"))
             .expect_err("directory")
-            .contains("fichier régulier"));
+            .contains_any_code(&[codes::COMFYUI_LAUNCHER_NOT_REGULAR]));
         fs::remove_dir_all(dir).expect("cleanup");
     }
 
@@ -253,8 +342,8 @@ mod tests {
         };
 
         let error = ensure_comfyui_sync(&settings).expect_err("stopped server");
-        assert!(error.contains("ComfyUI inaccessible"));
-        assert!(error.contains("démarrage automatique"));
+        assert!(error.contains_any_code(&[codes::COMFYUI_SERVER_START_REQUIRED]));
+        assert!(error.contains_any_code(&[codes::COMFYUI_SERVER_START_REQUIRED]));
     }
 
     #[cfg(unix)]
@@ -271,7 +360,7 @@ mod tests {
 
         let error =
             validated_launcher_command(link.to_str().expect("utf8")).expect_err("reject symlink");
-        assert!(error.contains("lien symbolique"));
+        assert!(error.contains_any_code(&[codes::COMFYUI_LAUNCHER_SYMLINK_FORBIDDEN]));
         fs::remove_dir_all(dir).expect("cleanup");
     }
 }

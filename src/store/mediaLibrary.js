@@ -1,17 +1,40 @@
+import { presentUserMessage } from '../i18n/userMessage.js';
 import { visitProjectEntries, walkProjectMediaReferences } from './projectModel/index.js';
+import { getIntlLocale } from '../i18n/language.js';
 import { mediaBindingLabel, readMediaBindings } from './projectModel/mediaBindings.js';
 import { isAdvancedProject } from './projectModel/envelope.js';
 import { isOriginalBackup } from '../utils/mediaConventions.js';
 import { basename, pathKey, stripWindowsLongPathPrefix } from '../utils/fileUtils.js';
 import { mediaTagsFor } from './mediaTags.js';
+import { translateMedia } from '../i18n/mediaPresentation.js';
 
-const EDITED_IMAGE_TAG = 'modifiée';
+// Provenances : identifiants techniques (lus par detectOrigin), jamais du texte
+// à traduire. Leur présentation passe par presentMediaSource.
+const SOURCE = Object.freeze({
+  // eslint-disable-next-line i18next/no-literal-string -- identifiant de provenance persisté dans les items du catalogue, pas un libellé.
+  PROJECT: 'Projet', ADVANCED: 'Document avancé', NATIVE_GRAPH: 'Graphe natif', STORY_TITLE: 'Titre histoire', STORY_END: 'Fin histoire', ARCHIVE: 'Archive', LIBRARY: 'Explorateur',
+});
+const SOURCE_LABEL_KEYS = {
+  [SOURCE.PROJECT]: 'media:usage.source.project',
+  [SOURCE.ADVANCED]: 'media:usage.source.advanced',
+  [SOURCE.NATIVE_GRAPH]: 'media:usage.source.nativeGraph',
+  [SOURCE.STORY_TITLE]: 'media:usage.source.storyTitle',
+  [SOURCE.STORY_END]: 'media:usage.source.storyEnd',
+  [SOURCE.ARCHIVE]: 'media:explorer.kind.archive',
+  [SOURCE.LIBRARY]: 'media:usage.source.library',
+};
+
+// Repli d'affichage d'une provenance (types d'entrée et noms d'outils inchangés).
+export function presentMediaSource(source) {
+  return SOURCE_LABEL_KEYS[source] ? translateMedia(SOURCE_LABEL_KEYS[source]) : source;
+}
 
 
 export function getEditedImageTags(mediaTags, sourcePath) {
   return [...new Set([
     ...mediaTagsFor(mediaTags, sourcePath),
-    EDITED_IMAGE_TAG,
+    // Étiquette écrite dans le projet : langue active au moment de la modification.
+    translateMedia('media:explorer.edited.tag'),
   ])];
 }
 
@@ -39,7 +62,7 @@ function detectOrigin(path, source) {
   const norm = pathKey(path);
   if (norm.includes('/enregistrements/')) return 'recorded';
   if (norm.includes('/fichiers-importes/')) return 'imported';
-  if (source === 'Explorateur') return 'library';
+  if (source === SOURCE.LIBRARY) return 'library';
   return 'project';
 }
 
@@ -138,8 +161,9 @@ export function reconcileMediaLibraryPaths(project, mediaLibraryPaths = []) {
 // occupe. « Écran » sans nom retombe sur son chemin d'auteur, que l'index rend
 // déjà tel quel — on ne fabrique pas un nom qui n'existe pas.
 function advancedUsageLabel(usage) {
-  const field = usage?.field === 'audio' ? 'audio' : usage?.field === 'image' ? 'image' : 'média';
-  return `${usage?.label || usage?.nodePath || 'Écran'} · ${field}`;
+  const field = usage?.field === 'audio' ? translateMedia('media:usage.field.audio')
+    : usage?.field === 'image' ? translateMedia('media:usage.field.image') : translateMedia('media:usage.field.media');
+  return `${usage?.label || usage?.nodePath || translateMedia('media:usage.screen.fallback')} · ${field}`;
 }
 
 // Une référence que le document cite mais qu'aucun fichier ne résout. Elle n'a
@@ -154,7 +178,7 @@ function addUnboundAdvancedRef(map, entry) {
   if (map.has(key)) return;
   const usages = (entry.usages ?? []).map((usage) => ({
     label: advancedUsageLabel(usage),
-    source: 'Document avancé',
+    source: SOURCE.ADVANCED,
     field: usage?.field ?? 'mediaBinding',
     ...(usage?.nodePath ? { nodePath: usage.nodePath } : {}),
   }));
@@ -164,7 +188,7 @@ function addUnboundAdvancedRef(map, entry) {
     name: assetRef,
     kind: mediaKind(assetRef),
     ext: extname(assetRef),
-    source: 'Document avancé',
+    source: SOURCE.ADVANCED,
     field: 'mediaBinding',
     origin: 'project',
     usages,
@@ -216,7 +240,7 @@ function addAdvancedMedia(map, project, statusByPath, advancedUsages) {
     if (assetRef !== null) boundWithPath.add(assetRef);
     const label = mediaBindingLabel(binding);
     if (!known) {
-      addMedia(map, binding.path, label, 'Document avancé', 'mediaBinding', statusByPath, true, null, {
+      addMedia(map, binding.path, label, SOURCE.ADVANCED, 'mediaBinding', statusByPath, true, null, {
         declaredOnly: true,
         usageKnown: false,
       });
@@ -224,14 +248,14 @@ function addAdvancedMedia(map, project, statusByPath, advancedUsages) {
     }
     const usages = usagesByAssetRef.get(assetRef) ?? [];
     if (usages.length === 0) {
-      addMedia(map, binding.path, label, 'Document avancé', 'mediaBinding', statusByPath, true, null, {
+      addMedia(map, binding.path, label, SOURCE.ADVANCED, 'mediaBinding', statusByPath, true, null, {
         declaredOnly: true,
       });
       continue;
     }
     for (const usage of usages) {
       addMedia(
-        map, binding.path, advancedUsageLabel(usage), 'Document avancé',
+        map, binding.path, advancedUsageLabel(usage), SOURCE.ADVANCED,
         usage?.field ?? 'mediaBinding', statusByPath, true, null,
         { nodePath: usage?.nodePath ?? null },
       );
@@ -278,7 +302,7 @@ export async function executeMediaDeletion({
     try {
       await deleteDisk?.();
     } catch (error) {
-      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      const message = presentUserMessage(error).message;
       return { removed: false, blocked: false, diskDeleted: false, diskError: message };
     }
   }
@@ -305,53 +329,60 @@ export function collectMediaLibrary({
   extraPaths = [],
   advancedUsages = null,
 }) {
+  // Libellés de repli d'usage : langue active au calcul, jamais écrits dans le projet.
   const map = new Map();
-  addMedia(map, project?.rootAudio, 'Accueil', 'Projet', 'rootAudio', statusByPath, true);
-  addMedia(map, project?.rootImage, 'Accueil', 'Projet', 'rootImage', statusByPath, true);
-  addMedia(map, project?.thumbnailImage, 'Bibliothèque', 'Projet', 'thumbnailImage', statusByPath, true);
-  addMedia(map, project?.nightModeAudio, 'Mode nuit', 'Projet', 'nightModeAudio', statusByPath, true);
+  const homeLabel = translateMedia('media:usage.label.home');
+  addMedia(map, project?.rootAudio, homeLabel, SOURCE.PROJECT, 'rootAudio', statusByPath, true);
+  addMedia(map, project?.rootImage, homeLabel, SOURCE.PROJECT, 'rootImage', statusByPath, true);
+  addMedia(map, project?.thumbnailImage, translateMedia('media:usage.label.thumbnail'), SOURCE.PROJECT, 'thumbnailImage', statusByPath, true);
+  addMedia(map, project?.nightModeAudio, translateMedia('media:usage.label.nightMode'), SOURCE.PROJECT, 'nightModeAudio', statusByPath, true);
 
   const addGraph = (graph, scope) => {
     for (const stage of graph?.document?.stageNodes ?? []) {
-      const label = `${scope} · ${stage.name || stage.uuid || 'Stage natif'}`;
-      addMedia(map, stage.audio, label, 'Graphe natif', 'audio', statusByPath, true);
-      addMedia(map, stage.image, label, 'Graphe natif', 'image', statusByPath, true);
+      const label = `${scope} · ${stage.name || stage.uuid || translateMedia('media:usage.label.nativeStage')}`;
+      addMedia(map, stage.audio, label, SOURCE.NATIVE_GRAPH, 'audio', statusByPath, true);
+      addMedia(map, stage.image, label, SOURCE.NATIVE_GRAPH, 'image', statusByPath, true);
     }
   };
-  addGraph(project?.nativeGraph, 'Racine');
+  addGraph(project?.nativeGraph, translateMedia('media:usage.label.root'));
 
   addAdvancedMedia(map, project, statusByPath, advancedUsages);
 
   visitProjectEntries(project, (entry) => {
-    const label = entry?.name || (entry?.type === 'menu' ? 'Menu sans titre' : entry?.type === 'zip' ? 'Archive importée' : 'Histoire sans titre');
+    const label = entry?.name || (entry?.type === 'menu' ? translateMedia('media:usage.label.untitledMenu')
+      : entry?.type === 'zip' ? translateMedia('media:usage.label.importedArchive') : translateMedia('media:usage.label.untitledStory'));
     const eid = entry?.id || null;
-    addMedia(map, entry?.audio, label, entry?.type || 'Projet', 'audio', statusByPath, true, eid);
-    addMedia(map, entry?.image, label, entry?.type || 'Projet', 'image', statusByPath, true, eid);
-    addMedia(map, entry?.itemAudio, label, 'Titre histoire', 'itemAudio', statusByPath, true, eid);
-    addMedia(map, entry?.itemImage, label, 'Titre histoire', 'itemImage', statusByPath, true, eid);
-    addMedia(map, entry?.zipPath, label, 'Archive', 'zipPath', statusByPath, true, eid);
-    addMedia(map, entry?.afterPlaybackPromptAudio, label, 'Fin histoire', 'afterPlaybackPromptAudio', statusByPath, true, eid);
+    addMedia(map, entry?.audio, label, entry?.type || SOURCE.PROJECT, 'audio', statusByPath, true, eid);
+    addMedia(map, entry?.image, label, entry?.type || SOURCE.PROJECT, 'image', statusByPath, true, eid);
+    addMedia(map, entry?.itemAudio, label, SOURCE.STORY_TITLE, 'itemAudio', statusByPath, true, eid);
+    addMedia(map, entry?.itemImage, label, SOURCE.STORY_TITLE, 'itemImage', statusByPath, true, eid);
+    addMedia(map, entry?.zipPath, label, SOURCE.ARCHIVE, 'zipPath', statusByPath, true, eid);
+    addMedia(map, entry?.afterPlaybackPromptAudio, label, SOURCE.STORY_END, 'afterPlaybackPromptAudio', statusByPath, true, eid);
     addGraph(entry?.nativeGraph, label);
     for (const step of entry?.afterPlaybackSequence ?? []) {
-      addMedia(map, step.audio, `${label} · ${step.name || 'Étape de fin'}`, 'Fin histoire', 'audio', statusByPath, true, eid);
-      addMedia(map, step.image, `${label} · ${step.name || 'Étape de fin'}`, 'Fin histoire', 'image', statusByPath, true, eid);
+      const stepLabel = `${label} · ${step.name || translateMedia('media:usage.label.endStep')}`;
+      addMedia(map, step.audio, stepLabel, SOURCE.STORY_END, 'audio', statusByPath, true, eid);
+      addMedia(map, step.image, stepLabel, SOURCE.STORY_END, 'image', statusByPath, true, eid);
     }
-    addMedia(map, entry?.afterPlaybackHomeStep?.audio, `${label} · Home`, 'Fin histoire', 'audio', statusByPath, true, eid);
-    addMedia(map, entry?.afterPlaybackHomeStep?.image, `${label} · Home`, 'Fin histoire', 'image', statusByPath, true, eid);
+    const homeStepLabel = translateMedia('media:usage.label.homeStep', { label });
+    addMedia(map, entry?.afterPlaybackHomeStep?.audio, homeStepLabel, SOURCE.STORY_END, 'audio', statusByPath, true, eid);
+    addMedia(map, entry?.afterPlaybackHomeStep?.image, homeStepLabel, SOURCE.STORY_END, 'image', statusByPath, true, eid);
   });
 
   for (const job of xttsJobs) {
+    if (job?.mediaOutput?.workId && job.mediaOutput.workId !== project?.storage?.workId) continue;
     if (job?.status === 'done' && hasPath(job.resultPath)) {
-      addMedia(map, job.resultPath, job.targetLabel || job.label || 'Voix générée', 'XTTS', 'audio', statusByPath, false);
+      addMedia(map, job.resultPath, job.targetLabel || job.label || translateMedia('media:usage.label.generatedVoice'), 'XTTS', 'audio', statusByPath, false);
     }
   }
   for (const job of sdJobs) {
+    if (job?.mediaOutput?.workId && job.mediaOutput.workId !== project?.storage?.workId) continue;
     for (const path of job?.resultPaths ?? []) {
-      addMedia(map, path, job.workflowName || 'Image générée', 'ComfyUI', 'image', statusByPath, false);
+      addMedia(map, path, job.workflowName || translateMedia('media:usage.label.generatedImage'), 'ComfyUI', 'image', statusByPath, false);
     }
   }
   for (const path of extraPaths) {
-    addMedia(map, path, 'Bibliothèque média', 'Explorateur', 'library', statusByPath, false, null, {
+    addMedia(map, path, translateMedia('media:usage.label.library'), SOURCE.LIBRARY, 'library', statusByPath, false, null, {
       allowOriginalBackup: true,
       catalogOnly: true,
     });
@@ -360,6 +391,6 @@ export function collectMediaLibrary({
   return [...map.values()].sort((a, b) => {
     const kindOrder = { image: 0, audio: 1, archive: 2, other: 3 };
     return (kindOrder[a.kind] ?? 9) - (kindOrder[b.kind] ?? 9)
-      || a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
+      || a.name.localeCompare(b.name, getIntlLocale(), { sensitivity: 'base' });
   });
 }

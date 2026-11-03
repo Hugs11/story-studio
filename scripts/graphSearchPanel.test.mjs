@@ -107,7 +107,7 @@ test('l\'Écran racine ouvre la liste et porte le badge « racine »', () => {
     `advanced-option-${encodeURIComponent(action.path)}`,
   ]);
   assert.equal((html.match(/class="advanced-search__root-badge"/g) ?? []).length, 1);
-  assert.match(html, /advanced-search__root-badge">racine</);
+  assert.match(html, /advanced-search__root-badge">Entrée</);
   assert.ok(elements.some((element) => element.props?.text === 'Écran d’entrée : le pack commence ici'));
   assert.doesNotMatch(html, /Montrer la racine/);
 });
@@ -124,24 +124,23 @@ test('sans racine unique, aucun Écran n\'est présenté comme racine', () => {
   }
 });
 
-test('le décompte monte dans la barre de la liste quand l\'hôte la fournit', () => {
+test('le décompte reste sur une ligne dédiée sous la barre de la liste', () => {
   const { html } = mountSurface(createElement(GraphSearchPanel, {
     search,
     focus: null,
     onFocusPath: witness(),
     counts: { stages: 2, actions: 1, edges: 4 },
-    renderHeader: (summary) => createElement(GraphNodeListActions, {
+    renderHeader: () => createElement(GraphNodeListActions, {
       onSearch: witness(),
       onClose: witness(),
-      summary,
     }),
   }));
 
-  // Une seule occurrence, logée dans l'emplacement de tête de la barre.
-  assert.equal((html.match(/2 Écrans · 1 liste de choix · 4 liens/g) ?? []).length, 1);
+  // Une seule occurrence, entre l'en-tête et la liste.
+  assert.equal((html.match(/>2 Écrans · 1 liste de choix · 4 liens</g) ?? []).length, 1);
   assert.match(
     html,
-    /class="structure-actions-leading"><p class="advanced-search__count" aria-live="polite">2 Écrans · 1 liste de choix · 4 liens/,
+    /<\/header><p class="advanced-search__count" aria-live="polite" title="2 Écrans · 1 liste de choix · 4 liens">2 Écrans · 1 liste de choix · 4 liens/,
   );
 });
 

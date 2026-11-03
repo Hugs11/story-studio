@@ -1,0 +1,6 @@
+{
+  "request": { "previewId": "preview-web", "chosenCandidateIds": ["c0"], "chosenImageId": "local-image", "chosenTagIds": [], "expectedFicheRevision": 2, "expectedCatalogueRevision": 9, "requestId": "apply-web" },
+  "receipt": { "operationId": "op-apply", "requestId": "apply-web", "sourcesRevision": 3, "catalogueRevision": 9 },
+  "image": { "imageCandidateId": "local-image", "coverStagingId": "00000000-0000-4000-8000-000000000001", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "width": 1600, "height": 800, "byteSize": 98304 },
+  "result": { "mutationId": "mutation-web", "ficheRevision": 3, "catalogueRevision": 10, "appliedFields": [{ "field": "title", "language": "fr" }, { "field": "cover", "language": null }], "createdTagIds": [], "coverHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "affectedCardIds": ["card-web"], "undoToken": "undo-web" }
+}

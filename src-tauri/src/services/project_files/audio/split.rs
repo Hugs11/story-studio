@@ -1,7 +1,9 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::fs;
 use std::path::PathBuf;
 
-use super::super::media_output_root;
+use super::super::media_output_dir;
 use super::{
     run_ffmpeg_audio_edit, unique_audio_assembly_path, validate_audio_assembly_filename,
     validate_audio_assembly_input, AudioEditParams, FfmpegAudioEditRequest,
@@ -43,16 +45,36 @@ pub struct AudioSplitResult {
     pub failed: Vec<AudioSplitFailure>,
 }
 
-fn split_target_dir(workspace_dir: Option<&str>) -> Result<PathBuf, String> {
-    let target_dir = media_output_root(
+fn split_target_dir(
+    workspace_dir: Option<&str>,
+    project_destination: Option<&crate::services::project_files::ProjectMediaDestination>,
+) -> Result<PathBuf, String> {
+    let target_dir = media_output_dir(
         workspace_dir,
-        "Aucun emplacement de travail : impossible de découper un audio.",
-    )?
-    .join("fichiers-importes");
-    fs::create_dir_all(&target_dir)
-        .map_err(|e| format!("Impossible de créer fichiers-importes : {}", e))?;
-    fs::canonicalize(&target_dir)
-        .map_err(|e| format!("Dossier fichiers-importes inaccessible : {}", e))
+        "fichiers-importes",
+        project_destination,
+        codes::AUDIO_SPLIT_WORKSPACE_REQUIRED_TRANSPORT,
+    )?;
+    fs::create_dir_all(&target_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_IMPORT_FOLDER_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de créer fichiers-importes : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    fs::canonicalize(&target_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_IMPORT_FOLDER_INACCESSIBLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Dossier fichiers-importes inaccessible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })
 }
 
 fn split_one_segment(
@@ -62,10 +84,18 @@ fn split_one_segment(
     segment: &AudioSplitSegment,
 ) -> Result<AudioSplitSuccess, String> {
     if !segment.start_sec.is_finite() || segment.start_sec < 0.0 {
-        return Err("Le point d'entrée est invalide.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::FILES_INVALID_IN_POINT)
+                .with_detail("Le point d'entrée est invalide.".to_string())
+                .into_transport(),
+        );
     }
     if !segment.end_sec.is_finite() || segment.end_sec <= segment.start_sec {
-        return Err("Le point de sortie doit être après le point d'entrée.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::AUDIO_CUT_OUTPOINT_INVALID)
+                .with_detail("Le point de sortie doit être après le point d'entrée.".to_string())
+                .into_transport(),
+        );
     }
 
     let output_name = validate_audio_assembly_filename(&segment.output_file_name)?;
@@ -107,13 +137,18 @@ pub fn split_audio_segments(
     input_path: &str,
     segments: &[AudioSplitSegment],
     workspace_dir: Option<&str>,
+    project_destination: Option<&crate::services::project_files::ProjectMediaDestination>,
 ) -> Result<AudioSplitResult, String> {
     if segments.is_empty() {
-        return Err("Ajoutez au moins un extrait à générer.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::AUDIO_CLIPS_SELECTION_EMPTY)
+                .with_detail("Ajoutez au moins un extrait à générer.".to_string())
+                .into_transport(),
+        );
     }
     let input = validate_audio_assembly_input(input_path)?;
     let input_path = input.to_string_lossy().to_string();
-    let target_dir = split_target_dir(workspace_dir)?;
+    let target_dir = split_target_dir(workspace_dir, project_destination)?;
     let ffmpeg = get_ffmpeg_path()?;
 
     let mut created = Vec::new();

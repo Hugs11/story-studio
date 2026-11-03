@@ -54,7 +54,16 @@ pub(crate) fn system_pack_identity() -> Uuid {
 /// est conservée bit-à-bit : on ne la remappe ni ne la normalise pour des
 /// raisons de forme.
 fn resolve_pack_identity(context: &mut StoryDocumentContext, next: PackIdentitySource<'_>) -> bool {
-    if context.pack_identity.origin != PackIdentityOrigin::RequiresGeneration {
+    if crate::domain::official_provenance::is_official_origin::<
+        crate::services::catalogue::CatalogueState,
+    >(
+        context.official_provenance,
+        context.pack_identity.value.as_deref().unwrap_or_default(),
+        None,
+    )
+    .expect("no catalogue lookup")
+        || context.pack_identity.origin != PackIdentityOrigin::RequiresGeneration
+    {
         return false;
     }
     context.pack_identity = PackIdentity::generated(next(), &context.pack_identity);
@@ -114,9 +123,17 @@ pub(crate) fn create_advanced_document(
     title: &str,
     next: PackIdentitySource<'_>,
 ) -> Result<String, PersistenceError> {
+    create_advanced_document_named(title, None, next)
+}
+
+pub(crate) fn create_advanced_document_named(
+    title: &str,
+    initial_stage_name: Option<&str>,
+    next: PackIdentitySource<'_>,
+) -> Result<String, PersistenceError> {
     let entry = StageNode {
         uuid: next().to_string(),
-        name: Presence::Value(FIRST_STAGE_NAME.to_string()),
+        name: Presence::Value(initial_stage_name.unwrap_or(FIRST_STAGE_NAME).to_string()),
         position: Presence::Value(Position {
             x: serde_json::Number::from(0),
             y: serde_json::Number::from(0),
@@ -203,6 +220,9 @@ impl AssetLocation {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AdvancedAcquisition {
+    pub(crate) official_provenance: crate::domain::official_provenance::OfficialProvenance,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) official_origin_uuid: Option<String>,
     pub(crate) payload: String,
     pub(crate) media_bindings: Vec<AdvancedMediaBinding>,
     /// La vignette catalogue du pack, quand l'archive en portait une.

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ArrowRight, X } from '../components/icons/LucideLocal';
 import { NodeIcon } from '../components/icons/NodeIcon.jsx';
 import { hierarchicalNatureOf } from '../store/nodeIconVocabulary.js';
@@ -15,19 +16,19 @@ function NodeTypeIcon({ type, icon }) {
   );
 }
 
-function getHeaderData({ node, selectedId, selectedIds, project }) {
+function getHeaderData(t, { node, selectedId, selectedIds, project }) {
   if (selectedIds?.size > 1) {
     return {
       type: 'multi',
-      title: `${selectedIds.size} éléments sélectionnés`,
-      badge: 'Modification groupée',
+      title: t('settings:panel.multi.title', { count: selectedIds.size }),
+      badge: t('settings:panel.multi.badge'),
       icon: null,
     };
   }
   if (selectedId === END_NODE_ID) {
     return {
       type: END_NODE_ID,
-      title: project?.endNodeName || 'Message de fin',
+      title: project?.endNodeName || t('settings:panel.end.fallback'),
       badge: TYPE_LABELS[END_NODE_ID],
       icon: project?.globalOptions?.nightMode ? 'moon' : 'stop',
     };
@@ -35,23 +36,23 @@ function getHeaderData({ node, selectedId, selectedIds, project }) {
   if (!node) {
     return {
       type: 'root',
-      title: 'Réglages',
-      badge: 'Sélection',
+      title: t('settings:panel.title.fallback'),
+      badge: t('settings:panel.selection.badge'),
       icon: null,
     };
   }
   const type = node.type === 'root' ? 'root' : node.type;
   const rootTitle = project?.projectType === 'simple'
-    ? (project?.projectName || 'Mon histoire')
-    : (project?.rootName || project?.projectName || 'Menu racine');
+    ? (project?.projectName || t('settings:panel.story.fallback'))
+    : (project?.rootName || project?.projectName || t('settings:panel.root.fallback'));
   // Badge du root : dépend du type de projet — « Histoire simple » en `simple`
   // (le header est visible dans l'éditeur simple même sans diagramme),
   // « Pack » sinon. « Histoire » seul serait ambigu avec TYPE_LABELS.story.
-  const rootBadge = project?.projectType === 'simple' ? 'Histoire simple' : 'Pack';
+  const rootBadge = project?.projectType === 'simple' ? t('settings:panel.simple.badge') : t('settings:panel.pack.badge');
   return {
     type,
-    title: type === 'root' ? rootTitle : (node.name || TYPE_LABELS[type] || 'Réglages'),
-    badge: type === 'root' ? rootBadge : (TYPE_LABELS[type] || 'Réglages'),
+    title: type === 'root' ? rootTitle : (node.name || TYPE_LABELS[type] || t('settings:panel.title.fallback')),
+    badge: type === 'root' ? rootBadge : (TYPE_LABELS[type] || t('settings:panel.title.fallback')),
     icon: node.icon ?? null,
   };
 }
@@ -64,7 +65,8 @@ export function SettingsPanelHeader({
   onClose = null,
   dragHandleProps = {},
 }) {
-  const data = getHeaderData({ node, selectedId, selectedIds, project });
+  const { t } = useTranslation('settings');
+  const data = getHeaderData(t, { node, selectedId, selectedIds, project });
 
   return (
     <div className="settings-panel-header" {...dragHandleProps}>
@@ -79,7 +81,7 @@ export function SettingsPanelHeader({
         <button
           type="button"
           className="settings-panel-header-close"
-          aria-label="Fermer les réglages"
+          aria-label={t('settings:panel.close.action')}
           onClick={onClose}
         >
           <X aria-hidden="true" />

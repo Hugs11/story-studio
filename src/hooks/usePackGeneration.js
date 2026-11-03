@@ -1,8 +1,11 @@
+import { invoke } from '@tauri-apps/api/core';
+import { productionRef, translateProduction } from '../i18n/productionPresentation.js';
 import { useCallback, useMemo, useState } from 'react';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { getLastExportDir, saveLastExportDir } from './useFileDialog';
 import { ensureExportsDir, projectToRustExport } from '../store/projectIO';
 import { getGenerateErrors } from '../store/projectValidation';
+import { mediaVerificationProblem, verifyMenuProduction } from '../store/production/mediaVerification.js';
 import { hasExplicitExportPackName } from '../store/projectHelpers';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { logger } from '../utils/logger';
@@ -18,6 +21,7 @@ import { askImportedUuidRevision } from './importedUuidRevision';
 // copie locale.
 export function usePackGeneration({
   store,
+  onGenerated = null,
   renderQueue,
   pathAudit,
   pathAuditPending,
@@ -67,28 +71,34 @@ export function usePackGeneration({
     }
     if (pathAuditPending) {
       showErrorDialog({
-        title: 'Vérification en cours',
-        message: 'Vérification des fichiers du projet en cours. Attendez une seconde puis réessayez.',
+        title: productionRef('production:generation.checking.title'),
+        message: productionRef('production:generation.checking.message'),
         variant: 'warning',
       });
       return;
     }
-    const validationErrors = getGenerateErrors(projectForGeneration, pathAudit);
+    const verification = await verifyMenuProduction(projectForGeneration, pathAudit);
+    if (verification.unverifiedPaths.length > 0) {
+      showErrorDialog({ ...mediaVerificationProblem(), variant: 'warning' });
+      return;
+    }
+    const validationErrors = verification.errors;
     if (validationErrors.length > 0) {
       logger.warn(`generate:blocked count=${validationErrors.length}`);
       showErrorDialog({
-        title: 'Impossible de générer',
-        message: `Impossible de générer le pack :\n\n• ${validationErrors.join('\n• ')}`,
+        title: productionRef('production:generation.blocked.title'),
+        message: productionRef('production:generation.blocked.message', { get errors() { return { messages: getGenerateErrors(projectForGeneration, verification.statusByPath), separator: '\n• ', data: true }; } }),
       });
       return;
     }
     const defaultPath = await resolveDefaultExportDir();
-    const outputFolder = await openDialog({ directory: true, multiple: false, title: 'Dossier de sortie du pack', defaultPath });
+    const outputFolder = await openDialog({ directory: true, multiple: false, title: translateProduction('production:generation.folder.title'), defaultPath });
     if (!outputFolder) return;
     saveLastExportDir(outputFolder);
     logger.info(`generate:queued projectType=${projectForGeneration.projectType} name='${projectForGeneration.projectName}' outputFolder='${outputFolder}'`);
     renderQueue.addJob({
-      projectName: projectForGeneration.projectName || '(sans nom)',
+      ...(onGenerated ? { onGenerated } : {}),
+      projectName: projectForGeneration.projectName || '',
       savePath: store.savePath ?? null,
       projectJson: JSON.stringify(projectToRustExport(projectForGeneration)),
       outputFolder,
@@ -98,12 +108,29 @@ export function usePackGeneration({
   async function handleSavePackMetadata(requestedDraft, { generate = false } = {}) {
     // La vignette catalogue n'est pas une métadonnée : elle est retirée du
     // brouillon et écrite à côté, dans les médias de la racine.
-    const { catalogImage, ...draft } = requestedDraft ?? {};
+    const {
+      catalogImage,
+      harmonizeLoudness,
+      silenceMode,
+      leadingSilenceSec,
+      trailingSilenceSec,
+      ...draft
+    } = requestedDraft ?? {};
     const catalogChanged = Object.hasOwn(requestedDraft ?? {}, 'catalogImage');
+    const audioSettings = {};
+    if (Object.hasOwn(requestedDraft ?? {}, 'harmonizeLoudness')) {
+      audioSettings.harmonizeLoudness = harmonizeLoudness;
+    }
+    if (Object.hasOwn(requestedDraft ?? {}, 'silenceMode')) {
+      audioSettings.silenceMode = silenceMode;
+    }
+    for (const [field, value] of [['leadingSilenceSec', leadingSilenceSec], ['trailingSilenceSec', trailingSilenceSec]]) {
+      if (Object.hasOwn(requestedDraft ?? {}, field)) audioSettings[field] = value;
+    }
     // Nouvelle révision d'un pack importé : la question est posée avant le
     // sélecteur de dossier de sortie.
     const effectiveDraft = generate && importedPackPendingMetaRef.current
-      ? await askImportedUuidRevision(draft, showChoiceDialog)
+      ? await askImportedUuidRevision(draft, showChoiceDialog, () => invoke('read_pack_identity_lock', { uuid: store.project.packMetadata?.uuid ?? '', officialProvenance: store.project.officialProvenance ?? 'unknown' }))
       : draft;
     const nextPackMetadata = { ...(store.project.packMetadata ?? {}), ...effectiveDraft };
     const isSimple = store.project.projectType === 'simple';
@@ -116,6 +143,9 @@ export function usePackGeneration({
       ...(catalogChanged ? {
         sameImage: !catalogImage,
         thumbnailImage: catalogImage || store.project.rootImage || null,
+      } : {}),
+      ...(Object.keys(audioSettings).length > 0 ? {
+        globalOptions: { ...(store.project.globalOptions ?? {}), ...audioSettings },
       } : {}),
     };
     if (!generate) {

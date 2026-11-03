@@ -154,6 +154,8 @@ pub struct PackValidationReport {
     pub pack_title: String,
     pub pack_description: String,
     pub pack_uuid: String,
+    pub(crate) official_provenance: crate::domain::official_provenance::OfficialProvenance,
+    pub(crate) identity_locked: bool,
     pub pack_version: u32,
     pub zip_path: String,
     pub verdict: PackValidationVerdict,

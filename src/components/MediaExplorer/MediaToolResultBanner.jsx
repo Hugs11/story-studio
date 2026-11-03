@@ -1,15 +1,21 @@
 import { Button } from '../common/Button';
+import { presentMedia } from '../../i18n/mediaPresentation.js';
+import { useMediaTranslation } from '../../i18n/useMediaTranslation.js';
 
 export function MediaToolResultBanner({
   result,
   unavailableReason = '',
   onFinish,
 }) {
+  const { t } = useMediaTranslation();
   if (!result) return null;
   const createdCount = result.createdPaths?.length ?? 0;
   const defaultMessage = createdCount === 1
-    ? 'Le fichier créé est sélectionné dans Médias.'
-    : `${createdCount} fichiers créés sont sélectionnés dans Médias.`;
+    ? t('media:toolResult.created.single')
+    : t('media:toolResult.created.count', { count: createdCount });
+  // Message et raison retenus comme descripteurs : résolus dans la langue active.
+  const message = presentMedia(result.message);
+  const reason = presentMedia(unavailableReason);
 
   return (
     <div className="media-tool-result" role="status" aria-live="polite">
@@ -17,14 +23,14 @@ export function MediaToolResultBanner({
         variant="icon"
         className="media-tool-result-close"
         onClick={onFinish}
-        aria-label="Fermer la notification"
-        title="Fermer"
+        aria-label={t('media:toolResult.close.ariaLabel')}
+        title={t('common:dialog.close.label')}
       >×</Button>
       <div className="media-tool-result-copy">
-        <strong>{result.projectApplied ? 'Projet mis à jour' : 'Fichiers créés dans Médias'}</strong>
-        <span>{result.message || defaultMessage}</span>
-        {unavailableReason ? (
-          <small>{unavailableReason}{result.projectApplied ? '' : ' Les fichiers créés restent disponibles dans Médias.'}</small>
+        <strong>{result.projectApplied ? t('media:toolResult.project.applied') : t('media:toolResult.files.created')}</strong>
+        <span>{message || defaultMessage}</span>
+        {reason ? (
+          <small>{reason}{result.projectApplied ? '' : ` ${t('media:toolResult.files.stillAvailable')}`}</small>
         ) : null}
       </div>
     </div>

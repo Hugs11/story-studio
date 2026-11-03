@@ -1,3 +1,5 @@
+import { graphTranslationEngine } from '../../i18n/graphPresentation.js';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from 'react';
 
 import { advancedGestures, graphNode, presence } from '../../store/projectModel/advancedGestures.js';
@@ -13,6 +15,7 @@ export function NodeNameEditor({
   onFocusHandled = null,
   onGesture,
 }) {
+  const { t } = useTranslation('graph', { i18n: graphTranslationEngine() });
   const authored = node.name?.presence === 'value' ? String(node.name.value ?? '') : '';
   const [draft, setDraft] = useState(authored);
   const inputRef = useRef(null);
@@ -41,7 +44,7 @@ export function NodeNameEditor({
       ref={inputRef}
       className="field-input advanced-field__name-input"
       value={draft}
-      aria-label="Nom"
+      aria-label={t("graph:name.field.aria")}
       disabled={disabled || node.uniqueId !== true}
       onChange={(event) => setDraft(event.target.value)}
       onBlur={commit}

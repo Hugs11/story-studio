@@ -209,7 +209,7 @@
   width: 48px;
   border: none;
   background: transparent;
-  color: var(--text);
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -296,4 +296,17 @@
   .chrome-window-btn {
     width: 44px;
   }
+}
+
+.chrome-window-separator {
+  align-self: center;
+  width: 1px;
+  height: 16px;
+  margin-inline: 4px;
+  background: var(--border);
+}
+
+.chrome-window-controls > .tooltip-wrap {
+  display: inline-flex;
+  align-items: stretch;
 }

@@ -1,3 +1,4 @@
+import { useCommonTranslation } from '../i18n/commonPresentation.js';
 import { Fragment, Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { DiagramPanel } from '../components/diagram/DiagramPanel';
 import { FloatingSimulator } from '../components/FloatingSimulator/FloatingSimulator';
@@ -58,6 +59,7 @@ export function WorkspaceView({
   onYoutubeFunnel,
   onAggregatePacks,
   onCheckPack,
+  onOpenCatalogue,
   onOpenProject,
   onOpenPreferences,
   recentProjects,
@@ -76,6 +78,7 @@ export function WorkspaceView({
   workspaceViewState,
   advanced = null,
 }) {
+  const { t } = useCommonTranslation();
   const { onSelect } = useProjectActions();
   // Seul point de montage de l'espace de travail hiérarchique : un projet avancé
   // n'en monte aucun composant. Le mode d'auteur,
@@ -86,6 +89,7 @@ export function WorkspaceView({
   const hasTree = hasProjectTree(project);
   const [selectedIds, setSelectedIds] = useState(() => new Set([selectedId]));
   const [afterPlayFocus, setAfterPlayFocus] = useState(null);
+  const [autoNextFocus, setAutoNextFocus] = useState(null);
   const [simulatorAnchorId, setSimulatorAnchorId] = useState(null);
   const [simulatorZipPath, setSimulatorZipPath] = useState(null);
   // Le jeton de lancement d'une écoute. Il change à chaque demande, et c'est lui
@@ -104,6 +108,7 @@ export function WorkspaceView({
   const selectedIdsRef = useRef(selectedIds);
   const pendingInternalSelectedIdRef = useRef(null);
   const revealRequestIdRef = useRef(0);
+  const autoNextFocusRequestIdRef = useRef(0);
   selectedIdRef.current = selectedId;
 
   // WorkspaceView reste monté derrière l'accueil. Sans remise à zéro ici, les
@@ -228,6 +233,24 @@ export function WorkspaceView({
     setTreeRevealRequest({ id, requestId: ++revealRequestIdRef.current });
   }, [onSelect]);
 
+  const handleOpenAutoNextSettingsFromTree = useCallback(() => {
+    commitSelectionChange(new Set(['root']));
+    handleTreeNodeSelect('root');
+    restoreSettings();
+    setAutoNextFocus({ requestId: ++autoNextFocusRequestIdRef.current });
+  }, [commitSelectionChange, handleTreeNodeSelect, restoreSettings]);
+
+  const handleOpenAutoNextSettingsFromDiagram = useCallback(() => {
+    commitSelectionChange(new Set(['root']));
+    handleDiagramNodeSelect('root');
+    restoreSettings();
+    setAutoNextFocus({ requestId: ++autoNextFocusRequestIdRef.current });
+  }, [commitSelectionChange, handleDiagramNodeSelect, restoreSettings]);
+
+  const handleAutoNextFocusConsumed = useCallback((requestId) => {
+    setAutoNextFocus((current) => current?.requestId === requestId ? null : current);
+  }, []);
+
   const handleSimulatorActiveNodeChange = useCallback((id) => {
     const sync = buildSimulatorSelectionSync(id, ++revealRequestIdRef.current);
     if (!sync) return;
@@ -277,13 +300,14 @@ export function WorkspaceView({
   }, [selectedId]);
 
   const style = {
+    // eslint-disable-next-line i18next/no-literal-string -- Valeur CSS numérique avec unité px.
     '--col-left': `${treePanelWidth}px`,
+    // eslint-disable-next-line i18next/no-literal-string -- Valeur CSS numérique avec unité px.
     '--workspace-settings-panel-width': `${settingsPanelWidth}px`,
   };
 
   const renderStructurePanel = (headerDragHandleProps) => (
     <StructurePanel
-      canvasActionsAvailable={showDiagram}
       project={project}
       projectType={projectType}
       selectedId={selectedId}
@@ -295,6 +319,7 @@ export function WorkspaceView({
       hoveredNodeId={hoveredStructureNodeId}
       onNodeHoverChange={handleStructureNodeHoverChange}
       onSelectNode={handleTreeNodeSelect}
+      onOpenAutoNextSettings={handleOpenAutoNextSettingsFromTree}
       onSelectionChange={handleTreeSelectionChange}
       onFocusTreeSearch={onFocusTreeSearch}
       onSimulateNode={handleSimulateNode}
@@ -315,6 +340,8 @@ export function WorkspaceView({
       projectIndex={projectIndex}
       afterPlayFocus={afterPlayFocus}
       onAfterPlayFocusConsumed={handleAfterPlayFocusConsumed}
+      autoNextFocus={autoNextFocus}
+      onAutoNextFocusConsumed={handleAutoNextFocusConsumed}
       header={(
         <SettingsPanelHeader
           node={node}
@@ -340,6 +367,7 @@ export function WorkspaceView({
       selectedId={selectedId}
       selectedIds={selectedIds}
       onSelectNode={handleDiagramNodeSelect}
+      onOpenAutoNextSettings={handleOpenAutoNextSettingsFromDiagram}
       onSelectionChange={handleDiagramSelectionChange}
       selectionRevealRequest={diagramRevealRequest}
       hoveredNodeId={hoveredStructureNodeId}
@@ -348,7 +376,7 @@ export function WorkspaceView({
       expandedStoryGroupIds={expandedDiagramStoryGroupIds}
       onExpandedStoryGroupIdsChange={setExpandedDiagramStoryGroupIds}
       variant={variant}
-      showActionsBar={showDiagram}
+      showActionsBar={showDiagram && !showTree}
       showHint={showDiagram && !showSettings}
       onClose={closeDiagram}
       onPreview={handleSimulateNode}
@@ -363,7 +391,7 @@ export function WorkspaceView({
     return (
       <div className="screen visible">
         <div className="workspace workspace--advanced">
-          <Suspense fallback={<p className="workspace-advanced-loading">Ouverture de l'Éditeur graphe…</p>}>
+          <Suspense fallback={<p className="workspace-advanced-loading">{t('common:workspace.graph.loading')}</p>}>
             <AdvancedWorkspace {...advanced} project={project} />
           </Suspense>
         </div>
@@ -385,6 +413,7 @@ export function WorkspaceView({
             onYoutubeFunnel={onYoutubeFunnel}
             onAggregatePacks={onAggregatePacks}
             onCheckPack={onCheckPack}
+            onOpenCatalogue={onOpenCatalogue}
             onOpen={onOpenProject}
             onOpenPreferences={onOpenPreferences}
             recentProjects={recentProjects}
@@ -411,7 +440,7 @@ export function WorkspaceView({
 
   const renderResizeHandle = (boundary) => {
     const settingsConfig = {
-      ariaLabel: 'Redimensionner les réglages',
+      ariaLabel: t('common:workspace.settings.resize'),
       panelClass: '.workspace-panel-slot--settings',
       cssVar: '--workspace-settings-panel-width',
       minWidth: SETTINGS_PANEL_WIDTH_MIN,
@@ -421,7 +450,7 @@ export function WorkspaceView({
       onResize: setSettingsPanelWidth,
     };
     const structureConfig = {
-      ariaLabel: 'Redimensionner l’arbre',
+      ariaLabel: t('common:workspace.tree.resize'),
       panelClass: '.workspace-panel-slot--structure',
       cssVar: '--col-left',
       minWidth: LEFT_PANEL_MIN_WIDTH,

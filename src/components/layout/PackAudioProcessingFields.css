@@ -1,0 +1,268 @@
+.pack-meta-audio {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.pack-meta-audio-volume-tooltip {
+  display: block;
+}
+
+.pack-meta-audio-volume-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pack-meta-audio-control-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pack-meta-audio-volume-row .pack-meta-audio-control-title {
+  flex: 1;
+}
+
+.pack-meta-audio-silence {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pack-meta-audio-silence-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 24px;
+  align-items: center;
+  gap: 2px 6px;
+}
+
+.pack-meta-audio-silence-heading .pack-meta-audio-control-title {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.pack-meta-audio-duration {
+  grid-column: 1;
+  grid-row: 2;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.pack-meta-audio-duration-scope {
+  grid-column: 2;
+  grid-row: 2;
+  color: color-mix(in srgb, var(--muted) 78%, transparent);
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+.pack-meta-audio-duration-edit {
+  grid-column: 3;
+  grid-row: 2;
+  justify-self: end;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  padding: 0;
+  flex: 0 0 24px;
+  align-self: center;
+}
+
+.pack-meta-audio-duration-edit svg {
+  width: 13px;
+  height: 13px;
+}
+
+.pack-meta-audio-duration-editor {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--bg2) 60%, transparent);
+}
+
+/* `display: flex` l'emporterait sur l'attribut `hidden` du navigateur. */
+.pack-meta-audio-duration-editor[hidden] {
+  display: none;
+}
+
+.pack-meta-audio-duration-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pack-meta-audio-duration-field {
+  align-content: start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.pack-meta-audio-duration-field label {
+  color: var(--muted);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.pack-meta-audio-duration-input {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  outline: none;
+  background: var(--bg2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: right;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.pack-meta-audio-duration-input:focus {
+  border-color: var(--accentBorder);
+  background: color-mix(in srgb, var(--bg2) 82%, var(--accentDim));
+}
+
+.pack-meta-audio-duration-input[aria-invalid='true'] {
+  border-color: var(--danger-border);
+}
+
+.pack-meta-audio-duration-input[aria-invalid='true']:focus {
+  border-color: var(--danger-border-hover);
+}
+
+.pack-meta-audio-duration-error {
+  grid-column: 1 / -1;
+  color: var(--danger-text);
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+
+.pack-meta-audio-duration-note {
+  color: var(--muted);
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+
+.pack-meta-audio-duration-input::placeholder {
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+.pack-meta-audio-duration-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pack-meta-audio-duration-invalid-hint {
+  color: var(--danger-text);
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+
+.pack-meta-audio .pack-meta-audio-duration-reset {
+  min-height: 24px;
+  max-width: 100%;
+  padding: 2px 4px;
+  color: var(--muted);
+  font-size: 10px;
+  white-space: normal;
+  text-align: left;
+}
+
+.pack-meta-audio-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pack-meta-audio-segment-tooltip {
+  display: flex;
+  width: 100%;
+}
+
+.pack-meta-audio-segment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.pack-meta-audio-segment:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.pack-meta-audio-option-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 999px;
+  background: var(--borderLt);
+}
+
+.pack-meta-audio-segment.is-active .pack-meta-audio-option-dot {
+  background: var(--accent);
+}
+
+.pack-meta-audio-help {
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .pack-meta-audio {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .pack-meta-audio-options {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .pack-meta-audio-segment-tooltip {
+    flex: 1 1 126px;
+    width: auto;
+  }
+
+  .pack-meta-audio-segment {
+    min-height: 30px;
+    height: auto;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 440px) {
+  .pack-meta-audio-duration-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pack-meta-audio-duration-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

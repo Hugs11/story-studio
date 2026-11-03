@@ -74,7 +74,7 @@ test('la barre de l’arbre garde exactement ses actions propres', () => {
   ]);
   // L'entrée en bibliothèque reste propre au graphe : côté Libre, la
   // médiathèque porte déjà ce même import, et l'offrir deux fois dans la même
-  // colonne serait une duplication, comme pour les options du pack.
+  // colonne serait une duplication, comme pour la Fiche du pack.
   assert.ok(!mediaToolActionIds(WORKSPACE_MODE_HIERARCHICAL).includes(MEDIA_TOOL_ACTIONS.IMPORT_MEDIA));
 });
 

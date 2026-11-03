@@ -1,5 +1,6 @@
 import { Button } from '../common/Button';
 import { formatTime } from './audioEditorConstants';
+import { useMediaTranslation } from '../../i18n/useMediaTranslation.js';
 
 // Menu contextuel + popover de réglage d'un fondu, positionnés au pointeur.
 export function AudioEditorFadeOverlays({
@@ -11,6 +12,7 @@ export function AudioEditorFadeOverlays({
   onSetFadeValue,
   onPopoverOk,
 }) {
+  const { t } = useMediaTranslation();
   return (
     <>
       {fadeContextMenu && (
@@ -22,12 +24,12 @@ export function AudioEditorFadeOverlays({
         >
           <button className="audio-editor-fade-context-item" onClick={onOpenContextFadePopover}>
             {currentFadeValue(fadeContextMenu.target) > 0
-              ? 'Modifier le fondu'
+              ? t('media:audioEditor.fade.edit')
               : fadeContextMenu.target === 'in'
-                ? 'Ajouter un fondu en entrée'
+                ? t('media:audioEditor.fade.addIn')
                 : fadeContextMenu.target === 'out'
-                  ? 'Ajouter un fondu en sortie'
-                  : 'Ajouter un fondu'}
+                  ? t('media:audioEditor.fade.addOut')
+                  : t('media:audioEditor.fade.add')}
           </button>
         </div>
       )}
@@ -41,7 +43,7 @@ export function AudioEditorFadeOverlays({
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >
-            <div className="audio-editor-fade-popover-title">{config.label}</div>
+            <div className="audio-editor-fade-popover-title">{t(config.labelKey)}</div>
             <div className="audio-editor-row">
               <input
                 type="range"
@@ -55,8 +57,8 @@ export function AudioEditorFadeOverlays({
               <span className="audio-editor-zoom-val">{formatTime(config.value)}</span>
             </div>
             <div className="audio-editor-fade-popover-actions">
-              <Button size="sm" onClick={() => onSetFadeValue(fadePopover.target, 0)}>Retirer</Button>
-              <Button size="sm" variant="primary" onClick={onPopoverOk}>OK</Button>
+              <Button size="sm" onClick={() => onSetFadeValue(fadePopover.target, 0)}>{t('media:delete.remove.action')}</Button>
+              <Button size="sm" variant="primary" onClick={onPopoverOk}>{t('common:dialog.confirm.label')}</Button>
             </div>
           </div>
         );

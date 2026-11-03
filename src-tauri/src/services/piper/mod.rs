@@ -27,6 +27,8 @@ pub struct PiperGenerateRequest {
     pub speed: f32,
     #[serde(rename = "workspaceDir", default)]
     pub workspace_dir: Option<String>,
+    #[serde(rename = "projectDestination", default)]
+    pub project_destination: Option<crate::services::project_files::ProjectMediaDestination>,
     #[serde(rename = "filenameHint")]
     pub filename_hint: Option<String>,
 }
@@ -119,6 +121,7 @@ mod tests {
             voice: None,
             speed: 1.0,
             workspace_dir: Some(workspace.to_string_lossy().to_string()),
+            project_destination: None,
             filename_hint: None,
         };
         assert_eq!(
@@ -200,6 +203,7 @@ mod tests {
                     voice: Some(voice.id.to_string()),
                     speed,
                     workspace_dir: Some(workspace.to_string_lossy().to_string()),
+                    project_destination: None,
                     filename_hint: Some(format!("{}-{speed}", voice.id)),
                 },
                 &emit,

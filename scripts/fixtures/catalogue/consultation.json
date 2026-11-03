@@ -1,0 +1,21 @@
+{
+  "handle": {
+    "consultationId": "6f1c2b9e-0d3a-4c55-9a51-2f8e7c4b1a00",
+    "exemplarId": "exemplar-zip",
+    "sourceRevision": 12,
+    "kind": "pack",
+    "graph": {
+      "title": "Lune",
+      "stageNodes": [
+        { "uuid": "cover", "name": "Cover", "squareOne": true, "audio": "m3f9a12bc04de-1", "image": "m3f9a12bc04de-2",
+          "controlSettings": { "wheel": true, "ok": true, "home": false, "pause": false, "autoplay": false },
+          "okTransition": null, "homeTransition": null }
+      ],
+      "actionNodes": []
+    },
+    "startId": null,
+    "mediaCount": 2,
+    "mediaTypes": { "m3f9a12bc04de-1": "audio/mpeg", "m3f9a12bc04de-2": "image/png" }
+  },
+  "closed": { "closed": true, "cleanupFailed": false }
+}

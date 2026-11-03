@@ -1,3 +1,5 @@
+import { TreeText, useTreeTranslation } from "../../i18n/useTreeTranslation.jsx";
+import { presentTree, translateTree as t } from "../../i18n/treePresentation.js";
 import { memo, useMemo, useState } from 'react';
 import { Toggle } from '../common/Toggle';
 import { Tooltip } from '../common/Tooltip';
@@ -8,12 +10,12 @@ import { useErrorDialog } from '../common/Dialog';
 import { generateTextImage } from '../TextImageGenerator/generateTextImage';
 import { CircleStop, Moon, Pause, Sparkles, Speech, Trash2 } from '../icons/LucideLocal';
 import {
+  navigationTargetLabel,
   generatedTargetIdToSelectValue,
   NavigationTargetSelect,
 } from './story/storyUtils';
 import {
   getDefaultPackEntryDestination,
-  getGeneratedNavigationTargetName,
   getGeneratedStoryNavigation,
   summarizeEffectiveStoryEnds,
 } from '../../store/generatedNavigation';
@@ -29,13 +31,13 @@ const STORY_DEFAULTS = { autoplay: false, pause: true, wheel: false, home: true 
 const MENU_DEFAULTS = { autoplay: false, pause: false, wheel: true };
 
 const SHARED_DURING_CONTROL_KEYS = [
-  { key: 'pause',    label: 'Bouton Pause',         desc: 'Autorise la pause pendant la lecture' },
+  { key: 'pause',    label: "tree:control.pause.title",         desc: "tree:multi.pause.description" },
 ];
 
 const MENU_CONTROL_KEYS = [
-  { key: 'wheel',    label: 'Molette de sélection', desc: 'Autorise la molette pour choisir une histoire' },
-  { key: 'autoplay', label: 'Lecture automatique',  desc: "Après l'audio de présentation, enchaîne automatiquement vers le contenu du dossier, sans attendre OK" },
-  { key: 'pause',    label: 'Bouton pause',         desc: "Autorise la pause pendant l'audio de présentation" },
+  { key: 'wheel',    label: "tree:control.wheel.selection", desc: "tree:multi.wheel.description" },
+  { key: 'autoplay', label: "tree:control.autoplay.label",  desc: "tree:multi.autoplay.description" },
+  { key: 'pause',    label: "tree:control.pause.label",         desc: "tree:multi.titlePause.description" },
 ];
 
 function getDefaults(type) {
@@ -51,6 +53,7 @@ export const MultiEditor = memo(function MultiEditor({
   onBulkUpdateItems,
   onBulkDeleteItems,
 }) {
+  useTreeTranslation();
   const ids = useMemo(() => [...selectedIds], [selectedIds]);
 
   const nodes = useMemo(
@@ -59,19 +62,19 @@ export const MultiEditor = memo(function MultiEditor({
         return {
           id: 'root',
           type: 'root',
-          name: project?.rootName || project?.packMetadata?.title || project?.projectName || 'Menu racine',
+          name: project?.rootName || project?.packMetadata?.title || project?.projectName || t("tree:navigation.root.label"),
         };
       }
       if (id === 'end-node') {
         return {
           id: 'end-node',
           type: 'end-node',
-          name: project?.endNodeName || 'Message de fin',
+          name: project?.endNodeName || t("tree:endNode.card.title"),
         };
       }
       return findEntryById(project, id, projectIndex);
     }).filter(Boolean),
-    [ids, project, projectIndex],
+    [ids, project, projectIndex, t("tree:navigation.root.label")],
   );
 
   const {
@@ -80,6 +83,7 @@ export const MultiEditor = memo(function MultiEditor({
     onMediaCreated,
     savePath,
     workspaceDir,
+    mediaStorage,
   } = useProjectContext();
   const { showErrorDialog } = useErrorDialog();
   const [batchImageGenerating, setBatchImageGenerating] = useState(false);
@@ -114,11 +118,11 @@ export const MultiEditor = memo(function MultiEditor({
   );
 
   const bannerParts = [];
-  if (storyCount > 0) bannerParts.push(`${storyCount} histoire${storyCount > 1 ? 's' : ''}`);
-  if (zipCount > 0) bannerParts.push(`${zipCount} ZIP`);
-  if (menuCount > 0) bannerParts.push(`${menuCount} dossier${menuCount > 1 ? 's' : ''}`);
-  if (rootCount > 0) bannerParts.push('menu racine');
-  if (endNodeCount > 0) bannerParts.push(project?.endNodeName || 'message de fin');
+  if (storyCount > 0) bannerParts.push(t("tree:count.stories.label", { count: storyCount }));
+  if (zipCount > 0) bannerParts.push(t("tree:count.archives.label", { count: zipCount }));
+  if (menuCount > 0) bannerParts.push(t("tree:count.folders.label", { count: menuCount }));
+  if (rootCount > 0) bannerParts.push(t("tree:multi.root.label"));
+  if (endNodeCount > 0) bannerParts.push(project?.endNodeName || t("tree:multi.endNode.label"));
 
   function handleControlChange(key, value) {
     const targetIds = (key === 'wheel' || key === 'autoplay')
@@ -193,20 +197,20 @@ export const MultiEditor = memo(function MultiEditor({
     if (!targetId) return null;
     if (targetId === 'root') {
       const destination = getDefaultPackEntryDestination(project);
-      if (!destination) return { label: 'Menu racine', selectValue: null, kind: 'menu' };
+      if (!destination) return { label: t("tree:navigation.root.label"), selectValue: null, kind: 'menu' };
       const generatedTargetId = destination.type === 'story'
         ? `story:${destination.id}`
         : destination.type === 'menu'
           ? destination.id
           : null;
       return {
-        label: destination.name,
+        label: project?.rootEntries?.[0]?.name || t("tree:navigation.name.fallback"),
         selectValue: generatedTargetIdToSelectValue(generatedTargetId),
         kind: destination.type === 'story' ? 'story' : 'menu',
       };
     }
     return {
-      label: getGeneratedNavigationTargetName(targetId, projectIndex),
+      label: navigationTargetLabel(targetId, projectIndex),
       selectValue: generatedTargetIdToSelectValue(targetId),
       kind: isStoryNavigationTarget(targetId) ? 'story' : 'menu',
     };
@@ -236,19 +240,19 @@ export const MultiEditor = memo(function MultiEditor({
     : '__mixed__';
   const storyReturnEmptyLabel = storyAfterPlayDestination?.label
     || (storyAfterPlaySummary?.hasDifferentDestinations
-      ? 'Destination propre à chaque histoire'
-      : 'Destination par défaut de chaque histoire');
+      ? t("tree:navigation.storySpecific.label")
+      : t("tree:navigation.storyDefault.label"));
   const usesStorySpecificEndReturn = onlyStories && hasEndNode && !project?.nightModeReturn;
 
   const batchBusy = batchImageGenerating || batchAudioGenerating;
   const playbackControlKeys = onlyMenus ? MENU_CONTROL_KEYS : SHARED_DURING_CONTROL_KEYS;
-  const playbackControlTitle = onlyMenus ? 'Comportement des dossiers' : "Pendant l'histoire";
+  const playbackControlTitle = onlyMenus ? t("tree:multi.menu.title") : t("tree:story.during.title");
   const batchGenerationDescription = canGenerateTextImages
-    ? "Crée d'un coup une image-titre pour chaque histoire ou dossier avec image sélectionné, ou un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les packs ZIP importés sont ignorés."
-    : "Crée d'un coup un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les images-titres ne sont proposées que pour les histoires et les dossiers avec image.";
+    ? t("tree:multi.generation.description")
+    : t("tree:multi.generation.audioDescription");
 
   function getNodeTitle(node) {
-    return (node.name && node.name.trim()) ? node.name.trim() : 'Sans titre';
+    return (node.name && node.name.trim()) ? node.name.trim() : t("tree:story.title.fallback");
   }
 
   async function handleGenerateTextImagesFromNames() {
@@ -264,7 +268,7 @@ export const MultiEditor = memo(function MultiEditor({
         const isMenu = node.type === 'menu';
 
         try {
-          const imagePath = await generateTextImage(text, workspaceDir);
+          const imagePath = await generateTextImage(text, workspaceDir, { mediaStorage });
           if (imagePath) {
             onMediaCreated?.(imagePath);
             imageUpdates.set(
@@ -275,7 +279,7 @@ export const MultiEditor = memo(function MultiEditor({
             );
           }
         } catch {
-          errors.push(`${text} : image-titre impossible à générer`);
+          errors.push({ key: "tree:multi.image.failed", params: { name: text } });
         }
       }
 
@@ -287,7 +291,7 @@ export const MultiEditor = memo(function MultiEditor({
       }
 
       if (errors.length > 0) {
-        setBatchError(errors.join(' · '));
+        setBatchError(errors);
       }
     } finally {
       setBatchImageGenerating(false);
@@ -300,10 +304,10 @@ export const MultiEditor = memo(function MultiEditor({
 
     const voice = batchTitleVoice(xttsSettings);
     if (!voice) {
-      const msg = 'Choisis une voix XTTS une première fois (depuis le bouton TTS d’un audio) avant de lancer la génération groupée.';
+      const msg = { key: "tree:multi.voice.required" };
       setBatchError(msg);
       showErrorDialog({
-        title: 'Génération audio',
+        title: <TreeText messageKey="tree:multi.audio.title" />,
         message: msg,
         variant: 'warning',
       });
@@ -323,10 +327,16 @@ export const MultiEditor = memo(function MultiEditor({
           if (isMenu) return { kind: 'menu', entryId: node.id, field: 'audio' };
           return { kind: 'story', entryId: node.id, field: 'itemAudio' };
         })();
+        // La requête garde le texte choisi ; le repli de destination reste vivant.
+        const targetName = node.type === 'root' && !(project?.rootName || project?.packMetadata?.title || project?.projectName)
+          ? { key: "tree:navigation.root.label" }
+          : node.type === 'end-node' && !project?.endNodeName
+            ? { key: "tree:endNode.card.title" }
+            : node.name?.trim() ? text : { key: "tree:story.title.fallback" };
         try {
           await onQueueXttsGenerate?.({
             target,
-            targetLabel: `${text} — titre`,
+            targetLabelRef: { key: "tree:multi.voice.target", params: { name: targetName } },
             voiceLabel: voice,
             request: {
               text,
@@ -334,16 +344,17 @@ export const MultiEditor = memo(function MultiEditor({
               speaker: null,
               voice,
               savePath,
+              // eslint-disable-next-line i18next/no-literal-string -- préfixe technique de fichier généré
               filenameHint: `selection-${text}`,
             },
           });
         } catch {
-          errors.push(`${text} : job XTTS non ajouté`);
+          errors.push({ key: "tree:multi.audio.failed", params: { name: text } });
         }
       }
 
       if (errors.length > 0) {
-        setBatchError(errors.join(' · '));
+        setBatchError(errors);
       }
     } finally {
       setBatchAudioGenerating(false);
@@ -357,11 +368,11 @@ export const MultiEditor = memo(function MultiEditor({
       {(canGenerateTextImages || titleAudioNodes.length > 0) && (
         <div className="card">
           <div className="card-title-row">
-            <div className="card-title">Génération groupée</div>
+            <div className="card-title">{t("tree:multi.generation.title")}</div>
           </div>
           <div className="editor-setting-row is-action-row">
             <div className="editor-setting-copy">
-              <div className="editor-setting-title">Générer à partir des noms</div>
+              <div className="editor-setting-title">{t("tree:multi.names.generate")}</div>
               <div className="editor-setting-desc">
                 {batchGenerationDescription}
               </div>
@@ -375,7 +386,7 @@ export const MultiEditor = memo(function MultiEditor({
                   disabled={batchBusy}
                 >
                   <Sparkles className="batch-generate-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-                  {batchImageGenerating ? 'Images…' : 'Images-titres'}
+                  {batchImageGenerating ? t("tree:multi.image.progress") : t("tree:multi.image.action")}
                 </button>
               ) : null}
               {isTtsAvailable(xttsSettings) && titleAudioNodes.length > 0 && (
@@ -386,14 +397,14 @@ export const MultiEditor = memo(function MultiEditor({
                   disabled={batchBusy}
                 >
                   <Speech className="batch-generate-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-                  {batchAudioGenerating ? 'Audios…' : 'Audios titres'}
+                  {batchAudioGenerating ? t("tree:multi.audio.progress") : t("tree:multi.titles.audio")}
                 </button>
               )}
             </div>
           </div>
           {batchError && (
             <div style={{ marginTop: 8, fontSize: 12, color: 'var(--danger)' }}>
-              {batchError}
+              {presentTree(batchError)}
             </div>
           )}
         </div>
@@ -415,10 +426,8 @@ export const MultiEditor = memo(function MultiEditor({
           return (
             <div className="card during-play-card">
               <div className="card-title-row">
-                <div className="card-title">Pendant l'histoire</div>
-                <div className="card-copy card-copy--inline">
-                  Choisis les boutons utilisables pendant la lecture de l'histoire.
-                </div>
+                <div className="card-title">{t("tree:story.during.title")}</div>
+                <div className="card-copy card-copy--inline">{t("tree:story.during.description")}</div>
               </div>
 
               <div className="during-play-stack">
@@ -428,18 +437,18 @@ export const MultiEditor = memo(function MultiEditor({
                       on={pauseState.value}
                       mixed={pauseState.isMixed}
                       onChange={(v) => handleControlChange('pause', v)}
-                      ariaLabel="Bouton Pause"
+                      ariaLabel={t("tree:control.pause.title")}
                     />
                     <Tooltip
                       text={pauseState.isMixed
-                        ? 'Réglage différent selon les histoires sélectionnées.'
+                        ? t("tree:multi.control.mixed")
                         : pauseState.value
-                          ? "L'enfant peut utiliser le bouton pause pendant l'histoire."
-                          : "L'enfant ne peut pas utiliser le bouton pause pendant l'histoire."}
+                          ? t("tree:story.pause.enabled")
+                          : t("tree:story.pause.disabled")}
                       placement="above"
                       style={{ minWidth: 0 }}
                     >
-                      <span className="during-play-control-title">Bouton Pause</span>
+                      <span className="during-play-control-title">{t("tree:control.pause.title")}</span>
                     </Tooltip>
                   </label>
                 </div>
@@ -455,22 +464,22 @@ export const MultiEditor = memo(function MultiEditor({
                           ...(v ? {} : { returnOnHome: null, returnOnHomeNone: true }),
                         }));
                       }}
-                      ariaLabel="Bouton Accueil"
+                      ariaLabel={t("tree:control.home.label")}
                     />
                     <Tooltip
                       text={homeState.isMixed
-                        ? 'Réglage différent selon les histoires sélectionnées.'
+                        ? t("tree:multi.control.mixed")
                         : homeState.value
-                          ? "L'enfant peut appuyer sur le bouton Accueil pendant l'histoire."
-                          : "L'enfant ne peut pas appuyer sur le bouton Accueil pendant l'histoire."}
+                          ? t("tree:story.home.enabled")
+                          : t("tree:story.home.disabled")}
                       placement="above"
                       style={{ minWidth: 0 }}
                     >
-                      <span className="during-play-control-title">Bouton Accueil</span>
+                      <span className="during-play-control-title">{t("tree:control.home.label")}</span>
                     </Tooltip>
                     {showHomeDestination ? (
                       <>
-                        <span className="during-play-destination-label">Destination</span>
+                        <span className="during-play-destination-label">{t("tree:navigation.destination.label")}</span>
                         <div className="during-play-home-select">
                           <NavigationTargetSelect
                             value={homeSelectValue}
@@ -483,7 +492,7 @@ export const MultiEditor = memo(function MultiEditor({
                             allMenus={allMenus}
                             allStories={allStories.filter((s) => !ids.includes(s.id))}
                             currentStoryId={null}
-                            emptyLabel="Retour direct au menu parent"
+                            emptyLabel={t("tree:navigation.parent.direct")}
                             includeNone
                             includeStoryPlay={false}
                             size="compact"
@@ -502,11 +511,7 @@ export const MultiEditor = memo(function MultiEditor({
           <div className="card-title">{playbackControlTitle}</div>
         </div>
         {forcedLinearRootMenuIds.size > 0 ? (
-          <div className="info-box menu-behavior-info">
-            Le Dossier linéaire placé seul sous le Menu racine conserve ses valeurs imposées :
-            Lecture automatique activée et Molette désactivée. Les modifications groupées de ces
-            deux réglages s’appliquent uniquement aux autres Dossiers sélectionnés.
-          </div>
+          <div className="info-box menu-behavior-info">{t("tree:multi.linear.description")}</div>
         ) : null}
         <div className="editor-setting-stack">
         {onlyMenus && (() => {
@@ -517,10 +522,8 @@ export const MultiEditor = memo(function MultiEditor({
           return (
             <div className="editor-setting-row is-toggle-row">
               <div className="editor-setting-copy">
-                <div className="editor-setting-title">Pas d'image</div>
-                <div className="editor-setting-desc">
-                  Ces dossiers n'envoient aucune image à la Lunii — l'écran conserve l'affichage précédent pendant la sélection.
-                </div>
+                <div className="editor-setting-title">{t("tree:multi.image.none")}</div>
+                <div className="editor-setting-desc">{t("tree:multi.image.description")}</div>
               </div>
               <div className="editor-setting-control">
                 <Toggle
@@ -544,8 +547,8 @@ export const MultiEditor = memo(function MultiEditor({
           return (
             <div key={key} className="editor-setting-row is-toggle-row">
               <div className="editor-setting-copy">
-                <div className="editor-setting-title">{label}</div>
-                <div className="editor-setting-desc">{desc}</div>
+                <div className="editor-setting-title">{t(label)}</div>
+                <div className="editor-setting-desc">{t(desc)}</div>
               </div>
               <div className="editor-setting-control">
                 <Toggle
@@ -560,11 +563,8 @@ export const MultiEditor = memo(function MultiEditor({
         {onlyStories && (
           <div className="editor-setting-row">
             <div className="editor-setting-copy">
-              <div className="editor-setting-title">Bouton Accueil</div>
-              <div className="editor-setting-desc">
-                Destination quand l'enfant appuie sur Accueil pendant la lecture.
-                Sans réglage spécifique : retour au dossier parent.
-              </div>
+              <div className="editor-setting-title">{t("tree:control.home.label")}</div>
+              <div className="editor-setting-desc">{t("tree:multi.home.description")}</div>
             </div>
             <div className="editor-setting-control">
               <NavigationTargetSelect
@@ -576,7 +576,7 @@ export const MultiEditor = memo(function MultiEditor({
                 allMenus={allMenus}
                 allStories={allStories.filter((s) => !ids.includes(s.id))}
                 currentStoryId={null}
-                emptyLabel="Retour direct au menu parent"
+                emptyLabel={t("tree:navigation.parent.direct")}
                 includeStoryPlay={false}
               />
             </div>
@@ -591,25 +591,23 @@ export const MultiEditor = memo(function MultiEditor({
         onlyStories ? (
           <div className="card">
             <div className="card-title-row">
-              <div className="card-title">Après la lecture</div>
-              <div className="card-copy card-copy--inline">
-                Que se passe-t-il quand ces histoires se terminent.
-              </div>
+              <div className="card-title">{t("tree:playback.after.title")}</div>
+              <div className="card-copy card-copy--inline">{t("tree:multi.after.description")}</div>
             </div>
 
             <div className="after-play-route">
               <div className="after-play-route-head">
-                <div className="after-play-route-title">Résumé du parcours</div>
+                <div className="after-play-route-title">{t("tree:story.route.title")}</div>
               </div>
               <div className="after-play-route-list">
                 <span className="after-play-route-chip">
                   <span className="after-play-route-icon"><CircleStop strokeWidth={2} absoluteStrokeWidth /></span>
-                  <span>Histoires terminées</span>
+                  <span>{t("tree:multi.route.finished")}</span>
                 </span>
                 <span className="after-play-route-arrow" aria-hidden="true">→</span>
                 <span className="after-play-route-chip">
                   <span className="after-play-route-icon"><Moon strokeWidth={2} absoluteStrokeWidth /></span>
-                  <span>{project?.endNodeName || 'Message de fin'}{project?.globalOptions?.nightMode ? ' (mode nuit)' : ''}</span>
+                  <span>{project?.globalOptions?.nightMode ? t("tree:multi.message.night", { name: project?.endNodeName || t("tree:endNode.card.title") }) : (project?.endNodeName || t("tree:endNode.card.title"))}</span>
                 </span>
                 <span className="after-play-route-arrow" aria-hidden="true">→</span>
                 <span className="after-play-route-chip is-destination">
@@ -617,9 +615,9 @@ export const MultiEditor = memo(function MultiEditor({
                     {usesStorySpecificEndReturn
                       ? (storyAfterPlayDestination?.label
                         || (storyAfterPlaySummary?.hasDifferentDestinations
-                          ? 'Selon chaque histoire'
-                          : 'Destination par défaut de chaque histoire'))
-                      : 'Destination du message de fin'}
+                          ? t("tree:navigation.individual.label")
+                          : t("tree:navigation.storyDefault.label")))
+                      : t("tree:multi.route.messageDestination")}
                   </span>
                 </span>
               </div>
@@ -629,13 +627,13 @@ export const MultiEditor = memo(function MultiEditor({
               <div className="after-play-destination-copy">
                 <span className="field-label">
                   {usesStorySpecificEndReturn
-                    ? 'Destination après le message de fin'
-                    : 'Message de fin commun'}
+                    ? t("tree:story.destination.afterMessage")
+                    : t("tree:multi.message.shared")}
                 </span>
                 <div className="after-play-muted">
                   {usesStorySpecificEndReturn
-                    ? 'Le message de fin conserve une destination propre à chaque histoire sélectionnée.'
-                    : "La Lunii continue automatiquement après chaque audio d'histoire pour jouer ce message. Pour modifier la destination, sélectionne le message de fin dans l'arbre à gauche."}
+                    ? t("tree:multi.message.individual")
+                    : t("tree:multi.message.description")}
                 </div>
               </div>
               {usesStorySpecificEndReturn ? (
@@ -662,15 +660,13 @@ export const MultiEditor = memo(function MultiEditor({
         ) : (
           <div className="card">
             <div className="card-title-row">
-              <div className="card-title">Après la lecture</div>
+              <div className="card-title">{t("tree:playback.after.title")}</div>
             </div>
             <div className="editor-setting-row is-note-row">
               <Moon className="editor-setting-icon" />
               <div className="editor-setting-copy">
-                <div className="editor-setting-title">Destination gérée par le message de fin</div>
-                <div className="editor-setting-desc">
-                  La destination après chaque histoire est gérée par le message de fin du pack. Pour la modifier, sélectionne le message de fin dans l'arbre à gauche.
-                </div>
+                <div className="editor-setting-title">{t("tree:multi.message.managed")}</div>
+                <div className="editor-setting-desc">{t("tree:multi.message.managedDescription")}</div>
               </div>
             </div>
           </div>
@@ -689,64 +685,58 @@ export const MultiEditor = memo(function MultiEditor({
             return (
               <div className="card">
                 <div className="card-title-row">
-                  <div className="card-title">Après la lecture</div>
-                  <div className="card-copy card-copy--inline">
-                    Que se passe-t-il quand ces histoires se terminent.
-                  </div>
+                  <div className="card-title">{t("tree:playback.after.title")}</div>
+                  <div className="card-copy card-copy--inline">{t("tree:multi.after.description")}</div>
                 </div>
 
                 <div className="after-play-main-row">
                   <div className="after-play-end-row">
-                    <span className="after-play-end-label">À la fin</span>
-                    <div className="story-end-mode" role="group" aria-label="Comportement à la fin des histoires">
+                    <span className="after-play-end-label">{t("tree:story.end.label")}</span>
+                    <div className="story-end-mode" role="group" aria-label={t("tree:multi.end.aria")}>
                       <button
                         type="button"
                         className={`story-end-mode-btn ${!isMixed && !value ? 'is-active' : ''}`}
                         aria-pressed={!isMixed && !value}
                         onClick={() => handleStoryAutoContinuationChange(false)}
-                      >
-                        Rester sur l'écran
-                      </button>
+                      >{t("tree:story.end.stay")}</button>
                       <button
                         type="button"
                         className={`story-end-mode-btn ${!isMixed && value ? 'is-active' : ''}`}
                         aria-pressed={!isMixed && value}
                         onClick={() => handleStoryAutoContinuationChange(true)}
-                      >
-                        Enchaîner
-                      </button>
+                      >{t("tree:story.end.continue")}</button>
                     </div>
                   </div>
                 </div>
 
                 <div className="after-play-route">
                   <div className="after-play-route-head">
-                    <div className="after-play-route-title">Résumé du parcours</div>
-                    {isMixed ? <div className="after-play-route-context">Comportements différents</div> : null}
+                    <div className="after-play-route-title">{t("tree:story.route.title")}</div>
+                    {isMixed ? <div className="after-play-route-context">{t("tree:multi.end.mixed")}</div> : null}
                   </div>
                   <div className="after-play-route-list">
                     <span className="after-play-route-chip">
                       <span className="after-play-route-icon"><CircleStop strokeWidth={2} absoluteStrokeWidth /></span>
-                      <span>Histoires terminées</span>
+                      <span>{t("tree:multi.route.finished")}</span>
                     </span>
                     <span className="after-play-route-arrow" aria-hidden="true">→</span>
                     {isMixed ? (
                       <span className="after-play-route-chip is-destination">
-                        <span>Selon chaque histoire</span>
+                        <span>{t("tree:navigation.individual.label")}</span>
                       </span>
                     ) : value ? (
                       <span className="after-play-route-chip is-destination">
                         <span>
                           {storyAfterPlayDestination?.label
                             || (hasDifferentDestinations
-                              ? 'Destination propre à chaque histoire'
-                              : 'Destination par défaut de chaque histoire')}
+                              ? t("tree:navigation.storySpecific.label")
+                              : t("tree:navigation.storyDefault.label"))}
                         </span>
                       </span>
                     ) : (
                       <span className="after-play-route-chip">
                         <span className="after-play-route-icon"><Pause strokeWidth={2} absoluteStrokeWidth /></span>
-                        <span>Attente sur l'écran</span>
+                        <span>{t("tree:story.route.waiting")}</span>
                       </span>
                     )}
                   </div>
@@ -755,10 +745,8 @@ export const MultiEditor = memo(function MultiEditor({
                 {showDestination && (
                   <div className="after-play-destination-row">
                     <div className="after-play-destination-copy">
-                      <span className="field-label">Destination après l'histoire</span>
-                      <div className="after-play-muted">
-                        L'écran ou le menu affiché à la sortie automatique.
-                      </div>
+                      <span className="field-label">{t("tree:story.destination.afterStory")}</span>
+                      <div className="after-play-muted">{t("tree:story.destination.description")}</div>
                     </div>
                     <div className="after-play-destination-select">
                       <NavigationTargetSelect
@@ -784,14 +772,12 @@ export const MultiEditor = memo(function MultiEditor({
           })() : (
           <div className="card">
             <div className="card-title-row">
-              <div className="card-title">Après la lecture</div>
+              <div className="card-title">{t("tree:playback.after.title")}</div>
             </div>
             <div className="editor-setting-row">
               <div className="editor-setting-copy">
-                <div className="editor-setting-title">Destination de fin d'histoire</div>
-                <div className="editor-setting-desc">
-                  Destination à la fin de l'histoire — suit le dossier parent si rien n’est choisi ici.
-                </div>
+                <div className="editor-setting-title">{t("tree:multi.destination.title")}</div>
+                <div className="editor-setting-desc">{t("tree:multi.destination.description")}</div>
               </div>
               <div className="editor-setting-control">
                 <NavigationTargetSelect
@@ -803,7 +789,7 @@ export const MultiEditor = memo(function MultiEditor({
                   allMenus={allMenus}
                   allStories={allStories.filter((s) => !ids.includes(s.id))}
                   currentStoryId={null}
-                  emptyLabel="Suit la destination du dossier parent"
+                  emptyLabel={t("tree:navigation.parent.follow")}
                 />
               </div>
             </div>
@@ -812,9 +798,7 @@ export const MultiEditor = memo(function MultiEditor({
       )}
 
       {!allSameType && (
-        <div className="multiselect-mixed-note">
-          Sélection mixte (histoires et dossiers) — seuls les contrôles de lecture peuvent être modifiés en groupe ici. Pour le reste, sélectionne un seul type d'élément à la fois.
-        </div>
+        <div className="multiselect-mixed-note">{t("tree:multi.selection.mixed")}</div>
       )}
 
       {colorableIds.length > 0 && (() => {
@@ -823,11 +807,11 @@ export const MultiEditor = memo(function MultiEditor({
           <div className="card">
             <div className="editor-setting-row is-action-row">
               <div className="editor-setting-copy">
-                <div className="editor-setting-title">Couleur</div>
+                <div className="editor-setting-title">{t("tree:multi.color.label")}</div>
                 <div className="editor-setting-desc">
                   {currentColor === '__mixed__'
-                    ? `Couleurs différentes sur ${colorableIds.length} éléments — choisir pour uniformiser.`
-                    : `Pastille affichée à gauche du nom dans l'arbre (${colorableIds.length} éléments).`}
+                    ? t("tree:multi.color.mixed", { count: colorableIds.length })
+                    : t("tree:multi.color.description", { count: colorableIds.length })}
                 </div>
               </div>
               <div className="multiselect-color-dots">
@@ -844,7 +828,7 @@ export const MultiEditor = memo(function MultiEditor({
                 <button
                   type="button"
                   className={`ctx-color-clear${currentColor === null ? ' is-active' : ''}`}
-                  title={currentColor === '__mixed__' ? 'Couleurs différentes — cliquer pour effacer' : 'Aucune couleur'}
+                  title={currentColor === '__mixed__' ? t("tree:multi.color.clearMixed") : t("tree:multi.color.none")}
                   onClick={() => handleSetColor(null)}
                 >
                   ×
@@ -861,13 +845,13 @@ export const MultiEditor = memo(function MultiEditor({
             className="card-danger-trash"
             type="button"
             onClick={() => onBulkDeleteItems?.(ids)}
-            aria-label="Supprimer la sélection"
+            aria-label={t("tree:multi.delete.action")}
           >
             <Trash2 className="card-danger-icon" />
           </button>
-          <span className="card-danger-title">Supprimer la sélection</span>
+          <span className="card-danger-title">{t("tree:multi.delete.action")}</span>
           <p className="card-danger-desc">
-            Supprime {nodes.length} élément{nodes.length > 1 ? 's' : ''} du projet : {bannerParts.join(', ')}.
+            {t("tree:multi.delete.description", { count: nodes.length, items: bannerParts.join(", ") })}
           </p>
         </div>
       </div>

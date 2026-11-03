@@ -1,4 +1,4 @@
-> [🇬🇧 English](README.md) | 🇫🇷 **Français**
+> 🇬🇧 [English](README.md) | 🇫🇷 **Français** | 🇮🇹 [Italiano](README.it.md)
 
 <p align="center">
   <img src="public/logostory.svg" alt="Story Studio" width="240">
@@ -9,14 +9,18 @@
 </p>
 
 <p align="center">
-  <a href=".github/workflows/ci.yml"><img alt="CI : builds desktop" src="https://img.shields.io/badge/CI-builds%20desktop-2ea44f.svg"></a>
+  <a href=".github/workflows/ci.yml"><img alt="CI : builds desktop" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#configuration-requise"><img alt="Plateformes : Windows, Linux et macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.9" src="https://img.shields.io/badge/version-0.9.9-2F80ED.svg"></a>
-  <a href="#statut-bêta"><img alt="Statut : bêta" src="https://img.shields.io/badge/statut-b%C3%AAta-f59e0b.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.10" src="https://img.shields.io/badge/version-0.9.10-2F80ED.svg"></a>
+  <a href="#statut-bêta"><img alt="Statut : bêta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
 </p>
+
+## Tu cherches à créer des histoires pour la Lunii ?
+
+La [documentation utilisateur en ligne](https://hugs11.github.io/story-studio/docs/) est actuellement disponible en français.
 
 Story Studio est un logiciel pour créer et modifier des packs pour les boîtes à histoires Lunii.
 Il intègre des outils pour éditer le son et les images, et évite de devoir jongler avec Audacity
@@ -51,23 +55,25 @@ issues.
 >
 > Une idée pour Story Studio, un bug à éclaircir rapidement, envie d'accéder
 > aux versions bêta ou simplement besoin d'aide ?
-> [Rejoins le serveur Discord de Story Studio](https://discord.gg/jztpQz5Ad)
+> [Rejoins le serveur Discord de Story Studio](https://discord.gg/jeC6Qk4NS)
 > pour échanger directement avec les utilisateurs et le développement du projet.
 
-## Dernière version
+## Utiliser Story Studio avec ta Lunii
 
-Story Studio 0.9.9 introduit l'**Éditeur graphe**, capable de reprendre et de
-modifier directement les navigations avancées. Lorsqu'un pack convient aux
-deux éditeurs, Story Studio te laisse choisir ; lorsque sa structure ne rentre pas
-dans un arbre hiérarchique, il s'ouvre directement dans le graphe. Tu peux aussi
-copier un projet de l'Éditeur par menus dans l'Éditeur graphe ; l'original reste intact.
+L'écriture sur la conteuse (envoi, suppression, réorganisation et rapatriement de packs) a été testée sur une **Lunii V3 en firmware 3.1.5 et 3.3.4**, sous Windows, Linux et macOS. Les autres modèles et versions de firmware n'ont pas été vérifiés sur un vrai appareil, et une mise à jour du firmware peut changer la façon dont la conteuse range les packs.
 
-Cette version ajoute des contrôles avant la génération du ZIP et rend plus fiables l'import,
-le Simulateur, les sauvegardes et les outils communs aux deux éditeurs.
+- Sauvegarde ta Lunii avant la première écriture et garde des copies de tes packs.
+- Les packs officiels Lunii ne sont jamais recopiés sur ton ordinateur.
+- Story Studio est fourni « en l'état », sans aucune garantie (voir la [licence](LICENSE)). **Tu l'utilises avec ta conteuse à tes propres risques** : les auteurs ne peuvent pas être tenus responsables d'une perte de données ou d'un dysfonctionnement de l'appareil.
 
-- [Télécharger la dernière version](https://github.com/Hugs11/story-studio/releases/latest)
-- [Lire les notes de version 0.9.9](https://github.com/Hugs11/story-studio/releases/tag/v0.9.9)
-- [Voir le changelog complet](CHANGELOG.md)
+## Version 0.9.10
+
+Story Studio 0.9.10 ajoute un catalogue local et la gestion directe de la Lunii : consulte, envoie et rapatrie des packs, gère la liste de la conteuse et éjecte-la. Les titres et jaquettes officiels sont facultatifs et nécessitent ton accord.
+
+L’interface est disponible en français, anglais et italien. Les traductions anglaise et italienne sont produites puis relues par IA ; les corrections sont bienvenues. Sur une installation existante sans préférence de langue, l’interface reste en français ; tu peux la changer dans les Préférences. Une nouvelle installation utilise la langue du système si elle est disponible, sinon l’anglais.
+
+- [Télécharger la dernière version publique](https://github.com/Hugs11/story-studio/releases/latest)
+- [Consulter le changelog complet](CHANGELOG.md)
 
 ## Packs de démonstration
 
@@ -104,10 +110,11 @@ audio et illustrations ne sont pas couverts par la licence MIT de Story Studio.
 |---|---|
 | **Statut** | Bêta |
 | **Plateformes cibles** | Windows x64, Linux x86_64 et macOS Apple Silicon |
+| **Langues de l’interface** | Français, anglais et italien |
 | **Format projet** | `.mbah` |
 | **Format de génération** | Packs ZIP compatibles Lunii |
 | **Stack principale** | React 19, Vite, Tauri 2, Rust |
-| **Workflow** | Accueil guidé, Éditeur par menus, Éditeur graphe, agrégation de packs ZIP, Bibliothèque médias, Simulateur et génération du ZIP contrôlée |
+| **Workflow** | Accueil guidé, Éditeur par menus, Éditeur graphe, agrégation de packs ZIP, Médias, Simulateur et génération du ZIP contrôlée |
 | **Vie privée** | App locale, aucun backend hébergé, aucune télémétrie |
 
 ## Du premier import au pack prêt à jouer
@@ -125,7 +132,22 @@ permettent aussi d'agréger plusieurs packs ou d'analyser un pack communautaire.
 
 ![Accueil de Story Studio avec les trois éditeurs et les parcours guidés](docs/public/assets/screenshots/home-dark.png)
 
-### 2. Préparer les fichiers audio
+### 2. Gère ta collection et transfère tes packs sur ta Lunii
+
+Ajoute tes dossiers sources, parcours tes packs en vignettes ou en liste et
+organise tes favoris et tes étiquettes. Connecte ta Lunii pour consulter ses
+histoires, envoyer des packs, les rapatrier dans ton catalogue et éjecter l’appareil.
+
+![Catalogue en vignettes avec la Lunii connectée et le détail d’un pack](docs/public/assets/screenshots/catalogue-lunii-dark.png)
+
+<details>
+<summary>Voir aussi le catalogue en liste</summary>
+
+![Catalogue en liste avec les métadonnées, formats et exemplaires des packs](docs/public/assets/screenshots/catalogue-lunii-list-dark.png)
+
+</details>
+
+### 3. Préparer les fichiers audio
 
 Importe ou enregistre un son, puis ajuste-le avant de l'utiliser dans une
 histoire. Un enregistrement long peut être découpé en extraits réutilisables ;
@@ -138,7 +160,7 @@ sans modifier les originaux.
 |---|---|
 | ![Découpe audio avec plusieurs extraits préparés](docs/public/assets/screenshots/Audio-decoupe-light.png) | ![Assemblage audio avec des sources réordonnables](docs/public/assets/screenshots/Audio-assemble-light.png) |
 
-### 3. Créer les voix, générer les illustrations et adapter les images
+### 4. Créer les voix, générer les illustrations et adapter les images
 
 Génère des voix localement avec Piper, prêt à l'emploi, ou utilise XTTS pour
 le clonage vocal avancé. ComfyUI peut produire des illustrations via un service
@@ -154,7 +176,7 @@ format 320×240 de la boîte à histoires.
 
 ![Recadrage et ajustement d'une image pour la boîte à histoires](docs/public/assets/screenshots/image-editor-dark.png)
 
-### 4. Construire et tester la navigation
+### 5. Construire et tester la navigation
 
 Avec l'**Éditeur par menus**, construis une arborescence de Dossiers et
 d'Histoires, attribue leurs images et leurs sons, puis définis le rôle des
@@ -170,13 +192,13 @@ plusieurs endroits.
 
 ![Vue générale de l'Éditeur graphe avec la liste des nœuds et l'Inspecteur](docs/public/assets/screenshots/graph-editor-overview-dark.png)
 
-Les deux éditeurs partagent la Bibliothèque médias, les outils audio, la file de rendu
+Les deux éditeurs partagent la Médias, les outils audio, la file de génération
 et le même Simulateur flottant. Tu peux parcourir la navigation avant
 la génération du ZIP comme sur la boîte à histoires.
 
 ![Diagramme complet du projet testé dans le Simulateur intégré](docs/public/assets/screenshots/diagram-simulator-dark.png)
 
-### 5. Vérifier les réglages et générer le ZIP
+### 6. Vérifier les réglages et générer le ZIP
 
 Contrôle les métadonnées publiques, la Vignette catalogue, le nom du fichier
 et les options audio ou de navigation du pack. Story Studio vérifie la
@@ -195,6 +217,7 @@ propose des corrections sûres et peut exporter un rapport détaillé.
 
 ## Fonctionnalités
 
+- **Catalogue et Lunii** : organise tes packs locaux, connecte ta Lunii, envoie et rapatrie des packs et gère sa liste.
 - **Éditeur par menus** avec Dossiers, Histoires, menus imbriqués, multi-sélection, glisser-déposer et Diagramme.
 - **Éditeur graphe** avec Écrans, Listes de choix, raccords, sélection multiple, presse-papier et disposition automatique.
 - **Flux guidés depuis l'accueil** pour modifier un pack existant, créer depuis un podcast ou YouTube, agréger des ZIP et vérifier/corriger un pack communautaire.
@@ -202,9 +225,9 @@ propose des corrections sûres et peut exporter un rapport détaillé.
 - **Workflow audio intégré** : enregistrement micro, rognage, coupes, fondus, assemblage et insertion de silence.
 - **Workflow image intégré** : recadrage 320×240 automatique, génération d'images textuelles depuis les noms.
 - **Génération vocale locale** avec Piper par défaut et XTTS en option avancée.
-- **Bibliothèque médias** avec tags, filtres, compteurs d'utilisation et aperçus rapides.
+- **Médias** avec tags, filtres, compteurs d'utilisation et aperçus rapides.
 - **Simulateur intégré** pour tester la navigation et les nœuds de fin avant génération du ZIP.
-- **Validation et file de rendu** : vérifications de compatibilité et génération en série avec suivi des logs.
+- **Validation et file de génération** : vérifications de compatibilité et génération en série avec suivi des logs.
 - **Intégrations locales optionnelles** : YouTube via yt-dlp, XTTS (voix) et ComfyUI (images).
 - **Confort projet** : sessions non enregistrées, enregistrement automatique, reprise après crash, versions de sécurité, raccourcis configurables, thèmes clair/sombre, vue Diagramme.
 
@@ -279,7 +302,7 @@ gérés :
 
 Les fichiers dans les dossiers médias gérés utilisent un préfixe
 `{nom-du-projet}__` pour que plusieurs projets puissent partager le même
-espace de travail sans risque.
+espace de travail plus sûrement.
 
 Les données applicatives sont stockées dans
 `%LOCALAPPDATA%\com.hugs11.story-studio` sous Windows,
@@ -291,7 +314,7 @@ dossiers, y compris sur les volumes macOS externes sous `/Volumes`.
 Quand Story Studio te propose de supprimer un média du disque, il ne
 supprime que les fichiers à l'intérieur des dossiers médias gérés de
 l'espace de travail. Les fichiers rangés ailleurs sont seulement retirés du projet ou de la
-Bibliothèque médias, jamais supprimés du disque.
+Médias, jamais supprimés du disque.
 
 ## Documentation
 
@@ -317,11 +340,12 @@ Les contributions sont les bienvenues, en particulier :
 - Rapports de bugs reproductibles.
 - Notes de compatibilité pour les packs communautaires.
 - Améliorations de la documentation.
+- Pour corriger une traduction sur GitHub, ouvre une issue ou propose une pull request : voir [TRANSLATING.md](TRANSLATING.md) (en anglais).
 - Pull requests ciblées avec des notes de test claires.
 
 Pour discuter d'une idée avant d'ouvrir une issue ou partager rapidement un
 retour de bêta-test, tu peux aussi rejoindre le
-[serveur Discord de Story Studio](https://discord.gg/jztpQz5Ad).
+[serveur Discord de Story Studio](https://discord.gg/jeC6Qk4NS).
 
 Merci de lire [CONTRIBUTING.md](CONTRIBUTING.md) avant d'ouvrir une pull
 request.

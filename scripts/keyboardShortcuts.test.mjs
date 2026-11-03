@@ -69,7 +69,7 @@ test('loadKeyboardShortcuts migrates the wave-1 tab model to panel toggles', () 
   assert.deepEqual(loaded.toggleTree, shortcut('Digit1', '1'));
   assert.deepEqual(loaded.toggleSettings, shortcut('Digit2', '2'));
   assert.deepEqual(loaded.toggleDiagram, shortcut('Digit3', '3'));
-  assert.deepEqual(loaded.tabOptions, shiftShortcut('KeyO', 'o'));
+  assert.deepEqual(loaded.tabOptions, shortcut('Comma', ','));
   assert.deepEqual(loaded.saveProject, shortcut('KeyS', 's'));
 
   // Ids morts purgés, nouvelles bascules et tabOptions déménagé persistés.
@@ -77,7 +77,7 @@ test('loadKeyboardShortcuts migrates the wave-1 tab model to panel toggles', () 
   assert.equal(persisted.tabDiagram, undefined);
   assert.deepEqual(persisted.toggleTree, shortcut('Digit1', '1'));
   assert.deepEqual(persisted.toggleDiagram, shortcut('Digit3', '3'));
-  assert.deepEqual(persisted.tabOptions, shiftShortcut('KeyO', 'o'));
+  assert.deepEqual(persisted.tabOptions, shortcut('Comma', ','));
 });
 
 test('loadKeyboardShortcuts migrates the legacy simulator-gap blob', () => {
@@ -93,11 +93,11 @@ test('loadKeyboardShortcuts migrates the legacy simulator-gap blob', () => {
   assert.deepEqual(loaded.toggleTree, shortcut('Digit1', '1'));
   assert.deepEqual(loaded.toggleSettings, shortcut('Digit2', '2'));
   assert.deepEqual(loaded.toggleDiagram, shortcut('Digit3', '3'));
-  assert.deepEqual(loaded.tabOptions, shiftShortcut('KeyO', 'o'));
+  assert.deepEqual(loaded.tabOptions, shortcut('Comma', ','));
 
   assert.equal(persisted.tabEdit, undefined);
   assert.equal(persisted.tabDiagram, undefined);
-  assert.deepEqual(persisted.tabOptions, shiftShortcut('KeyO', 'o'));
+  assert.deepEqual(persisted.tabOptions, shortcut('Comma', ','));
 });
 
 test('loadKeyboardShortcuts migrates a customized tabDiagram to toggleDiagram', () => {
@@ -209,19 +209,19 @@ test('loadKeyboardShortcuts preserves a genuinely customized tabOptions', () => 
   assert.deepEqual(persisted.toggleDiagram, shortcut('Digit3', '3'));
 });
 
-test('loadKeyboardShortcuts leaves storySettings untouched', () => {
+test('loadKeyboardShortcuts removes retired storySettings and migrates the prior preferences default', () => {
   globalThis.localStorage.setItem(KEYS.KEYBOARD_SHORTCUTS, JSON.stringify({
-    tabOptions: { ctrl: true, key: '3', code: 'Digit3' },
+    tabOptions: { ctrl: true, shift: true, key: 'o', code: 'KeyO' },
     storySettings: { ctrl: true, key: ',', code: 'Comma' },
   }));
 
   const loaded = loadKeyboardShortcuts();
   const persisted = JSON.parse(globalThis.localStorage.getItem(KEYS.KEYBOARD_SHORTCUTS));
 
-  assert.deepEqual(loaded.storySettings, shortcut('Comma', ','));
-  assert.deepEqual(persisted.storySettings, { ctrl: true, key: ',', code: 'Comma' });
-  // tabOptions a bien déménagé sans toucher storySettings (Ctrl+, reste « Options du pack »).
-  assert.deepEqual(loaded.tabOptions, shiftShortcut('KeyO', 'o'));
+  assert.equal(loaded.storySettings, undefined);
+  assert.equal(persisted.storySettings, undefined);
+  assert.deepEqual(loaded.tabOptions, shortcut('Comma', ','));
+  assert.deepEqual(persisted.tabOptions, shortcut('Comma', ','));
 });
 
 test('findShortcutAction still recognizes the default Numpad panel aliases', () => {
@@ -330,7 +330,7 @@ test('aucune touche par défaut ne contredit une autre commande active en même 
   }
 });
 
-for (const ownerId of ['storySettings', 'toggleTree', 'toggleSettings', 'toggleDiagram', 'selectionDelete', 'graphFit']) {
+for (const ownerId of ['tabOptions', 'toggleTree', 'toggleSettings', 'toggleDiagram', 'selectionDelete', 'graphFit']) {
   const owner = SHORTCUT_DEFINITIONS.find((definition) => definition.id === ownerId);
   for (const alias of owner.aliases) {
     test(`la capture refuse l'alias actif de ${ownerId} (${alias.code}) puis l'accepte quand il est inactif`, () => {
@@ -368,7 +368,7 @@ test('les libellés montrent le caractère tapé et les touches nommées', () =>
   assert.equal(formatShortcut(key('selectionDelete')), 'Suppr');
   // Capturé sur un AZERTY, un `A` reste un `A`, pas la lettre de la position.
   assert.equal(formatShortcut(plain('KeyQ', 'a')), 'A');
-  assert.equal(formatShortcut(plain('Equal', '+', { shift: true })), 'Shift++');
+  assert.equal(formatShortcut(plain('Equal', '+', { shift: true })), 'Maj++');
 });
 
 // --- La touche de commande sous macOS --------------------------------------

@@ -31,8 +31,10 @@
 //! borné, réservé aux bancs, et aucun média valide ne peut donc être refusé par
 //! un résultat non concluant.
 
+use crate::support::user_message::{codes, MessageLabel, UserMessage};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use serde::Serialize;
@@ -41,6 +43,7 @@ use crate::native_pack::persistence::AdvancedMediaBinding;
 use crate::native_pack::{NativeGenerationWarning, StoryDocument};
 use crate::support::ffmpeg::file_ext;
 
+mod bmp_rle4;
 pub(crate) mod digest;
 pub(crate) mod executor;
 pub(crate) mod format;
@@ -60,7 +63,9 @@ mod tests;
 use super::audio::harmonization_warning;
 use super::parallel::{partition_map_parallel, try_map_parallel};
 use executor::{read_registry, ExecutedConversion, ExecutionFailure, TaskExecutor};
-use inventory::{inventory_media, media_destinations, InventoriedMedia, InventoryError};
+use inventory::{
+    inventory_media_with_cancel, media_destinations, InventoriedMedia, InventoryError,
+};
 use naming::{build_archive_name_table, ArchiveNameConflict, NameCandidate, NamingError};
 use oracle::{verify_attachment, OracleDisagreement};
 use plan::{plan_audio, plan_image, AdvancedAudioOptions, ConversionPlan, ConversionTask};
@@ -192,11 +197,76 @@ pub(crate) fn prepare_advanced_assets_within(
     options: &AdvancedAudioOptions,
     deadline: Duration,
 ) -> Result<AdvancedAssetPreparation, AssetPreparationError> {
+    prepare_assets(
+        document,
+        bindings,
+        workspace_root,
+        ffmpeg,
+        options,
+        deadline,
+        false,
+        None,
+        &mut |_| {},
+    )
+    .map(|prepared| prepared.expect("préparation sans signal d'annulation"))
+}
+
+/// What the executor is about to re-encode, announced once before it starts.
+/// Information only: it never changes a produced byte.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ConversionNotice {
+    pub(crate) audio: bool,
+    pub(crate) image: bool,
+}
+
+/// Same inventory, executor and oracle, with device image requirements.
+/// `Ok(None)` reports cancellation between tasks. The caller owns and cleans
+/// the workspace, including conversions that had already started.
+pub(crate) fn prepare_storyteller_assets(
+    document: &StoryDocument,
+    bindings: &[AdvancedMediaBinding],
+    workspace_root: &Path,
+    ffmpeg: &Path,
+    cancel: Option<&AtomicBool>,
+    on_conversion: &mut dyn FnMut(ConversionNotice),
+) -> Result<Option<AdvancedAssetPreparation>, AssetPreparationError> {
+    prepare_assets(
+        document,
+        bindings,
+        workspace_root,
+        ffmpeg,
+        &AdvancedAudioOptions::default(),
+        DEFAULT_TOOL_DEADLINE,
+        true,
+        cancel,
+        on_conversion,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn prepare_assets(
+    document: &StoryDocument,
+    bindings: &[AdvancedMediaBinding],
+    workspace_root: &Path,
+    ffmpeg: &Path,
+    options: &AdvancedAudioOptions,
+    deadline: Duration,
+    storyteller: bool,
+    cancel: Option<&AtomicBool>,
+    on_conversion: &mut dyn FnMut(ConversionNotice),
+) -> Result<Option<AdvancedAssetPreparation>, AssetPreparationError> {
+    if is_cancelled(cancel) {
+        return Ok(None);
+    }
     let workspace = AdvancedWorkspace::open(workspace_root)?;
     let destinations = media_destinations(document);
 
-    let media = inventory_media(document, bindings, &workspace, ffmpeg, deadline)
-        .map_err(inventory_refusal)?;
+    let media =
+        inventory_media_with_cancel(document, bindings, &workspace, ffmpeg, deadline, cancel)
+            .map_err(inventory_refusal)?;
+    if is_cancelled(cancel) {
+        return Ok(None);
+    }
 
     // Un descripteur par média, arrêté avant toute exécution.
     //
@@ -205,6 +275,9 @@ pub(crate) fn prepare_advanced_assets_within(
     // son propre instantané — d'où le parallélisme, qui ne change ni les
     // descripteurs produits, ni l'ordre dans lequel les défauts sont annoncés.
     let (planned, plan_failures) = partition_map_parallel(&media, |item| {
+        if is_cancelled(cancel) {
+            return Ok(None);
+        }
         let snapshot = workspace.snapshot_path(&item.snapshot_sha256);
         let plan = match item.kind {
             MediaKind::Audio => plan_audio(ffmpeg, &snapshot, item.mpeg_header, options, deadline),
@@ -212,18 +285,33 @@ pub(crate) fn prepare_advanced_assets_within(
                 let facts = item
                     .image_facts
                     .expect("une image inventoriée porte ses dimensions");
-                Ok(plan_image(
-                    facts.width,
-                    facts.height,
-                    facts.studio_extension,
-                ))
+                if storyteller {
+                    std::fs::read(&snapshot)
+                        .map(|bytes| {
+                            if bmp_rle4::is_conformant(&bytes) {
+                                ConversionPlan::ImageVerbatim { extension: "bmp" }
+                            } else {
+                                ConversionPlan::ImageBmpRle4
+                            }
+                        })
+                        .map_err(|e| plan::PlanFailure {
+                            cause: MediaCause::ProcessingFailed,
+                            detail: e.to_string(),
+                        })
+                } else {
+                    Ok(plan_image(
+                        facts.width,
+                        facts.height,
+                        facts.studio_extension,
+                    ))
+                }
             }
         };
         match plan {
-            Ok(plan) => Ok((
+            Ok(plan) => Ok(Some((
                 item.asset_ref.clone(),
                 ConversionTask::new(item.snapshot_sha256.clone(), plan),
-            )),
+            ))),
             Err(failure) => Err(MediaUnavailable {
                 asset_ref: item.asset_ref.clone(),
                 kind: item.kind,
@@ -234,10 +322,13 @@ pub(crate) fn prepare_advanced_assets_within(
             }),
         }
     });
+    if is_cancelled(cancel) {
+        return Ok(None);
+    }
     if !plan_failures.is_empty() {
         return Err(AssetPreparationError::MediaUnavailable(plan_failures));
     }
-    let tasks: BTreeMap<String, ConversionTask> = planned.into_iter().collect();
+    let tasks: BTreeMap<String, ConversionTask> = planned.into_iter().flatten().collect();
 
     // Deux références de même instantané et de même plan sont **la même
     // tâche** : une exécution, une adresse.
@@ -246,6 +337,22 @@ pub(crate) fn prepare_advanced_assets_within(
         if !distinct_tasks.iter().any(|known| known == task) {
             distinct_tasks.push(task.clone());
         }
+    }
+
+    // Annonce, sans effet sur la suite : ce qui sera réellement ré-encodé.
+    let notice = ConversionNotice {
+        audio: distinct_tasks
+            .iter()
+            .any(|task| matches!(task.plan(), ConversionPlan::AudioEncode { .. })),
+        image: distinct_tasks.iter().any(|task| {
+            matches!(
+                task.plan(),
+                ConversionPlan::ImageResizePng | ConversionPlan::ImageBmpRle4
+            )
+        }),
+    };
+    if notice.audio || notice.image {
+        on_conversion(notice);
     }
 
     // L'exécution, en parallèle. C'est la conversion elle-même, et de loin le
@@ -260,10 +367,21 @@ pub(crate) fn prepare_advanced_assets_within(
     let executor = TaskExecutor::new(&workspace, ffmpeg, deadline);
     // Le reçu n'est pas conservé : le registre relit les adresses.
     try_map_parallel(&distinct_tasks, |task| {
-        executor
+        // Les tâches déjà en cours finissent ; aucune tâche en attente ne
+        // lance sa conversion une fois le signal observé.
+        if is_cancelled(cancel) {
+            return Ok(());
+        }
+        let result = executor
             .run(task)
-            .map_err(|failure| execution_refusal(failure, task, &media, &destinations))
+            .map_err(|failure| execution_refusal(failure, task, &media, &destinations));
+        #[cfg(test)]
+        tests::after_conversion();
+        result.map(|_| ())
     })?;
+    if is_cancelled(cancel) {
+        return Ok(None);
+    }
 
     let executed =
         read_registry(&workspace, &distinct_tasks).map_err(execution_refusal_without_media)?;
@@ -303,7 +421,11 @@ pub(crate) fn prepare_advanced_assets_within(
         harmonization_warnings(document, ffmpeg, &media, &destinations, &tasks, &registry);
     let mut preparation = build_preparation(&media, &destinations, &tasks, &registry, name_table);
     preparation.audio_warnings = audio_warnings;
-    Ok(preparation)
+    Ok(Some(preparation))
+}
+
+fn is_cancelled(cancel: Option<&AtomicBool>) -> bool {
+    cancel.is_some_and(|cancel| cancel.load(Ordering::SeqCst))
 }
 
 /// Les avertissements d'harmonisation, un par média qui en porte un, avec
@@ -332,7 +454,7 @@ fn harmonization_warnings(
             ffmpeg,
             &executed.output_path,
             item.asset_ref.clone(),
-            stage_label_of(document, destinations, &item.asset_ref),
+            MessageLabel::data(stage_label_of(document, destinations, &item.asset_ref)),
             notice.clone(),
         ));
     }
@@ -497,6 +619,9 @@ fn reason_for(item: &InventoriedMedia, plan: &ConversionPlan) -> String {
         ConversionPlan::ImageVerbatim { .. } => {
             "image déjà en 320×240 dans un format accepté".to_string()
         }
+        ConversionPlan::ImageBmpRle4 => {
+            "image adaptée à la conteuse (16 gris, BMP RLE4)".to_string()
+        }
         ConversionPlan::ImageResizePng => match item.image_facts {
             Some(facts) if facts.width != 320 || facts.height != 240 => {
                 format!("image {}×{} hors 320×240", facts.width, facts.height)
@@ -530,14 +655,18 @@ fn inventory_refusal(error: InventoryError) -> AssetPreparationError {
                     asset_ref: destination.asset_ref,
                     stage_uuid: Some(destination.stage_uuid),
                     kind: Some(destination.kind),
-                    expected: "une seule nature de destination".to_string(),
-                    observed: format!(
-                        "la référence occupe aussi une place {}",
-                        match destination.kind {
-                            MediaKind::Audio => MediaKind::Image.label(),
-                            MediaKind::Image => MediaKind::Audio.label(),
-                        }
-                    ),
+                    expected: UserMessage::new(codes::GENERATION_DESTINATION_KIND_EXPECTED)
+                        .into_transport(),
+                    observed: UserMessage::new(codes::GRAPH_REFERENCE_SLOT_LABEL)
+                        .param(
+                            "mediaKind",
+                            (match destination.kind {
+                                MediaKind::Audio => MediaKind::Image.label(),
+                                MediaKind::Image => MediaKind::Audio.label(),
+                            })
+                            .to_string(),
+                        )
+                        .into_transport(),
                 })
                 .collect(),
         ),
@@ -578,7 +707,8 @@ fn execution_refusal_without_media(failure: ExecutionFailure) -> AssetPreparatio
                 asset_ref: String::new(),
                 stage_uuid: None,
                 kind: None,
-                expected: "une sortie produite par cette préparation".to_string(),
+                expected: UserMessage::new(codes::GENERATION_PREPARED_OUTPUT_EXPECTED)
+                    .into_transport(),
                 observed: message,
             }])
         }

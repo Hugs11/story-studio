@@ -47,18 +47,18 @@
   font-weight: 600;
 }
 
-.advanced-search__count {
+p.advanced-search__count {
   margin: 0;
-  padding: 0 14px 10px;
+  height: 24px;
+  padding: 0 12px;
+  flex: 0 0 24px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--muted);
-  font: 10px/1.4 var(--font-mono);
+  font: 10px/24px var(--font-sans);
   opacity: 1;
-}
-
-/* Dans la barre de la liste, le décompte prend la place libre à gauche des
- * boutons : ses marges de ligne indépendante n'ont plus lieu d'être. */
-.structure-actions-leading .advanced-search__count {
-  padding: 0;
 }
 
 .advanced-search__list {

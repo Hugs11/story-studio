@@ -1,10 +1,12 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::super::{
-    absolute_path, media_output_root, project_dir_from_save_path, validate_existing_file_path,
+    absolute_path, media_output_dir, project_dir_from_save_path, validate_existing_file_path,
     MANAGED_PROJECT_DIRS,
 };
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
@@ -56,6 +58,7 @@ pub struct AudioEditRequest<'a> {
     pub input_path: &'a str,
     pub save_path: Option<&'a str>,
     pub workspace_dir: Option<&'a str>,
+    pub project_destination: Option<&'a crate::services::project_files::ProjectMediaDestination>,
     pub params: AudioEditParams<'a>,
 }
 
@@ -79,9 +82,11 @@ pub(crate) const TRIM_IN_PLACE_DIRS: [&str; 4] = [
 pub(crate) const AUDIO_EDIT_DIR: &str = ".story-studio-audio-edits";
 
 pub(crate) fn audio_edit_dir_for(path: &Path) -> Result<PathBuf, String> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| "Impossible de déterminer le dossier audio.".to_string())?;
+    let parent = path.parent().ok_or_else(|| {
+        user_message::UserMessage::new(codes::AUDIO_FOLDER_RESOLUTION_FAILED)
+            .with_detail("Impossible de déterminer le dossier audio.".to_string())
+            .into_transport()
+    })?;
     Ok(parent.join(AUDIO_EDIT_DIR))
 }
 
@@ -89,7 +94,11 @@ pub(crate) fn audio_edit_file_name(path: &Path) -> Result<String, String> {
     path.file_name()
         .and_then(OsStr::to_str)
         .map(|value| value.to_string())
-        .ok_or_else(|| "Nom de fichier audio invalide.".to_string())
+        .ok_or_else(|| {
+            user_message::UserMessage::new(codes::FILES_INVALID_AUDIO_FILE_NAME)
+                .with_detail("Nom de fichier audio invalide.".to_string())
+                .into_transport()
+        })
 }
 
 pub(crate) fn audio_edit_sidecar_path(path: &Path) -> Result<PathBuf, String> {
@@ -105,13 +114,16 @@ pub(crate) fn audio_edit_sidecar_path(path: &Path) -> Result<PathBuf, String> {
 /// En cas de collision (le fichier existe déjà — autre édité du même stem, ou fichier
 /// utilisateur légitime), on bascule sur `{stem}.original-2.{ext}`, puis `-3`, etc.
 pub(crate) fn audio_edit_original_path(path: &Path, source_ext: &str) -> Result<PathBuf, String> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| "Impossible de déterminer le dossier audio.".to_string())?;
-    let stem = path
-        .file_stem()
-        .and_then(OsStr::to_str)
-        .ok_or_else(|| "Nom de fichier audio invalide.".to_string())?;
+    let parent = path.parent().ok_or_else(|| {
+        user_message::UserMessage::new(codes::AUDIO_FOLDER_RESOLUTION_FAILED)
+            .with_detail("Impossible de déterminer le dossier audio.".to_string())
+            .into_transport()
+    })?;
+    let stem = path.file_stem().and_then(OsStr::to_str).ok_or_else(|| {
+        user_message::UserMessage::new(codes::FILES_INVALID_AUDIO_FILE_NAME)
+            .with_detail("Nom de fichier audio invalide.".to_string())
+            .into_transport()
+    })?;
     let ext = source_ext.trim().trim_start_matches('.');
 
     let build = |suffix: &str| -> PathBuf {
@@ -133,7 +145,13 @@ pub(crate) fn audio_edit_original_path(path: &Path, source_ext: &str) -> Result<
             return Ok(candidate);
         }
     }
-    Err("Trop de variantes d'originaux existent déjà pour ce fichier audio.".to_string())
+    Err(
+        user_message::UserMessage::new(codes::AUDIO_ORIGINAL_VARIANT_LIMIT)
+            .with_detail(
+                "Trop de variantes d'originaux existent déjà pour ce fichier audio.".to_string(),
+            )
+            .into_transport(),
+    )
 }
 
 pub(crate) fn is_in_managed_media_dir(
@@ -147,7 +165,7 @@ pub(crate) fn is_in_managed_media_dir(
 
     let mut bases: Vec<PathBuf> = Vec::new();
     if let Some(ws) = workspace_dir.filter(|s| !s.trim().is_empty()) {
-        if let Ok(dir) = absolute_path(ws, "Emplacement de travail") {
+        if let Ok(dir) = absolute_path(ws, codes::FILES_WORKSPACE_LOCATION_TRANSPORT) {
             bases.push(dir);
         }
     }
@@ -187,11 +205,27 @@ pub(crate) fn audio_edit_original_for_final(
 
     let original_path = audio_edit_original_path(final_path, source_ext)?;
     if let Some(parent) = original_path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Impossible de créer le dossier original audio : {}", e))?;
+        fs::create_dir_all(parent).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::AUDIO_ORIGINAL_FOLDER_CREATE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de créer le dossier original audio : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error),
+                ))
+                .into_transport()
+        })?;
     }
-    fs::copy(source_path, &original_path)
-        .map_err(|e| format!("Impossible de sauvegarder l'audio original : {}", e))?;
+    fs::copy(source_path, &original_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_ORIGINAL_SAVE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de sauvegarder l'audio original : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     Ok(original_path)
 }
 
@@ -231,13 +265,37 @@ pub(crate) fn write_audio_edit_sidecar(
     sidecar: &AudioEditSidecar,
 ) -> Result<(), String> {
     let dir = audio_edit_dir_for(path)?;
-    fs::create_dir_all(&dir)
-        .map_err(|e| format!("Impossible de créer le dossier d'édition audio : {}", e))?;
+    fs::create_dir_all(&dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_EDIT_FOLDER_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de créer le dossier d'édition audio : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let sidecar_path = audio_edit_sidecar_path(path)?;
-    let json = serde_json::to_string_pretty(sidecar)
-        .map_err(|e| format!("Impossible de sérialiser l'édition audio : {}", e))?;
-    fs::write(&sidecar_path, json)
-        .map_err(|e| format!("Impossible d'écrire l'édition audio : {}", e))
+    let json = serde_json::to_string_pretty(sidecar).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_EDIT_ENCODE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de sérialiser l'édition audio : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    fs::write(&sidecar_path, json).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_EDIT_WRITE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible d'écrire l'édition audio : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })
 }
 
 pub(crate) fn audio_edit_source_for(input: &Path) -> PathBuf {

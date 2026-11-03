@@ -31,7 +31,7 @@ Une fois le fichier affecté, le lecteur intégré permet de l’écouter et de 
 piste sans quitter les Réglages.
 
 Selon tes préférences, Story Studio peut copier les fichiers importés dans le dossier
-`fichiers-importes/` de l’emplacement de travail. Si cette copie est désactivée, le projet conserve une
+`fichiers-importes/<dossier du projet>/` de l’emplacement de travail. Si cette copie est désactivée, le projet conserve une
 référence vers le fichier à son emplacement d’origine.
 
 Tu peux également faire glisser un audio depuis **Médias** vers un champ compatible, ou utiliser
@@ -70,7 +70,7 @@ première utilisation.
 ## Où est enregistré le fichier ?
 
 Les prises réalisées par Story Studio sont enregistrées au format **WebM/Opus** dans le dossier
-`enregistrements/` de l’emplacement de travail courant.
+`enregistrements/<dossier du projet>/` de l’emplacement de travail courant.
 
 Une session temporaire possède déjà son propre emplacement de travail. Dans les rares cas où aucun
 emplacement n’est disponible, Story Studio demande d’enregistrer le projet avant de créer le
@@ -114,3 +114,6 @@ Quand tu remplaces un audio déjà utilisé, l’ancien fichier reste disponible
 une source externe n’est pas supprimée du disque.
 
 [Retrouver et classer les audios dans Médias](/story-studio/docs/gestionnaire-de-medias/)
+
+En session temporaire, ces fichiers restent à plat dans leur catégorie jusqu’au premier
+enregistrement manuel. [Le rangement par projet](/story-studio/docs/enregistrer-et-sauvegarder-un-projet/) explique le nom du dossier et son maintien après un renommage.

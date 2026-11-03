@@ -1,3 +1,5 @@
+@import '../../styles/keyboard.css';
+
 .keyboard-shortcuts-modal {
   width: min(620px, calc(100vw - 32px));
   max-height: min(760px, calc(100vh - 32px));
@@ -174,20 +176,4 @@
   justify-content: flex-end;
   flex-shrink: 0;
   max-width: 220px;
-}
-
-.kbd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  padding: 4px 7px;
-  background: var(--bg2);
-  border: 0.5px solid var(--borderLt);
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  font-family: inherit;
 }

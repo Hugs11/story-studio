@@ -1,3 +1,5 @@
+import { presentUserMessage } from '../../i18n/userMessage.js';
+import { productionRef, productionTextFields } from '../../i18n/productionPresentation.js';
 // Le travail graphe, préparé puis exécuté par la file de rendu.
 //
 // Ce module remplace la session d'export de l'Éditeur avancé. Il ne perd aucune
@@ -54,13 +56,48 @@ export const ADVANCED_WORK = Object.freeze({
   SUCCEEDED: 'succeeded',
 });
 
+// Présentation de la réponse native : les enums restent ceux du classificateur
+// commun ; ses tableaux français sont hors du lot et ne sont jamais modifiés.
+const NATIVE_TITLE_KEYS = Object.freeze({
+  'payload-decode': 'production:native.title.decode',
+  preparation: 'production:native.title.preparation',
+  'media-unavailable': 'production:native.title.media',
+  'archive-name-collision': 'production:native.title.collision',
+  'media-oracle': 'production:native.title.oracle',
+  'export-cancelled': 'production:native.title.cancelled',
+  'output-write': 'production:native.title.write',
+  untyped: 'production:native.title.interrupted',
+  request: 'production:work.export.title',
+});
+const QUALIFICATION_KEYS = Object.freeze({
+  'graph-integrity': 'production:native.qualification.integrity',
+  'authoring-action-required': 'production:native.qualification.author',
+  'pack-identity': 'production:native.qualification.identity',
+  'readiness-blocked': 'production:native.qualification.readiness',
+  'standard-serialization': 'production:native.qualification.serialization',
+});
+function nativeRefusal(error) {
+  const classified = classifyExportRefusal(error);
+  const titleKey = NATIVE_TITLE_KEYS[classified.kind];
+  const qualificationKey = QUALIFICATION_KEYS[classified.preparationKind];
+  const title = titleKey ? productionRef(titleKey) : classified.title;
+  return productionTextFields({
+    ...classified,
+    title: qualificationKey ? productionRef('production:native.title.qualified', {
+      title, qualification: productionRef(qualificationKey),
+    }) : title,
+    get message() { return classifyExportRefusal(error).message; },
+    technicalDetail: presentUserMessage(error?.error?.message ?? error?.message ?? error).technicalDetail,
+  });
+}
+
 // La forme commune d'un refus, identique à celle que `classifyExportRefusal`
 // rend : le rapport n'a qu'un seul branchement à connaître.
 function localRefusal(fields) {
-  return {
+  return productionTextFields({
     kind: EXPORT_REFUSAL.REQUEST,
     preparationKind: null,
-    title: 'Export impossible',
+    title: productionRef('production:work.export.title'),
     message: '',
     code: null,
     cancelled: false,
@@ -74,7 +111,7 @@ function localRefusal(fields) {
     codecError: null,
     beforeEngine: true,
     ...fields,
-  };
+  });
 }
 
 /**
@@ -118,8 +155,10 @@ export async function prepareAdvancedWork({
       return {
         outcome: ADVANCED_WORK.REFUSED,
         refusal: error instanceof ExportRequestError
-          ? localRefusal({ message: error.message, code: error.code })
-          : classifyExportRefusal(error),
+          ? localRefusal({ message: error.code === 'ADVANCED_PAYLOAD_REQUIRED'
+            ? productionRef('production:work.request.payload')
+            : error.code === 'OUTPUT_FOLDER_REQUIRED' ? productionRef('production:work.request.folder') : error.message, code: error.code })
+          : nativeRefusal(error),
       };
     }
 
@@ -139,7 +178,8 @@ export async function prepareAdvancedWork({
     return {
       outcome: ADVANCED_WORK.REFUSED,
       refusal: localRefusal({
-        message: `La préparation du document a échoué : ${String(error?.message ?? error)}`,
+        message: productionRef('production:work.prepare.message', { reason: { userMessage: error } }),
+        technicalDetail: presentUserMessage(error).technicalDetail,
       }),
     };
   }
@@ -163,8 +203,7 @@ export async function runAdvancedWork({
     return {
       outcome: ADVANCED_WORK.REFUSED,
       refusal: localRefusal({
-        message: "Le poste de travail natif n'est pas tenu au nom de l'éditeur graphe :"
-          + " rien n'a été demandé au moteur.",
+        message: productionRef('production:work.lock.message'),
       }),
     };
   }
@@ -186,6 +225,6 @@ export async function runAdvancedWork({
       ownership,
     };
   } catch (error) {
-    return { outcome: ADVANCED_WORK.REFUSED, refusal: classifyExportRefusal(error) };
+    return { outcome: ADVANCED_WORK.REFUSED, refusal: nativeRefusal(error) };
   }
 }

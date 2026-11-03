@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::{
-    DecodedStoryDocument, DocumentOrigin, PackIdentityOrigin, StoryDocument, StoryDocumentContext,
+    DecodedStoryDocument, DocumentOrigin, OpaqueMemberKind, PackIdentityOrigin, StoryDocument,
+    StoryDocumentContext,
 };
 
 // Acquisition d'un document avancé. La production des liaisons médias vit ici
@@ -15,9 +16,10 @@ mod acquisition;
 
 #[allow(unused_imports)]
 pub(crate) use acquisition::{
-    create_advanced_document, initialize_advanced_document, initialize_advanced_payload,
-    media_bindings_for_document, referenced_asset_refs, system_pack_identity, AdvancedAcquisition,
-    AdvancedMediaBinding, AssetLocation, MediaBindingStatus, PackIdentitySource,
+    create_advanced_document, create_advanced_document_named, initialize_advanced_document,
+    initialize_advanced_payload, media_bindings_for_document, referenced_asset_refs,
+    system_pack_identity, AdvancedAcquisition, AdvancedMediaBinding, AssetLocation,
+    MediaBindingStatus, PackIdentitySource,
 };
 
 pub(crate) const AUTHORING_PAYLOAD_VERSION: u64 = 1;
@@ -183,9 +185,17 @@ pub(crate) fn decode_authoring_payload(
         )
     })?;
     validate_stored_shape(&raw, &canonical, "")?;
+    let mut context = stored.context;
+    // Un projet enregistré avant que les clés inconnues soient ignorées peut
+    // encore en porter, avec ou sans disposition. Elles sont retirées ici, au
+    // seul point de relecture : aucun diagnostic ni aucune réémission ensuite,
+    // et le prochain enregistrement ne les écrit plus.
+    context
+        .opaque_members
+        .retain(|member| member.kind != OpaqueMemberKind::UnknownExtension);
     Ok(DecodedStoryDocument {
         document: stored.document,
-        context: stored.context,
+        context,
         source_value: Value::Null,
     })
 }
@@ -285,6 +295,11 @@ pub(crate) enum IdentityStatus {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AuthoringPayloadSummary {
+    pub(crate) official_provenance: crate::domain::official_provenance::OfficialProvenance,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) official_origin_uuid: Option<String>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) contains_official_content: bool,
     pub(crate) payload_version: u64,
     pub(crate) document_origin: DocumentOrigin,
     pub(crate) stage_count: usize,
@@ -300,6 +315,9 @@ pub(crate) fn validate_authoring_payload(
 ) -> Result<AuthoringPayloadSummary, PersistenceError> {
     let payload = decode_authoring_payload(input)?;
     Ok(AuthoringPayloadSummary {
+        official_provenance: payload.context.official_provenance,
+        official_origin_uuid: payload.context.official_origin_uuid.clone(),
+        contains_official_content: payload.context.contains_official_content,
         payload_version: AUTHORING_PAYLOAD_VERSION,
         document_origin: payload.context.document_origin,
         stage_count: payload.document.stage_nodes.len(),

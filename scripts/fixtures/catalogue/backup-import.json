@@ -1,0 +1,75 @@
+{
+  "preview": {
+    "previewId": "preview",
+    "formatVersion": 1,
+    "backupDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expectedCatalogueRevision": 7,
+    "counts": {
+      "cards": 1,
+      "tags": 0,
+      "images": 0
+    },
+    "issues": [],
+    "offset": 0,
+    "limit": 100,
+    "additions": {
+      "items": [],
+      "total": 0
+    },
+    "changes": {
+      "items": [
+        {
+          "id": "favorite-conflict",
+          "target": "local-card",
+          "kind": "favorite",
+          "incoming": 1,
+          "label": "Le voyage"
+        }
+      ],
+      "total": 1
+    },
+    "conflicts": {
+      "items": [
+        {
+          "id": "favorite-conflict",
+          "target": {
+            "kind": "favorite",
+            "id": "local-card",
+            "key": "",
+            "label": "Le voyage",
+            "identity": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+          },
+          "local": 0,
+          "incoming": 1,
+          "defaultChoice": "local"
+        }
+      ],
+      "total": 1
+    },
+    "unresolved": {
+      "items": [
+        {
+          "id": "remote-card",
+          "reason": "missingIdentity",
+          "label": "Le voyage"
+        }
+      ],
+      "total": 1
+    },
+    "forgottenCount": 0
+  },
+  "result": {
+    "imported": 2,
+    "keptLocal": 1,
+    "ignored": 0,
+    "unresolved": 1,
+    "catalogueRevision": 8,
+    "reportId": "report"
+  },
+  "receipt": {
+    "operationId": "operation",
+    "requestId": "request",
+    "sourcesRevision": 0,
+    "catalogueRevision": 7
+  }
+}

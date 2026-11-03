@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "bulkSetMetadata",
+    "requestKey": "bulk",
+    "ficheIds": [
+      "a",
+      "b"
+    ],
+    "changes": {
+      "ageMin": {
+        "state": "defined",
+        "value": 3
+      },
+      "ageMax": {
+        "state": "cleared"
+      },
+      "language": {
+        "state": "defined",
+        "value": "it"
+      }
+    },
+    "expectedFicheRevisions": {
+      "a": 1,
+      "b": 2
+    }
+  },
+  {
+    "kind": "undoMutation",
+    "requestKey": "undo",
+    "undoToken": "opaque-token"
+  },
+  {
+    "kind": "forgetUnreferencedCards",
+    "requestKey": "forget",
+    "ficheIds": [
+      "a"
+    ],
+    "expectedFicheRevisions": {
+      "a": 1
+    }
+  }
+]

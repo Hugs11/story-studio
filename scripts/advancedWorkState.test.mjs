@@ -276,6 +276,8 @@ test('l’ordre des clés du fichier n’est pas une valeur d’auteur', () => {
     },
     rootEntries: [],
     projectName: base.projectName,
+    officialProvenance: base.officialProvenance,
+    storage: base.storage,
     projectType: 'advanced',
     authoringMode: 'advanced',
     schemaVersion: 4,
@@ -402,7 +404,7 @@ test('un enregistrement lancé sur un projet corrigé hors du store reste publia
   // Cas du relink : l'objet enregistré n'est plus celui du store, mais la
   // signature est la même — le fichier porte bien le travail courant.
   const corrected = advancedProject();
-  const work = storeDouble(advancedProject());
+  const work = storeDouble(structuredClone(corrected));
   assert.notEqual(work.project, corrected);
   const savedSnapshot = createWorkSnapshot(corrected, [], {});
   const marks = { savedSnapshotRef: { current: null }, autoSaveSnapshotRef: { current: 'auto' } };
@@ -484,7 +486,7 @@ test('l’acquisition d’un document créé n’a lieu qu’une fois par projet
   work.undo();
   work.redo();
   work.install(normalizeWorkProject(work.project));
-  assert.deepEqual(calls, [{ command: 'create_advanced_document', args: { title: 'Le renard' } }]);
+  assert.deepEqual(calls, [{ command: 'create_advanced_document', args: { title: 'Le renard', initialStageName: 'Écran 1' } }]);
   assert.equal(acquired.projectName, 'Le renard');
   assert.equal(acquired.authoringMode, 'advanced');
   assert.deepEqual(acquired.authoring.mediaBindings, []);

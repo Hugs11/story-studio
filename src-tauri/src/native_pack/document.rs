@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, UserMessage};
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -450,12 +451,13 @@ pub(crate) fn validate_document_for_studio_compat(document: &StoryDocument) -> R
                 continue;
             };
             if !stage_ids.contains(stage_id) {
-                issues.push(format!(
-                    "Action '{}' option {} pointe vers un stage introuvable '{}'",
-                    action.label(),
-                    option_index,
-                    stage_id
-                ));
+                issues.push(
+                    UserMessage::new(codes::GRAPH_ACTION_OPTION_STAGE_MISSING)
+                        .param("action", (action.label()).to_string())
+                        .param("option_index", (option_index).to_string())
+                        .param("stage_id", (stage_id).to_string())
+                        .into_transport(),
+                );
             }
         }
     }
@@ -486,10 +488,14 @@ pub(crate) fn validate_document_for_studio_compat(document: &StoryDocument) -> R
     if issues.is_empty() {
         Ok(())
     } else {
-        Err(format!(
-            "story.json natif incompatible STUdio : {}",
-            issues.join(" | ")
-        ))
+        Err(
+            UserMessage::new(codes::EXPORT_NATIVE_STORY_STUDIO_INCOMPATIBLE)
+                .param(
+                    "issues",
+                    crate::support::user_message::message_list(&issues, " | "),
+                )
+                .into_transport(),
+        )
     }
 }
 
@@ -498,28 +504,46 @@ fn port_violation_message(document: &StoryDocument, violation: PortViolation) ->
         PortViolation::HomeLoopsToSelf { stage, implicit } => {
             let label = document.stage_nodes[stage].label();
             if implicit {
-                format!("Stage '{label}' : écran d'entrée avec Accueil actif sans destination, Accueil ramène ici même")
+                UserMessage::new(codes::VALIDATION_ENTRY_HOME_LOOP)
+                    .param("label", (label).to_string())
+                    .into_transport()
             } else {
-                format!("Stage '{label}' : homeTransition ramène l'écran sur lui-même")
+                UserMessage::new(codes::VALIDATION_STAGE_HOME_LOOP)
+                    .param("label", (label).to_string())
+                    .into_transport()
             }
         }
-        PortViolation::OkLoopsToSelf { stage } => format!(
-            "Stage '{}' : okTransition ramène l'écran sur lui-même",
-            document.stage_nodes[stage].label()
-        ),
-        PortViolation::OkWithoutUsableDestination { stage } => format!(
-            "Stage '{}' : OK ou fin automatique actif sans destination utilisable",
-            document.stage_nodes[stage].label()
-        ),
-        PortViolation::NoUsableExit { stage } => format!(
-            "Stage '{}' : écran accessible sans sortie utilisable, même par la molette",
-            document.stage_nodes[stage].label()
-        ),
-        PortViolation::EntryStageAsOption { action, option } => format!(
-            "Action '{}' option {} vise l'écran d'entrée",
-            document.action_nodes[action].label(),
-            option
-        ),
+        PortViolation::OkLoopsToSelf { stage } => UserMessage::new(codes::VALIDATION_STAGE_OK_LOOP)
+            .param(
+                "document_stage_nodes_stage",
+                (document.stage_nodes[stage].label()).to_string(),
+            )
+            .into_transport(),
+        PortViolation::OkWithoutUsableDestination { stage } => {
+            UserMessage::new(codes::VALIDATION_STAGE_PLAY_TARGET_MISSING)
+                .param(
+                    "document_stage_nodes_stage",
+                    (document.stage_nodes[stage].label()).to_string(),
+                )
+                .into_transport()
+        }
+        PortViolation::NoUsableExit { stage } => {
+            UserMessage::new(codes::VALIDATION_STAGE_EXIT_UNUSABLE)
+                .param(
+                    "document_stage_nodes_stage",
+                    (document.stage_nodes[stage].label()).to_string(),
+                )
+                .into_transport()
+        }
+        PortViolation::EntryStageAsOption { action, option } => {
+            UserMessage::new(codes::GRAPH_ACTION_OPTION_ENTRY_FORBIDDEN)
+                .param(
+                    "document_action_nodes_action",
+                    (document.action_nodes[action].label()).to_string(),
+                )
+                .param("option", (option).to_string())
+                .into_transport()
+        }
     }
 }
 
@@ -536,20 +560,25 @@ fn validate_stage_transition(
     };
 
     if !port_available {
-        issues.push(format!(
-            "Stage '{}' declare {} sans port compatible",
-            stage.label(),
-            transition_label
-        ));
+        issues.push(
+            UserMessage::new(codes::VALIDATION_STAGE_PORT_INCOMPATIBLE)
+                .param("stage", (stage.label()).to_string())
+                .param("transition_label", (transition_label).to_string())
+                .into_transport(),
+        );
     }
 
     let Some(action) = action_map.get(transition.action_node.as_str()) else {
-        issues.push(format!(
-            "Stage '{}' pointe via {} vers une action introuvable '{}'",
-            stage.label(),
-            transition_label,
-            transition.action_node
-        ));
+        issues.push(
+            UserMessage::new(codes::VALIDATION_STAGE_ACTION_MISSING)
+                .param("stage", (stage.label()).to_string())
+                .param("transition_label", (transition_label).to_string())
+                .param(
+                    "transition_action_node",
+                    (transition.action_node).to_string(),
+                )
+                .into_transport(),
+        );
         return;
     };
 
@@ -557,12 +586,13 @@ fn validate_stage_transition(
     // Reste la borne haute, qui vaut aussi pour `Random` sur une Action sans
     // option.
     if !transition.selection.is_within_bounds(action.options.len()) {
-        issues.push(format!(
-            "Stage '{}' utilise une sélection hors limites ({}) sur {}",
-            stage.label(),
-            transition.selection,
-            transition_label
-        ));
+        issues.push(
+            UserMessage::new(codes::VALIDATION_STAGE_SELECTION_OUTSIDE)
+                .param("stage", (stage.label()).to_string())
+                .param("transition_selection", (transition.selection).to_string())
+                .param("transition_label", (transition_label).to_string())
+                .into_transport(),
+        );
     }
 }
 

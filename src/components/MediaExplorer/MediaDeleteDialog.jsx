@@ -1,6 +1,8 @@
 import { Button } from '../common/Button';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { isMediaHeldByProject } from '../../store/mediaLibrary';
+import { translateMedia } from '../../i18n/mediaPresentation.js';
+import { useMediaTranslation } from '../../i18n/useMediaTranslation.js';
 
 // Ce qu'on peut dire d'un média retenu par le projet, sans rien affirmer de
 // plus que ce qui est su. Trois états : des écrans nommés, un inventaire non
@@ -8,9 +10,9 @@ import { isMediaHeldByProject } from '../../store/mediaLibrary';
 function holdReason(item) {
   const labels = [...new Set((item.usages ?? []).map((usage) => usage.label).filter(Boolean))];
   if (labels.length > 0) return labels.slice(0, 3).join(', ');
-  if (item.usageKnown === false) return 'usages non calculés';
-  if (item.projectUsedCount > 0) return `${item.projectUsedCount} usage${item.projectUsedCount > 1 ? 's' : ''}`;
-  return 'média lié au document';
+  if (item.usageKnown === false) return translateMedia('media:delete.reason.unknown');
+  if (item.projectUsedCount > 0) return translateMedia('media:delete.reason.count', { count: item.projectUsedCount });
+  return translateMedia('media:delete.reason.bound');
 }
 
 export function MediaDeleteDialog({
@@ -21,13 +23,14 @@ export function MediaDeleteDialog({
   onCancel,
   onConfirm,
 }) {
+  const { t } = useMediaTranslation();
   useEscapeKey(!!items?.length, onCancel);
 
   if (!items?.length) return null;
 
   const usedItems = items.filter(isMediaHeldByProject);
   const usedCount = usedItems.length;
-  const actionLabel = deleteDisk ? 'Supprimer définitivement' : 'Retirer';
+  const actionLabel = deleteDisk ? t('media:delete.permanent.title') : t('media:delete.remove.action');
 
   return (
     // data-modal-surface : overlay à styles inline, reconnu par la garde des
@@ -37,16 +40,16 @@ export function MediaDeleteDialog({
         <div className="gen-header">
           <span className="gen-title">
             {usedCount > 0
-              ? (usedCount === 1 ? 'Média encore utilisé' : `${usedCount} médias encore utilisés`)
-              : (deleteDisk ? 'Supprimer définitivement' : 'Retirer de la médiathèque')}
+              ? (usedCount === 1 ? t('media:delete.used.single') : t('media:delete.used.count', { count: usedCount }))
+              : (deleteDisk ? t('media:delete.permanent.title') : t('media:delete.library.title'))}
           </span>
         </div>
         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {usedCount > 0 && (
             <div style={{ fontSize: 12, color: 'var(--warning-text)', lineHeight: 1.5 }}>
               {usedCount === 1
-                ? 'Ce média ne peut pas être retiré de la médiathèque car il est encore utilisé dans le projet. Retirez d’abord ses affectations depuis les réglages concernés.'
-                : `${usedCount} médias ne peuvent pas être retirés de la médiathèque car ils sont encore utilisés dans le projet. Retirez d’abord leurs affectations depuis les réglages concernés.`}
+                ? t('media:delete.used.singleMessage')
+                : t('media:delete.used.message', { count: usedCount })}
               <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
                 {usedItems.slice(0, 5).map((item) => (
                   <li key={item.id}>
@@ -61,21 +64,21 @@ export function MediaDeleteDialog({
               <label className="media-delete-option" onClick={() => onDeleteDiskChange(false)}>
                 <input type="radio" readOnly checked={!deleteDisk} />
                 <span>
-                  <strong>Retirer de la médiathèque</strong><br />
-                  <small>Le fichier reste sur le disque.</small>
+                  <strong>{t('media:delete.library.title')}</strong><br />
+                  <small>{t('media:delete.library.hint')}</small>
                 </span>
               </label>
               {canDeleteFromDisk ? (
                 <label className="media-delete-option" onClick={() => onDeleteDiskChange(true)}>
                   <input type="radio" readOnly checked={deleteDisk} />
                   <span>
-                    <strong>Supprimer définitivement du disque</strong><br />
-                    <small>Cette action est irréversible.</small>
+                    <strong>{t('media:delete.disk.option')}</strong><br />
+                    <small>{t('media:delete.disk.hint')}</small>
                   </span>
                 </label>
               ) : (
                 <div className="info-box">
-                  La suppression disque est disponible uniquement pour les médias placés dans les dossiers gérés par Story Studio. Les fichiers externes peuvent seulement être retirés de la médiathèque.
+                  {t('media:delete.disk.unavailable')}
                 </div>
               )}
             </>
@@ -83,10 +86,10 @@ export function MediaDeleteDialog({
         </div>
         <div className="gen-footer">
           {usedCount > 0 ? (
-            <Button type="button" onClick={onCancel}>Fermer</Button>
+            <Button type="button" onClick={onCancel}>{t('common:dialog.close.label')}</Button>
           ) : (
             <>
-              <Button type="button" onClick={onCancel}>Annuler</Button>
+              <Button type="button" onClick={onCancel}>{t('common:dialog.cancel.label')}</Button>
               <Button type="button" variant="danger" onClick={onConfirm}>{actionLabel}</Button>
             </>
           )}

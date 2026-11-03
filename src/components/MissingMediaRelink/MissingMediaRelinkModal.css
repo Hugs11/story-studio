@@ -467,14 +467,6 @@
 
 .relink-row-select {
   max-width: min(260px, 30vw);
-  height: 30px;
-  border-radius: 7px;
-  border: 1px solid var(--control-border);
-  background: var(--control-bg);
-  color: var(--control-text);
-  font-family: inherit;
-  font-size: 12px;
-  padding: 0 8px;
 }
 
 .relink-row-cta {

@@ -1,10 +1,13 @@
+import { useTreeTranslation } from '../../i18n/useTreeTranslation.jsx';
+import { translateTree as t } from '../../i18n/treePresentation.js';
 import { useState } from 'react';
-import { Search, X } from '../icons/LucideLocal';
+import { ChevronRight, Search, X } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { CompleteDiagramTree } from './FullDiagramTree';
 import './FlowDiagram.css';
 
 function IconButton({ label, onClick, active = false, children }) {
+  useTreeTranslation();
   return (
     <Tooltip text={label}>
       <button
@@ -24,22 +27,36 @@ function DiagramPanelHeader({
   variant,
   onClose,
   onSearch,
+  autoNextActive,
+  onOpenAutoNextSettings,
   controlsHostRef,
   dragHandleProps,
 }) {
+  useTreeTranslation();
   const isFull = variant === 'plein';
 
   return (
     <div className="fd-panel-header" {...dragHandleProps}>
-      <div className="fd-panel-title" title={isFull ? 'Diagramme complet du pack' : 'Diagramme'}>
-        {isFull ? 'Diagramme complet du pack' : 'Diagramme'}
+      <div className="fd-panel-title" title={isFull ? t("tree:diagram.full.title") : t("common:workspace.diagram.label")}>
+        {isFull ? t("tree:diagram.full.title") : t("common:workspace.diagram.label")}
       </div>
       <div className="fd-panel-view-controls" ref={controlsHostRef} />
+      {autoNextActive ? (
+        <button
+          type="button"
+          className="fd-auto-next-badge"
+          title={t("tree:diagram.autoNext.edit")}
+          aria-label={t("tree:diagram.autoNext.aria")}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={onOpenAutoNextSettings}
+        >
+          <span className="fd-auto-next-icon" aria-hidden="true"><ChevronRight /><ChevronRight /></span>{t("tree:diagram.autoNext.label")}</button>
+      ) : null}
       <div className="fd-panel-window-controls">
-        <IconButton label="Rechercher dans le diagramme (Ctrl+F)" onClick={onSearch}>
+        <IconButton label={t("tree:diagram.search.shortcut")} onClick={onSearch}>
           <Search aria-hidden="true" />
         </IconButton>
-        <IconButton label="Fermer le diagramme" onClick={onClose}>
+        <IconButton label={t("tree:diagram.close.aria")} onClick={onClose}>
           <X aria-hidden="true" />
         </IconButton>
       </div>
@@ -69,8 +86,10 @@ export function DiagramPanel({
   onSimulateZip,
   onSimulateRoot,
   onOpenLocalEndSettings,
+  onOpenAutoNextSettings,
   headerDragHandleProps = {},
 }) {
+  useTreeTranslation();
   const [controlsHost, setControlsHost] = useState(null);
   const [localSearchFocusTrigger, setLocalSearchFocusTrigger] = useState(0);
 
@@ -81,6 +100,8 @@ export function DiagramPanel({
       <DiagramPanelHeader
         variant={variant}
         onClose={onClose}
+        autoNextActive={projectType === 'pack' && !!project?.globalOptions?.autoNext}
+        onOpenAutoNextSettings={onOpenAutoNextSettings}
         onSearch={() => {
           setLocalSearchFocusTrigger((value) => value + 1);
         }}

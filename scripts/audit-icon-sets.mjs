@@ -39,7 +39,7 @@ const ALLOWED_FAMILIES = Object.freeze([
     reason: "Marque déposée, pas une icône : un logo ne se remplace pas par un dessin du jeu.",
   },
   {
-    file: 'src/components/layout/ValidationPill.jsx',
+    file: 'src/components/layout/StatusPill.jsx',
     reason:
       "Un caret plein de 9 px, glyphe typographique. Le chevron tracé du jeu partagé rendrait "
       + "un trait d'un demi-pixel à cette taille.",

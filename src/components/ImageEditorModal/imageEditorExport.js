@@ -1,3 +1,4 @@
+import { beginProjectMediaOutput } from '../../store/projectMediaOutput';
 // Export PNG 320x240 d'une edition d'image vers le filesystem Tauri.
 // Extrait de ImageEditorModal.jsx : isole le pipeline canvas -> blob -> fichier
 // vers un emplacement géré du workspace effectif, ou vers le cache temporaire
@@ -8,9 +9,7 @@ import { appCacheDir, join } from '@tauri-apps/api/path';
 import { logger } from '../../utils/logger';
 import { TEMP_IMAGES_DIR } from '../../utils/tempDirs';
 import {
-  buildEditedImageDestination,
   buildEditedImageFileName,
-  IMAGES_GENEREES,
 } from '../../store/workspaceDirs';
 import { joinPath } from '../../utils/fileUtils';
 import { renderFrame, CANVAS_W, CANVAS_H } from './useImageEditor';
@@ -26,11 +25,9 @@ function isAlreadyExistsError(error) {
     || message.includes('os error 183');
 }
 
-async function writeUniqueImage({ directory, sourcePath, bytes, managedWorkspace }) {
+async function writeUniqueImage({ directory, sourcePath, bytes }) {
   for (let collisionIndex = 1; collisionIndex <= MAX_FILENAME_ATTEMPTS; collisionIndex += 1) {
-    const candidate = managedWorkspace
-      ? buildEditedImageDestination(managedWorkspace, sourcePath, collisionIndex)
-      : joinPath(directory, buildEditedImageFileName(sourcePath, collisionIndex));
+    const candidate = joinPath(directory, buildEditedImageFileName(sourcePath, collisionIndex));
     if (await exists(candidate)) continue;
     try {
       await writeFile(candidate, bytes, { createNew: true });
@@ -40,6 +37,7 @@ async function writeUniqueImage({ directory, sourcePath, bytes, managedWorkspace
       throw error;
     }
   }
+  // eslint-disable-next-line i18next/no-literal-string -- diagnostic technique journalisé ; l'interface affiche media:imageEditor.export.failed.
   throw new Error('Impossible de trouver un nom disponible pour l’image modifiée.');
 }
 
@@ -60,45 +58,49 @@ export async function exportEditedImage({
   sourcePath,
   outputNameSourcePath = sourcePath,
   workspaceDir = '',
+  mediaStorage = null,
   requireManagedOutput = false,
 }) {
-  const offscreen = document.createElement('canvas');
-  offscreen.width = CANVAS_W;
-  offscreen.height = CANVAS_H;
-  renderFrame(offscreen, image, transform, filters);
-
-  const blob = await new Promise((resolve) => offscreen.toBlob(resolve, 'image/png'));
-  if (!blob) throw new Error('Canvas export returned null blob');
-  const buffer = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-
-  const managedWorkspace = workspaceDir?.trim();
-  if (requireManagedOutput && !managedWorkspace) {
-    const error = new Error('Aucun workspace géré n’est disponible pour enregistrer ce nouveau média.');
-    error.userMessage = 'Aucun dossier de projet durable n’est disponible. L’image n’a pas été créée.';
-    throw error;
-  }
-
-  let directory;
-  if (managedWorkspace) {
-    directory = joinPath(managedWorkspace, IMAGES_GENEREES);
-  } else {
-    directory = await join(await appCacheDir(), TEMP_IMAGES_DIR);
-  }
-  await mkdir(directory, { recursive: true });
-
-  const finalPath = await writeUniqueImage({
-    directory,
-    sourcePath: outputNameSourcePath,
-    bytes,
-    managedWorkspace,
-  });
+  const output = workspaceDir?.trim() ? beginProjectMediaOutput(mediaStorage ?? { root: workspaceDir, ephemeral: true }) : null;
   try {
-    await writeImageEditMetadata(finalPath, { sourcePath, transform, filters }, { strict: true });
-    return finalPath;
-  } catch (error) {
-    await cleanupIncompleteExport(finalPath);
-    logger.warn('image-editor:incomplete-export-cleaned', finalPath);
-    throw error;
-  }
+    const offscreen = document.createElement('canvas');
+    offscreen.width = CANVAS_W;
+    offscreen.height = CANVAS_H;
+    renderFrame(offscreen, image, transform, filters);
+
+    const blob = await new Promise((resolve) => offscreen.toBlob(resolve, 'image/png'));
+    // eslint-disable-next-line i18next/no-literal-string -- diagnostic technique journalisé ; l'éditeur affiche media:imageEditor.export.failed.
+    if (!blob) throw new Error('Canvas export returned null blob');
+    const buffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+
+    const managedWorkspace = workspaceDir?.trim();
+    if (requireManagedOutput && !managedWorkspace) {
+      // eslint-disable-next-line i18next/no-literal-string -- diagnostic technique journalisé ; le texte affiché est userMessageRef.
+      const error = new Error('Aucun workspace géré n’est disponible pour enregistrer ce nouveau média.');
+      // Descripteur résolu à l'affichage par l'éditeur d'image (langue active).
+      error.userMessageRef = { key: 'media:imageEditor.export.noWorkspace' };
+      throw error;
+    }
+
+    const write = async (directory) => {
+    await mkdir(directory, { recursive: true });
+
+    const finalPath = await writeUniqueImage({
+      directory,
+      sourcePath: outputNameSourcePath,
+      bytes,
+    });
+    try {
+      await writeImageEditMetadata(finalPath, { sourcePath, transform, filters }, { strict: true });
+      return finalPath;
+    } catch (error) {
+      await cleanupIncompleteExport(finalPath);
+      logger.warn('image-editor:incomplete-export-cleaned', finalPath);
+      throw error;
+    }
+    };
+    if (managedWorkspace) return await write(await output.directory('images-generees'));
+    return await write(await join(await appCacheDir(), TEMP_IMAGES_DIR));
+  } finally { output?.release(); }
 }

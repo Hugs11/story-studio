@@ -24,6 +24,7 @@
 //! document **créé**, et laisse celles d'un document **importé**. Une demande
 //! explicite d'identité met aussi à jour le contexte, qui gouverne l'export.
 
+use crate::support::user_message::{codes, UserMessage};
 use serde::Deserialize;
 
 use super::GestureError;
@@ -113,7 +114,8 @@ fn check_version(update: &VersionUpdate) -> Result<(), GestureError> {
                 "INVALID_DOCUMENT_VERSION",
                 "/version",
                 format!("La version d'un pack est un entier strictement positif ; {value} ne l'est pas."),
-            ));
+            ).with_user_message(UserMessage::new(codes::INVALID_DOCUMENT_VERSION)
+.param("value", (value).to_string())));
         }
     }
     Ok(())
@@ -129,7 +131,7 @@ fn check_uuid(update: &TextUpdate) -> Result<(), GestureError> {
                 "/uuid",
                 "Un identifiant vide n'est pas une valeur : retire le champ plutôt que d'y écrire une chaîne vide."
                     .to_string(),
-            ));
+            ).with_user_message(UserMessage::new(codes::EMPTY_DOCUMENT_UUID)));
         }
     }
     Ok(())
@@ -145,8 +147,11 @@ pub(crate) fn set_document_metadata(
             DOCUMENT_ROOT,
             "Aucune métadonnée n'est nommée : le geste ne devine pas laquelle modifier."
                 .to_string(),
-        ));
+        )
+        .with_user_message(UserMessage::new(codes::EMPTY_METADATA_UPDATE)));
     }
+
+    check_identity_update(decoded, update, None)?;
 
     // Tous les contrôles **avant** la première écriture : un geste à moitié
     // appliqué laisserait le document dans un état que l'auteur n'a pas demandé
@@ -166,6 +171,11 @@ pub(crate) fn set_document_metadata(
                 "INVALID_PACK_IDENTITY",
                 "/context/packIdentity/value",
                 refusal,
+            )
+            .with_user_message(
+                UserMessage::new("INVALID_PACK_IDENTITY")
+                    .param("identity", identity)
+                    .param("context", codes::INVALID_PACK_IDENTITY_UNREADABLE),
             )),
             None => Ok(identity),
         })
@@ -207,4 +217,47 @@ fn mark_authored(decoded: &mut DecodedStoryDocument, path: &str) {
         path: path.to_string(),
         origin: ValueOrigin::Authored,
     });
+}
+
+/// Check before any mutation, including the legacy root UUID gesture.
+pub(crate) fn check_identity_update(
+    decoded: &DecodedStoryDocument,
+    update: &DocumentMetadataUpdate,
+    catalogue: Option<&crate::services::catalogue::CatalogueState>,
+) -> Result<(), GestureError> {
+    let current = decoded
+        .context
+        .pack_identity
+        .value
+        .as_deref()
+        .unwrap_or_default();
+    let check = |requested: &str| {
+        crate::domain::official_provenance::check_identity_change(
+            decoded.context.official_provenance,
+            current,
+            requested,
+            catalogue,
+        )
+        .map_err(identity_change_error)
+    };
+    if let Some(identity) = update.pack_identity.as_deref() {
+        check(identity.trim())?;
+    }
+    if let Some(uuid) = update.uuid.clone() {
+        let presence = uuid.presence();
+        if presence != decoded.document.uuid {
+            check(presence.as_deref().unwrap_or_default())?;
+        }
+    }
+    Ok(())
+}
+
+/// Keep the engine refusal intact; a lookup error must never masquerade as a lock.
+pub(super) fn identity_change_error(message: UserMessage) -> GestureError {
+    GestureError::new(
+        message.code.clone(),
+        "/context/packIdentity/value",
+        message.clone().into_transport(),
+    )
+    .with_user_message(message)
 }

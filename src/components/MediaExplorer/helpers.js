@@ -1,3 +1,5 @@
+import { getIntlLocale } from '../../i18n/language.js';
+import { translateMedia } from '../../i18n/mediaPresentation.js';
 import { fmtSize, fmtHz } from '../../hooks/useMediaMetadata';
 import { stripWindowsLongPathPrefix } from '../../utils/fileUtils';
 
@@ -10,7 +12,7 @@ export function formatDuration(secs) {
 
 export function formatDate(ts) {
   if (!ts) return '—';
-  return new Date(ts * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  return new Date(ts * 1000).toLocaleDateString(getIntlLocale(), { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
 function tagHue(name) {
@@ -33,10 +35,10 @@ export function waveHeights(name, bars = 18) {
 }
 
 export function kindLabel(kind) {
-  if (kind === 'image') return 'Image';
-  if (kind === 'audio') return 'Son';
-  if (kind === 'archive') return 'Archive';
-  return 'Fichier';
+  if (kind === 'image') return translateMedia('media:explorer.kind.image');
+  if (kind === 'audio') return translateMedia('media:explorer.kind.audio');
+  if (kind === 'archive') return translateMedia('media:explorer.kind.archive');
+  return translateMedia('media:explorer.kind.file');
 }
 
 export function getMetaDisplay(item, m, duration) {

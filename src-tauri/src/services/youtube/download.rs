@@ -2,6 +2,8 @@
 //! ffmpeg embarqué. Sortie bornée au cache privé de l'application (le frontend
 //! la copie ensuite dans le projet/session, comme pour le podcast).
 
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::ffi::OsString;
 use std::path::Path;
 use std::time::Duration;
@@ -31,12 +33,22 @@ pub fn download_audio(
     let ytdlp = Ytdlp::prepare(home, custom, emit)?;
 
     let ffmpeg = get_ffmpeg_path()?;
-    let ffmpeg_dir = ffmpeg
-        .parent()
-        .ok_or_else(|| "Dossier ffmpeg introuvable.".to_string())?;
+    let ffmpeg_dir = ffmpeg.parent().ok_or_else(|| {
+        user_message::UserMessage::new(codes::YOUTUBE_FFMPEG_FOLDER_NOT_FOUND)
+            .with_detail("Dossier ffmpeg introuvable.".to_string())
+            .into_transport()
+    })?;
 
-    std::fs::create_dir_all(output_dir)
-        .map_err(|e| format!("Création du dossier temporaire impossible : {}", e))?;
+    std::fs::create_dir_all(output_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::YOUTUBE_TEMP_FOLDER_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Création du dossier temporaire impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     let stem = unique_stem(output_dir, file_name);
     let dest = output_dir.join(format!("{}.mp3", stem));
     // yt-dlp remplace `%(ext)s` ; après extraction MP3 le fichier est `<stem>.mp3`.
@@ -58,7 +70,7 @@ pub fn download_audio(
         }
     };
 
-    emit("Téléchargement de l'audio…");
+    emit(codes::YOUTUBE_DOWNLOADING_AUDIO_TRANSPORT);
     let mut cmd = ytdlp.command();
     cmd.args([
         "--no-playlist".as_ref(),
@@ -78,7 +90,11 @@ pub fn download_audio(
     ]);
     cmd.args(&source);
 
-    let result = run_command_with_timeout(cmd, DOWNLOAD_TIMEOUT, "Téléchargement YouTube");
+    let result = run_command_with_timeout(
+        cmd,
+        DOWNLOAD_TIMEOUT,
+        codes::YOUTUBE_DOWNLOAD_SERVICE_LABEL_TRANSPORT,
+    );
     // Une analyse sert à un seul téléchargement : réussi, il est inutile de la
     // garder ; échoué, elle est suspecte.
     if let Some(id) = video_id.as_deref().filter(|_| cached_info.is_some()) {
@@ -95,18 +111,23 @@ pub fn download_audio(
         cleanup_stem_files(output_dir, &stem);
         return Err(classify_failure(
             &String::from_utf8_lossy(&output.stderr),
-            "Téléchargement impossible",
+            codes::YOUTUBE_DOWNLOAD_IMPOSSIBLE_TRANSPORT,
         ));
     }
     if !dest.is_file() || std::fs::metadata(&dest).map(|m| m.len()).unwrap_or(0) == 0 {
         cleanup_stem_files(output_dir, &stem);
         // yt-dlp sort sans erreur lorsqu'il saute un fichier trop volumineux.
         let stdout = String::from_utf8_lossy(&output.stdout);
-        let failure = classify_failure(&stdout, "Téléchargement impossible");
+        let failure = classify_failure(&stdout, codes::YOUTUBE_DOWNLOAD_IMPOSSIBLE_TRANSPORT);
         if failure.code == YoutubeErrorCode::TooLarge {
             return Err(failure);
         }
-        return Err("yt-dlp n'a produit aucun fichier audio.".to_string().into());
+        return Err(
+            user_message::UserMessage::new(codes::YOUTUBE_AUDIO_OUTPUT_MISSING)
+                .with_detail("yt-dlp n'a produit aucun fichier audio.".to_string())
+                .into_transport()
+                .into(),
+        );
     }
     Ok(path_for_frontend(&dest))
 }

@@ -481,7 +481,7 @@ test('formatBadgeTitle : return décrit le comportement sans wording par défaut
     { id: 'menu-target', type: 'menu', name: 'Menu parent' },
   ]);
   const ui = formatBadgeTitle({ kind: 'return', status: 'default', targetId: 'menu-target', isDefault: true }, projectIndex);
-  assert.match(ui.title, /À la fin de l'histoire → « Menu parent »/);
+  assert.match(ui.title, /À la fin de l’histoire → « Menu parent »/);
   assert.doesNotMatch(ui.title, /par défaut|modifié/i);
   assert.match(ui.title, /Menu parent/);
 });
@@ -497,7 +497,7 @@ test('formatBadgeTitle : prompt-return décrit le trajet via le message de fin',
     isDefault: true,
     isInactive: false,
   }, projectIndex);
-  assert.match(ui.title, /À la fin de l'histoire : passage par le message de fin personnalisé → « Menu parent »/);
+  assert.match(ui.title, /À la fin de l’histoire : passage par le message de fin personnalisé → « Menu parent »/);
   assert.doesNotMatch(ui.title, /par défaut|modifié/i);
 });
 
@@ -558,7 +558,7 @@ test('formatBadgeTitle : end-night default décrit le passage par le message de 
     { id: 'story-target', type: 'story', name: 'Après la nuit' },
   ]);
   const ui = formatBadgeTitle({ kind: 'end-night', status: 'default', targetId: 'story:story-target', isDefault: true }, projectIndex);
-  assert.match(ui.title, /À la fin de l'histoire : passage par le message de fin/);
+  assert.match(ui.title, /À la fin de l’histoire : passage par le message de fin/);
   assert.doesNotMatch(ui.title, /par défaut|modifié/i);
   assert.match(ui.title, /message de fin/);
 });
@@ -603,4 +603,38 @@ test('Invariant : computeBadgesData ne stocke aucun nom textuel', () => {
       assert.ok(allowed.has(key), `Champ inattendu "${key}" sur kind "${sample.kind}" -- les noms textuels doivent rester dans formatBadgeTitle`);
     }
   }
+});
+
+// --- Classement des issues par identifiant stable (lot 4.13) ---
+
+test('badges retour/Accueil : mêmes statuts en FR, EN et IT, classés par issue.navigation', async () => {
+  const { default: i18next } = await import('i18next');
+  const { createTestI18n } = await import('./i18nTestSetup.mjs');
+  const { getProjectValidationIssues } = await import('../src/store/projectValidation.js');
+  if (!i18next.isInitialized) {
+    i18next.init({ lng: 'fr', resources: createTestI18n().options.resources, initAsync: false, keySeparator: false, interpolation: { escapeValue: false } });
+  }
+  const story = { id: 's1', type: 'story', name: 'Histoire', audio: 'a.mp3', itemImage: 'i.png', itemAudio: 't.mp3', returnAfterPlay: 'menu:absent-retour', returnOnHome: 'menu:absent-accueil' };
+  const project = { projectType: 'pack', rootEntries: [story] };
+  // Ancien filtre (texte français, avant le lot 4.13), gardé ici comme mutant.
+  const legacy = (issues) => ({
+    return: getStrongestStatus(issues.filter((issue) => issue.text.includes('destination de retour'))),
+    home: getStrongestStatus(issues.filter((issue) => issue.text.includes('destination bouton Accueil') || issue.text.includes('destination Home spécifique inutile'))),
+  });
+  const results = {};
+  for (const language of ['fr', 'en', 'it']) {
+    await i18next.changeLanguage(language);
+    const issues = getProjectValidationIssues(project).filter((issue) => issue.id === 's1');
+    assert.deepEqual(issues.filter((issue) => issue.navigation).map((issue) => issue.navigation).sort(), ['home', 'return'], language);
+    const data = computeBadgesData(story, null, new Map([['s1', issues]]), project, project.rootEntries);
+    results[language] = data.map(({ kind, status }) => ({ kind, status }));
+    assert.ok(results[language].some((badge) => badge.kind === 'return' && badge.status === 'error'), `${language} retour`);
+    assert.ok(results[language].some((badge) => badge.kind === 'home' && badge.status === 'error'), `${language} Accueil`);
+    // Mutation : l'ancien filtre textuel ne voyait aucune de ces issues, en EN/IT
+    // comme en FR (textes de validation changés depuis la 0.9.1).
+    assert.deepEqual(legacy(issues), { return: null, home: null }, `${language} ancien filtre`);
+  }
+  assert.deepEqual(results.en, results.fr);
+  assert.deepEqual(results.it, results.fr);
+  await i18next.changeLanguage('fr');
 });

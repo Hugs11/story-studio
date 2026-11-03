@@ -1,3 +1,8 @@
+import { useTranslation } from 'react-i18next';
+import { focusButtonOnMouseDown } from '../common/mouseFocus.js';
+import { translateGraph as t, graphTranslationEngine } from '../../i18n/graphPresentation.js';
+import { presentCommon } from '../../i18n/commonPresentation.js';
+import { UserMessage } from '../common/UserMessage.jsx';
 // L'espace de travail de l'Éditeur avancé.
 //
 // C'est le prototype de lecture devenu un lieu d'édition : même
@@ -15,6 +20,7 @@
 //   passent par la session de vue, qui n'écrit pas dans le projet.
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getIntlLocale } from '../../i18n/language.js';
 
 import GraphCanvasStage from '../AdvancedGraphCanvas/GraphCanvasStage.jsx';
 import { DEFAULT_EDGE_VISIBILITY } from '../AdvancedGraphCanvas/engines/engineContract.js';
@@ -74,6 +80,8 @@ import { useRevealHistory } from '../AdvancedGraphCanvas/useRevealHistory.js';
 import { GESTURE_APPLIED, GESTURE_REFUSED } from '../../hooks/useAdvancedAuthoring.js';
 import { GESTURE_BUSY, documentUntouchedBy } from '../../store/advancedAuthoring/authoringSession.js';
 import { useAdvancedReadiness } from '../../hooks/useAdvancedReadiness.js';
+import { useAdvancedExamples } from '../../hooks/useAdvancedExamples.js';
+import { initialRootUuid } from '../../store/advancedExamples/transaction.js';
 import {
   ADVANCED_INSPECTOR_WIDTH_DEFAULT,
   ADVANCED_INSPECTOR_WIDTH_MAX,
@@ -111,6 +119,8 @@ import { buildGraphContextActions, buildGraphSurfaceActions } from './graphConte
 import { GraphSelectionEditor } from './GraphSelectionEditor.jsx';
 import { GraphLinkDialog } from './GraphLinkDialog.jsx';
 import { NewStageDefaultsDialog } from './NewStageDefaultsDialog.jsx';
+import { ExamplesMenu } from './ExamplesMenu.jsx';
+import { ExampleDialog } from './ExampleDialog.jsx';
 import { readNewStageControls } from '../../store/advancedAuthoring/newStageControls.js';
 import { DERIVED_CONSTRUCTION_CREATION_ENABLED } from '../../store/advancedAuthoring/constructions.js';
 import '../AdvancedGraphCanvas/AdvancedGraphCanvas.css';
@@ -129,6 +139,7 @@ const MEDIA_RETRY_LIMIT = 50;
 // Elles arrêtent le pointeur : l'en-tête est la poignée de déplacement du
 // panneau, et un appui sur un bouton ne doit pas amorcer un glisser.
 function AdvancedPanelHeader({ title, onClose = null, actions = null, dragHandleProps = {} }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   return (
     <header
       className={`advanced-panel-header${actions ? ' has-actions' : ''}`}
@@ -153,7 +164,7 @@ function AdvancedPanelHeader({ title, onClose = null, actions = null, dragHandle
         <button
           type="button"
           className="advanced-panel-header__close"
-          aria-label={`Fermer ${title.toLocaleLowerCase('fr')}`}
+          aria-label={t("graph:workspace.fermer.label", { title: title.toLocaleLowerCase(getIntlLocale()) })}
           onClick={onClose}
         >
           <X aria-hidden="true" />
@@ -222,6 +233,7 @@ export function AdvancedWorkspace({
   panelViewState = null,
   searchFocusTrigger = 0,
 }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const view = useAdvancedGraphView({ payload, projectDescriptor, projectEpoch, bridge });
   const { prepareMediaForProject, setGraphMediaTarget } = useMediaTransfer();
   // Les quatre outils de son et l'import de fichiers viennent du contexte
@@ -256,6 +268,9 @@ export function AdvancedWorkspace({
   const reservedNamesRef = useRef([]);
   const authoringRef = useRef(authoring);
   authoringRef.current = authoring;
+  const projectEpochRef = useRef(projectEpoch);
+  projectEpochRef.current = projectEpoch;
+  const [exampleReveal, setExampleReveal] = useState(null);
   const [dialog, setDialog] = useState(null);
   // Le menu contextuel du graphe : la cible sous le pointeur et l'endroit où
   // poser le menu. La cible est **résolue par le moteur**, pas déduite de la
@@ -465,9 +480,14 @@ export function AdvancedWorkspace({
   // groupée reviennent de la file un par un, sans attendre l'auteur. Refusé
   // parce qu'un geste est en vol, il attend le repos et repart, au lieu de
   // perdre le média produit.
-  const assignStageMedia = useCallback(async (stageUuid, kind, path) => {
+  // `history` (facultatif) est transmis tel quel à la session : les médias
+  // d'un exemple s'y fondent dans l'étape d'insertion (`exampleHistory.js`).
+  const assignStageMedia = useCallback(async (stageUuid, kind, path, { projectEpoch: expectedEpoch, history = true } = {}) => {
     if (!path) return null;
     const build = (current) => {
+      if (expectedEpoch !== undefined && expectedEpoch !== projectEpochRef.current) {
+        throw Object.assign(new Error(t("graph:workspace.theProjectForThisMediaIsNoLongerOpen.label")), { code: 'STALE_MEDIA_TARGET' });
+      }
       const plan = planStageMediaAssignment({
         project: current, stageUuid, kind, path,
       });
@@ -478,13 +498,35 @@ export function AdvancedWorkspace({
       return plan.gesture;
     };
     const current = authoringRef.current;
-    let outcome = await current.runGestureFor('set-stage-media', build);
+    let outcome = await current.runGestureFor('set-stage-media', build, { history });
     for (let attempt = 0; outcome?.status === GESTURE_BUSY && attempt < MEDIA_RETRY_LIMIT; attempt += 1) {
       await current.whenIdle();
-      outcome = await current.runGestureFor('set-stage-media', build);
+      outcome = await current.runGestureFor('set-stage-media', build, { history });
     }
     return outcome;
   }, []);
+
+  const examples = useAdvancedExamples({
+    authoring, projectEpoch, onAssignMedia: assignStageMedia, onInserted: setExampleReveal,
+  });
+
+  // Le rapport de création ne doit pas être perdu au premier média affecté :
+  // la relecture du graphe et la génération des images avancent en parallèle.
+  useEffect(() => {
+    if (!exampleReveal || exampleReveal.projectEpoch !== projectEpoch || !view.index) return;
+    const stages = new Set(exampleReveal.stages);
+    const actions = new Set(exampleReveal.actions);
+    const entries = view.index.entries.filter((entry) => entry.kind === STAGE_KIND
+      ? stages.has(entry.node.uuid) : actions.has(entry.node.id));
+    const entry = entries.find((candidate) => candidate.node.uuid === exampleReveal.entryUuid);
+    if (!entry || entries.length !== stages.size + actions.size) return;
+    // L'entrée seule reste sélectionnée : l'écoute depuis cet Écran est alors
+    // immédiatement disponible, et son nom rend le départ facile à retrouver.
+    view.noteSelection([entry.path], view.index, { focus: entry.path });
+    focusPath(entry.path);
+    setExampleReveal(null);
+  }, [exampleReveal, focusPath, projectEpoch, view]);
+  useEffect(() => { setExampleReveal(null); }, [projectEpoch]);
 
   //
   // La copie précède le geste, qui a besoin du chemin final. Un geste qui n'est
@@ -553,7 +595,7 @@ export function AdvancedWorkspace({
   useEffect(() => {
     const entry = authoring.lastReport;
     const created = entry?.report?.created;
-    if (!created || focusedCreation.current === entry || !view.index) return;
+    if (!created || entry?.report?.example || focusedCreation.current === entry || !view.index) return;
     const pasted = entry.report.gesture === 'paste-subgraph' ? entry.report.construction : null;
     const stageUuids = new Set(pasted?.stages ?? (created.stageUuid ? [created.stageUuid] : []));
     const actionIds = new Set(
@@ -750,7 +792,7 @@ export function AdvancedWorkspace({
   // La même raison que celle que la barre du haut affichait pour ces commandes,
   // prise aux mêmes constantes : le bouton a bougé, pas le motif de son refus.
   const creationBlocked = editingDisabled
-    ? (authoring.locked === true ? SUSPENDED_BY_EXPORT : SUSPENDED_BY_GESTURE)
+    ? presentCommon(authoring.locked === true ? SUSPENDED_BY_EXPORT : SUSPENDED_BY_GESTURE)
     : null;
   // Appliquer un rangement, c'est écrire des positions d'auteur — comme le
   // fait déjà un glisser, et par la même porte.
@@ -1239,11 +1281,11 @@ export function AdvancedWorkspace({
   if (view.status === 'failed') {
     return (
       <div className="advanced-workspace advanced-workspace--error" role="alert">
-        <h2>Lecture impossible</h2>
+        <h2>{t("graph:workspace.unableToRead.label")}</h2>
         {/* Les refus du codec ressortent tels quels : ils ne sont pas réécrits
             en codes de vue, et le projet reste ouvert et enregistrable. */}
-        <p><code>{view.error?.code ?? 'ERREUR'}</code> {view.error?.path}</p>
-        <p>{view.error?.message ?? String(view.error)}</p>
+        <p><code>{view.error?.code ?? t('graph:canvas.error.fallbackCode')}</code> {view.error?.path}</p>
+        <p><UserMessage value={view.error} /></p>
       </div>
     );
   }
@@ -1283,7 +1325,7 @@ export function AdvancedWorkspace({
 
   const renderResizeHandle = (boundary) => {
     const nodeListConfig = {
-      ariaLabel: 'Redimensionner la liste des nœuds',
+      ariaLabel: t("graph:workspace.resizeTheNodeList.label"),
       panelClass: '.advanced-panel-slot--advanced-node-list',
       cssVar: '--advanced-node-list-panel-width',
       minWidth: ADVANCED_NODE_LIST_WIDTH_MIN,
@@ -1293,7 +1335,7 @@ export function AdvancedWorkspace({
       onResize: panelViewState?.setNodeListPanelWidth,
     };
     const inspectorConfig = {
-      ariaLabel: 'Redimensionner les réglages',
+      ariaLabel: t("common:workspace.settings.resize"),
       panelClass: '.advanced-panel-slot--advanced-inspector',
       cssVar: '--advanced-inspector-panel-width',
       minWidth: ADVANCED_INSPECTOR_WIDTH_MIN,
@@ -1310,19 +1352,22 @@ export function AdvancedWorkspace({
   };
 
   const renderNodeListPanel = (dragHandleProps) => (
-    <section className="advanced-panel advanced-panel--nodes" aria-label="Liste des nœuds et Écrans">
+    <section className="advanced-panel advanced-panel--nodes" aria-label={t("graph:workspace.nodeAndStageList.label")}>
       {/* Cette liste est l'équivalent structurel de l'Arbre côté Libre. Elle
-          garde sa recherche et ses compteurs, rendus dans sa barre ; les
-          outils communs sont sur le L. */}
+          porte les outils communs tant qu'elle est ouverte ; ses compteurs
+          restent sur une ligne dédiée sous la barre. */}
       <GraphSearchPanel
-        renderHeader={(summary) => (
+        renderHeader={() => (
           <GraphNodeListActions
+            surfaceTools={{
+              ...mediaTools,
+              onSimulate: view.view ? () => startSimulation(null) : null,
+            }}
             onSearch={() => {
               setNodeSearchActive(true);
               setLocalSearchFocusTrigger((trigger) => trigger + 1);
             }}
             onClose={panelViewState?.toggleNodeList}
-            summary={summary}
             dragHandleProps={dragHandleProps}
           />
         )}
@@ -1341,9 +1386,9 @@ export function AdvancedWorkspace({
   );
 
   const renderGraphPanel = (dragHandleProps) => (
-    <section className="advanced-panel advanced-panel--graph" aria-label="Graphe">
+    <section className="advanced-panel advanced-panel--graph" aria-label={t("graph:workspace.graphe.label")}>
       <AdvancedPanelHeader
-        title="Graphe"
+        title={t("graph:workspace.graphe.label")}
         dragHandleProps={dragHandleProps}
         actions={(
           <>
@@ -1351,6 +1396,7 @@ export function AdvancedWorkspace({
                 de la liste et du canvas. */}
             <div
               className="advanced-create-stage-split"
+              onMouseDown={focusButtonOnMouseDown}
               onMouseLeave={() => setStageDefaultsMenu(null)}
               onBlur={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget)) setStageDefaultsMenu(null);
@@ -1363,14 +1409,14 @@ export function AdvancedWorkspace({
               }}
             >
               <CommandButton
-                entry={headerCommand('createStage', 'Créer un Écran…', creationBlocked, shortcutLabels.graphCreateStage)}
+                entry={headerCommand('createStage', t("graph:workspace.creerUnEcran.label"), creationBlocked, shortcutLabels.graphCreateStage)}
                 Icon={Fullscreen}
                 onClick={() => createStageAt(viewCenter())}
               />
               <button
                 type="button"
                 className="chrome-toolbar-btn is-icon-only advanced-create-stage-split__toggle"
-                aria-label="Options de création d’un Écran"
+                aria-label={t("graph:workspace.stageCreationOptions.label")}
                 aria-haspopup="menu"
                 aria-expanded={Boolean(stageDefaultsMenu)}
                 onMouseEnter={() => setStageDefaultsMenu(true)}
@@ -1385,7 +1431,7 @@ export function AdvancedWorkspace({
                 <ChevronDown className="chrome-icon" aria-hidden="true" />
               </button>
               {stageDefaultsMenu && (
-                <div className="advanced-create-stage-menu" role="menu" aria-label="Options de création d’un Écran">
+                <div className="advanced-create-stage-menu" role="menu" aria-label={t("graph:workspace.stageCreationOptions.label")}>
                   <button
                     type="button"
                     role="menuitem"
@@ -1394,20 +1440,23 @@ export function AdvancedWorkspace({
                       setStageDefaultsMenu(null);
                       setDialog({ kind: 'new-stage-defaults' });
                     }}
-                  >
-                    Écran par défaut…
-                  </button>
+                  >{t("graph:workspace.ecranParDefaut.label")}</button>
                 </div>
               )}
             </div>
             <CommandButton
-              entry={headerCommand('createAction', 'Créer une liste de choix…', creationBlocked, shortcutLabels.graphCreateAction)}
+              entry={headerCommand('createAction', t("graph:workspace.createAChoiceList.label"), creationBlocked, shortcutLabels.graphCreateAction)}
               className="advanced-create-command"
               Icon={Waypoints}
               onClick={() => createActionAt(viewCenter())}
             />
+            <ExamplesMenu
+              disabled={!!creationBlocked || !!examples.state}
+              disabledReason={creationBlocked}
+              onChoose={examples.open}
+            />
             {DERIVED_CONSTRUCTION_CREATION_ENABLED && <CommandButton
-              entry={headerCommand('createConstruction', 'Constructions dérivées…', creationBlocked)}
+              entry={headerCommand('createConstruction', t("graph:workspace.derivedConstructions.label"), creationBlocked)}
               className="advanced-create-command"
               Icon={Wrench}
               onClick={() => setDialog({ kind: 'create-construction' })}
@@ -1418,7 +1467,7 @@ export function AdvancedWorkspace({
       <GraphCanvasStage
         view={canvasView}
         project={project}
-        surfaceTools={{
+        surfaceTools={showNodeList ? null : {
           ...mediaTools,
           onSimulate: view.view ? () => startSimulation(null) : null,
           onSearch: () => {
@@ -1461,9 +1510,9 @@ export function AdvancedWorkspace({
   );
 
   const renderInspectorPanel = (dragHandleProps) => (
-    <section className="advanced-panel advanced-panel--inspector" aria-label="Réglages du nœud sélectionné">
+    <section className="advanced-panel advanced-panel--inspector" aria-label={t("graph:workspace.selectedNodeSettings.label")}>
       <AdvancedPanelHeader
-        title="Réglages"
+        title={t("common:workspace.settings.label")}
         onClose={panelViewState?.toggleInspector}
         dragHandleProps={dragHandleProps}
       />
@@ -1511,9 +1560,7 @@ export function AdvancedWorkspace({
         )}
 
         {!inspected && selectedEntries.length <= 1 && (
-          <p className="advanced-inspector__empty">
-            Sélectionnez un Écran ou une liste de choix pour afficher ses réglages.
-          </p>
+          <p className="advanced-inspector__empty">{t("graph:workspace.selectAStageOrAChoiceListToDisplay.label")}</p>
         )}
 
         {/* La `key` sur le chemin — stable : bâti sur l'uuid ou l'id, jamais sur le
@@ -1617,6 +1664,17 @@ export function AdvancedWorkspace({
       )}
       {DERIVED_CONSTRUCTION_CREATION_ENABLED && dialog?.kind === 'create-construction' && (
         <CreateConstructionDialog index={view.index} busy={editingDisabled} onCancel={() => setDialog(null)} onConfirm={runGesture} />
+      )}
+      {examples.state && (
+        <ExampleDialog
+          key={examples.state.example.id}
+          state={examples.state}
+          replacesInitialRoot={initialRootUuid(view.view) !== null}
+          disabled={editingDisabled}
+          onCancel={examples.close}
+          onStop={examples.stop}
+          onConfirm={(options) => examples.confirm({ ...options, anchor: viewCenter() ?? { x: 0, y: 0 } })}
+        />
       )}
       {dialog?.kind === 'remove-option' && (
         <RemoveOptionDialog

@@ -1,3 +1,4 @@
+import { translateHome as t } from '../../i18n/homePresentation.js';
 /**
  * Helpers purs du châssis de funnel.
  *
@@ -51,7 +52,7 @@ export function deriveStepStatus(stepIndex, currentIndex, errorSteps = null) {
 /** Libellé centré du pied : « Étape N / M » (1-indexé). */
 export function stepCounterLabel(index, count) {
   if (count <= 0) return '';
-  return `Étape ${clampStepIndex(index, count) + 1} / ${count}`;
+  return t('home:funnel.footer.stepCount', { step: clampStepIndex(index, count) + 1, total: count });
 }
 
 /**

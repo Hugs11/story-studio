@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from '@tauri-apps/plugin-fs';
+import { importPresentationError } from '../i18n/importPresentation.js';
 
 const IMAGE_EDIT_METADATA_DIR = '.story-studio-image-edits';
 const METADATA_SUFFIX = '.edit.json';
@@ -40,7 +41,7 @@ export async function readImageEditMetadata(imagePath, { strict = false } = {}) 
     const text = new TextDecoder().decode(bytes);
     const data = JSON.parse(text);
     if (data?.version !== METADATA_VERSION || !data.sourcePath) {
-      if (strict) throw new Error(`Sidecar d’image invalide : ${metadataPath}`);
+      if (strict) throw importPresentationError('media:imageEditor.sidecar.invalid', { path: metadataPath }, { code: 'IMAGE_EDIT_SIDECAR_INVALID' });
       return null;
     }
     return data;

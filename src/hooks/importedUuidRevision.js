@@ -1,3 +1,4 @@
+import { translateImport as t } from '../i18n/importPresentation.js';
 import { shouldPromptRegenerateImportedUuid } from '../store/projectHelpers.js';
 import { generateUuid } from '../utils/uuid.js';
 
@@ -7,17 +8,17 @@ import { generateUuid } from '../utils/uuid.js';
 // dialogue natif qui passerait devant.
 //
 // Rend le brouillon, avec un UUID neuf si l'auteur le demande.
-export async function askImportedUuidRevision(draft, showChoiceDialog) {
+export async function askImportedUuidRevision(draft, showChoiceDialog, identityLock = null) {
+  if (draft?.identityLocked || (identityLock && await identityLock(draft))) return draft;
   if (!shouldPromptRegenerateImportedUuid(draft)) return draft;
   const choice = await showChoiceDialog({
-    title: "Nouvelle révision d'un pack importé",
-    message: "Ce pack a un UUID d'origine. Générer un nouvel UUID pour cette version ?\n\n"
-      + "Garde l'UUID d'origine seulement pour remplacer exactement la même révision.",
+    get title() { return t('import:revision.dialog.title'); },
+    get message() { return t('import:revision.dialog.message'); },
     variant: 'info',
     cancelValue: 'keep',
     actions: [
-      { value: 'keep', label: "Garder l'UUID d'origine", kind: 'ghost' },
-      { value: 'renew', label: 'Générer un nouvel UUID', kind: 'primary', autoFocus: true },
+      { value: 'keep', get label() { return t('import:revision.keep.action'); }, kind: 'ghost' },
+      { value: 'renew', get label() { return t('import:revision.renew.action'); }, kind: 'primary', autoFocus: true },
     ],
   });
   return choice === 'renew' ? { ...draft, uuid: generateUuid() } : draft;

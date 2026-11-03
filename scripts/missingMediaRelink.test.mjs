@@ -35,7 +35,7 @@ test('collectMissingMedia groups repeated missing media references', () => {
   assert.equal(missing.length, 1);
   assert.equal(missing[0].fileName, 'intro.mp3');
   assert.equal(missing[0].count, 2);
-  assert.deepEqual(missing[0].labels, ['Audio de couverture', 'Titre audio: Story']);
+  assert.deepEqual(missing[0].labels, ['Audio de couverture', 'Titre audio : Story']);
 });
 
 test('relinkProjectMedia replaces every matching project media path', () => {

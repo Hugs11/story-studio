@@ -63,6 +63,7 @@
 //! readiness ou d'identité. Les règles sont celles de l'export avancé, appelées
 //! telles quelles.
 
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::BTreeSet;
 use std::path::Path;
 
@@ -85,11 +86,17 @@ pub(crate) enum ObservedGate {
 }
 
 impl ObservedGate {
-    pub(crate) fn label(self) -> &'static str {
+    pub(crate) fn label(self) -> String {
         match self {
-            Self::Readiness => "Readiness d'export",
-            Self::PackIdentity => "Identité du pack",
-            Self::ArchiveReview => "Relecture de l'archive",
+            Self::Readiness => {
+                UserMessage::new(codes::LABEL_EXPORT_READINESS_VALUE).into_transport()
+            }
+            Self::PackIdentity => {
+                UserMessage::new(codes::LABEL_PACK_IDENTITY_VALUE).into_transport()
+            }
+            Self::ArchiveReview => {
+                UserMessage::new(codes::LABEL_ARCHIVE_REVIEW_OPERATION).into_transport()
+            }
         }
     }
 }
@@ -167,7 +174,7 @@ pub(crate) struct GateRefusalReason {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct GateObservation {
     pub(crate) gate: ObservedGate,
-    pub(crate) label: &'static str,
+    pub(crate) label: String,
     pub(crate) outcome: GateOutcome,
     /// Cette porte a-t-elle le droit d'arrêter la production ?
     ///
@@ -234,35 +241,48 @@ impl GateObservation {
     /// un refus sans le faire serait le pire des deux mondes.
     pub(crate) fn log_line(&self) -> String {
         match self.outcome {
-            GateOutcome::Passed => format!("  ✔ {} : rien à signaler.", self.label),
-            GateOutcome::NotObserved => format!("  · {} : {}", self.label, self.note),
+            GateOutcome::Passed => UserMessage::new(codes::GENERATION_REPORT_NO_ISSUES)
+                .param("self_label", (self.label).to_string())
+                .into_transport(),
+            GateOutcome::NotObserved => UserMessage::new(codes::GENERATION_LOG_GATE_NOT_OBSERVED)
+                .param("self_label", (self.label).to_string())
+                .param("self_note", (self.note).to_string())
+                .into_transport(),
             GateOutcome::WouldRefuse => {
-                let mut line = if self.blocking {
-                    format!(
-                        "  ✖ {} : {} motif(s) de refus — la production est arrêtée, aucune archive n'est publiée.",
-                        self.label,
-                        self.reasons.len()
-                    )
+                let line = if self.blocking {
+                    UserMessage::new(codes::GENERATION_PUBLICATION_REFUSED_SUMMARY)
+                        .param("self_label", (self.label).to_string())
+                        .param("self_reasons", (self.reasons.len()).to_string())
+                        .into_transport()
                 } else {
-                    format!(
-                        "  ⚠ {} : {} motif(s) de refus observés — la production continue (contrôle en observation).",
-                        self.label,
-                        self.reasons.len()
-                    )
+                    UserMessage::new(codes::GENERATION_REFUSALS_OBSERVED_SUMMARY)
+                        .param("self_label", (self.label).to_string())
+                        .param("self_reasons", (self.reasons.len()).to_string())
+                        .into_transport()
                 };
+                let mut lines = vec![line];
                 for reason in self.reasons.iter().take(5) {
-                    line.push_str(&format!(
-                        "\n      {} {} — {}",
-                        reason.code, reason.path, reason.message
-                    ));
+                    lines.push(
+                        UserMessage::new(codes::GENERATION_LOG_GATE_REASON)
+                            .param("reason_code", (reason.code).to_string())
+                            .param("reason_path", (reason.path).to_string())
+                            .param("reason_message", (reason.message).to_string())
+                            .into_transport(),
+                    );
                 }
                 if self.reasons.len() > 5 {
-                    line.push_str(&format!(
-                        "\n      … et {} autre(s).",
-                        self.reasons.len() - 5
-                    ));
+                    lines.push(
+                        UserMessage::new(codes::LABEL_ADDITIONAL_ITEMS_COUNT)
+                            .param("self_reasons_len_5", (self.reasons.len() - 5).to_string())
+                            .into_transport(),
+                    );
                 }
-                line
+                UserMessage::new(codes::GENERATION_LOG_LINES)
+                    .param(
+                        "lines",
+                        crate::support::user_message::message_list(&lines, ""),
+                    )
+                    .into_transport()
             }
         }
     }
@@ -292,15 +312,34 @@ pub(crate) fn observe_document_gates(
         .map(|diagnostic| GateRefusalReason {
             code: diagnostic.code().to_string(),
             path: diagnostic.path().to_string(),
-            message: diagnostic.message().to_string(),
+            message: match diagnostic {
+                super::readiness::ReadinessDiagnostic::Decode(diagnostic) => {
+                    serde_json::to_string(diagnostic).unwrap_or_else(|_| diagnostic.message.clone())
+                }
+                super::readiness::ReadinessDiagnostic::GraphIntegrity(error) => {
+                    serde_json::to_string(error).unwrap_or_else(|_| error.message.clone())
+                }
+                super::readiness::ReadinessDiagnostic::Authoring(diagnostic) => {
+                    serde_json::to_string(diagnostic).unwrap_or_else(|_| diagnostic.message.clone())
+                }
+                _ => diagnostic.message().to_string(),
+            },
         })
         .collect::<Vec<_>>();
-    let qualification = format!(
-        "interopérabilité {:?}, {} dimension(s) évaluée(s), {} non évaluée(s)",
-        readiness.interoperability,
-        readiness.dimensions.len(),
-        readiness.unevaluated.len()
-    );
+    let qualification = UserMessage::new(codes::EXPORT_INTEROPERABILITY_DIMENSIONS_COUNT)
+        .param(
+            "readiness_interoperability",
+            format!("{:?}", readiness.interoperability),
+        )
+        .param(
+            "readiness_dimensions",
+            (readiness.dimensions.len()).to_string(),
+        )
+        .param(
+            "readiness_unevaluated",
+            (readiness.unevaluated.len()).to_string(),
+        )
+        .into_transport();
     let readiness_observation = if readiness.blocked {
         GateObservation::would_refuse(ObservedGate::Readiness, reasons, qualification)
     } else {
@@ -315,7 +354,7 @@ pub(crate) fn observe_document_gates(
     let identity_observation = match decoded.as_ref() {
         Err(_) => GateObservation::not_observed(
             ObservedGate::PackIdentity,
-            "document non décodable : l'identité n'est pas observable.",
+            UserMessage::new(codes::EXPORT_DOCUMENT_IDENTITY_UNREADABLE).into_transport(),
         ),
         Ok(payload) => match pack_identity_for_export(&payload.context.pack_identity) {
             Ok(value) if expected_identity.is_some_and(|expected| expected != value) => {
@@ -330,16 +369,21 @@ pub(crate) fn observe_document_gates(
                             .source_path
                             .clone()
                             .unwrap_or_else(|| "/".to_string()),
-                        message: format!(
-                            "L'Écran d'entrée porte « {value} » au lieu de l'identité du projet « {expected} »."
-                        ),
+                        message: UserMessage::new(codes::EXPORT_ENTRY_IDENTITY_MISMATCH)
+                            .param("value", (value).to_string())
+                            .param("expected", (expected).to_string())
+                            .into_transport(),
                     }],
-                    format!("identité attendue « {expected} »"),
+                    UserMessage::new(codes::EXPORT_IDENTITY_EXPECTED_LABEL)
+                        .param("expected", expected)
+                        .into_transport(),
                 )
             }
             Ok(value) => GateObservation::passed(
                 ObservedGate::PackIdentity,
-                format!("identité retenue « {value} »"),
+                UserMessage::new(codes::LABEL_SELECTED_IDENTITY_VALUE)
+                    .param("value", (value).to_string())
+                    .into_transport(),
             ),
             Err(error) => GateObservation::would_refuse(
                 ObservedGate::PackIdentity,
@@ -353,7 +397,12 @@ pub(crate) fn observe_document_gates(
                         .unwrap_or_else(|| "/".to_string()),
                     message: error.to_string(),
                 }],
-                format!("origine {:?}", payload.context.pack_identity.origin),
+                UserMessage::new(codes::LABEL_SOURCE_ORIGIN_VALUE)
+                    .param(
+                        "payload_context_pack_identity_origin",
+                        format!("{:?}", payload.context.pack_identity.origin),
+                    )
+                    .into_transport(),
             ),
         },
     };
@@ -393,7 +442,10 @@ pub(crate) fn observe_archive_review(
             Err(error) => unreadable.push(GateRefusalReason {
                 code: "STAGED_ASSET_UNREADABLE".to_string(),
                 path: format!("{ASSETS_PREFIX}{archive_name}"),
-                message: format!("fichier étagé illisible au moment du contrôle : {error}"),
+                message: UserMessage::new(codes::EXPORT_STAGED_FILE_UNREADABLE)
+                    .param("reason", (error).to_string())
+                    .with_detail((error).to_string())
+                    .into_transport(),
             }),
         }
     }
@@ -403,10 +455,9 @@ pub(crate) fn observe_archive_review(
         // Le dire est plus utile qu'un verdict calculé sur une attente partielle.
         return GateObservation::not_observed(
             ObservedGate::ArchiveReview,
-            format!(
-                "{} fichier(s) étagé(s) illisible(s) : contrôle d'octets non concluant.",
-                unreadable.len()
-            ),
+            UserMessage::new(codes::EXPORT_STAGED_FILES_UNREADABLE)
+                .param("unreadable", (unreadable.len()).to_string())
+                .into_transport(),
         )
         .under(policy);
     }
@@ -421,10 +472,9 @@ pub(crate) fn observe_archive_review(
     if review.is_conformant() {
         GateObservation::passed(
             ObservedGate::ArchiveReview,
-            format!(
-                "{} entrée(s) relue(s) et rattachée(s)",
-                review.entry_names.len()
-            ),
+            UserMessage::new(codes::EXPORT_ENTRIES_REATTACHED_LABEL)
+                .param("review_entry_names", (review.entry_names.len()).to_string())
+                .into_transport(),
         )
         .under(policy)
     } else {
@@ -434,27 +484,29 @@ pub(crate) fn observe_archive_review(
             .map(|disagreement| GateRefusalReason {
                 code: "ARCHIVE_DISAGREEMENT".to_string(),
                 path: disagreement.asset_ref.clone(),
-                message: format!(
-                    "attendu {} ; observé {}",
-                    disagreement.expected, disagreement.observed
-                ),
+                message: UserMessage::new(codes::EXPORT_VALUE_EXPECTED_OBSERVED)
+                    .param("disagreement_expected", (disagreement.expected).to_string())
+                    .param("disagreement_observed", (disagreement.observed).to_string())
+                    .into_transport(),
             })
             .collect();
         GateObservation::would_refuse(
             ObservedGate::ArchiveReview,
             reasons,
-            format!("{} entrée(s) relue(s)", review.entry_names.len()),
+            UserMessage::new(codes::EXPORT_ENTRIES_REVIEWED_LABEL)
+                .param("review_entry_names", (review.entry_names.len()).to_string())
+                .into_transport(),
         )
         .under(policy)
     }
 }
 
 /// Le préfixe de journal commun aux trois portes, selon ce qu'elles peuvent.
-pub(crate) fn gates_header(policy: GatePolicy) -> &'static str {
+pub(crate) fn gates_header(policy: GatePolicy) -> String {
     if policy == GatePolicy::ENFORCED {
-        "🛂 Contrôles d'archive :"
+        UserMessage::new(codes::EXPORT_ARCHIVE_GATES_LABEL).into_transport()
     } else {
-        "🔭 Contrôles d'archive, en observation (ils ne refusent rien) :"
+        UserMessage::new(codes::EXPORT_ARCHIVE_GATES_OBSERVATION).into_transport()
     }
 }
 
@@ -485,25 +537,44 @@ pub(crate) fn refusal_from_gates(observations: &[GateObservation]) -> Option<Str
         return None;
     }
 
-    let mut message = String::from("Production refusée avant publication. Aucune archive n'a été écrite dans le dossier de sortie.");
+    let mut messages =
+        vec![UserMessage::new(codes::EXPORT_PUBLICATION_GATE_REFUSED).into_transport()];
     for observation in refusing {
-        message.push_str(&format!(
-            "\n• {} — {} motif(s) :",
-            observation.label,
-            observation.reasons.len()
-        ));
+        messages.push(
+            UserMessage::new(codes::LABEL_REFUSAL_REASONS_COUNT)
+                .param("observation_label", (observation.label).to_string())
+                .param(
+                    "observation_reasons",
+                    (observation.reasons.len()).to_string(),
+                )
+                .into_transport(),
+        );
         for reason in observation.reasons.iter().take(3) {
-            message.push_str(&format!(
-                "\n    {} {} — {}",
-                reason.code, reason.path, reason.message
-            ));
+            messages.push(
+                UserMessage::new(codes::GENERATION_REFUSAL_GATE_REASON)
+                    .param("reason_code", (reason.code).to_string())
+                    .param("reason_path", (reason.path).to_string())
+                    .param("reason_message", (reason.message).to_string())
+                    .into_transport(),
+            );
         }
         if observation.reasons.len() > 3 {
-            message.push_str(&format!(
-                "\n    … et {} autre(s).",
-                observation.reasons.len() - 3
-            ));
+            messages.push(
+                UserMessage::new(codes::GENERATION_REFUSAL_MORE_REASONS)
+                    .param(
+                        "observation_reasons_len_3",
+                        (observation.reasons.len() - 3).to_string(),
+                    )
+                    .into_transport(),
+            );
         }
     }
-    Some(message)
+    Some(
+        UserMessage::new(codes::GENERATION_LOG_LINES)
+            .param(
+                "lines",
+                crate::support::user_message::message_list(&messages, ""),
+            )
+            .into_transport(),
+    )
 }

@@ -2,6 +2,7 @@
 //! (pure, testée) transforme ses messages anglais en une cause stable, que le
 //! frontend exploite (arrêt d'un lot sur blocage) et en un conseil lisible.
 
+use crate::support::user_message::codes;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -18,6 +19,9 @@ pub enum YoutubeErrorCode {
     Live,
     TooLarge,
     Network,
+    /// Mode « outils installés uniquement » : yt-dlp n'est pas installé et
+    /// la vérification de fond ne le télécharge jamais d'elle-même.
+    ToolMissing,
     Other,
 }
 
@@ -63,7 +67,7 @@ fn error_detail(output: &str) -> &str {
     lines()
         .rfind(|line| line.starts_with("ERROR:"))
         .or_else(|| lines().next_back())
-        .unwrap_or("erreur inconnue")
+        .unwrap_or(codes::YOUTUBE_UNKNOWN_ERROR_TRANSPORT)
 }
 
 fn contains_any(haystack: &str, needles: &[&str]) -> bool {
@@ -75,17 +79,11 @@ fn contains_any(haystack: &str, needles: &[&str]) -> bool {
 pub fn classify_failure(output: &str, context: &str) -> YoutubeError {
     let text = output.to_lowercase().replace('’', "'");
     let (code, message) = if text.contains("not a bot") {
-        (
-            YoutubeErrorCode::Blocked,
-            "YouTube demande une vérification anti-robot à cette connexion et refuse l'accès à \
-             l'audio. Ce blocage vise l'adresse IP et se lève en général seul au bout de quelques \
-             heures : réessaie plus tard.",
-        )
+        (YoutubeErrorCode::Blocked, codes::YOUTUBE_BLOCKED_TRANSPORT)
     } else if contains_any(&text, &["http error 429", "too many requests"]) {
         (
             YoutubeErrorCode::Blocked,
-            "YouTube limite temporairement les requêtes de cette connexion. Réessaie dans \
-             quelques heures.",
+            codes::YOUTUBE_RATE_LIMIT_TRANSPORT,
         )
     } else if contains_any(
         &text,
@@ -98,8 +96,7 @@ pub fn classify_failure(output: &str, context: &str) -> YoutubeError {
     ) {
         (
             YoutubeErrorCode::AgeRestricted,
-            "Cette vidéo est soumise à une limite d'âge : YouTube exige un compte connecté pour \
-             la lire.",
+            codes::YOUTUBE_AGE_RESTRICTED_TRANSPORT,
         )
     } else if contains_any(
         &text,
@@ -112,17 +109,17 @@ pub fn classify_failure(output: &str, context: &str) -> YoutubeError {
     ) {
         (
             YoutubeErrorCode::MembersOnly,
-            "Cette vidéo est réservée aux membres de la chaîne.",
+            codes::YOUTUBE_MEMBERS_ONLY_TRANSPORT,
         )
     } else if text.contains("private video") {
-        (YoutubeErrorCode::Private, "Cette vidéo est privée.")
+        (YoutubeErrorCode::Private, codes::YOUTUBE_PRIVATE_TRANSPORT)
     } else if contains_any(
         &text,
         &["in your country", "geo restriction", "geo-restricted"],
     ) {
         (
             YoutubeErrorCode::GeoBlocked,
-            "Cette vidéo n'est pas disponible dans ton pays.",
+            codes::YOUTUBE_GEO_BLOCKED_TRANSPORT,
         )
     } else if contains_any(
         &text,
@@ -134,15 +131,11 @@ pub fn classify_failure(output: &str, context: &str) -> YoutubeError {
             "is live now",
         ],
     ) {
-        (
-            YoutubeErrorCode::Live,
-            "Cette vidéo est un direct ou une première à venir : son audio n'est pas encore \
-             téléchargeable.",
-        )
+        (YoutubeErrorCode::Live, codes::YOUTUBE_LIVE_TRANSPORT)
     } else if contains_any(&text, &["larger than max-filesize", "max-filesize"]) {
         (
             YoutubeErrorCode::TooLarge,
-            "L'audio de cette vidéo dépasse la taille maximale autorisée (300 Mo).",
+            codes::YOUTUBE_TOO_LARGE_TRANSPORT,
         )
     } else if contains_any(
         &text,
@@ -158,8 +151,7 @@ pub fn classify_failure(output: &str, context: &str) -> YoutubeError {
             YoutubeErrorCode::Unavailable,
             // « This video is not available » couvre aussi une vidéo « made for
             // kids » lue sans moteur JavaScript : ne pas affirmer une suppression.
-            "YouTube ne rend pas cette vidéo disponible au téléchargement (vidéo supprimée, \
-             restreinte ou réservée à la lecture sur YouTube).",
+            codes::YOUTUBE_UNAVAILABLE_TRANSPORT,
         )
     } else if contains_any(
         &text,
@@ -173,14 +165,20 @@ pub fn classify_failure(output: &str, context: &str) -> YoutubeError {
             "timed out",
         ],
     ) {
-        (
-            YoutubeErrorCode::Network,
-            "Connexion à YouTube impossible. Vérifie ta connexion Internet.",
-        )
+        (YoutubeErrorCode::Network, codes::YOUTUBE_NETWORK_TRANSPORT)
     } else {
         return YoutubeError::new(
             YoutubeErrorCode::Other,
-            format!("{context} : {}", error_detail(output)),
+            crate::support::user_message::UserMessage::new(codes::YOUTUBE_FAILURE_CONTEXT_DETAIL)
+                .param(
+                    "context",
+                    crate::support::user_message::transport_param(context.to_string()),
+                )
+                .param(
+                    "output",
+                    crate::support::user_message::transport_param(error_detail(output).to_string()),
+                )
+                .into_transport(),
         );
     };
     YoutubeError::new(code, message)
@@ -189,6 +187,7 @@ pub fn classify_failure(output: &str, context: &str) -> YoutubeError {
 #[cfg(test)]
 mod tests {
     use super::{classify_failure, YoutubeErrorCode};
+    use crate::support::user_message::{self, codes};
 
     fn code(output: &str) -> YoutubeErrorCode {
         classify_failure(output, "Téléchargement impossible").code
@@ -230,13 +229,19 @@ mod tests {
             "Téléchargement impossible",
         );
         assert_eq!(error.code, YoutubeErrorCode::Other);
+        let message: user_message::UserMessage = serde_json::from_str(&error.message).unwrap();
+        assert_eq!(message.code, codes::YOUTUBE_FAILURE_CONTEXT_DETAIL);
         assert_eq!(
-            error.message,
-            "Téléchargement impossible : ERROR: [youtube] x: Strange failure"
+            message.params["output"],
+            "ERROR: [youtube] x: Strange failure"
         );
+        assert_eq!(message.params["context"], "Téléchargement impossible");
+        let empty = classify_failure("", "Lecture impossible");
+        let message: user_message::UserMessage = serde_json::from_str(&empty.message).unwrap();
+        assert_eq!(message.params["context"], "Lecture impossible");
         assert_eq!(
-            classify_failure("", "Lecture impossible").message,
-            "Lecture impossible : erreur inconnue"
+            message.params["output"]["code"],
+            codes::YOUTUBE_UNKNOWN_ERROR
         );
     }
 
@@ -244,6 +249,9 @@ mod tests {
     fn serializes_codes_for_the_frontend() {
         let json = serde_json::to_value(classify_failure("not a bot", "x")).unwrap();
         assert_eq!(json["code"], "blocked");
-        assert!(json["message"].as_str().unwrap().contains("anti-robot"));
+        let message: user_message::UserMessage =
+            serde_json::from_str(json["message"].as_str().unwrap()).unwrap();
+        assert_eq!(message.code, "blocked");
+        assert!(message.params.is_empty());
     }
 }

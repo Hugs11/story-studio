@@ -35,6 +35,7 @@ import { ensureExportsDir } from '../store/projectIO';
 import { getLastExportDir, saveLastExportDir } from './useFileDialog';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { logger } from '../utils/logger';
+import { translateChecker } from '../i18n/checkerPresentation.js';
 
 // La vue de lecture sérialise chaque champ avec sa présence :
 // absent, `null` ou valeur. Seule une valeur compte pour composer un nom.
@@ -44,6 +45,7 @@ function presenceValue(field) {
 
 export function useAdvancedExport({
   store,
+  onGenerated = null,
   authoring,
   // La lecture du document telle que l'espace de travail la publie : titre et
   // version. Elle sert au **nom du fichier** produit, et à rien d'autre — le
@@ -60,6 +62,8 @@ export function useAdvancedExport({
   const [review, setReview] = useState(null);
   const projectRef = useRef(store.project);
   projectRef.current = store.project;
+  // Lecteur stable de l'état courant (absent des doubles de test les plus simples).
+  const readLiveProject = store.readProject ?? null;
   const epochRef = store.workEpochRef;
 
   // Les collaborateurs sont lus par **ref écrite pendant le rendu**, jamais
@@ -102,6 +106,9 @@ export function useAdvancedExport({
    */
   const prepare = useCallback(async ({ outputFolder, options }) => {
     logger.info(`advanced:export-prepare folder='${outputFolder ?? ''}' silence=${options?.silenceMode} harmonize=${options?.harmonizeLoudness}`);
+    // La fiche du pack peut avoir écrit le projet juste avant cet appel, sans
+    // rendu intermédiaire : le ref du rendu serait alors en retard d'une écriture.
+    if (readLiveProject) projectRef.current = readLiveProject();
     // Ce que le graphe affiche devient la disposition d'auteur, avant que
     // l'auteur soit verrouillé : les gestes seraient refusés après.
     const promoted = await promoteDisplayedLayout({
@@ -141,8 +148,8 @@ export function useAdvancedExport({
       outputFolder,
       options,
     });
-    return prepared;
-  }, [readGraphView, readTicket]);
+    return onGenerated ? { ...prepared, onGenerated } : prepared;
+  }, [readGraphView, readTicket, readLiveProject, onGenerated]);
 
   // Un refus prononcé **avant** tout appel : le parcours de production a posé
   // ses questions, l'une d'elles a dit non, et le moteur n'a rien vu.
@@ -197,7 +204,8 @@ async function defaultFolderPicker(defaultPath) {
   return openDialog({
     directory: true,
     multiple: false,
-    title: 'Dossier de sortie du pack',
+    // Titre du dialogue natif, résolu à l'ouverture dans la langue active.
+    title: translateChecker('native:export.output.title'),
     defaultPath,
   });
 }

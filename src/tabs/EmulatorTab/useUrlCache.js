@@ -9,14 +9,49 @@ import { FILE_CHANGED_EVENT } from '../../store/fileMetadataCache';
 
 export { MIME };
 
+/**
+ * Un cache d'URL blob et son propriétaire : seul celui qui le crée le révoque.
+ * Le simulateur d'une consultation du catalogue a le sien, révoqué à sa
+ * fermeture, et ne touche jamais au cache partagé ci-dessous.
+ */
+export function createUrlCache() {
+  const urls = new Map();
+  return {
+    has: (key) => urls.has(key),
+    get: (key) => urls.get(key),
+    set(key, url) {
+      // Concurrent reads can finish after an earlier caller displayed this key.
+      // Keep that URL alive; the new, unused URL can be revoked immediately.
+      if (urls.has(key)) {
+        const current = urls.get(key);
+        if (current !== url) {
+          try { URL.revokeObjectURL(url); } catch {}
+        }
+        return current;
+      }
+      urls.set(key, url);
+      return url;
+    },
+    delete(key) {
+      if (!urls.has(key)) return;
+      try { URL.revokeObjectURL(urls.get(key)); } catch {}
+      urls.delete(key);
+    },
+    values: () => urls.values(),
+    revokeAll() {
+      for (const url of urls.values()) {
+        try { URL.revokeObjectURL(url); } catch {}
+      }
+      urls.clear();
+    },
+  };
+}
+
 // Cache blob URLs partagé (chemin fichier → url, ou "zip:path:asset" → url)
-const urlCache = new Map();
+const urlCache = createUrlCache();
 
 export function revokeUrlCache() {
-  for (const url of urlCache.values()) {
-    try { URL.revokeObjectURL(url); } catch {}
-  }
-  urlCache.clear();
+  urlCache.revokeAll();
 }
 
 // Un fichier a changé sur disque sans changer de chemin (ex : édition audio en
@@ -25,7 +60,6 @@ if (typeof window !== 'undefined') {
   window.addEventListener(FILE_CHANGED_EVENT, (event) => {
     const path = event?.detail?.path;
     if (!path || !urlCache.has(path)) return;
-    try { URL.revokeObjectURL(urlCache.get(path)); } catch {}
     urlCache.delete(path);
   });
 }
@@ -37,8 +71,7 @@ export async function getLocalUrl(path) {
     const ext = path.split('.').pop().toLowerCase();
     const data = await readFile(path);
     const url = URL.createObjectURL(new Blob([data], { type: MIME[ext] || 'application/octet-stream' }));
-    urlCache.set(path, url);
-    return url;
+    return urlCache.set(path, url);
   } catch { return null; }
 }
 
@@ -50,8 +83,7 @@ export async function getZipAssetUrl(zipPath, assetName) {
     const bytes = await invoke('get_pack_asset', { zipPath, assetName });
     const ext = assetName.split('.').pop().toLowerCase();
     const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: MIME[ext] || 'application/octet-stream' }));
-    urlCache.set(key, url);
-    return url;
+    return urlCache.set(key, url);
   } catch { return null; }
 }
 

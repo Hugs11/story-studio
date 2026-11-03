@@ -1,15 +1,18 @@
 ---
+import { existsSync } from 'node:fs';
 import '../styles/landing.css';
+
+const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screenshots/catalogue-lunii-dark.png', import.meta.url));
 ---
 <!doctype html>
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Story Studio pour Lunii — Créer, éditer et tester des packs</title>
+    <title>Story Studio pour Lunii — Créer ses histoires et gérer sa collection</title>
     <meta
       name="description"
-      content="Story Studio est un éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et générer des packs d'histoires compatibles Lunii."
+      content="Story Studio 0.9.10 : créez vos histoires, organisez votre collection et transférez vos packs sur votre Lunii. Application locale pour Windows, Linux et macOS, en français, anglais et italien."
     />
     <meta name="robots" content="index, follow" />
     <meta name="google-site-verification" content="EW_r5pSDajA6Py5Z_duzkWnG2z-j_8UgUwk07VyOa4c" />
@@ -17,10 +20,10 @@ import '../styles/landing.css';
     <link rel="canonical" href="https://hugs11.github.io/story-studio/" />
     <link rel="author" href="https://hugs11.github.io/" />
 
-    <meta property="og:title" content="Story Studio pour Lunii — Créer et tester des packs" />
+    <meta property="og:title" content="Story Studio pour Lunii — Histoires, catalogue et transferts" />
     <meta
       property="og:description"
-      content="Éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et générer des packs compatibles Lunii."
+      content="Créez vos histoires, gérez votre collection et connectez votre Lunii. Gratuit et open source, pour Windows, Linux et macOS, en français, anglais et italien."
     />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Story Studio" />
@@ -33,8 +36,8 @@ import '../styles/landing.css';
     <meta property="og:image:alt" content="Story Studio — éditeur de packs d'histoires pour la Lunii" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Story Studio pour Lunii — Créer et tester des packs" />
-    <meta name="twitter:description" content="Éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et générer des packs compatibles Lunii." />
+    <meta name="twitter:title" content="Story Studio pour Lunii — Histoires, catalogue et transferts" />
+    <meta name="twitter:description" content="Créez vos histoires, gérez votre collection et connectez votre Lunii. Application gratuite et open source pour Windows, Linux et macOS, en français, anglais et italien." />
     <meta name="twitter:image" content="https://hugs11.github.io/story-studio/social-card.png" />
     <meta name="twitter:image:alt" content="Story Studio — éditeur de packs d'histoires pour la Lunii" />
 
@@ -44,13 +47,14 @@ import '../styles/landing.css';
         "@type": "SoftwareApplication",
         "name": "Story Studio",
         "alternateName": "Story Studio pour Lunii",
-        "description": "Éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et générer des packs d'histoires compatibles Lunii.",
+        "description": "Application desktop open source pour créer des histoires, organiser sa collection et transférer ses packs sur une Lunii, disponible en français, anglais et italien.",
         "url": "https://hugs11.github.io/story-studio/",
         "downloadUrl": "https://github.com/Hugs11/story-studio/releases/latest",
         "codeRepository": "https://github.com/Hugs11/story-studio",
         "applicationCategory": "MultimediaApplication",
+        "inLanguage": ["fr", "en", "it"],
         "operatingSystem": "Windows 10+, Linux x86_64, macOS 11+",
-        "softwareVersion": "0.9.9",
+        "softwareVersion": "0.9.10",
         "license": "https://github.com/Hugs11/story-studio/blob/main/LICENSE",
         "author": {
           "@type": "Person",
@@ -74,7 +78,7 @@ import '../styles/landing.css';
         <img class="logo" src="logostory.svg" alt="Story Studio" />
         <div class="badge" id="version-badge" aria-live="polite">
           <span class="dot"></span>
-          <span id="version-text">Chargement de la dernière version…</span>
+          <span id="version-text">Story Studio 0.9.10</span>
         </div>
       </div>
     </header>
@@ -98,6 +102,18 @@ import '../styles/landing.css';
             plus complexes, comme des quiz ou des histoires à choix multiples.
             L'Éditeur simplifié propose un parcours guidé.
           </p>
+          <p class="tagline">
+            Le catalogue rassemble vos packs : recherche, filtres, favoris et
+            étiquettes. Branchez votre Lunii pour consulter ses histoires,
+            transférer vos packs, les rapatrier dans votre collection et
+            éjecter l'appareil depuis Story Studio.
+          </p>
+          <p class="tagline">
+            L'interface est disponible en français, anglais et italien.
+            Les traductions anglaise et italienne sont produites puis vérifiées
+            par IA. Vous pouvez proposer une correction sur GitHub :
+            <a href="https://github.com/Hugs11/story-studio/blob/main/TRANSLATING.md">contribuer aux traductions</a>.
+          </p>
 
           <div class="cta-group">
             <a
@@ -117,7 +133,7 @@ import '../styles/landing.css';
             </div>
             <div class="hero-links">
               <a href="docs/">Documentation</a>
-              <a href="https://discord.gg/jztpQz5Ad" target="_blank" rel="noopener noreferrer">Discord</a>
+              <a href="https://discord.gg/jeC6Qk4NS" target="_blank" rel="noopener noreferrer">Discord</a>
               <a href="https://github.com/Hugs11/story-studio/releases/latest">Notes de version</a>
               <a href="https://github.com/Hugs11/story-studio/blob/main/CHANGELOG.md">Changelog complet</a>
               <a href="https://github.com/Hugs11/story-studio">Code source</a>
@@ -125,16 +141,14 @@ import '../styles/landing.css';
           </div>
 
           <div class="release-card" aria-labelledby="latest-release-title">
-            <h2 id="latest-release-title">Nouveautés de la version 0.9.9</h2>
+            <h2 id="latest-release-title">Nouveautés de la version 0.9.10</h2>
             <ul>
-              <li>Nouvel Éditeur graphe pour créer et modifier directement les navigations avancées.</li>
-              <li>À l'import, tu peux choisir l'éditeur quand les deux conviennent ; lorsque la structure du pack ne rentre pas dans un arbre hiérarchique, il s'ouvre directement dans le graphe.</li>
-              <li>Un projet de l'Éditeur par menus peut être copié dans l'Éditeur graphe ; l'original reste intact.</li>
-              <li>Import des archives contenant plusieurs packs, avec choix du pack à ouvrir.</li>
-              <li>Contrôles renforcés avant génération du ZIP et relecture du ZIP généré.</li>
-              <li>Correction de l'UUID afin de conserver réellement l'identité choisie à la génération du ZIP.</li>
-              <li>Import YouTube plus fiable grâce à Deno, notamment pour les vidéos destinées aux enfants et les pistes doublées.</li>
-              <li>Simulateur, audio, sauvegardes et reprise de session plus fiables.</li>
+              <li>Catalogue local : recherche, filtres, vues en vignettes et en liste, favoris, étiquettes, corbeille, assemblage et sauvegarde.</li>
+              <li>Connexion directe à la Lunii : consultez ses histoires, envoyez et rapatriez des packs, gérez sa liste et éjectez l’appareil.</li>
+              <li>Titres et jaquettes officiels facultatifs, récupérés avec votre accord. Sauvegardez votre Lunii avant la première écriture.</li>
+              <li>Interface en français, anglais et italien ; traductions anglaise et italienne produites puis vérifiées par IA, ouvertes aux corrections sur GitHub.</li>
+              <li>Suivi de sources podcast et YouTube pour retrouver leurs nouveaux contenus.</li>
+              <li>Diverses corrections et améliorations de fiabilité.</li>
             </ul>
           </div>
 
@@ -148,7 +162,7 @@ import '../styles/landing.css';
                 échanger autour d'un bug ou accéder aux versions bêta.
               </p>
             </div>
-            <a href="https://discord.gg/jztpQz5Ad" target="_blank" rel="noopener noreferrer">
+            <a href="https://discord.gg/jeC6Qk4NS" target="_blank" rel="noopener noreferrer">
               <svg class="discord-mark" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7.2 6.4A15.8 15.8 0 0 1 12 5.7c1.7 0 3.3.2 4.8.7 1.7 2.4 2.7 5.2 2.9 8.2-1.2 1.7-2.8 2.8-4.6 3.5l-1.1-1.5c.7-.3 1.3-.6 1.9-1.1-1.2.6-2.5.9-3.9.9s-2.7-.3-3.9-.9c.6.5 1.2.8 1.9 1.1l-1.1 1.5a10.6 10.6 0 0 1-4.6-3.5c.2-3 1.2-5.8 2.9-8.2Z" />
                 <circle cx="9.2" cy="11.8" r="1.15" />
@@ -203,7 +217,8 @@ import '../styles/landing.css';
             Story Studio rassemble tout le parcours dans une application locale :
             partir de ses propres fichiers ou d'un pack existant, préparer les
             médias, construire la navigation, tester le résultat et générer un
-            pack prêt pour la boîte à histoires.
+            pack prêt pour la Lunii. Le catalogue permet aussi de gérer sa
+            collection et les transferts vers l'appareil.
           </p>
 
           <div class="journey">
@@ -226,6 +241,32 @@ import '../styles/landing.css';
             <article class="journey-step">
               <div class="journey-copy">
                 <span class="journey-number">2</span>
+                <h3>Gérer sa collection et transférer ses packs sur la Lunii</h3>
+                <p>
+                  Ajoutez vos dossiers sources et retrouvez vos packs en vignettes
+                  ou en liste. Recherchez, filtrez et organisez votre collection
+                  avec les favoris et les étiquettes, puis sauvegardez les données
+                  de votre catalogue.
+                </p>
+              </div>
+              <div class="journey-copy">
+                <p>
+                  Branchez votre Lunii pour voir ses histoires, envoyer vos packs,
+                  les rapatrier dans le catalogue et gérer la liste de l'appareil.
+                  Suivez les transferts et éjectez la Lunii une fois terminé.
+                  Les titres et jaquettes officiels sont facultatifs et nécessitent
+                  votre accord. Sauvegardez votre Lunii avant la première écriture.
+                </p>
+              </div>
+              {/* Capture du catalogue avec la Lunii branchée, affichée dès que le fichier est disponible. */}
+              {hasCatalogueScreenshot && <figure class="journey-media">
+                <img src="assets/screenshots/catalogue-lunii-dark.png" alt="Catalogue de Story Studio avec une Lunii connectée et sa liste d'histoires" loading="lazy" />
+              </figure>}
+            </article>
+
+            <article class="journey-step">
+              <div class="journey-copy">
+                <span class="journey-number">3</span>
                 <h3>Préparer les fichiers audio</h3>
                 <p>
                   Importez ou enregistrez un son, puis ajustez-le avant de
@@ -264,7 +305,7 @@ import '../styles/landing.css';
 
             <article class="journey-step">
               <div class="journey-copy">
-                <span class="journey-number">3</span>
+                <span class="journey-number">4</span>
                 <h3>Générer les voix et les images</h3>
                 <p>
                   Piper fournit une synthèse vocale locale prête à l'emploi ;
@@ -309,7 +350,7 @@ import '../styles/landing.css';
 
             <article class="journey-step">
               <div class="journey-copy">
-                <span class="journey-number">4</span>
+                <span class="journey-number">5</span>
                 <h3>Construire et tester la navigation</h3>
                 <p>
                   L'Éditeur par menus organise simplement les Dossiers et les
@@ -351,29 +392,22 @@ import '../styles/landing.css';
 
             <article class="journey-step">
               <div class="journey-copy">
-                <span class="journey-number">5</span>
+                <span class="journey-number">6</span>
                 <h3>Vérifier les réglages puis générer le ZIP</h3>
                 <p>
-                  Contrôlez les métadonnées, la Vignette catalogue et les
-                  options audio ou de navigation avant la génération du ZIP. Story Studio
+                  Contrôlez dans la Fiche du pack les métadonnées, la Vignette
+                  catalogue et le traitement audio avant la génération du ZIP. Story Studio
                   vérifie la structure, l'identité et les médias, puis relit le
                   ZIP produit avant de terminer la génération du ZIP.
                 </p>
               </div>
-              <div class="media-pair media-pair--settings">
-                <figure>
-                  <img src="assets/screenshots/pack-metadata-dark.png" alt="Métadonnées du pack avec la Vignette catalogue, l'UUID et le nom du ZIP" loading="lazy" />
-                  <figcaption>Vérifier les métadonnées du pack</figcaption>
-                </figure>
-                <figure>
-                  <img
-                    src="assets/screenshots/Pack-settings.png"
-                    alt="Options de traitement audio et de lecture du pack"
-                    loading="lazy"
-                  />
-                  <figcaption>Vérifier les options de génération du ZIP</figcaption>
-                </figure>
-              </div>
+              <figure class="journey-media">
+                <img
+                  src="assets/screenshots/pack-metadata-dark.png"
+                  alt="Fiche du pack avec la Vignette catalogue, l'UUID et le nom du ZIP"
+                  loading="lazy"
+                />
+              </figure>
               <div class="journey-copy">
                 <p>
                   Le parcours de vérification peut aussi analyser un pack
@@ -406,7 +440,7 @@ import '../styles/landing.css';
           </p>
           <p>
             Story Studio est né de ce besoin : rassembler l'import, les images,
-            l'audio, la navigation, la simulation et la génération du ZIP dans un même
+            l'audio, la navigation, la simulation, le catalogue et les transferts dans un même
             espace clair, local et compréhensible.
           </p>
         </div>
@@ -455,7 +489,7 @@ import '../styles/landing.css';
         </div>
         <div class="links">
           <a href="docs/">Documentation</a>
-          <a href="https://discord.gg/jztpQz5Ad" target="_blank" rel="noopener noreferrer">Discord</a>
+          <a href="https://discord.gg/jeC6Qk4NS" target="_blank" rel="noopener noreferrer">Discord</a>
           <a href="https://github.com/Hugs11/story-studio">Code source (GitHub)</a>
           <a href="https://github.com/Hugs11/story-studio/issues">Signaler un bug</a>
           <a href="https://github.com/Hugs11/story-studio/blob/main/CHANGELOG.md">Changelog</a>
@@ -523,7 +557,7 @@ import '../styles/landing.css';
         }
 
         function setFallback(message) {
-          versionText.textContent = message || "Voir les versions disponibles";
+          versionText.textContent = message || "Story Studio 0.9.10 — Voir les téléchargements";
           label.textContent = "Voir les téléchargements";
           btn.setAttribute("href", RELEASES_URL);
           meta.textContent = "Vous serez redirigé vers la page GitHub Releases.";
@@ -536,11 +570,8 @@ import '../styles/landing.css';
           })
           .then(function (release) {
             var version = (release.tag_name || release.name || "").replace(/^v/i, "");
-            if (version) {
-              versionText.textContent = "Version " + version + " — Bêta";
-            } else {
-              versionText.textContent = "Dernière version — Bêta";
-            }
+            var versionLabel = version ? "Version " + version + (release.prerelease ? " — Bêta" : "") : "Voir les versions disponibles";
+            versionText.textContent = versionLabel;
 
             var details = platformDetails(detectPlatform());
             var asset = pickAsset(release.assets || [], details);
@@ -553,7 +584,7 @@ import '../styles/landing.css';
                 asset.name +
                 (size ? " (" + size + ")" : "");
             } else {
-              setFallback(version ? "Version " + version + " — Bêta" : null);
+              setFallback(versionLabel);
             }
           })
           .catch(function () {

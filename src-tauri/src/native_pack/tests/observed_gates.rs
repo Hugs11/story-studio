@@ -15,6 +15,7 @@ use crate::native_pack::observed_gates::{
     observe_archive_review, observe_document_gates, refusal_from_gates, GateOutcome, GatePolicy,
     ObservedGate,
 };
+use crate::support::user_message;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
@@ -231,22 +232,40 @@ fn observation_does_not_change_a_single_byte_of_the_archive() {
     let report = report_for(project, assets, Vec::new());
     let document = build_story_document(&report).expect("build story document");
 
-    let unobserved = write_native_pack_archive(&report, &document, &base.join("out-a"))
-        .expect("write archive without observation");
-    let unobserved_bytes = fs::read(&unobserved.zip_path).expect("read unobserved");
+    // Each ZIP entry carries the write time at a 2-second DOS resolution: two
+    // writes straddling a boundary differ only there (seen on a slow CI runner).
+    // Retry the pair; a difference caused by observation would repeat every time.
+    let mut attempt = 0;
+    let (unobserved, unobserved_bytes, observed, observed_bytes, observations) = loop {
+        let unobserved =
+            write_native_pack_archive(&report, &document, &base.join(format!("out-a-{attempt}")))
+                .expect("write archive without observation");
+        let unobserved_bytes = fs::read(&unobserved.zip_path).expect("read unobserved");
 
-    let observed = write_native_pack_archive(&report, &document, &base.join("out-b"))
-        .expect("write archive with observation");
-    let mut observations =
-        observe_document_gates(&observed.story_json, None, GatePolicy::OBSERVE_ONLY);
-    observations.push(observe_archive_review(
-        &observed.zip_path,
-        &observed.story_json,
-        &staged_pairs(&report),
-        observed.has_thumbnail,
-        GatePolicy::OBSERVE_ONLY,
-    ));
-    let observed_bytes = fs::read(&observed.zip_path).expect("read observed");
+        let observed =
+            write_native_pack_archive(&report, &document, &base.join(format!("out-b-{attempt}")))
+                .expect("write archive with observation");
+        let mut observations =
+            observe_document_gates(&observed.story_json, None, GatePolicy::OBSERVE_ONLY);
+        observations.push(observe_archive_review(
+            &observed.zip_path,
+            &observed.story_json,
+            &staged_pairs(&report),
+            observed.has_thumbnail,
+            GatePolicy::OBSERVE_ONLY,
+        ));
+        let observed_bytes = fs::read(&observed.zip_path).expect("read observed");
+        attempt += 1;
+        if unobserved_bytes == observed_bytes || attempt == 5 {
+            break (
+                unobserved,
+                unobserved_bytes,
+                observed,
+                observed_bytes,
+                observations,
+            );
+        }
+    };
 
     assert_eq!(unobserved_bytes, observed_bytes);
     assert_eq!(unobserved.story_json, observed.story_json);
@@ -437,10 +456,24 @@ fn a_faulty_pack_is_refused_and_the_message_names_the_cause() {
 
     // Un auteur doit pouvoir agir sans ouvrir un journal : le message dit ce
     // qui s'est passé, quelle porte a parlé, et ce qu'il advient de l'archive.
-    assert!(refusal.contains("Production refusée avant publication"));
-    assert!(refusal.contains("Aucune archive n'a été écrite"));
-    assert!(refusal.contains("Readiness d'export"));
-    assert!(refusal.contains("DUPLICATE_STAGE_ID"));
+    assert!(crate::support::user_message::contains_code(
+        &refusal,
+        "EXPORT_PUBLICATION_GATE_REFUSED"
+    ));
+    let message: user_message::UserMessage =
+        serde_json::from_str(&refusal).expect("message composé");
+    assert_eq!(
+        message.params["lines"]["messages"][0]["code"],
+        "EXPORT_PUBLICATION_GATE_REFUSED"
+    );
+    assert!(crate::support::user_message::contains_code(
+        &refusal,
+        "LABEL_EXPORT_READINESS_VALUE"
+    ));
+    assert!(crate::support::user_message::contains_code(
+        &refusal,
+        "DUPLICATE_STAGE_ID"
+    ));
 
     let _ = fs::remove_dir_all(base);
 }

@@ -33,6 +33,7 @@
 //! des deux n'ait à recopier son travail — et pour qu'un changement de politique
 //! ne demande pas d'y revenir.
 
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Read;
 use std::path::Path;
@@ -207,8 +208,8 @@ fn cross_check_story_references(
             asset_ref: STORY_ENTRY.to_string(),
             stage_uuid: None,
             kind: None,
-            expected: "un JSON relisible".to_string(),
-            observed: "un story.json que la relecture ne parse pas".to_string(),
+            expected: UserMessage::new(codes::IMPORT_READABLE_JSON_EXPECTED).into_transport(),
+            observed: UserMessage::new(codes::EXPORT_UNPARSED_STORY_EXPECTED).into_transport(),
         }];
     };
 
@@ -239,8 +240,12 @@ fn cross_check_story_references(
                     asset_ref: name.to_string(),
                     stage_uuid: Some(stage_uuid.clone()),
                     kind: None,
-                    expected: format!("l'entrée '{ASSETS_PREFIX}{name}' dans l'archive"),
-                    observed: "une référence sans fichier".to_string(),
+                    expected: UserMessage::new(codes::LABEL_ARCHIVE_ENTRY_VALUE)
+                        .param("assets_prefix", (ASSETS_PREFIX).to_string())
+                        .param("name", (name).to_string())
+                        .into_transport(),
+                    observed: UserMessage::new(codes::EXPORT_REFERENCE_FILE_EXPECTED)
+                        .into_transport(),
                 });
             }
         }
@@ -252,8 +257,8 @@ fn cross_check_story_references(
                 asset_ref: (*name).to_string(),
                 stage_uuid: None,
                 kind: None,
-                expected: "un média utilisé dans le pack".to_string(),
-                observed: "un fichier qu'aucun élément du pack ne désigne".to_string(),
+                expected: UserMessage::new(codes::EXPORT_USED_MEDIA_EXPECTED).into_transport(),
+                observed: UserMessage::new(codes::EXPORT_UNUSED_FILE_EXPECTED).into_transport(),
             });
         }
     }
@@ -266,8 +271,15 @@ fn cross_check_story_references(
             asset_ref: STORY_ENTRY.to_string(),
             stage_uuid: None,
             kind: None,
-            expected: format!("{expected_distinct_names} nom(s) d'archive distinct(s)"),
-            observed: format!("{} référencé(s) par la copie", referenced.len()),
+            expected: UserMessage::new(codes::LABEL_DISTINCT_ARCHIVE_NAMES_COUNT)
+                .param(
+                    "expected_distinct_names",
+                    (expected_distinct_names).to_string(),
+                )
+                .into_transport(),
+            observed: UserMessage::new(codes::LABEL_COPIED_REFERENCE_COUNT)
+                .param("referenced", (referenced.len()).to_string())
+                .into_transport(),
         });
     }
 
@@ -301,7 +313,7 @@ fn unreadable(zip_path: &Path, error: impl std::fmt::Display) -> OracleDisagreem
         asset_ref: zip_path.to_string_lossy().to_string(),
         stage_uuid: None,
         kind: None,
-        expected: "une archive relisible".to_string(),
+        expected: UserMessage::new(codes::EXPORT_READABLE_ARCHIVE_EXPECTED).into_transport(),
         observed: error.to_string(),
     }
 }
@@ -311,8 +323,10 @@ fn missing_entry(name: &str) -> OracleDisagreement {
         asset_ref: name.to_string(),
         stage_uuid: None,
         kind: None,
-        expected: format!("l'entrée '{name}'"),
-        observed: "absente de l'archive".to_string(),
+        expected: UserMessage::new(codes::EXPORT_ARCHIVE_ENTRY_EXPECTED)
+            .param("name", name)
+            .into_transport(),
+        observed: UserMessage::new(codes::EXPORT_ARCHIVE_MEMBER_MISSING).into_transport(),
     }
 }
 

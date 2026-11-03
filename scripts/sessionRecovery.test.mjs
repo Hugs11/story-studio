@@ -377,7 +377,7 @@ test('une liaison avancée restée dans la session est une dépendance vivante ;
 
     const before = await io.collectLiveSessionDependencies(project, dir);
     assert.deepEqual(before.map((entry) => entry.path), [audio]);
-    assert.equal(before[0].label, 'Média avancé: a1b2c3.mp3');
+    assert.equal(before[0].label, 'Média avancé : a1b2c3.mp3');
 
     const transfer = await io.transferProjectFilesToProject(project, savePath, async (source) => {
       const target = `${projectDir}/${source.split('/').pop()}`;

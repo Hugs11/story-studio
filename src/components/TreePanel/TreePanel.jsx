@@ -1,3 +1,5 @@
+import { useTreeTranslation } from '../../i18n/useTreeTranslation.jsx';
+import { translateTree as t } from '../../i18n/treePresentation.js';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Fragment, useState, useCallback, useMemo, useRef, useEffect } from 'react';
@@ -27,7 +29,6 @@ import {
   countDescendants,
   resolveDropTargetForNode,
 } from '../tree/treeOperations';
-import { buildRefDisplay } from '../tree/refDisplay';
 import { hasVisibleEndNode } from '../../store/generatedNavigation';
 import './TreePanel.css';
 
@@ -49,6 +50,7 @@ export function TreePanel({
   onBulkDeleteItems, onBulkUpdateItems,
   onPasteEntries, onCutPasteEntries, onSetMenuAsRoot, onDemoteRootToMenu, onSelectionChange, onDuplicate, onSetNodeColor,
   onRenameNode,
+  onOpenAutoNextSettings,
   onAddEndNode, onRemoveEndNode, onSimulateNode,
   onOpenMediaAudioTool,
   validationIssues: validationIssuesProp, projectIndex,
@@ -59,6 +61,7 @@ export function TreePanel({
   showNavigationBadges = true,
   showTreeGuides = true,
 }) {
+  useTreeTranslation();
   const { activeDropZone } = useMediaTransfer();
   const [ctxMenu, setCtxMenu] = useState(null);
   const [collapsedIds, setCollapsedIds] = useState(new Set());
@@ -124,6 +127,10 @@ export function TreePanel({
     });
   }, [selectedIds, getEntry]);
 
+  const handleNavigationBadgeActivate = useCallback((action) => {
+    if (action === 'open-auto-next-settings') onOpenAutoNextSettings?.();
+  }, [onOpenAutoNextSettings]);
+
   const ancestorIds = useMemo(() => {
     const ancestors = new Set();
     for (const id of selectedIds) {
@@ -183,7 +190,7 @@ export function TreePanel({
     setHoverScopeParentId((prev) => (prev === nextScopeParentId ? prev : nextScopeParentId));
   }, []);
 
-  const { navigationBadgesById, endNodeNavigationBadges, hasEndNode } = useTreeNavigationBadges({
+  const { navigationBadgesById, rootNavigationBadges, endNodeNavigationBadges, hasEndNode } = useTreeNavigationBadges({
     project,
     projectIndex,
     projectType,
@@ -383,7 +390,7 @@ export function TreePanel({
             <TreeNode
               id={entry.id}
               type={entry.type}
-              label={entry.type === 'ref' ? buildRefDisplay(entry, projectIndex.entryById).label : entry.name}
+              label={entry.name}
               level={level}
               selected={selectedIds.has(entry.id)}
               hovered={hoveredNodeId === entry.id}
@@ -498,20 +505,16 @@ export function TreePanel({
               id="root"
               type="root"
               label={projectType === 'pack'
-                ? (project.rootName || 'Menu racine')
-                : (project.projectName || 'Mon histoire')}
+                ? (project.rootName || t("common:status.root.fallback"))
+                : (project.projectName || t("common:status.story.fallback"))}
               level={0}
               selected={selectedIds.has('root')}
               hovered={hoveredNodeId === 'root'}
               color={project.treeColor}
               dragging={!!activeId}
               containerDroppableId="container:root"
-              navigationBadges={showNavigationBadgeColumn && project?.nativeGraph?.preserveForRoundTrip === true ? [{
-                key: 'native-graph-root',
-                kind: 'graph',
-                label: 'Graphe',
-                title: 'Graphe interactif natif actif pour le round-trip.',
-              }] : EMPTY_BADGES}
+              navigationBadges={rootNavigationBadges}
+              onNavigationBadgeActivate={handleNavigationBadgeActivate}
               showNavigationBadgeColumn={showNavigationBadgeColumn}
               dropTarget={resolveDropTargetForNode('root', 'root', dropInfo)}
               suppressSortAnimation={suppressSortAnimation}
@@ -532,7 +535,7 @@ export function TreePanel({
                   id={END_NODE_ID}
                   type="end-node"
                   night={nightModeActive}
-                  label={`${project.endNodeName || 'Message de fin'}${nightModeActive ? ' (mode nuit)' : ''}`}
+                  label={nightModeActive ? t('tree:node.end.namedNight', { name: project.endNodeName || t('common:status.end.fallback') }) : project.endNodeName || t('common:status.end.fallback')}
                   level={0}
                   selected={selectedIds.has(END_NODE_ID)}
                   hovered={hoveredNodeId === END_NODE_ID}
@@ -548,9 +551,7 @@ export function TreePanel({
           </div>
 
         {osDropHover && (
-          <div className="tree-os-drop-overlay">
-            Déposer pour ajouter au projet
-          </div>
+          <div className="tree-os-drop-overlay">{t("tree:drop.project.hint")}</div>
         )}
         </div>
 

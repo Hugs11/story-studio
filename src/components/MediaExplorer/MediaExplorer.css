@@ -1,3 +1,4 @@
+@import '../common/ColumnControls.css';
 .media-explorer {
   --accent: var(--accent-2);
   --accent-dim: var(--accent-2-dim);
@@ -184,43 +185,6 @@
 
 .media-search-clear:hover {
   background: var(--accent-hover);
-}
-
-.media-view-switch {
-  display: inline-flex;
-  border: 0.5px solid var(--control-border);
-  border-radius: 5px;
-  overflow: hidden;
-  flex-shrink: 0;
-  background: var(--control-bg);
-}
-
-.media-view-switch button {
-  height: 26px;
-  border: none;
-  background: transparent;
-  color: var(--control-text-muted);
-  font-size: 11px;
-  padding: 0 8px;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s, box-shadow 0.12s;
-}
-
-.media-view-switch button.is-active {
-  background: color-mix(in srgb, var(--accent) 14%, var(--control-bg));
-  color: var(--accent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 36%, transparent);
-}
-
-.media-view-switch button:hover:not(.is-active) {
-  background: var(--control-bg-hover);
-  color: var(--control-text);
-}
-
-.media-view-switch button:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: -2px;
-  box-shadow: inset 0 0 0 1px var(--focus-ring), 0 0 0 3px var(--focus-ring-soft);
 }
 
 .media-import-btn {
@@ -460,108 +424,6 @@
   flex-shrink: 0;
 }
 
-/* Resize handle — sits in the gap between columns */
-.me-col-resize {
-  position: absolute;
-  right: -4px;
-  top: -4px;
-  bottom: -6px;
-  width: 9px;
-  cursor: col-resize;
-  z-index: 3;
-  flex-shrink: 0;
-}
-
-.me-col-resize::after {
-  content: '';
-  position: absolute;
-  left: calc(50% - 0.75px);
-  top: 25%;
-  bottom: 25%;
-  width: 1.5px;
-  background: var(--borderLt);
-  border-radius: 1px;
-  opacity: 0;
-  transition: opacity 0.12s;
-}
-
-.me-col-head:hover .me-col-resize::after {
-  opacity: 1;
-}
-
-/* View switch row — groups view buttons and column picker */
-.media-view-switch-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-/* Column picker button */
-.me-col-picker-wrap {
-  position: relative;
-}
-
-/* Sélecteur de colonnes : .btn dimensionné en icône 26px ; actif = réglage local violet. */
-.btn.me-col-picker-btn {
-  width: 26px;
-  min-width: 26px;
-  min-height: 26px;
-  padding: 0;
-  color: var(--control-text-muted);
-}
-
-.me-col-picker-btn.is-active {
-  background: color-mix(in srgb, var(--accent) 14%, var(--control-bg));
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--control-border));
-}
-
-.me-col-picker-icon {
-  width: 13px;
-  height: 13px;
-}
-
-.me-col-picker-panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 400;
-  min-width: 140px;
-  background: var(--bg1);
-  border: 0.5px solid var(--borderLt);
-  border-radius: 7px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-  padding: 6px 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.me-col-picker-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--text-secondary);
-  user-select: none;
-}
-
-.me-col-picker-row:hover {
-  background: var(--bg2);
-  color: var(--text);
-}
-
-.me-col-picker-row input[type="checkbox"] {
-  accent-color: var(--accent);
-  width: 13px;
-  height: 13px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
 
 /* Date column */
 .media-col--date {

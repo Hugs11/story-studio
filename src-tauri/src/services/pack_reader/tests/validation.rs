@@ -1,4 +1,7 @@
 use super::*;
+use crate::support::user_message::codes;
+#[cfg(test)]
+use crate::support::user_message::MessageTransportAssertions as _;
 
 #[test]
 fn validate_pack_asset_name_accepts_asset_paths() {
@@ -39,7 +42,7 @@ fn validate_pack_asset_name_rejects_traversal_and_external_paths() {
 fn archive_entry_count_limit_rejects_large_zip() {
     let err =
         ensure_zip_entry_count(ARCHIVE_MAX_ENTRIES + 1, Path::new("too-large.zip")).unwrap_err();
-    assert!(err.contains("Archive trop volumineuse"));
+    assert!(err.contains_any_code(&[codes::IMPORT_ARCHIVE_ENTRY_LIMIT]));
     assert!(err.contains(&ARCHIVE_MAX_ENTRIES.to_string()));
 }
 
@@ -52,7 +55,7 @@ fn story_json_size_limit_rejects_large_entry() {
         MAX_STORY_JSON_BYTES,
     )
     .unwrap_err();
-    assert!(err.contains("story.json trop volumineux"));
+    assert!(err.contains_any_code(&[codes::IMPORT_ARCHIVE_FILE_SIZE_LIMIT]));
 }
 
 #[test]
@@ -64,12 +67,12 @@ fn asset_size_limit_rejects_large_entry() {
         ARCHIVE_MAX_FILE_BYTES,
     )
     .unwrap_err();
-    assert!(err.contains("Asset trop volumineux"));
+    assert!(err.contains_any_code(&[codes::IMPORT_ARCHIVE_FILE_SIZE_LIMIT]));
 }
 
 #[test]
 fn total_asset_size_limit_is_five_gib() {
     ensure_total_asset_size(5 * 1024 * 1024 * 1024).unwrap();
     let err = ensure_total_asset_size(5 * 1024 * 1024 * 1024 + 1).unwrap_err();
-    assert!(err.contains("maximum 5120 Mo"));
+    assert!(err.contains_any_code(&[codes::IMPORT_ASSET_EXTRACTED_SIZE_LIMIT]));
 }

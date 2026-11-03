@@ -14,7 +14,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { NO_FOLD, parcoursLayout } from '../../store/advancedGraphView/graphParcoursLayout.js';
 
-export const ARRANGEMENT_REFUSED = 'Le rangement a été refusé : rien n’a été modifié.';
+export const ARRANGEMENT_REFUSED = "graph:arrangement.arrangementWasRefusedNothingWasChanged.label";
 
 export function useGraphArrangement({ index, applyLayout, disabled = false }) {
   const [busy, setBusy] = useState(false);

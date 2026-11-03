@@ -1,6 +1,12 @@
+import { presentUserMessage, rustMessageEnvelope } from '../../i18n/userMessage.js';
+import { presentMedia } from '../../i18n/mediaPresentation.js';
+import { useMediaTranslation } from '../../i18n/useMediaTranslation.js';
+import { TechnicalDetail } from '../common/UserMessage';
+import { sanitizeProjectPrefix } from '../../utils/projectPrefix';
+import { useProjectMediaDirectory } from '../../hooks/useProjectMediaDirectory';
 import { useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { sanitizeProjectPrefix } from '../../utils/projectPrefix';
+import { withProjectMediaOutput } from '../../store/projectMediaOutput';
 import { basename } from '../../utils/fileUtils';
 import { useProjectContext } from '../../store/ProjectContext';
 import { getAudioAssemblyLogicalFileName } from '../../store/mediaToolContext';
@@ -14,17 +20,29 @@ function formatDuration(value) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+// Échec FFmpeg reconnu sur des valeurs indépendantes de la langue : code Rust,
+// paramètres et détail techniques, ou texte brut d'un échec non codé. Le
+// verdict ne dépend jamais de la phrase traduite.
+export function looksLikeFfmpegFailure(value) {
+  const envelope = rustMessageEnvelope(value);
+  const parts = envelope?.code
+    ? [/ffmpeg/i.test(envelope.code) ? 'ffmpeg' : '', ...Object.values(envelope.params ?? {}).map(String), String(envelope.detail ?? '')]
+    : [typeof value === 'string' ? value : String(value?.message ?? '')];
+  return /ffmpeg|invalid data|error/i.test(parts.join('\n'));
+}
+
 export function AudioAssemblyModal({
   items,
-  ignoredCount = 0,
   projectName = '',
+  ignoredCount = 0,
   onClose,
   onCreated,
   contextRequest = null,
   projectAction = null,
   projectActionUnavailableReason = '',
 }) {
-  const { workspaceDir } = useProjectContext();
+  const importDirectory = useProjectMediaDirectory('fichiers-importes');
+  const { workspaceDir, mediaStorage } = useProjectContext();
   const initialItems = useMemo(
     () => items.map((item) => ({
       id: item.id || item.path,
@@ -34,6 +52,7 @@ export function AudioAssemblyModal({
     })),
     [items],
   );
+  const { t } = useMediaTranslation();
   const [orderedItems, setOrderedItems] = useState(initialItems);
   const savedOpts = useMemo(
     () => read(KEYS.AUDIO_ASSEMBLY_OPTIONS, { parse: JSON.parse, defaultValue: {} }) ?? {},
@@ -46,12 +65,11 @@ export function AudioAssemblyModal({
     const current = read(KEYS.AUDIO_ASSEMBLY_OPTIONS, { parse: JSON.parse, defaultValue: {} }) ?? {};
     write(KEYS.AUDIO_ASSEMBLY_OPTIONS, { ...current, ...patch }, { serialize: JSON.stringify });
   }
-  const projectPrefix = sanitizeProjectPrefix(projectName);
   const [outputFileName, setOutputFileName] = useState(() => {
     return getAudioAssemblyLogicalFileName({
       items: initialItems,
       storyNames: contextRequest?.storyNames,
-      projectPrefix,
+      projectPrefix: sanitizeProjectPrefix(projectName),
     });
   });
   const [submitting, setSubmitting] = useState(false);
@@ -60,10 +78,9 @@ export function AudioAssemblyModal({
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [dragOverPosition, setDragOverPosition] = useState(null); // 'above' | 'below'
   const willReplaceStories = projectAction === 'replace-stories-with-assembly';
-  const logicalStem = outputFileName.trim().replace(/\.(mp3|flac|wav|ogg|m4a)$/i, '') || 'montage';
-  const hasProjectPrefix = projectPrefix
-    && logicalStem.toLocaleLowerCase().startsWith(`${projectPrefix}__`.toLocaleLowerCase());
-  const storageFileName = `${hasProjectPrefix || !projectPrefix ? logicalStem : `${projectPrefix}__${logicalStem}`}.flac`;
+  // Radical de repli écrit dans le nom du fichier créé : langue active à la création.
+  const logicalStem = outputFileName.trim().replace(/\.(mp3|flac|wav|ogg|m4a)$/i, '') || t('media:assembly.fallback.stem');
+  const storageFileName = `${logicalStem}.flac`;
 
   function handleGripPointerDown(e, index) {
     if (e.button !== 0 || submitting) return;
@@ -136,28 +153,30 @@ export function AudioAssemblyModal({
 
 
   function readableError(value) {
-    const text = String(value || '').trim();
-    if (!text) return "L'assemblage audio a échoué.";
+    if (value?.key) return presentMedia(value);
+    const text = presentUserMessage(value).message.trim();
+    if (!text) return t('media:assembly.error.generic');
     const firstLine = text.split(/\r?\n/).find((line) => line.trim()) || text;
-    if (/ffmpeg|invalid data|error/i.test(text)) {
-      return `FFmpeg n'a pas pu assembler ces fichiers. ${firstLine}`;
+    if (looksLikeFfmpegFailure(value)) {
+      return t('media:assembly.error.ffmpeg', { detail: firstLine });
     }
     return firstLine;
   }
+  const errorPresentation = error && !error.key ? presentUserMessage(error) : null;
 
   async function handleSubmit() {
     setError('');
     if (!workspaceDir) {
-      setError('Aucun emplacement de travail : impossible de créer un fichier assemblé.');
+      setError({ key: 'media:assembly.workspace.missing' });
       return;
     }
     if (orderedItems.length < 2) {
-      setError('Conservez au moins deux audios à assembler.');
+      setError({ key: 'media:assembly.items.tooFew' });
       return;
     }
     const silence = addSilence ? Number(String(silenceSec).replace(',', '.')) : 0;
     if (!Number.isFinite(silence) || silence < 0 || silence > 30) {
-      setError('La durée du silence doit être comprise entre 0 et 30 secondes.');
+      setError({ key: 'media:assembly.silence.invalid' });
       return;
     }
 
@@ -166,13 +185,13 @@ export function AudioAssemblyModal({
       const inputPaths = orderedItems.map((item) => item.path);
       // Le backend force l'extension du fichier de travail (FLAC) ; on n'envoie
       // que le radical, en retirant une extension audio éventuellement saisie.
-      const rawName = hasProjectPrefix || !projectPrefix ? logicalStem : `${projectPrefix}__${logicalStem}`;
-      const outputPath = await invoke('concat_audio_files', {
+      const rawName = logicalStem;
+      const outputPath = await withProjectMediaOutput(mediaStorage ?? { root: workspaceDir, ephemeral: true }, async (output) => invoke('concat_audio_files', {
         inputPaths,
         outputFileName: rawName,
         silenceBetweenSec: silence,
-        workspaceDir: workspaceDir || null,
-      });
+        ...await output.arguments(),
+      }));
       onCreated?.(outputPath, {
         inputPaths,
         logicalName: logicalStem,
@@ -180,7 +199,7 @@ export function AudioAssemblyModal({
         projectActionUnavailableReason,
       });
     } catch (e) {
-      setError(readableError(e));
+      setError(e);
     } finally {
       setSubmitting(false);
     }
@@ -190,33 +209,35 @@ export function AudioAssemblyModal({
     <div className="modal-overlay">
       <div className="modal-box audio-assembly-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span>{willReplaceStories ? 'Assembler et remplacer les histoires' : 'Assembler des audios'}</span>
+          <span>{willReplaceStories ? t('media:assembly.replace.title') : t('media:assembly.title')}</span>
           <Button variant="icon" className="modal-close" onClick={onClose} disabled={submitting}>×</Button>
         </div>
 
         <div className="audio-assembly-body">
           <div className="audio-assembly-intro">
             {contextRequest ? (
-              <strong>Depuis {contextRequest.storyNames.length} histoires sélectionnées</strong>
+              <strong>{t('media:assembly.context.stories', { count: contextRequest.storyNames.length })}</strong>
             ) : null}
-            <span>Crée une piste audio unique à partir des fichiers sélectionnés.</span>
-            <span>Les fichiers audio originaux resteront disponibles dans Médias.</span>
+            <span>{t('media:assembly.intro.description')}</span>
+            <span>{t('media:assembly.intro.originals')}</span>
             {willReplaceStories ? (
-              <span>Le résultat remplacera les histoires sélectionnées en une seule opération annulable.</span>
+              <span>{t('media:assembly.intro.replace')}</span>
             ) : null}
             {contextRequest && !willReplaceStories ? (
-              <span>Le projet restera inchangé{projectActionUnavailableReason ? ` : ${projectActionUnavailableReason}` : '.'}</span>
+              <span>{projectActionUnavailableReason
+                ? t('media:assembly.project.unchangedReason', { reason: projectActionUnavailableReason })
+                : t('media:assembly.project.unchanged')}</span>
             ) : null}
           </div>
 
           {ignoredCount > 0 && (
             <div className="audio-assembly-note">
-              Seuls les fichiers audio peuvent être assemblés. {ignoredCount} média{ignoredCount > 1 ? 's' : ''} non audio ignoré{ignoredCount > 1 ? 's' : ''}.
+              {t('media:assembly.ignored.notice', { count: ignoredCount })}
             </div>
           )}
 
           <section className="audio-assembly-section">
-            <h3>Audios à assembler</h3>
+            <h3>{t('media:assembly.list.title')}</h3>
             <div className="audio-assembly-list">
               {orderedItems.map((item, index) => (
                 <div
@@ -231,16 +252,16 @@ export function AudioAssemblyModal({
                   >≡</span>
                   <span className="audio-assembly-name" title={item.name}>{index + 1}. {item.name}</span>
                   <span className="audio-assembly-duration">{formatDuration(item.durationSecs)}</span>
-                  <Button variant="icon" className="audio-assembly-icon-btn" onClick={() => moveItem(index, -1)} disabled={submitting || index === 0} title="Monter">↑</Button>
-                  <Button variant="icon" className="audio-assembly-icon-btn" onClick={() => moveItem(index, 1)} disabled={submitting || index === orderedItems.length - 1} title="Descendre">↓</Button>
-                  <Button variant="icon" className="audio-assembly-icon-btn is-danger" onClick={() => removeItem(index)} disabled={submitting || orderedItems.length <= 2} title="Retirer">×</Button>
+                  <Button variant="icon" className="audio-assembly-icon-btn" onClick={() => moveItem(index, -1)} disabled={submitting || index === 0} title={t('media:assembly.item.up')}>↑</Button>
+                  <Button variant="icon" className="audio-assembly-icon-btn" onClick={() => moveItem(index, 1)} disabled={submitting || index === orderedItems.length - 1} title={t('media:assembly.item.down')}>↓</Button>
+                  <Button variant="icon" className="audio-assembly-icon-btn is-danger" onClick={() => removeItem(index)} disabled={submitting || orderedItems.length <= 2} title={t('media:delete.remove.action')}>×</Button>
                 </div>
               ))}
             </div>
           </section>
 
           <section className="audio-assembly-section">
-            <h3>Options</h3>
+            <h3>{t('media:assembly.options.title')}</h3>
             <label className="audio-assembly-check">
               <input
                 type="checkbox"
@@ -248,11 +269,11 @@ export function AudioAssemblyModal({
                 onChange={(e) => { setAddSilence(e.target.checked); saveOpts({ addSilence: e.target.checked }); }}
                 disabled={submitting}
               />
-              <span>Ajouter un silence entre les fichiers</span>
+              <span>{t('media:assembly.silence.label')}</span>
             </label>
             {addSilence && (
               <label className="audio-assembly-field is-inline">
-                <span>Durée</span>
+                <span>{t('media:explorer.column.duration')}</span>
                 <input
                   type="number"
                   min="0"
@@ -262,38 +283,38 @@ export function AudioAssemblyModal({
                   onChange={(e) => { setSilenceSec(e.target.value); saveOpts({ silenceSec: e.target.value }); }}
                   disabled={submitting}
                 />
-                <span>secondes</span>
+                <span>{t('media:assembly.silence.unit')}</span>
               </label>
             )}
             <div className="audio-assembly-note">
-              Les fichiers sources restent dans la médiathèque. Ils pourront ensuite être retirés ou supprimés depuis l’onglet Médias.
+              {t('media:assembly.sources.note')}
             </div>
           </section>
 
           <section className="audio-assembly-section">
             <label className="audio-assembly-field">
-              <span>Nom du fichier final</span>
+              <span>{t('media:assembly.output.label')}</span>
               <input
                 value={outputFileName}
                 onChange={(e) => setOutputFileName(e.target.value)}
                 disabled={submitting}
-                placeholder="histoire_complete.flac"
+                placeholder={t('media:assembly.output.placeholder')}
               />
             </label>
             <div className="audio-assembly-destination">
-              <span>Fichier créé</span>
-              <strong title={`fichiers-importes/${storageFileName}`}>fichiers-importes/{storageFileName}</strong>
+              <span>{t('media:assembly.output.created')}</span>
+              <strong title={`${importDirectory}/${storageFileName}`}>{importDirectory}/{storageFileName}</strong>
             </div>
           </section>
 
-          {error && <div className="audio-assembly-error">{error}</div>}
+          {error && <div className="audio-assembly-error">{readableError(error)}<TechnicalDetail value={errorPresentation?.fallback ? errorPresentation.technicalDetail : ''} /></div>}
         </div>
 
         <div className="audio-assembly-footer">
-          <Button onClick={onClose} disabled={submitting}>Annuler</Button>
+          <Button onClick={onClose} disabled={submitting}>{t('common:dialog.cancel.label')}</Button>
           <Button variant="primary" className="audio-assembly-submit" onClick={handleSubmit} disabled={!canSubmit}>
             {submitting && <span className="audio-assembly-spinner" />}
-            {submitting ? 'Assemblage…' : (willReplaceStories ? 'Assembler et remplacer' : 'Assembler')}
+            {submitting ? t('media:assembly.submit.progress') : (willReplaceStories ? t('media:assembly.submit.replace') : t('media:assembly.submit.action'))}
           </Button>
         </div>
       </div>

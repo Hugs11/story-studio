@@ -1,3 +1,4 @@
+import { translateTree as t } from '../../../i18n/treePresentation.js';
 const STORY_GROUP_PREFIX = 'story-group:';
 
 export function getStoryGroupId(parentId) {
@@ -49,7 +50,7 @@ function projectEntry(entry, depth, options) {
       entry: {
         id: groupId,
         type: 'story-group',
-        name: `${stories.length} histoires`,
+        name: t('tree:diagram.stories.groupCount', { count: stories.length }),
         storyCount: stories.length,
         storyIds: stories.map((story) => story.id),
         parentId: entry.id,
@@ -73,8 +74,8 @@ export function buildStructureProjection(project, options = {}) {
     id: 'root',
     type: 'root',
     name: project.projectType === 'simple'
-      ? (project.projectName || 'Mon histoire')
-      : (project.rootName || 'Menu racine'),
+      ? (project.projectName || t("common:status.story.fallback"))
+      : (project.rootName || t("common:status.root.fallback")),
     treeColor: project.treeColor ?? null,
     children: project.rootEntries ?? [],
   }, 0, {

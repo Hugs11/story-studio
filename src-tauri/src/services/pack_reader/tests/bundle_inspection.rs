@@ -7,6 +7,9 @@
 //! sont vérifiées séparément par `real_library_envelopes_expose_their_children`,
 //! pilotée par variable d'environnement.
 
+use crate::support::user_message::codes;
+#[cfg(test)]
+use crate::support::user_message::MessageTransportAssertions as _;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -297,7 +300,7 @@ fn a_single_nested_archive_is_not_an_envelope() {
 
     let error = inspect(&archive).expect_err("aucun pack reconnu");
     assert!(
-        error.contains("Aucun pack Lunii reconnu"),
+        error.contains_any_code(&[codes::IMPORT_EXTRACTED_LUNII_PACK_MISSING]),
         "message inattendu : {error}"
     );
 
@@ -358,7 +361,10 @@ fn an_unknown_child_identifier_is_refused() {
         &cache,
     )
     .expect_err("identifiant inconnu refusé");
-    assert!(error.contains("ne fait pas partie"), "{error}");
+    assert!(
+        error.contains_any_code(&[codes::IMPORT_BUNDLE_SELECTION_STALE]),
+        "{error}"
+    );
 
     fs::remove_dir_all(dir).expect("nettoyage");
 }
@@ -379,7 +385,7 @@ fn a_traversal_entry_in_an_envelope_is_refused() {
 
     let error = inspect(&envelope).expect_err("traversal refusé");
     assert!(
-        error.contains("invalide ou dangereuse"),
+        error.contains_any_code(&[codes::FILES_INVALID_DANGEROUS_ZIP_ENTRY]),
         "message inattendu : {error}"
     );
     assert!(
@@ -427,7 +433,10 @@ fn a_container_replaced_between_listing_and_selection_is_refused() {
         &cache,
     )
     .expect_err("conteneur remplacé refusé");
-    assert!(error.contains("a changé depuis"), "{error}");
+    assert!(
+        error.contains_any_code(&[codes::IMPORT_BUNDLE_ARCHIVE_CHANGED]),
+        "{error}"
+    );
 
     fs::remove_dir_all(dir).expect("nettoyage");
 }

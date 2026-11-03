@@ -5,6 +5,7 @@
 //! au contraire les trois formes de présence du dialecte et modifie le champ
 //! `name` réel du Stage ou de l'Action.
 
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::HashSet;
 
 use super::anchors::node_anchor_paths;
@@ -55,7 +56,8 @@ pub(crate) fn set_node_color(
             "EMPTY_NODE_COLOR_TARGETS",
             "/context/nodeColors",
             "Aucun nœud n'est visé par le changement de couleur.".to_string(),
-        ));
+        )
+        .with_user_message(UserMessage::new(codes::EMPTY_NODE_COLOR_TARGETS)));
     }
     if let Some(value) = color {
         if !NODE_COLORS.contains(&value) {
@@ -63,6 +65,9 @@ pub(crate) fn set_node_color(
                 "UNSUPPORTED_NODE_COLOR",
                 "/context/nodeColors",
                 format!("La couleur « {value} » n'appartient pas à la palette de l'éditeur."),
+            )
+            .with_user_message(
+                UserMessage::new(codes::UNSUPPORTED_NODE_COLOR).param("value", (value).to_string()),
             ));
         }
     }
@@ -75,14 +80,16 @@ pub(crate) fn set_node_color(
                 "UNKNOWN_NODE_PATH",
                 path,
                 "Ce chemin ne désigne aucun nœud du document courant.".to_string(),
-            ));
+            )
+            .with_user_message(UserMessage::new(codes::UNKNOWN_NODE_PATH)));
         }
         if !unique.insert(path.clone()) {
             return Err(GestureError::new(
                 "DUPLICATE_NODE_COLOR_TARGET",
                 path,
                 "Le même nœud est visé deux fois par ce changement de couleur.".to_string(),
-            ));
+            )
+            .with_user_message(UserMessage::new(codes::DUPLICATE_NODE_COLOR_TARGET)));
         }
     }
 

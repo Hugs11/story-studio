@@ -8,9 +8,9 @@
 
 import { invoke } from '@tauri-apps/api/core';
 
-import { MEDIA_FROM_PACK } from './flatGraph.js';
+import { MEDIA_FROM_CONSULTATION, MEDIA_FROM_PACK, mediaRequestKey } from './flatGraph.js';
 import { createAudioPlayer } from '../../utils/audioPlayer';
-import { getLocalUrl, getZipAssetUrl, MIME } from './useUrlCache';
+import { createUrlCache, getLocalUrl, getZipAssetUrl, MIME } from './useUrlCache';
 
 export async function loadFlatMedia(request) {
   if (request.kind === MEDIA_FROM_PACK) {
@@ -27,6 +27,11 @@ export async function loadFlatMedia(request) {
 }
 
 export function createFlatAudio(loaded) {
+  if (loaded.kind === MEDIA_FROM_CONSULTATION) {
+    if (!loaded.bytes) return null;
+    const blob = new Blob([loaded.bytes], { type: loaded.mime || 'audio/mpeg' });
+    return createAudioPlayer(URL.createObjectURL(blob), { revokeSourceOnDestroy: true });
+  }
   if (loaded.kind !== MEDIA_FROM_PACK) {
     return loaded.url ? createAudioPlayer(loaded.url) : null;
   }
@@ -41,4 +46,45 @@ export function loadFlatImageUrl(request) {
   return request.kind === MEDIA_FROM_PACK
     ? getZipAssetUrl(request.zipPath, request.assetName)
     : getLocalUrl(request.path);
+}
+
+/**
+ * Le transport d'une consultation du catalogue : les octets sont lus par
+ * `readAsset` (commande du moteur, aucun chemin), le type vient de la table
+ * publiée avec la consultation. Les URL d'image appartiennent à ce chargeur
+ * seul et sont révoquées par `dispose`, sans toucher au cache partagé.
+ *
+ * Un refus (consultation expirée, fichier changé) rend `null` — l'Écran se joue
+ * en silence — et prévient `onFailure`, qui propose de relancer.
+ */
+export function createConsultationMediaLoader({ mediaTypes = {}, readAsset, onFailure = () => {} }) {
+  const cache = createUrlCache();
+  let disposed = false;
+  const typeOf = (request) => (Object.hasOwn(mediaTypes, request.mediaId) ? mediaTypes[request.mediaId] : 'application/octet-stream');
+  async function bytes(request) {
+    if (disposed) return null;
+    try {
+      return await readAsset(request);
+    } catch (error) {
+      if (!disposed) onFailure(error);
+      return null;
+    }
+  }
+  return {
+    async loadAudio(request) {
+      return { kind: MEDIA_FROM_CONSULTATION, mime: typeOf(request), bytes: await bytes(request) };
+    },
+    async loadImageUrl(request) {
+      const key = mediaRequestKey(request);
+      if (cache.has(key)) return cache.get(key);
+      const data = await bytes(request);
+      if (!data || disposed) return null;
+      const url = URL.createObjectURL(new Blob([data], { type: typeOf(request) }));
+      return cache.set(key, url);
+    },
+    dispose() {
+      disposed = true;
+      cache.revokeAll();
+    },
+  };
 }

@@ -1,3 +1,4 @@
+import { translateGraph as t } from '../i18n/graphPresentation.js';
 // Copie graphe d'un projet par menus : ce que l'interface décide seule.
 //
 // Le moteur fabrique le payload et ses liaisons (`copy_project_to_graph`) et
@@ -9,7 +10,10 @@
 // Aucune fonction ici n'écrit sur le disque : l'existence d'un fichier est
 // une question posée par l'appelant, et l'écriture lui appartient.
 
-import { readPackAudioProcessing } from '../config/audioProcessing.js';
+import {
+  readPackAudioEdgeSilenceOverrides,
+  readPackAudioProcessing,
+} from '../config/audioProcessing.js';
 import { archiveNamingFields } from './advancedExport/archiveName.js';
 import { layoutEntriesFromPositions } from './advancedAuthoring/graphLinkDraft.js';
 import { NO_FOLD, parcoursLayout } from './advancedGraphView/graphParcoursLayout.js';
@@ -50,7 +54,7 @@ export async function nextGraphCopyPath(savePath, fileExists) {
     const candidate = `${dir}${graphCopyFileName(savePath, rank)}`;
     if (!(await fileExists(candidate))) return candidate;
   }
-  throw new Error('Trop de copies graphe portent déjà ce nom à côté de ton projet.');
+  throw new Error(t("graph:copy.tooManyGraphCopiesWithThisNameAlreadyExist.label"));
 }
 
 /**
@@ -71,15 +75,25 @@ export function graphCopyRustExport(project, audioEdgeSilence) {
  */
 export function graphCopyProject(original, acquired) {
   const sameImage = !!original?.sameImage || !original?.thumbnailImage;
+  const edgeSilenceOverrides = Object.fromEntries(
+    Object.entries(readPackAudioEdgeSilenceOverrides(original?.globalOptions))
+      .filter(([, value]) => value !== null),
+  );
   return {
     ...createAdvancedProject({
       payload: acquired.payload,
+      officialProvenance: original.officialProvenance ?? 'unknown',
+      officialOriginUuid: original.officialOriginUuid,
+      storage: original.storage,
       projectName: original?.projectName ?? '',
       packMetadata: archiveNamingFields(original?.packMetadata ?? {}),
       mediaBindings: acquired.mediaBindings ?? [],
       thumbnailImage: sameImage ? null : original.thumbnailImage,
     }),
-    globalOptions: readPackAudioProcessing(original?.globalOptions),
+    globalOptions: {
+      ...readPackAudioProcessing(original?.globalOptions),
+      ...edgeSilenceOverrides,
+    },
   };
 }
 

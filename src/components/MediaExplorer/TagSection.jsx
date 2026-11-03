@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { tagStyle } from './helpers';
 import { selectionTagStates } from '../../store/mediaTags';
+import { useMediaTranslation } from '../../i18n/useMediaTranslation.js';
 
 export function TagSection({ paths, mediaTags, itemTags, allProjectTags, onAddMediaTag, onRemoveMediaTag }) {
+  const { t } = useMediaTranslation();
   const [newTag, setNewTag] = useState('');
   const targetPaths = (paths ?? []).filter(Boolean);
   const isBulk = targetPaths.length > 1;
@@ -16,16 +18,16 @@ export function TagSection({ paths, mediaTags, itemTags, allProjectTags, onAddMe
 
   function handleSubmit(e) {
     e.preventDefault();
-    const t = newTag.trim();
-    if (t) {
-      for (const path of targetPaths) onAddMediaTag(path, t);
+    const tag = newTag.trim();
+    if (tag) {
+      for (const path of targetPaths) onAddMediaTag(path, tag);
       setNewTag('');
     }
   }
 
   return (
     <div className="ctx-tag-section">
-      <div className="ctx-tag-header">{isBulk ? `Tags (${targetPaths.length})` : 'Tags'}</div>
+      <div className="ctx-tag-header">{isBulk ? t('media:explorer.tags.bulkHeader', { total: targetPaths.length }) : t('media:explorer.tags.header')}</div>
       {states.map(({ tag, active, partial }) => (
         <button
           key={tag}
@@ -47,7 +49,7 @@ export function TagSection({ paths, mediaTags, itemTags, allProjectTags, onAddMe
           className="ctx-tag-new-input"
           value={newTag}
           onChange={(e) => setNewTag(e.target.value)}
-          placeholder="+ Nouveau tag"
+          placeholder={t('media:explorer.tags.newPlaceholder')}
           onKeyDown={(e) => e.stopPropagation()}
         />
       </form>

@@ -1,3 +1,4 @@
+import { translateGraph as t } from '../../i18n/graphPresentation.js';
 // Traduction d'un dépôt de média vers le geste d'auteur qui lui correspond.
 //
 // Côté Libre, déposer un son sur une histoire écrit directement le champ de
@@ -42,7 +43,7 @@ export function resolveGraphDropTarget({ index, path, kind }) {
   if (!advancedMediaField(kind) || !path) return null;
   const entry = index?.byPath.get(path);
   if (!entry || entry.kind !== STAGE_KIND) return null;
-  return { path, uuid: entry.node.uuid, label: entry.label?.label ?? path };
+  return { path, uuid: entry.node.uuid, get label() { return entry.label?.label ?? path; } };
 }
 
 // La liaison qui porte déjà ce fichier, comparée par `pathKey` — la même règle
@@ -95,13 +96,13 @@ export function freeAssetRef(project, path, reserved = []) {
 export function planStageMediaAssignment({ project, stageUuid, kind, path }) {
   const field = advancedMediaField(kind);
   if (!field) {
-    return { ok: false, code: 'unsupported-kind', reason: 'Un Écran ne porte qu’un audio et une image.' };
+    return { ok: false, code: 'unsupported-kind', get reason() { return t('graph:drop.reason.kind'); } };
   }
   if (typeof stageUuid !== 'string' || stageUuid.length === 0) {
-    return { ok: false, code: 'no-stage', reason: 'Aucun Écran désigné.' };
+    return { ok: false, code: 'no-stage', get reason() { return t('graph:drop.reason.stage'); } };
   }
   if (typeof path !== 'string' || path.trim().length === 0) {
-    return { ok: false, code: 'no-path', reason: 'Aucun fichier à déposer.' };
+    return { ok: false, code: 'no-path', get reason() { return t('graph:drop.reason.path'); } };
   }
 
   const shared = boundAssetRefForPath(project, path);

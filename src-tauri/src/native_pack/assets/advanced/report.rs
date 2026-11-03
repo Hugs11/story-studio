@@ -95,7 +95,7 @@ pub(crate) fn transformation_of(
             }
         }
         ConversionPlan::AudioEncode { .. } => Transformation::Reencoded,
-        ConversionPlan::ImageResizePng => {
+        ConversionPlan::ImageResizePng | ConversionPlan::ImageBmpRle4 => {
             if resized {
                 Transformation::Resized
             } else {

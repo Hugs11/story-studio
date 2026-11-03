@@ -222,7 +222,7 @@ test('collectSessionBoundReferences: une liaison avancée dans la session est un
     ]),
     sessionDir: SESSION_DIR,
   });
-  assert.deepEqual(bound, [{ path: inside, label: 'Média avancé: a1b2c3.mp3' }]);
+  assert.deepEqual(bound, [{ path: inside, label: 'Média avancé : a1b2c3.mp3' }]);
 });
 
 test('collectSessionBoundReferences: références Libre dédupliquées, dossier frère exclu', () => {

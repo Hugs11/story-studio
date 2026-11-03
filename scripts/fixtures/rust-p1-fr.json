@@ -1,0 +1,4790 @@
+[
+  {
+    "code": "VALIDATION_FIELD_MISSING_MASCULINE",
+    "params": {
+      "label": "Exemple label"
+    },
+    "expected": "Exemple label manquant.",
+    "source": "domain/validation.rs:18"
+  },
+  {
+    "code": "VALIDATION_PROJECT_MISSING_TITLE_AUDIO",
+    "params": {
+      "item_audio_label": "Exemple item_audio_label"
+    },
+    "expected": "Exemple item_audio_label manquant.",
+    "source": "domain/validation.rs:89"
+  },
+  {
+    "code": "VALIDATION_PROJECT_IMAGE_MISSING",
+    "params": {
+      "item_image_label": "Exemple item_image_label"
+    },
+    "expected": "Exemple item_image_label manquant.",
+    "source": "domain/validation.rs:105"
+  },
+  {
+    "code": "VALIDATION_PROJECT_TARGET_MISSING",
+    "params": {
+      "entry_name": "Exemple entry_name",
+      "target_label": "Exemple target_label"
+    },
+    "expected": "Exemple entry_name : Exemple target_label est introuvable.",
+    "source": "domain/validation.rs:176"
+  },
+  {
+    "code": "VALIDATION_PROJECT_TARGET_UNPLAYABLE",
+    "params": {
+      "entry_name": "Exemple entry_name",
+      "target_label": "Exemple target_label"
+    },
+    "expected": "Exemple entry_name : Exemple target_label est vide ou non jouable.",
+    "source": "domain/validation.rs:184"
+  },
+  {
+    "code": "VALIDATION_PROJECT_TARGET_MISSING",
+    "params": {
+      "entry_name": "Exemple entry_name",
+      "target_label": "Exemple target_label"
+    },
+    "expected": "Exemple entry_name : Exemple target_label est introuvable.",
+    "source": "domain/validation.rs:191"
+  },
+  {
+    "code": "VALIDATION_PROJECT_TARGET_MISSING",
+    "params": {
+      "entry_name": "Exemple entry_name",
+      "target_label": "Exemple target_label"
+    },
+    "expected": "Exemple entry_name : Exemple target_label est introuvable.",
+    "source": "domain/validation.rs:196"
+  },
+  {
+    "code": "VALIDATION_ENDING_RETURN_MISSING",
+    "params": {
+      "entry_name": "Exemple entry_name"
+    },
+    "expected": "Exemple entry_name : retour de fin introuvable.",
+    "source": "domain/validation.rs:198"
+  },
+  {
+    "code": "VALIDATION_SHARED_ELEMENT_UNUSED",
+    "params": {
+      "entry_context": "Exemple entry_context"
+    },
+    "expected": "Exemple entry_context : élément partagé non utilisé.",
+    "source": "domain/validation.rs:591"
+  },
+  {
+    "code": "VALIDATION_ELEMENT_ID_MISSING",
+    "params": {
+      "context": "Exemple context"
+    },
+    "expected": "Exemple context : identifiant interne manquant.",
+    "source": "domain/validation.rs:786"
+  },
+  {
+    "code": "VALIDATION_ROOT_ID_RESERVED",
+    "params": {
+      "context": "Exemple context"
+    },
+    "expected": "Exemple context : l'identifiant reserve `root` ne peut pas etre utilise.",
+    "source": "domain/validation.rs:788"
+  },
+  {
+    "code": "VALIDATION_PROJECT_COLLECTION_EMPTY",
+    "params": {
+      "context": "Exemple context"
+    },
+    "expected": "Exemple context : collection vide.",
+    "source": "domain/validation.rs:797"
+  },
+  {
+    "code": "VALIDATION_FIELD_MISSING_FEMININE",
+    "params": {
+      "menu_image_label": "Exemple menu_image_label"
+    },
+    "expected": "Exemple menu_image_label manquante.",
+    "source": "domain/validation.rs:835"
+  },
+  {
+    "code": "VALIDATION_IMPORTED_ARCHIVE_INVALID",
+    "params": {
+      "zip_label": "Exemple zip_label",
+      "reason": "Exemple reason"
+    },
+    "expected": "Exemple zip_label : Exemple reason",
+    "source": "domain/validation.rs:856"
+  },
+  {
+    "code": "VALIDATION_ELEMENT_TYPE_UNSUPPORTED",
+    "params": {
+      "context": "Exemple context",
+      "entry_entry_type": "Exemple entry_entry_type"
+    },
+    "expected": "Exemple context : type d'element non pris en charge (Exemple entry_entry_type).",
+    "source": "domain/validation.rs:876"
+  },
+  {
+    "code": "VALIDATION_AUTHORING_SHARED_UNSUPPORTED",
+    "params": {},
+    "expected": "Les éléments partagés ne sont plus pris en charge en authoring Story Studio.",
+    "source": "domain/validation.rs:951"
+  },
+  {
+    "code": "VALIDATION_PROJECT_TYPE_UNSELECTED",
+    "params": {},
+    "expected": "Aucun type de projet selectionne.",
+    "source": "domain/validation.rs:957"
+  },
+  {
+    "code": "VALIDATION_MAIN_STORY_MISSING",
+    "params": {},
+    "expected": "Histoire principale manquante.",
+    "source": "domain/validation.rs:1054"
+  },
+  {
+    "code": "VALIDATION_PACK_STORIES_MISSING",
+    "params": {},
+    "expected": "Le pack ne contient aucune histoire.",
+    "source": "domain/validation.rs:1059"
+  },
+  {
+    "code": "VALIDATION_ELEMENT_ID_DUPLICATED",
+    "params": {
+      "count": 2,
+      "entry_id": "Exemple entry_id"
+    },
+    "expected": "Identifiant dupliqué : 2 éléments partagent l'id Exemple entry_id.",
+    "source": "domain/validation.rs:1087"
+  },
+  {
+    "code": "VALIDATION_ELEMENT_ROOT_ID_RESERVED",
+    "params": {},
+    "expected": "Identifiant reserve utilise : aucun element ne doit porter l'id root.",
+    "source": "domain/validation.rs:1095"
+  },
+  {
+    "code": "GENERATION_ZIP_CACHE_ASSEMBLY",
+    "params": {},
+    "expected": "📦 Assemblage du ZIP dans le cache local...",
+    "source": "native_pack/writer.rs:52"
+  },
+  {
+    "code": "GENERATION_ZIP_TRANSFER_START",
+    "params": {},
+    "expected": "📤 Transfert du ZIP vers le dossier choisi...",
+    "source": "native_pack/writer.rs:63"
+  },
+  {
+    "code": "GENERATION_NATIVE_ZIP_GENERATED",
+    "params": {
+      "zip_path": "Exemple zip_path"
+    },
+    "expected": "✅ ZIP natif v1 généré : Exemple zip_path",
+    "source": "native_pack/writer.rs:71"
+  },
+  {
+    "code": "EXPORT_DESTINATION_FOLDER_INACCESSIBLE",
+    "params": {
+      "output_dir": "Exemple output_dir",
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible d'accéder au dossier de destination 'Exemple output_dir': Exemple reason",
+    "source": "native_pack/writer.rs:255"
+  },
+  {
+    "code": "EXPORT_DESTINATION_CREATE_FORBIDDEN",
+    "params": {
+      "output_dir": "Exemple output_dir",
+      "reason": "Exemple reason"
+    },
+    "expected": "Le dossier de destination 'Exemple output_dir' n'autorise pas la création de fichiers: Exemple reason",
+    "source": "native_pack/writer.rs:268"
+  },
+  {
+    "code": "EXPORT_DESTINATION_WRITE_FORBIDDEN",
+    "params": {
+      "output_dir": "Exemple output_dir",
+      "reason": "Exemple reason"
+    },
+    "expected": "Le dossier de destination 'Exemple output_dir' n'autorise pas l'écriture de fichiers: Exemple reason",
+    "source": "native_pack/writer.rs:274"
+  },
+  {
+    "code": "EXPORT_DESTINATION_PROBE_FINALIZE_FAILED",
+    "params": {
+      "output_dir": "Exemple output_dir",
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible de terminer le test d'écriture dans 'Exemple output_dir': Exemple reason",
+    "source": "native_pack/writer.rs:280"
+  },
+  {
+    "code": "EXPORT_DESTINATION_DELETE_FORBIDDEN",
+    "params": {
+      "output_dir": "Exemple output_dir",
+      "probe_path": "Exemple probe_path",
+      "reason": "Exemple reason"
+    },
+    "expected": "Le dossier de destination 'Exemple output_dir' n'autorise pas la suppression du fichier de test 'Exemple probe_path': Exemple reason",
+    "source": "native_pack/writer.rs:293"
+  },
+  {
+    "code": "EXPORT_DESTINATION_FOLDER_INACCESSIBLE",
+    "params": {
+      "output_dir": "Exemple output_dir",
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible d'accéder au dossier de destination 'Exemple output_dir': Exemple reason",
+    "source": "native_pack/writer.rs:316"
+  },
+  {
+    "code": "EXPORT_LOCAL_ZIP_REVIEW_FAILED",
+    "params": {
+      "local_zip_path": "Exemple local_zip_path",
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible de relire le ZIP local 'Exemple local_zip_path': Exemple reason",
+    "source": "native_pack/writer.rs:337"
+  },
+  {
+    "code": "EXPORT_LOCAL_ZIP_SIZE_FAILED",
+    "params": {
+      "local_zip_path": "Exemple local_zip_path",
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible de contrôler la taille du ZIP local 'Exemple local_zip_path': Exemple reason",
+    "source": "native_pack/writer.rs:348"
+  },
+  {
+    "code": "EXPORT_TRANSFER_TEMP_CREATE_FAILED",
+    "params": {
+      "partial_path": "Exemple partial_path",
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible de créer le transfert temporaire 'Exemple partial_path': Exemple reason",
+    "source": "native_pack/writer.rs:362"
+  },
+  {
+    "code": "EXPORT_TRANSFER_ZIP_READ_FAILED",
+    "params": {
+      "local_zip_path": "Exemple local_zip_path",
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible de lire le ZIP local pendant le transfert 'Exemple local_zip_path': Exemple reason",
+    "source": "native_pack/writer.rs:379"
+  },
+  {
+    "code": "EXPORT_DESTINATION_ZIP_WRITE_FAILED",
+    "params": {
+      "output_dir": "Exemple output_dir",
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible d'écrire le ZIP dans le dossier de destination 'Exemple output_dir': Exemple reason",
+    "source": "native_pack/writer.rs:391"
+  },
+  {
+    "code": "EXPORT_ZIP_WRITE_FINALIZE_FAILED",
+    "params": {
+      "output_dir": "Exemple output_dir",
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible de terminer l'écriture du ZIP dans 'Exemple output_dir': Exemple reason",
+    "source": "native_pack/writer.rs:402"
+  },
+  {
+    "code": "EXPORT_TRANSFER_TEMP_VERIFY_FAILED",
+    "params": {
+      "partial_path": "Exemple partial_path",
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible de vérifier le transfert temporaire 'Exemple partial_path': Exemple reason",
+    "source": "native_pack/writer.rs:414"
+  },
+  {
+    "code": "EXPORT_ZIP_TRANSFER_INCOMPLETE",
+    "params": {
+      "output_dir": "Exemple output_dir",
+      "expected_size": "Exemple expected_size",
+      "transferred_size": "Exemple transferred_size",
+      "published_size": "Exemple published_size"
+    },
+    "expected": "Le transfert du ZIP vers 'Exemple output_dir' est incomplet (attendu: Exemple expected_size octets, transféré: Exemple transferred_size, présent: Exemple published_size).",
+    "source": "native_pack/writer.rs:424"
+  },
+  {
+    "code": "EXPORT_ZIP_RENAME_FAILED",
+    "params": {
+      "partial_path": "Exemple partial_path",
+      "final_path": "Exemple final_path",
+      "reason": "Exemple reason"
+    },
+    "expected": "Le ZIP a été transféré, mais son renommage final de 'Exemple partial_path' vers 'Exemple final_path' a échoué: Exemple reason",
+    "source": "native_pack/writer.rs:437"
+  },
+  {
+    "code": "EXPORT_PARTIAL_FILE_DELETE_FAILED",
+    "params": {
+      "partial_path": "Exemple partial_path",
+      "reason": "Exemple reason"
+    },
+    "expected": "Le fichier incomplet 'Exemple partial_path' n'a pas pu être supprimé après l'arrêt du transfert: Exemple reason",
+    "source": "native_pack/writer.rs:459"
+  },
+  {
+    "code": "EXPORT_PACK_IDENTITY_REQUIRED",
+    "params": {},
+    "expected": "Identité de pack absente : elle doit être choisie et persistée avant l'export.",
+    "source": "native_pack/writer.rs:481"
+  },
+  {
+    "code": "VALIDATION_PACK_IDENTITY_REPAIR_ADVICE",
+    "params": {
+      "refusal": "Exemple refusal"
+    },
+    "expected": "Exemple refusal Le corriger, ou en générer un nouveau, dans la fenêtre des métadonnées du pack.",
+    "source": "native_pack/writer.rs:486"
+  },
+  {
+    "code": "EXPORT_PACK_IDENTITY_REQUIRED",
+    "params": {},
+    "expected": "Identité de pack absente : elle doit être choisie et persistée avant l'export.",
+    "source": "native_pack/writer.rs:510"
+  },
+  {
+    "code": "GENERATION_STORY_JSON_ENCODE_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible de sérialiser story.json natif : Exemple reason",
+    "source": "native_pack/writer.rs:517"
+  },
+  {
+    "code": "GENERATION_STORY_JSON_ENCODE_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible de sérialiser story.json natif : Exemple reason",
+    "source": "native_pack/writer.rs:519"
+  },
+  {
+    "code": "VALIDATION_STAGE_CONTROLS_INCOMPLETE",
+    "params": {
+      "incomplete": "Exemple incomplete"
+    },
+    "expected": "Contrôles incomplets : Exemple incomplete n'ont pas leurs cinq valeurs (wheel, ok, home, pause, autoplay). Renseigne-les explicitement avant de générer le pack : elles ne peuvent pas être déduites.",
+    "source": "native_pack/writer.rs:563"
+  },
+  {
+    "code": "IMPORT_THUMBNAIL_READ_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Lecture thumbnail impossible : Exemple reason",
+    "source": "native_pack/writer.rs:583"
+  },
+  {
+    "code": "GENERATION_THUMBNAIL_IMAGE_UNREADABLE",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Image thumbnail illisible : Exemple reason",
+    "source": "native_pack/writer.rs:585"
+  },
+  {
+    "code": "GENERATION_THUMBNAIL_ENCODE_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Encodage thumbnail PNG impossible : Exemple reason",
+    "source": "native_pack/writer.rs:589"
+  },
+  {
+    "code": "GRAPH_ACTION_OPTION_STAGE_MISSING",
+    "params": {
+      "action": "Exemple action",
+      "option_index": "Exemple option_index",
+      "stage_id": "Exemple stage_id"
+    },
+    "expected": "Action 'Exemple action' option Exemple option_index pointe vers un stage introuvable 'Exemple stage_id'",
+    "source": "native_pack/document.rs:453"
+  },
+  {
+    "code": "EXPORT_NATIVE_STORY_STUDIO_INCOMPATIBLE",
+    "params": {
+      "issues": "Exemple issues"
+    },
+    "expected": "story.json natif incompatible STUdio : Exemple issues",
+    "source": "native_pack/document.rs:489"
+  },
+  {
+    "code": "VALIDATION_ENTRY_HOME_LOOP",
+    "params": {
+      "label": "Exemple label"
+    },
+    "expected": "Stage 'Exemple label' : écran d'entrée avec Accueil actif sans destination, Accueil ramène ici même",
+    "source": "native_pack/document.rs:501"
+  },
+  {
+    "code": "VALIDATION_STAGE_HOME_LOOP",
+    "params": {
+      "label": "Exemple label"
+    },
+    "expected": "Stage 'Exemple label' : homeTransition ramène l'écran sur lui-même",
+    "source": "native_pack/document.rs:503"
+  },
+  {
+    "code": "VALIDATION_STAGE_OK_LOOP",
+    "params": {
+      "document_stage_nodes_stage": "Exemple document_stage_nodes_stage"
+    },
+    "expected": "Stage 'Exemple document_stage_nodes_stage' : okTransition ramène l'écran sur lui-même",
+    "source": "native_pack/document.rs:506"
+  },
+  {
+    "code": "VALIDATION_STAGE_PLAY_TARGET_MISSING",
+    "params": {
+      "document_stage_nodes_stage": "Exemple document_stage_nodes_stage"
+    },
+    "expected": "Stage 'Exemple document_stage_nodes_stage' : OK ou fin automatique actif sans destination utilisable",
+    "source": "native_pack/document.rs:510"
+  },
+  {
+    "code": "VALIDATION_STAGE_EXIT_UNUSABLE",
+    "params": {
+      "document_stage_nodes_stage": "Exemple document_stage_nodes_stage"
+    },
+    "expected": "Stage 'Exemple document_stage_nodes_stage' : écran accessible sans sortie utilisable, même par la molette",
+    "source": "native_pack/document.rs:514"
+  },
+  {
+    "code": "GRAPH_ACTION_OPTION_ENTRY_FORBIDDEN",
+    "params": {
+      "document_action_nodes_action": "Exemple document_action_nodes_action",
+      "option": "Exemple option"
+    },
+    "expected": "Action 'Exemple document_action_nodes_action' option Exemple option vise l'écran d'entrée",
+    "source": "native_pack/document.rs:518"
+  },
+  {
+    "code": "VALIDATION_STAGE_PORT_INCOMPATIBLE",
+    "params": {
+      "stage": "Exemple stage",
+      "transition_label": "Exemple transition_label"
+    },
+    "expected": "Stage 'Exemple stage' declare Exemple transition_label sans port compatible",
+    "source": "native_pack/document.rs:539"
+  },
+  {
+    "code": "VALIDATION_STAGE_ACTION_MISSING",
+    "params": {
+      "stage": "Exemple stage",
+      "transition_label": "Exemple transition_label",
+      "transition_action_node": "Exemple transition_action_node"
+    },
+    "expected": "Stage 'Exemple stage' pointe via Exemple transition_label vers une action introuvable 'Exemple transition_action_node'",
+    "source": "native_pack/document.rs:547"
+  },
+  {
+    "code": "VALIDATION_STAGE_SELECTION_OUTSIDE",
+    "params": {
+      "stage": "Exemple stage",
+      "transition_selection": "Exemple transition_selection",
+      "transition_label": "Exemple transition_label"
+    },
+    "expected": "Stage 'Exemple stage' utilise une sélection hors limites (Exemple transition_selection) sur Exemple transition_label",
+    "source": "native_pack/document.rs:560"
+  },
+  {
+    "code": "LABEL_IMAGE_READ_OPERATION",
+    "params": {
+      "request_role": "Exemple request_role",
+      "reason": "Exemple reason"
+    },
+    "expected": "Lecture image 'Exemple request_role' : Exemple reason",
+    "source": "native_pack/assets/pipeline.rs:106"
+  },
+  {
+    "code": "GENERATION_AUDIO_FFMPEG_MISSING",
+    "params": {},
+    "expected": "FFmpeg requis pour la préparation audio native mais introuvable.",
+    "source": "native_pack/assets/pipeline.rs:129"
+  },
+  {
+    "code": "GENERATION_NATIVE_ASSETS_PREPARING",
+    "params": {},
+    "expected": "🧪 Préparation assets moteur natif",
+    "source": "native_pack/assets/pipeline.rs:239"
+  },
+  {
+    "code": "GENERATION_LOG_STAGE_DIR",
+    "params": {
+      "stage_dir": "Exemple stage_dir"
+    },
+    "expected": "  Stage dir : Exemple stage_dir",
+    "source": "native_pack/assets/pipeline.rs:240"
+  },
+  {
+    "code": "GENERATION_ASSETS_PREPROCESS_START",
+    "params": {
+      "requests": 2
+    },
+    "expected": "  Prétraitement assets : 2 éléments",
+    "source": "native_pack/assets/pipeline.rs:241"
+  },
+  {
+    "code": "GENERATION_LOG_ASSET_START",
+    "params": {
+      "request_role": "Exemple request_role"
+    },
+    "expected": "  ▶ Exemple request_role",
+    "source": "native_pack/assets/pipeline.rs:263"
+  },
+  {
+    "code": "GENERATION_LOG_MS",
+    "params": {
+      "pre_role": "Exemple pre_role",
+      "pre_preprocess_ms": "Exemple pre_preprocess_ms"
+    },
+    "expected": "  ✓ Exemple pre_role (Exemple pre_preprocess_ms ms)",
+    "source": "native_pack/assets/pipeline.rs:272"
+  },
+  {
+    "code": "GENERATION_LOG_ASSET_FAILED",
+    "params": {
+      "request_role": "Exemple request_role",
+      "reason": "Exemple reason"
+    },
+    "expected": "  ✕ Exemple request_role : Exemple reason",
+    "source": "native_pack/assets/pipeline.rs:275"
+  },
+  {
+    "code": "GENERATION_ASSET_PREPROCESS_INTERRUPTED",
+    "params": {},
+    "expected": "Prétraitement assets interrompu.",
+    "source": "native_pack/assets/pipeline.rs:293"
+  },
+  {
+    "code": "GENERATION_LOG_STAGING_ASSETS",
+    "params": {},
+    "expected": "  Staging assets...",
+    "source": "native_pack/assets/pipeline.rs:309"
+  },
+  {
+    "code": "GENERATION_NATIVE_ZIP_MERGE",
+    "params": {
+      "pre_role": "Exemple pre_role"
+    },
+    "expected": "  📦 ZIP fusion natif : Exemple pre_role",
+    "source": "native_pack/assets/pipeline.rs:318"
+  },
+  {
+    "code": "GENERATION_LOG_RESIZE_320X240",
+    "params": {
+      "pre_role": "Exemple pre_role"
+    },
+    "expected": "  [resize] Exemple pre_role -> 320x240",
+    "source": "native_pack/assets/pipeline.rs:351"
+  },
+  {
+    "code": "GENERATION_ASSETS_PREPARED_SUMMARY",
+    "params": {
+      "stats_unique_asset_count": "Exemple stats_unique_asset_count",
+      "stats_transformed_audio_count": "Exemple stats_transformed_audio_count",
+      "stats_imported_zip_count": "Exemple stats_imported_zip_count"
+    },
+    "expected": "  Assets uniques : Exemple stats_unique_asset_count | audios transformés : Exemple stats_transformed_audio_count | zips importés : Exemple stats_imported_zip_count",
+    "source": "native_pack/assets/pipeline.rs:403"
+  },
+  {
+    "code": "GENERATION_TIMING_ASSETS_SUMMARY",
+    "params": {
+      "total_ms": "Exemple total_ms",
+      "preprocess_ms": "Exemple preprocess_ms",
+      "stage_ms": "Exemple stage_ms"
+    },
+    "expected": "  ⏱  Timing assets : total wall Exemple total_ms ms | preprocess parallele Exemple preprocess_ms ms | stage sequentiel Exemple stage_ms ms",
+    "source": "native_pack/assets/pipeline.rs:413"
+  },
+  {
+    "code": "GENERATION_TIMING_CPU_SUMMARY",
+    "params": {
+      "audio_processing_ms": "Exemple audio_processing_ms",
+      "transformed_audio_count": "Exemple transformed_audio_count",
+      "audio_passthrough_ms": "Exemple audio_passthrough_ms",
+      "image_ms": "Exemple image_ms",
+      "image_resize_count": "Exemple image_resize_count",
+      "zip_ms": "Exemple zip_ms"
+    },
+    "expected": "      cumul CPU par catégorie : audio FFmpeg Exemple audio_processing_ms ms (Exemple transformed_audio_countx) | audio passthrough Exemple audio_passthrough_ms ms | image Exemple image_ms ms (Exemple image_resize_countx resize) | zip Exemple zip_ms ms",
+    "source": "native_pack/assets/pipeline.rs:417"
+  },
+  {
+    "code": "GENERATION_ZIP_NOT_PRODUCED",
+    "params": {},
+    "expected": "  Aucun ZIP final n'est encore généré à ce stade.",
+    "source": "native_pack/assets/pipeline.rs:426"
+  },
+  {
+    "code": "GENERATION_AUDIO_WARNINGS_ATTACHED",
+    "params": {
+      "warnings": 2
+    },
+    "expected": "  ⚠️  2 avertissements audio seront joints au résultat.",
+    "source": "native_pack/assets/pipeline.rs:428"
+  },
+  {
+    "code": "GENERATION_LOG_ASSET_READY",
+    "params": {
+      "asset_role": "Exemple asset_role",
+      "asset_staged_asset_name": "Exemple asset_staged_asset_name",
+      "transform": "Exemple transform",
+      "suffix": "Exemple suffix"
+    },
+    "expected": "  Exemple asset_role → Exemple asset_staged_asset_name [Exemple transform]Exemple suffix",
+    "source": "native_pack/assets/pipeline.rs:720"
+  },
+  {
+    "code": "GENERATION_IMAGE_ROLE_UNREADABLE",
+    "params": {
+      "role": "Exemple role",
+      "reason": "Exemple reason"
+    },
+    "expected": "Image illisible pour 'Exemple role' : Exemple reason",
+    "source": "native_pack/assets/image.rs:13"
+  },
+  {
+    "code": "GENERATION_IMAGE_RESIZE_FAILED",
+    "params": {
+      "role": "Exemple role",
+      "reason": "Exemple reason"
+    },
+    "expected": "Encodage 320x240 pour 'Exemple role' : Exemple reason",
+    "source": "native_pack/assets/image.rs:21"
+  },
+  {
+    "code": "GENERATION_IMAGE_FORMAT_UNKNOWN",
+    "params": {
+      "role": "Exemple role",
+      "reason": "Exemple reason"
+    },
+    "expected": "Format d'image indéterminé pour 'Exemple role' : Exemple reason",
+    "source": "native_pack/assets/image.rs:51"
+  },
+  {
+    "code": "GENERATION_IMAGE_ROLE_UNREADABLE",
+    "params": {
+      "role": "Exemple role",
+      "reason": "Exemple reason"
+    },
+    "expected": "Image illisible pour 'Exemple role' : Exemple reason",
+    "source": "native_pack/assets/image.rs:67"
+  },
+  {
+    "code": "GENERATION_IMAGE_RESIZE_FAILED",
+    "params": {
+      "role": "Exemple role",
+      "reason": "Exemple reason"
+    },
+    "expected": "Encodage 320x240 pour 'Exemple role' : Exemple reason",
+    "source": "native_pack/assets/image.rs:76"
+  },
+  {
+    "code": "FILES_NAMED_FILE_READ_FAILED",
+    "params": {
+      "role": "Exemple role",
+      "reason": "Exemple reason"
+    },
+    "expected": "Lecture impossible pour Exemple role : Exemple reason",
+    "source": "native_pack/assets/image.rs:118"
+  },
+  {
+    "code": "GENERATION_PREPARED_ASSET_WRITE_FAILED",
+    "params": {
+      "staged_path": "Exemple staged_path",
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible d'écrire l'asset préparé Exemple staged_path : Exemple reason",
+    "source": "native_pack/assets/image.rs:124"
+  },
+  {
+    "code": "IMPORT_ASSET_EXTENSION_MISSING",
+    "params": {
+      "original_name": "Exemple original_name"
+    },
+    "expected": "Extension introuvable pour l'asset importé Exemple original_name",
+    "source": "native_pack/assets/image.rs:153"
+  },
+  {
+    "code": "IMPORT_ASSET_FILE_WRITE_FAILED",
+    "params": {
+      "staged_path": "Exemple staged_path",
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible d'écrire l'asset importé Exemple staged_path : Exemple reason",
+    "source": "native_pack/assets/image.rs:163"
+  },
+  {
+    "code": "IMPORT_ZIP_OPEN_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Ouverture ZIP impossible : Exemple reason",
+    "source": "native_pack/assets/zip_bundle.rs:20"
+  },
+  {
+    "code": "IMPORT_STORY_FILE_MISSING",
+    "params": {
+      "zip_path_buf": "Exemple zip_path_buf"
+    },
+    "expected": "story.json introuvable dans Exemple zip_path_buf",
+    "source": "native_pack/assets/zip_bundle.rs:26"
+  },
+  {
+    "code": "IMPORT_STORY_JSON_READ_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Lecture story.json impossible : Exemple reason",
+    "source": "native_pack/assets/zip_bundle.rs:28"
+  },
+  {
+    "code": "IMPORT_STORY_DOCUMENT_INVALID",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "story.json import invalide : Exemple reason",
+    "source": "native_pack/assets/zip_bundle.rs:31"
+  },
+  {
+    "code": "IMPORT_IMPORTED_ASSET_MISSING",
+    "params": {
+      "asset_name": "Exemple asset_name"
+    },
+    "expected": "Asset importé introuvable : Exemple asset_name",
+    "source": "native_pack/assets/zip_bundle.rs:47"
+  },
+  {
+    "code": "IMPORT_ASSET_FILE_READ_FAILED",
+    "params": {
+      "asset_name": "Exemple asset_name",
+      "reason": "Exemple reason"
+    },
+    "expected": "Lecture asset importé impossible Exemple asset_name : Exemple reason",
+    "source": "native_pack/assets/zip_bundle.rs:51"
+  },
+  {
+    "code": "IMPORT_ZIP_ENTRY_STAGE_MISSING",
+    "params": {
+      "zip_path_buf": "Exemple zip_path_buf"
+    },
+    "expected": "ZIP importé sans squareOne : Exemple zip_path_buf",
+    "source": "native_pack/assets/zip_bundle.rs:105"
+  },
+  {
+    "code": "IMPORT_ZIP_ROOT_ACTION_MISSING",
+    "params": {
+      "zip_path_buf": "Exemple zip_path_buf"
+    },
+    "expected": "ZIP importé sans action racine : Exemple zip_path_buf",
+    "source": "native_pack/assets/zip_bundle.rs:112"
+  },
+  {
+    "code": "IMPORT_ROOT_ACTION_MISSING",
+    "params": {
+      "zip_path_buf": "Exemple zip_path_buf"
+    },
+    "expected": "Action racine introuvable dans Exemple zip_path_buf",
+    "source": "native_pack/assets/zip_bundle.rs:121"
+  },
+  {
+    "code": "IMPORT_ROOT_ACTION_EMPTY",
+    "params": {
+      "zip_path_buf": "Exemple zip_path_buf"
+    },
+    "expected": "Action racine vide dans Exemple zip_path_buf",
+    "source": "native_pack/assets/zip_bundle.rs:125"
+  },
+  {
+    "code": "IMPORT_ZIP_OPEN_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Ouverture ZIP impossible : Exemple reason",
+    "source": "native_pack/assets/zip_bundle.rs:163"
+  },
+  {
+    "code": "IMPORT_STORY_FILE_MISSING",
+    "params": {
+      "zip_path_buf": "Exemple zip_path_buf"
+    },
+    "expected": "story.json introuvable dans Exemple zip_path_buf",
+    "source": "native_pack/assets/zip_bundle.rs:169"
+  },
+  {
+    "code": "IMPORT_STORY_JSON_READ_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Lecture story.json impossible : Exemple reason",
+    "source": "native_pack/assets/zip_bundle.rs:171"
+  },
+  {
+    "code": "IMPORT_STORY_DOCUMENT_INVALID",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "story.json import invalide : Exemple reason",
+    "source": "native_pack/assets/zip_bundle.rs:174"
+  },
+  {
+    "code": "IMPORT_DOCUMENT_JSON_DEPTH_LIMIT",
+    "params": {
+      "max_project_json_nesting": "Exemple max_project_json_nesting"
+    },
+    "expected": "JSON invalide : imbrication technique supérieure à Exemple max_project_json_nesting.",
+    "source": "commands/generation.rs:39"
+  },
+  {
+    "code": "IMPORT_DOCUMENT_JSON_INVALID",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "JSON invalide : Exemple reason",
+    "source": "commands/generation.rs:61"
+  },
+  {
+    "code": "GRAPH_PROJECTION_TASK_INTERRUPTED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Projection interrompue : Exemple reason",
+    "source": "commands/generation.rs:131"
+  },
+  {
+    "code": "EXPORT_COPY_TASK_INTERRUPTED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Copie interrompue : Exemple reason",
+    "source": "commands/generation.rs:141"
+  },
+  {
+    "code": "EXPORT_VERIFY_TASK_INTERRUPTED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Vérification interrompue : Exemple reason",
+    "source": "commands/generation.rs:154"
+  },
+  {
+    "code": "GENERATION_PACK_AUDIO_WARNINGS",
+    "params": {
+      "warnings": 2
+    },
+    "expected": "⚠️  Pack généré avec 2 avertissements audio :",
+    "source": "commands/generation.rs:235"
+  },
+  {
+    "code": "GENERATION_LOG_AUDIO_WARNING",
+    "params": {
+      "warning_message": "Exemple warning_message"
+    },
+    "expected": "  ⚠️  Exemple warning_message",
+    "source": "commands/generation.rs:240"
+  },
+  {
+    "code": "GENERATION_ZIP_DEVICE_CHECK_ADVISED",
+    "params": {},
+    "expected": "   Le ZIP est utilisable ; vérifie de préférence ces passages sur la Lunii.",
+    "source": "commands/generation.rs:254"
+  },
+  {
+    "code": "GENERATION_LUNII_VALIDATION_OBSERVED",
+    "params": {},
+    "expected": "🔍 Validation format Lunii (contrôle non bloquant)...",
+    "source": "commands/generation.rs:258"
+  },
+  {
+    "code": "GENERATION_ZIP_VALIDATION_WARNINGS",
+    "params": {
+      "warn_count": 2
+    },
+    "expected": "✅ ZIP valide (2 avertissements)",
+    "source": "commands/generation.rs:272"
+  },
+  {
+    "code": "GENERATION_LOG_ARCHIVE_WARNING",
+    "params": {
+      "issue_code": "Exemple issue_code",
+      "issue_message": "Exemple issue_message"
+    },
+    "expected": "  ⚠️  Exemple issue_code : Exemple issue_message",
+    "source": "commands/generation.rs:274"
+  },
+  {
+    "code": "GENERATION_ZIP_VALIDATION_SUCCESS",
+    "params": {},
+    "expected": "✅ ZIP valide — aucune erreur détectée.",
+    "source": "commands/generation.rs:279"
+  },
+  {
+    "code": "GENERATION_ZIP_VALIDATION_ERRORS",
+    "params": {
+      "err_count": 2
+    },
+    "expected": "⚠️  ZIP généré avec 2 erreurs de validation non bloquantes.",
+    "source": "commands/generation.rs:284"
+  },
+  {
+    "code": "GENERATION_PACK_DEVICE_TEST_ADVISED",
+    "params": {},
+    "expected": "   Le fichier a été créé, mais il est conseillé de tester le pack sur l'appareil ou dans le simulateur.",
+    "source": "commands/generation.rs:288"
+  },
+  {
+    "code": "GENERATION_LOG_ARCHIVE_ISSUE",
+    "params": {
+      "icon": "Exemple icon",
+      "issue_code": "Exemple issue_code",
+      "issue_message": "Exemple issue_message"
+    },
+    "expected": "  Exemple icon Exemple issue_code : Exemple issue_message",
+    "source": "commands/generation.rs:295"
+  },
+  {
+    "code": "GENERATION_NIGHT_ROOT_ACTION_MISSING",
+    "params": {},
+    "expected": "Action racine introuvable pour le bridge night.",
+    "source": "native_pack/builder/night_mode.rs:14"
+  },
+  {
+    "code": "GENERATION_ENDING_SEQUENCE_EMPTY",
+    "params": {},
+    "expected": "Sequence de fin vide.",
+    "source": "native_pack/builder/after_playback.rs:215"
+  },
+  {
+    "code": "GENERATION_WRAPPER_NODE_MISSING",
+    "params": {
+      "zip_name": "Exemple zip_name"
+    },
+    "expected": "Wrapper introuvable pour Exemple zip_name",
+    "source": "native_pack/builder/imported_zip.rs:49"
+  },
+  {
+    "code": "IMPORT_IMPORTED_ACTION_MISSING",
+    "params": {
+      "action_id": "Exemple action_id"
+    },
+    "expected": "Action importée introuvable : Exemple action_id",
+    "source": "native_pack/builder/imported_zip.rs:72"
+  },
+  {
+    "code": "IMPORT_IMPORTED_STAGE_MISSING",
+    "params": {
+      "stage_uuid": "Exemple stage_uuid"
+    },
+    "expected": "Stage importé introuvable : Exemple stage_uuid",
+    "source": "native_pack/builder/imported_zip.rs:97"
+  },
+  {
+    "code": "IMPORT_IMPORTED_ENTRY_MISSING",
+    "params": {
+      "zip_name": "Exemple zip_name"
+    },
+    "expected": "Entrée importée introuvable pour Exemple zip_name",
+    "source": "native_pack/builder/imported_zip.rs:115"
+  },
+  {
+    "code": "GENERATION_POST_ROOT_MISSING",
+    "params": {
+      "zip_name": "Exemple zip_name"
+    },
+    "expected": "Post-root introuvable pour Exemple zip_name",
+    "source": "native_pack/builder/imported_zip.rs:127"
+  },
+  {
+    "code": "GENERATION_WRAPPER_NODE_MISSING",
+    "params": {
+      "zip_name": "Exemple zip_name"
+    },
+    "expected": "Wrapper introuvable pour Exemple zip_name",
+    "source": "native_pack/builder/imported_zip.rs:130"
+  },
+  {
+    "code": "IMPORT_IMPORTED_COVER_MISSING",
+    "params": {
+      "zip_name": "Exemple zip_name"
+    },
+    "expected": "Cover importé introuvable pour Exemple zip_name",
+    "source": "native_pack/builder/imported_zip.rs:136"
+  },
+  {
+    "code": "GENERATION_PREPARED_ZIP_MISSING",
+    "params": {
+      "role": "Exemple role"
+    },
+    "expected": "ZIP importé préparé introuvable pour le rôle Exemple role",
+    "source": "native_pack/builder/imported_zip.rs:203"
+  },
+  {
+    "code": "GENERATION_MENU_STORIES_UNPLAYABLE",
+    "params": {
+      "display_label_menu_name_collection": "Exemple display_label_menu_name_collection"
+    },
+    "expected": "Le menu Exemple display_label_menu_name_collection ne contient aucune histoire exploitable pour le générateur natif v1.",
+    "source": "native_pack/builder/menu_branch.rs:166"
+  },
+  {
+    "code": "GENERATION_SIMPLE_STORY_MISSING",
+    "params": {},
+    "expected": "Histoire simple introuvable dans le modèle canonique.",
+    "source": "native_pack/builder/root.rs:16"
+  },
+  {
+    "code": "GENERATION_SIMPLE_STORY_COUNT_INVALID",
+    "params": {},
+    "expected": "Le mode simple natif v1 n'accepte qu'une histoire audio.",
+    "source": "native_pack/builder/root.rs:18"
+  },
+  {
+    "code": "GRAPH_SHARED_APPROACH_ACTION_MISSING",
+    "params": {},
+    "expected": "Action d'approche partagee manquante.",
+    "source": "native_pack/builder/root.rs:210"
+  },
+  {
+    "code": "IMPORT_SHARED_ZIP_UNSUPPORTED",
+    "params": {},
+    "expected": "Les éléments partagés de type ZIP ne sont pas pris en charge.",
+    "source": "native_pack/builder/root.rs:315"
+  },
+  {
+    "code": "GENERATION_NATIVE_ENTRIES_EMPTY",
+    "params": {},
+    "expected": "Aucune entrée native construite pour le projet.",
+    "source": "native_pack/builder/core.rs:111"
+  },
+  {
+    "code": "GENERATION_PREPARED_ASSET_MISSING",
+    "params": {
+      "role": "Exemple role"
+    },
+    "expected": "Asset préparé introuvable pour le rôle Exemple role",
+    "source": "native_pack/builder/core.rs:236"
+  },
+  {
+    "code": "IMPORT_DOCUMENT_JSON_INVALID",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "JSON invalide : Exemple reason",
+    "source": "commands/generation.rs:57"
+  },
+  {
+    "code": "VALIDATION_PROJECT_ERRORS",
+    "params": {
+      "errors": {
+        "messages": [
+          {
+            "code": "GENERATION_CANCELLED",
+            "params": {}
+          },
+          "Audio racine manquant."
+        ],
+        "separator": "\n"
+      }
+    },
+    "expected": "Génération annulée.\nAudio racine manquant.",
+    "source": "domain/validation.rs:validation result"
+  },
+  {
+    "code": "EMPTY_NODE_COLOR_TARGETS",
+    "params": {},
+    "expected": "Aucun nœud n'est visé par le changement de couleur.",
+    "source": "native_pack/editing/node_presentation.rs:54"
+  },
+  {
+    "code": "UNSUPPORTED_NODE_COLOR",
+    "params": {
+      "value": "Exemple value"
+    },
+    "expected": "La couleur « Exemple value » n'appartient pas à la palette de l'éditeur.",
+    "source": "native_pack/editing/node_presentation.rs:62"
+  },
+  {
+    "code": "UNKNOWN_NODE_PATH",
+    "params": {},
+    "expected": "Ce chemin ne désigne aucun nœud du document courant.",
+    "source": "native_pack/editing/node_presentation.rs:74"
+  },
+  {
+    "code": "DUPLICATE_NODE_COLOR_TARGET",
+    "params": {},
+    "expected": "Le même nœud est visé deux fois par ce changement de couleur.",
+    "source": "native_pack/editing/node_presentation.rs:81"
+  },
+  {
+    "code": "EMPTY_CONTROLS_UPDATE",
+    "params": {},
+    "expected": "Aucun contrôle n'est nommé : le geste ne devine pas lequel modifier.",
+    "source": "native_pack/editing/controls.rs:128"
+  },
+  {
+    "code": "CONTROL_SETTINGS_ABSENT",
+    "params": {},
+    "expected": "Ce Stage ne porte pas d'objet de contrôles : le compléter est un choix explicite des cinq valeurs, pas la pose d'un membre isolé.",
+    "source": "native_pack/editing/controls.rs:136"
+  },
+  {
+    "code": "EMPTY_STAGE_SELECTION",
+    "params": {},
+    "expected": "Aucun Écran n'est désigné : le geste ne règle rien.",
+    "source": "native_pack/editing/controls.rs:162"
+  },
+  {
+    "code": "DUPLICATE_STAGE",
+    "params": {},
+    "expected": "Cet Écran est désigné deux fois dans la même demande.",
+    "source": "native_pack/editing/controls.rs:170"
+  },
+  {
+    "code": "UNKNOWN_ASSET_REF",
+    "params": {
+      "asset_ref": "Exemple asset_ref"
+    },
+    "expected": "Aucun Stage ne référence « Exemple asset_ref » : un remplacement ne crée pas la référence qu'il remplace.",
+    "source": "native_pack/editing/media.rs:208"
+  },
+  {
+    "code": "INVALID_ASSET_REF",
+    "params": {},
+    "expected": "Une référence de média ne peut pas être vide.",
+    "source": "native_pack/editing/media.rs:258"
+  },
+  {
+    "code": "ASSET_REF_ALREADY_BOUND",
+    "params": {
+      "asset_ref": "Exemple asset_ref"
+    },
+    "expected": "« Exemple asset_ref » est déjà liée : partager le média se demande sans chemin, la re-pointer est le geste de remplacement.",
+    "source": "native_pack/editing/media.rs:266"
+  },
+  {
+    "code": "UNBOUND_ASSET_REF",
+    "params": {
+      "asset_ref": "Exemple asset_ref"
+    },
+    "expected": "« Exemple asset_ref » n'est liée à aucun fichier : donner son emplacement.",
+    "source": "native_pack/editing/media.rs:273"
+  },
+  {
+    "code": "INVALID_MEDIA_BINDING",
+    "params": {},
+    "expected": "Une liaison porte une référence de dialecte vide.",
+    "source": "native_pack/editing/media.rs:350"
+  },
+  {
+    "code": "DUPLICATE_MEDIA_BINDING",
+    "params": {
+      "assetRef": "Exemple binding_asset_ref"
+    },
+    "expected": "« Exemple binding_asset_ref » est liée deux fois.",
+    "source": "native_pack/editing/media.rs:360"
+  },
+  {
+    "code": "INVALID_MEDIA_BINDING",
+    "params": {
+      "context": "INVALID_MEDIA_BINDING_EMPTY_PATH"
+    },
+    "expected": "Un chemin de liaison est vide : utiliser null.",
+    "source": "native_pack/editing/media.rs:371"
+  },
+  {
+    "code": "INVALID_MEDIA_BINDING",
+    "params": {
+      "binding_asset_ref": "Exemple binding_asset_ref",
+      "context": "INVALID_MEDIA_BINDING_RESOLVED_PATH"
+    },
+    "expected": "« Exemple binding_asset_ref » est résolue sans chemin ; elle reste manquante tant que son fichier est inconnu.",
+    "source": "native_pack/editing/media.rs:378"
+  },
+  {
+    "code": "INVALID_DOCUMENT_VERSION",
+    "params": {
+      "value": "Exemple value"
+    },
+    "expected": "La version d'un pack est un entier strictement positif ; Exemple value ne l'est pas.",
+    "source": "native_pack/editing/metadata.rs:112"
+  },
+  {
+    "code": "EMPTY_DOCUMENT_UUID",
+    "params": {},
+    "expected": "Un identifiant vide n'est pas une valeur : retire le champ plutôt que d'y écrire une chaîne vide.",
+    "source": "native_pack/editing/metadata.rs:127"
+  },
+  {
+    "code": "EMPTY_METADATA_UPDATE",
+    "params": {},
+    "expected": "Aucune métadonnée n'est nommée : le geste ne devine pas laquelle modifier.",
+    "source": "native_pack/editing/metadata.rs:143"
+  },
+  {
+    "code": "ORPHAN_CONTEXT_ANCHOR",
+    "params": {},
+    "expected": "Le geste détacherait un ancrage de contexte : il est refusé plutôt qu'appliqué.",
+    "source": "native_pack/editing/mod.rs:723"
+  },
+  {
+    "code": "NO_CREATED_STAGE",
+    "params": {},
+    "expected": "Aucun Stage n'est créé par ce geste : désigner la destination par son identifiant.",
+    "source": "native_pack/editing/options.rs:62"
+  },
+  {
+    "code": "UNKNOWN_STAGE",
+    "params": {
+      "uuid": "Exemple uuid"
+    },
+    "expected": "L'option désigne un Stage introuvable : « Exemple uuid ».",
+    "source": "native_pack/editing/options.rs:70"
+  },
+  {
+    "code": "ENTRY_STAGE_AS_OPTION",
+    "params": {},
+    "expected": "L'Écran d'entrée ne peut pas être le choix d'une liste : on y revient par le bouton Accueil laissé sans destination.",
+    "source": "native_pack/editing/options.rs:81"
+  },
+  {
+    "code": "UNEXPECTED_SELECTION_DECISION",
+    "params": {},
+    "expected": "Cette transition conserve sa destination : le geste ne demande aucune décision ici.",
+    "source": "native_pack/editing/options.rs:152"
+  },
+  {
+    "code": "OPTION_ORDINAL_OUT_OF_RANGE",
+    "params": {
+      "action_id": "Exemple action_id",
+      "count": 2,
+      "ordinal": "Exemple ordinal",
+      "bound": "Exemple bound"
+    },
+    "expected": "L'ActionNode « Exemple action_id » porte 2 options : le rang Exemple ordinal n'est pas adressable (maximum Exemple bound).",
+    "source": "native_pack/editing/options.rs:285"
+  },
+  {
+    "code": "INVALID_OPTION_PERMUTATION",
+    "params": {
+      "count": 2,
+      "rankCount": "Exemple new_position_of_old"
+    },
+    "expected": "La permutation porte NaN rangs pour 2 options : chaque occurrence doit recevoir une place.",
+    "source": "native_pack/editing/options.rs:372"
+  },
+  {
+    "code": "INVALID_OPTION_PERMUTATION",
+    "params": {
+      "position": "Exemple position",
+      "count": 2,
+      "context": "INVALID_OPTION_PERMUTATION_OUT_RANGE"
+    },
+    "expected": "La permutation désigne la place Exemple position hors des 2 rangs.",
+    "source": "native_pack/editing/options.rs:384"
+  },
+  {
+    "code": "INVALID_OPTION_PERMUTATION",
+    "params": {
+      "position": "Exemple position",
+      "context": "INVALID_OPTION_PERMUTATION_DUPLICATE"
+    },
+    "expected": "Deux occurrences reçoivent la place Exemple position.",
+    "source": "native_pack/editing/options.rs:391"
+  },
+  {
+    "code": "OPTION_SELECTION_DECISION_REQUIRED",
+    "params": {
+      "ordinal": "Exemple ordinal"
+    },
+    "expected": "Le retrait du rang Exemple ordinal prive cette transition de sa destination : il faut décider explicitement de la rediriger ou de la retirer.",
+    "source": "native_pack/editing/options.rs:463"
+  },
+  {
+    "code": "OPTION_SELECTION_OUT_OF_BOUNDS",
+    "params": {
+      "action_id": "Exemple action_id",
+      "remaining": 2,
+      "selection": "Exemple selection"
+    },
+    "expected": "Après retrait, l'ActionNode « Exemple action_id » porte 2 options : Exemple selection n'en désigne aucune.",
+    "source": "native_pack/editing/options.rs:499"
+  },
+  {
+    "code": "POSITION_NOT_FINITE",
+    "params": {
+      "number": "Exemple number"
+    },
+    "expected": "Une coordonnée doit être un nombre fini, reçu Exemple number.",
+    "source": "native_pack/editing/positions.rs:98"
+  },
+  {
+    "code": "SQUARE_ONE_REMOVAL",
+    "params": {},
+    "expected": "Le Stage d'entrée ne se retire pas : un pack a exactement un Écran d'entrée, et le transfert de l'entrée est un geste distinct.",
+    "source": "native_pack/editing/removal.rs:218"
+  },
+  {
+    "code": "OPTION_DECISION_REQUIRED",
+    "params": {},
+    "expected": "Cette occurrence survit au retrait et désigne un Écran retiré : elle n'a reçu aucune décision.",
+    "source": "native_pack/editing/removal.rs:248"
+  },
+  {
+    "code": "UNEXPECTED_OPTION_DECISION",
+    "params": {},
+    "expected": "Cette occupation de rang ne survit pas au retrait, ou ne désigne aucun Écran retiré : le geste n'y touche pas.",
+    "source": "native_pack/editing/removal.rs:260"
+  },
+  {
+    "code": "UNSUPPORTED_REMOVAL_RESOLUTION",
+    "params": {},
+    "expected": "Un retrait par lot ne retire pas d'occupation de rang : les rangs suivants glisseraient d'un plan à l'autre. Retirer un rang se fait par `delete-stage`.",
+    "source": "native_pack/editing/removal.rs:269"
+  },
+  {
+    "code": "UNKNOWN_STAGE",
+    "params": {
+      "context": "UNKNOWN_STAGE_RETARGET_REMOVED"
+    },
+    "expected": "Le retargeting désigne un Stage que le geste retire.",
+    "source": "native_pack/editing/removal.rs:277"
+  },
+  {
+    "code": "TRANSITION_DECISION_REQUIRED",
+    "params": {},
+    "expected": "Cette transition survit au retrait et vise une Action retirée : elle n'a reçu aucune décision.",
+    "source": "native_pack/editing/removal.rs:301"
+  },
+  {
+    "code": "UNEXPECTED_TRANSITION_DECISION",
+    "params": {},
+    "expected": "Cette transition ne survit pas au retrait, ou ne vise aucune Action retirée : le geste n'y touche pas.",
+    "source": "native_pack/editing/removal.rs:313"
+  },
+  {
+    "code": "UNKNOWN_ACTION",
+    "params": {},
+    "expected": "Le retargeting désigne une Action que le geste retire.",
+    "source": "native_pack/editing/removal.rs:322"
+  },
+  {
+    "code": "UNKNOWN_NODE",
+    "params": {
+      "kind": "Exemple kind",
+      "wanted": "Exemple wanted"
+    },
+    "expected": "Aucun Exemple kind « Exemple wanted » dans le document.",
+    "source": "native_pack/editing/structure.rs:132"
+  },
+  {
+    "code": "AMBIGUOUS_NODE",
+    "params": {
+      "kind": "Exemple kind",
+      "wanted": "Exemple wanted",
+      "count": 2
+    },
+    "expected": "2 éléments de type Exemple kind portent l'identifiant « Exemple wanted » : lever le doublon avant d'éditer.",
+    "source": "native_pack/editing/structure.rs:137"
+  },
+  {
+    "code": "IDENTIFIER_COLLISION",
+    "params": {},
+    "expected": "Aucun identifiant libre obtenu : la source d'identifiants ne varie pas.",
+    "source": "native_pack/editing/structure.rs:166"
+  },
+  {
+    "code": "INVALID_ACTION_ID",
+    "params": {},
+    "expected": "Un identifiant d'ActionNode ne peut pas être vide.",
+    "source": "native_pack/editing/structure.rs:255"
+  },
+  {
+    "code": "IDENTIFIER_COLLISION",
+    "params": {
+      "id": "Exemple id",
+      "context": "IDENTIFIER_COLLISION_ACTION"
+    },
+    "expected": "L'identifiant d'ActionNode « Exemple id » est déjà pris.",
+    "source": "native_pack/editing/structure.rs:265"
+  },
+  {
+    "code": "SQUARE_ONE_REMOVAL",
+    "params": {},
+    "expected": "Le Stage d'entrée ne se retire pas : un pack a exactement un Écran d'entrée, et le transfert de l'entrée est un geste distinct.",
+    "source": "native_pack/editing/structure.rs:426"
+  },
+  {
+    "code": "STAGE_STILL_TARGETED",
+    "params": {
+      "count": 2
+    },
+    "expected": "2 occurrences d'options désignent encore ce Stage : il faut décider explicitement de les rediriger ou de les retirer.",
+    "source": "native_pack/editing/structure.rs:439"
+  },
+  {
+    "code": "OPTION_DECISION_REQUIRED",
+    "params": {
+      "context": "OPTION_DECISION_REQUIRED_REMOVED_STAGE"
+    },
+    "expected": "Cette occurrence désigne le Stage retiré et n'a reçu aucune décision.",
+    "source": "native_pack/editing/structure.rs:457"
+  },
+  {
+    "code": "UNEXPECTED_OPTION_DECISION",
+    "params": {
+      "context": "UNEXPECTED_OPTION_DECISION_UNTOUCHED"
+    },
+    "expected": "Cette occurrence ne désigne pas le Stage retiré : le geste n'y touche pas.",
+    "source": "native_pack/editing/structure.rs:468"
+  },
+  {
+    "code": "UNKNOWN_STAGE",
+    "params": {
+      "context": "UNKNOWN_STAGE_RETARGET_REMOVED_SINGLE"
+    },
+    "expected": "Le retargeting désigne le Stage que le geste retire.",
+    "source": "native_pack/editing/structure.rs:477"
+  },
+  {
+    "code": "STAGE_STILL_TARGETED",
+    "params": {
+      "context": "STAGE_STILL_TARGETED_REMOVAL_PLAN"
+    },
+    "expected": "Le plan laisse des occurrences désignant le Stage retiré.",
+    "source": "native_pack/editing/structure.rs:537"
+  },
+  {
+    "code": "ACTION_STILL_TARGETED",
+    "params": {
+      "count": 2
+    },
+    "expected": "2 transitions référencent encore cet ActionNode : les retirer ou les rediriger est une décision explicite.",
+    "source": "native_pack/editing/structure.rs:563"
+  },
+  {
+    "code": "TRANSITION_DECISION_REQUIRED",
+    "params": {
+      "context": "TRANSITION_DECISION_REQUIRED_REMOVAL"
+    },
+    "expected": "Cette transition vise l'Action retirée et n'a reçu aucune décision.",
+    "source": "native_pack/editing/structure.rs:580"
+  },
+  {
+    "code": "UNEXPECTED_TRANSITION_DECISION",
+    "params": {
+      "context": "UNEXPECTED_TRANSITION_DECISION_UNTOUCHED"
+    },
+    "expected": "Cette transition ne vise pas l'Action retirée : le geste n'y touche pas.",
+    "source": "native_pack/editing/structure.rs:591"
+  },
+  {
+    "code": "UNKNOWN_ACTION",
+    "params": {
+      "context": "UNKNOWN_ACTION_RETARGET_REMOVED"
+    },
+    "expected": "Le retargeting désigne l'Action que le geste retire.",
+    "source": "native_pack/editing/structure.rs:600"
+  },
+  {
+    "code": "ACTION_STILL_TARGETED",
+    "params": {
+      "context": "ACTION_STILL_TARGETED_REMOVAL_PLAN"
+    },
+    "expected": "Le plan laisse des transitions visant l'Action retirée.",
+    "source": "native_pack/editing/structure.rs:640"
+  },
+  {
+    "code": "UNKNOWN_ACTION",
+    "params": {
+      "action_node": "Exemple action_node",
+      "context": "UNKNOWN_ACTION_TRANSITION_TARGET"
+    },
+    "expected": "Aucun ActionNode « Exemple action_node » dans le document.",
+    "source": "native_pack/editing/transitions.rs:111"
+  },
+  {
+    "code": "OPTION_SELECTION_OUT_OF_BOUNDS",
+    "params": {
+      "action_node": "Exemple action_node",
+      "action_options": 2,
+      "selection": "Exemple selection",
+      "context": "OPTION_SELECTION_OUT_OF_BOUNDS_TRANSITION"
+    },
+    "expected": "L'ActionNode « Exemple action_node » porte 2 options : Exemple selection n'en désigne aucune.",
+    "source": "native_pack/editing/transitions.rs:122"
+  },
+  {
+    "code": "ACTION_NOT_EMPTY",
+    "params": {
+      "action_node": "Exemple action_node"
+    },
+    "expected": "L'ActionNode « Exemple action_node » possède déjà une ou plusieurs options.",
+    "source": "native_pack/editing/transitions.rs:159"
+  },
+  {
+    "code": "ENRICHED_TYPE_UNKNOWN",
+    "params": {
+      "stage_type": "Exemple stage_type"
+    },
+    "expected": "Type de Stage inconnu « Exemple stage_type », conservé sans remapping ni sémantique déduite.",
+    "source": "native_pack/authoring.rs:156"
+  },
+  {
+    "code": "ENRICHED_TYPE_UNKNOWN",
+    "params": {
+      "action_type": "Exemple action_type",
+      "context": "ENRICHED_TYPE_UNKNOWN_ACTION"
+    },
+    "expected": "Type d'Action inconnu « Exemple action_type », conservé sans remapping ni sémantique déduite.",
+    "source": "native_pack/authoring.rs:171"
+  },
+  {
+    "code": "ENRICHED_GROUP_UNKNOWN",
+    "params": {
+      "group_id": "Exemple group_id"
+    },
+    "expected": "Forme de groupe enrichi inconnue « Exemple group_id », conservée sans interprétation.",
+    "source": "native_pack/authoring.rs:293"
+  },
+  {
+    "code": "ENRICHED_GROUP_INCOHERENT",
+    "params": {
+      "kind": "Exemple kind",
+      "group_id": "Exemple group_id"
+    },
+    "expected": "Le groupe Exemple kind connu « Exemple group_id » ne respecte plus sa forme interne ; ses marqueurs sont conservés jusqu'à réparation ou flatten explicite.",
+    "source": "native_pack/authoring.rs:322"
+  },
+  {
+    "code": "ORPHAN_ACTION_EMPTY_SCAFFOLD",
+    "params": {},
+    "expected": "Action orpheline strictement vide : aucun contenu authored ne serait perdu.",
+    "source": "native_pack/authoring.rs:447"
+  },
+  {
+    "code": "ORPHAN_ACTION_AUTHORED_CONTENT",
+    "params": {},
+    "expected": "Action orpheline porte du contenu authored que les passerelles supprimeraient silencieusement.",
+    "source": "native_pack/authoring.rs:455"
+  },
+  {
+    "code": "OPAQUE_EXTENSION_PRESERVED_UNTESTED",
+    "params": {},
+    "expected": "Extension opaque préservée tel quel par décision explicite ; sa dimension d'interopérabilité reste UNTESTED.",
+    "source": "native_pack/authoring.rs:484"
+  },
+  {
+    "code": "CONTROL_SETTINGS_INCOMPLETE",
+    "params": {},
+    "expected": "Les cinq booléens de contrôle doivent être renseignés explicitement avant export standard.",
+    "source": "native_pack/authoring.rs:519"
+  },
+  {
+    "code": "TRANSITION_SEVERED_BY_REMOVAL",
+    "params": {
+      "control": "Exemple control"
+    },
+    "expected": "Un retrait a laissé cet Écran sans destination Exemple control : le raccorder, ou désactiver ce bouton.",
+    "source": "native_pack/authoring.rs:622"
+  },
+  {
+    "code": "SQUARE_ONE_COUNT",
+    "params": {
+      "count": "Exemple entries"
+    },
+    "expected": "Le document doit contenir exactement un Stage squareOne ; il en contient Exemple entries.",
+    "source": "native_pack/integrity.rs:267"
+  },
+  {
+    "code": "OPTION_TARGET_NULL",
+    "params": {
+      "index": "Exemple index",
+      "actionId": "Exemple action_id"
+    },
+    "expected": "L'option Exemple index de l'ActionNode « Exemple action_id » est nulle : elle ne désigne aucun Stage.",
+    "source": "native_pack/integrity.rs:287"
+  },
+  {
+    "code": "OPTION_TARGET_MISSING",
+    "params": {
+      "index": "Exemple index",
+      "target": "Exemple target",
+      "actionId": "Exemple action_id"
+    },
+    "expected": "L'option Exemple index de l'ActionNode « Exemple action_id » désigne un Stage introuvable : « Exemple target ».",
+    "source": "native_pack/integrity.rs:298"
+  },
+  {
+    "code": "TRANSITION_ACTION_MISSING",
+    "params": {
+      "field": "Exemple field",
+      "stage": "Exemple stage_uuid",
+      "action": "Exemple transition_action_node"
+    },
+    "expected": "La transition Exemple field du Stage « Exemple stage_uuid » référence un ActionNode introuvable : « Exemple transition_action_node ».",
+    "source": "native_pack/integrity.rs:330"
+  },
+  {
+    "code": "OPTION_SELECTION_INVALID",
+    "params": {
+      "field": "Exemple field",
+      "stage": "Exemple stage_uuid",
+      "selection": "Exemple transition_selection",
+      "optionCount": 2
+    },
+    "expected": "La transition Exemple field du Stage « Exemple stage_uuid » sélectionne Exemple transition_selection sur un ActionNode de 2 options.",
+    "source": "native_pack/integrity.rs:342"
+  },
+  {
+    "code": "GENERATION_CANONICAL_GRAPH_UNFAITHFUL",
+    "params": {},
+    "expected": "Génération bloquée : le modèle canonique n'est pas fidèle au graphe natif d'origine.",
+    "source": "native_pack/mod.rs:152"
+  },
+  {
+    "code": "EXPORT_CANONICAL_GRAPH_DIVERGENCE_DETAIL",
+    "params": {
+      "detail": "Exemple detail"
+    },
+    "expected": "Génération bloquée : le modèle canonique n'est pas fidèle au graphe natif d'origine (Exemple detail).",
+    "source": "native_pack/mod.rs:154"
+  },
+  {
+    "code": "GENERATION_NATIVE_TASK_START_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible de démarrer la génération native : Exemple reason",
+    "source": "native_pack/mod.rs:176"
+  },
+  {
+    "code": "GENERATION_DOCUMENT_TASK_INTERRUPTED",
+    "params": {},
+    "expected": "La construction du document natif s'est interrompue de façon inattendue.",
+    "source": "native_pack/mod.rs:178"
+  },
+  {
+    "code": "GENERATION_STABLE_IDENTITY_REQUIRED",
+    "params": {},
+    "expected": "La packIdentity stable doit être générée et persistée avant préparation.",
+    "source": "native_pack/preparation.rs:109"
+  },
+  {
+    "code": "GENERATION_BRIDGE_IDENTITY_INVALID",
+    "params": {},
+    "expected": "La packIdentity stable n'est pas bridge-compatible.",
+    "source": "native_pack/preparation.rs:115"
+  },
+  {
+    "code": "EXPORT_PREPARED_COPY_ENCODE_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible de sérialiser la copie préparée : Exemple reason",
+    "source": "native_pack/preparation.rs:306"
+  },
+  {
+    "code": "EXPORT_ARCHIVE_NAME_TABLE_INCOMPLETE",
+    "params": {
+      "missing": 2,
+      "missing_2": "assets/a, assets/b"
+    },
+    "expected": "Table des noms d'archive incomplète : 2 références sans nom (assets/a, assets/b).",
+    "source": "native_pack/preparation.rs:423"
+  },
+  {
+    "code": "EXPORT_IMPORTED_VERSION_REQUIRED",
+    "params": {},
+    "expected": "Un document importé doit porter une version explicite avant export standard.",
+    "source": "native_pack/preparation.rs:455"
+  },
+  {
+    "code": "GRAPH_POSITION_SHORT_SCALE_FAILED",
+    "params": {
+      "position": "Exemple position"
+    },
+    "expected": "Position impossible à mettre à l'échelle vers l'intervalle short : Exemple position.",
+    "source": "native_pack/preparation.rs:646"
+  },
+  {
+    "code": "EXPORT_STANDARD_JSON_BUILD_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible de construire le JSON standard : Exemple reason",
+    "source": "native_pack/preparation.rs:672"
+  },
+  {
+    "code": "EXPORT_OPAQUE_LAYOUT_LOSS",
+    "params": {
+      "path": "Exemple path"
+    },
+    "expected": "La disposition opaque à Exemple path ne peut pas être appliquée sans perte à la copie préparée.",
+    "source": "native_pack/preparation.rs:779"
+  },
+  {
+    "code": "EXPORT_ENTRY_IDENTITY_MISMATCH",
+    "params": {
+      "value": "Exemple value",
+      "expected": "Exemple expected"
+    },
+    "expected": "L'Écran d'entrée porte « Exemple value » au lieu de l'identité du projet « Exemple expected ».",
+    "source": "native_pack/observed_gates.rs:333"
+  },
+  {
+    "code": "EXPORT_STAGED_FILE_UNREADABLE",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "fichier étagé illisible au moment du contrôle : Exemple reason",
+    "source": "native_pack/observed_gates.rs:396"
+  },
+  {
+    "code": "EXPORT_VALUE_EXPECTED_OBSERVED",
+    "params": {
+      "disagreement_expected": "Exemple disagreement_expected",
+      "disagreement_observed": "Exemple disagreement_observed"
+    },
+    "expected": "attendu Exemple disagreement_expected ; observé Exemple disagreement_observed",
+    "source": "native_pack/observed_gates.rs:437"
+  },
+  {
+    "code": "GENERATION_AUDIO_VERBATIM_READ_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Lecture audio pour copie verbatim échouée : Exemple reason",
+    "source": "native_pack/assets/audio.rs:182"
+  },
+  {
+    "code": "AUDIO_ROLE_FFMPEG_MISSING",
+    "params": {
+      "role": "Exemple role",
+      "reason": "Exemple reason"
+    },
+    "expected": "FFmpeg introuvable pour Exemple role : Exemple reason",
+    "source": "native_pack/assets/audio.rs:292"
+  },
+  {
+    "code": "GENERATION_AUDIO_PREPARE_FAILED",
+    "params": {
+      "role": "Exemple role",
+      "summary": "Exemple summary"
+    },
+    "expected": "Préparation audio native échouée pour Exemple role : Exemple summary",
+    "source": "native_pack/assets/audio.rs:300"
+  },
+  {
+    "code": "GENERATION_AUDIO_SILENCE_MEASURE_FAILED",
+    "params": {
+      "role": "Exemple role",
+      "reason": "Exemple reason"
+    },
+    "expected": "Mesure des silences native échouée pour Exemple role : Exemple reason",
+    "source": "native_pack/assets/audio.rs:455"
+  },
+  {
+    "code": "GENERATION_AUDIO_SILENT_REFUSED",
+    "params": {
+      "role": "Exemple role"
+    },
+    "expected": "Préparation audio native impossible pour Exemple role : audio silencieux",
+    "source": "native_pack/assets/audio.rs:459"
+  },
+  {
+    "code": "GENERATION_AUDIO_LEVEL_MEASURE_FAILED",
+    "params": {
+      "role": "Exemple role",
+      "reason": "Exemple reason"
+    },
+    "expected": "Mesure audio native échouée pour Exemple role : Exemple reason",
+    "source": "native_pack/assets/audio.rs:507"
+  },
+  {
+    "code": "GENERATION_AUDIO_PREPARE_UNAVAILABLE",
+    "params": {
+      "role": "Exemple role",
+      "loudness_action_reason_action": "Exemple loudness_action_reason_action"
+    },
+    "expected": "Préparation audio native impossible pour Exemple role : Exemple loudness_action_reason_action",
+    "source": "native_pack/assets/audio.rs:510"
+  },
+  {
+    "code": "AUDIO_NEAR_MUTE_BOOST",
+    "params": {
+      "label": "Exemple label"
+    },
+    "expected": "L'audio « Exemple label » était presque muet et a été fortement amplifié ; le bruit de fond peut être plus audible.",
+    "source": "native_pack/assets/audio.rs:549"
+  },
+  {
+    "code": "AUDIO_STRONG_LIMITING",
+    "params": {
+      "label": "Exemple label"
+    },
+    "expected": "L'audio « Exemple label » a nécessité une forte limitation pour être harmonisé ; certaines pointes peuvent sembler comprimées.",
+    "source": "native_pack/assets/audio.rs:554"
+  },
+  {
+    "code": "GENERATION_NATIVE_MEDIA_PIPELINE_NOTICE",
+    "params": {},
+    "expected": "Le pipeline assets natif prépare déjà les médias hors SPG.",
+    "source": "native_pack/stats.rs:20"
+  },
+  {
+    "code": "GENERATION_AUDIO_NORMALIZATION_NOTICE",
+    "params": {},
+    "expected": "Les audios sont reencodes en mp3 44.1 kHz mono et normalises.",
+    "source": "native_pack/stats.rs:21"
+  },
+  {
+    "code": "GENERATION_AUDIO_SILENCE_NOTICE",
+    "params": {},
+    "expected": "Le silence début/fin est mesuré puis posé pendant la préparation native.",
+    "source": "native_pack/stats.rs:30"
+  },
+  {
+    "code": "GENERATION_IMPORTED_ZIP_MERGE_NOTICE",
+    "params": {},
+    "expected": "Les ZIPs importés sont préparés pour fusion native sans SPG.",
+    "source": "native_pack/stats.rs:36"
+  },
+  {
+    "code": "GENERATION_ASSET_DEDUPLICATION_NOTICE",
+    "params": {},
+    "expected": "La déduplication de contenu fonctionne déjà au niveau des assets préparés.",
+    "source": "native_pack/stats.rs:40"
+  },
+  {
+    "code": "EXPORT_OUTPUT_FOLDER_UNAVAILABLE",
+    "params": {},
+    "expected": "répertoire de sortie indisponible",
+    "source": "native_pack/assets/advanced/executor.rs:173"
+  },
+  {
+    "code": "GRAPH_PASTED_OPTION_TARGET_OUTSIDE",
+    "params": {
+      "ordinal": "Exemple ordinal",
+      "rank": "Exemple rank"
+    },
+    "expected": "L'option Exemple ordinal de l'Action collée Exemple rank désigne un Écran hors du collage.",
+    "source": "native_pack/editing/paste.rs:135"
+  },
+  {
+    "code": "GRAPH_PASTED_STAGE_SOURCE_OUTSIDE",
+    "params": {
+      "transition_stage": "Exemple transition_stage"
+    },
+    "expected": "Une transition collée part d'un Écran hors du collage (rang Exemple transition_stage).",
+    "source": "native_pack/editing/paste.rs:144"
+  },
+  {
+    "code": "GRAPH_PASTED_ACTION_TARGET_OUTSIDE",
+    "params": {
+      "transition_action": "Exemple transition_action"
+    },
+    "expected": "Une transition collée mène à une Action hors du collage (rang Exemple transition_action).",
+    "source": "native_pack/editing/paste.rs:150"
+  },
+  {
+    "code": "GRAPH_CLIPBOARD_NODES_EMPTY",
+    "params": {},
+    "expected": "Le presse-papier ne porte aucun nœud à coller.",
+    "source": "native_pack/editing/paste.rs:169"
+  },
+  {
+    "code": "GRAPH_REMOVAL_NODE_DUPLICATED",
+    "params": {
+      "label": "Exemple label",
+      "identifier": "Exemple identifier"
+    },
+    "expected": "Le Exemple label « Exemple identifier » est nommé deux fois dans le même retrait.",
+    "source": "native_pack/editing/removal.rs:193"
+  },
+  {
+    "code": "GRAPH_REMOVAL_NODES_EMPTY",
+    "params": {},
+    "expected": "Aucun nœud à retirer.",
+    "source": "native_pack/editing/removal.rs:208"
+  },
+  {
+    "code": "GRAPH_EDITOR_POSITIONS_MOVE_EMPTY",
+    "params": {},
+    "expected": "Aucune position n'est fournie : le geste ne déplace rien.",
+    "source": "native_pack/editing/positions.rs:208"
+  },
+  {
+    "code": "GRAPH_NODE_POSITION_DUPLICATED",
+    "params": {},
+    "expected": "Ce nœud reçoit deux positions dans la même demande.",
+    "source": "native_pack/editing/positions.rs:219"
+  },
+  {
+    "code": "GRAPH_NODE_POSITION_DUPLICATED",
+    "params": {},
+    "expected": "Ce nœud reçoit deux positions dans la même demande.",
+    "source": "native_pack/editing/positions.rs:252"
+  },
+  {
+    "code": "GRAPH_EDITOR_POSITIONS_KEEP_EMPTY",
+    "params": {},
+    "expected": "Aucune position n'est fournie : le geste ne conserve rien.",
+    "source": "native_pack/editing/positions.rs:284"
+  },
+  {
+    "code": "GRAPH_NODE_POSITION_DUPLICATED",
+    "params": {},
+    "expected": "Ce nœud reçoit deux positions dans la même demande.",
+    "source": "native_pack/editing/positions.rs:295"
+  },
+  {
+    "code": "GRAPH_NODE_POSITION_PROMOTION_MISSING",
+    "params": {},
+    "expected": "Ce nœud ne porte aucune position d'éditeur à promouvoir.",
+    "source": "native_pack/editing/positions.rs:359"
+  },
+  {
+    "code": "GRAPH_EDITOR_POSITIONS_PROMOTION_EMPTY",
+    "params": {},
+    "expected": "Aucune position d'éditeur à promouvoir.",
+    "source": "native_pack/editing/positions.rs:370"
+  },
+  {
+    "code": "GRAPH_POSITION_SHORT_DECISION_REQUIRED",
+    "params": {
+      "excess": 2
+    },
+    "expected": "2 positions sortiraient de [-32768, 32767] : créer cette valeur demande une décision explicite.",
+    "source": "native_pack/editing/positions.rs:394"
+  },
+  {
+    "code": "GRAPH_POSITION_SCALE_UNREPRESENTABLE",
+    "params": {},
+    "expected": "La mise à l'échelle ne produit pas un nombre représentable.",
+    "source": "native_pack/editing/positions.rs:452"
+  },
+  {
+    "code": "GENERATION_DESTINATION_FOLDER_CHECK",
+    "params": {},
+    "expected": "🔍 Contrôle du dossier de destination...",
+    "source": "native_pack/advanced_export/mod.rs:320"
+  },
+  {
+    "code": "GENERATION_ADVANCED_MEDIA_PREPARING",
+    "params": {},
+    "expected": "🧪 Préparation des médias du projet avancé...",
+    "source": "native_pack/advanced_export/mod.rs:376"
+  },
+  {
+    "code": "GENERATION_MEDIA_PREPARED_SUMMARY",
+    "params": {
+      "prepared_assets_assets": 2,
+      "prepared_assets_archive_entries": "Exemple prepared_assets_archive_entries"
+    },
+    "expected": "  2 médias préparés, NaN fichiers à écrire.",
+    "source": "native_pack/advanced_export/mod.rs:385"
+  },
+  {
+    "code": "GENERATION_ZIP_WORKSPACE_ASSEMBLY",
+    "params": {},
+    "expected": "📦 Assemblage du ZIP dans l'espace de travail...",
+    "source": "native_pack/advanced_export/mod.rs:407"
+  },
+  {
+    "code": "GENERATION_ARCHIVE_MEDIA_REVIEW",
+    "params": {},
+    "expected": "🔎 Relecture de l'archive et contrôle des médias...",
+    "source": "native_pack/advanced_export/mod.rs:421"
+  },
+  {
+    "code": "GENERATION_ENTRIES_REATTACHED_LOG",
+    "params": {
+      "entry_names": 2
+    },
+    "expected": "  2 entrées relues et rattachées.",
+    "source": "native_pack/advanced_export/mod.rs:428"
+  },
+  {
+    "code": "GENERATION_ARCHIVE_TRANSFER_START",
+    "params": {},
+    "expected": "📤 Transfert de l'archive vers le dossier choisi...",
+    "source": "native_pack/advanced_export/mod.rs:435"
+  },
+  {
+    "code": "GENERATION_ADVANCED_PACK_EXPORTED",
+    "params": {
+      "published": "Exemple published"
+    },
+    "expected": "✅ Pack avancé exporté : Exemple published",
+    "source": "native_pack/advanced_export/mod.rs:446"
+  },
+  {
+    "code": "GENERATION_DESTINATION_KIND_EXPECTED",
+    "params": {},
+    "expected": "une seule nature de destination",
+    "source": "native_pack/assets/advanced/mod.rs:533"
+  },
+  {
+    "code": "GRAPH_REFERENCE_SLOT_LABEL",
+    "params": {
+      "mediaKind": "Exemple mediaKind"
+    },
+    "expected": "la référence occupe aussi une place Exemple mediaKind",
+    "source": "native_pack/assets/advanced/mod.rs:534"
+  },
+  {
+    "code": "GENERATION_PREPARED_OUTPUT_EXPECTED",
+    "params": {},
+    "expected": "une sortie produite par cette préparation",
+    "source": "native_pack/assets/advanced/mod.rs:581"
+  },
+  {
+    "code": "MISSING_STORY_JSON",
+    "params": {},
+    "expected": "story.json absent de la racine du ZIP.",
+    "source": "support/lunii_zip_validator.rs:72"
+  },
+  {
+    "code": "STORY_JSON_INVALID",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "story.json JSON invalide : Exemple reason",
+    "source": "support/lunii_zip_validator.rs:105"
+  },
+  {
+    "code": "INVALID_FORMAT_FIELD",
+    "params": {
+      "format": "Exemple fmt"
+    },
+    "expected": "Champ 'format' invalide : 'Exemple fmt' (attendu : 'v1', 'v2', …)",
+    "source": "support/lunii_zip_validator.rs:127"
+  },
+  {
+    "code": "SNODE_MISSING_UUID",
+    "params": {
+      "i": "Exemple i"
+    },
+    "expected": "stageNodes[Exemple i] : 'uuid' manquant.",
+    "source": "support/lunii_zip_validator.rs:159"
+  },
+  {
+    "code": "SNODE_MISSING_AUDIO",
+    "params": {
+      "i": "Exemple i",
+      "id": "Exemple id"
+    },
+    "expected": "stageNodes[Exemple i] (Exemple id) : 'audio' manquant.",
+    "source": "support/lunii_zip_validator.rs:166"
+  },
+  {
+    "code": "SNODE_INVALID_AUDIO",
+    "params": {
+      "i": "Exemple i",
+      "id": "Exemple id"
+    },
+    "expected": "stageNodes[Exemple i] (Exemple id) : 'audio' doit etre une chaine ou null.",
+    "source": "support/lunii_zip_validator.rs:173"
+  },
+  {
+    "code": "MISSING_AUDIO_ASSET",
+    "params": {
+      "i": "Exemple i",
+      "id": "Exemple id",
+      "audio": "Exemple audio"
+    },
+    "expected": "stageNodes[Exemple i] (Exemple id) : assets/Exemple audio absent du ZIP.",
+    "source": "support/lunii_zip_validator.rs:185"
+  },
+  {
+    "code": "MISSING_IMAGE_ASSET",
+    "params": {
+      "i": "Exemple i",
+      "id": "Exemple id",
+      "image": "Exemple image"
+    },
+    "expected": "stageNodes[Exemple i] (Exemple id) : assets/Exemple image absent du ZIP.",
+    "source": "support/lunii_zip_validator.rs:197"
+  },
+  {
+    "code": "SNODE_MISSING_CONTROL_SETTINGS",
+    "params": {
+      "i": "Exemple i",
+      "id": "Exemple id"
+    },
+    "expected": "stageNodes[Exemple i] (Exemple id) : 'controlSettings' manquant.",
+    "source": "support/lunii_zip_validator.rs:214"
+  },
+  {
+    "code": "ANODE_MISSING_ID",
+    "params": {
+      "i": "Exemple i"
+    },
+    "expected": "actionNodes[Exemple i] : 'id' manquant.",
+    "source": "support/lunii_zip_validator.rs:226"
+  },
+  {
+    "code": "ANODE_MISSING_OPTIONS",
+    "params": {
+      "i": "Exemple i"
+    },
+    "expected": "actionNodes[Exemple i] : 'options' manquant.",
+    "source": "support/lunii_zip_validator.rs:232"
+  },
+  {
+    "code": "AUDIO_TOO_SHORT",
+    "params": {
+      "name": "Exemple name"
+    },
+    "expected": "Exemple name : fichier audio trop court.",
+    "source": "support/lunii_zip_validator.rs:283"
+  },
+  {
+    "code": "AUDIO_WRONG_SAMPLE_RATE",
+    "params": {
+      "name": "Exemple name",
+      "sr": "Exemple sr"
+    },
+    "expected": "Exemple name : sample rate Exemple srHz (attendu 44100Hz).",
+    "source": "support/lunii_zip_validator.rs:324"
+  },
+  {
+    "code": "AUDIO_NOT_MONO",
+    "params": {
+      "name": "Exemple name",
+      "mode": "Exemple mode"
+    },
+    "expected": "Exemple name : audio Exemple mode (attendu mono).",
+    "source": "support/lunii_zip_validator.rs:339"
+  },
+  {
+    "code": "NO_ASSETS_DIR",
+    "params": {},
+    "expected": "Aucun fichier dans assets/ — le ZIP semble vide.",
+    "source": "support/lunii_zip_validator.rs:145"
+  },
+  {
+    "code": "SNODE_MISSING_CONTROL",
+    "params": {
+      "i": "Exemple i",
+      "id": "Exemple id",
+      "ctrl": "Exemple ctrl"
+    },
+    "expected": "stageNodes[Exemple i] (Exemple id) controlSettings : 'Exemple ctrl' manquant.",
+    "source": "support/lunii_zip_validator.rs:207"
+  },
+  {
+    "code": "AUDIO_NO_MPEG_FRAME",
+    "params": {
+      "name": "Exemple name"
+    },
+    "expected": "Exemple name : aucun frame MPEG trouvé.",
+    "source": "support/lunii_zip_validator.rs:291"
+  },
+  {
+    "code": "ZIP_OPEN_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Impossible d'ouvrir le ZIP : Exemple reason",
+    "source": "support/lunii_zip_validator.rs:41"
+  },
+  {
+    "code": "ZIP_INVALID",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Archive ZIP invalide : Exemple reason",
+    "source": "support/lunii_zip_validator.rs:52"
+  },
+  {
+    "code": "STORY_JSON_READ_ERROR",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Lecture story.json impossible : Exemple reason",
+    "source": "support/lunii_zip_validator.rs:84"
+  },
+  {
+    "code": "STORY_JSON_READ_ERROR",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "Lecture story.json impossible : Exemple reason",
+    "source": "support/lunii_zip_validator.rs:93"
+  },
+  {
+    "code": "INVALID_CONSTRUCTION",
+    "params": {},
+    "expected": "Donner un nom à la construction.",
+    "source": "native_pack/editing/constructions.rs:231"
+  },
+  {
+    "code": "INVALID_CONSTRUCTION",
+    "params": {
+      "context": "INVALID_CONSTRUCTION_ITEM_COUNT"
+    },
+    "expected": "Le nombre de passages ou de propositions ne convient pas à cette construction.",
+    "source": "native_pack/editing/constructions.rs:239"
+  },
+  {
+    "code": "INVALID_CONSTRUCTION",
+    "params": {
+      "context": "INVALID_CONSTRUCTION_RANDOM_INPUT"
+    },
+    "expected": "Le tirage au sort exige une transition entrante explicite.",
+    "source": "native_pack/editing/constructions.rs:244"
+  },
+  {
+    "code": "INVALID_CONSTRUCTION",
+    "params": {
+      "context": "INVALID_CONSTRUCTION_QUESTION_KIND"
+    },
+    "expected": "La question appartient uniquement à la construction Choix.",
+    "source": "native_pack/editing/constructions.rs:249"
+  },
+  {
+    "code": "INVALID_CONSTRUCTION",
+    "params": {
+      "context": "INVALID_CONSTRUCTION_ITEM_LABEL"
+    },
+    "expected": "Nommer chaque nouveau passage ou proposition.",
+    "source": "native_pack/editing/constructions.rs:255"
+  },
+  {
+    "code": "INVALID_CONSTRUCTION",
+    "params": {
+      "context": "INVALID_CONSTRUCTION_SEQUENCE_TARGET"
+    },
+    "expected": "Une séquence crée ses passages ; sa destination finale est distincte.",
+    "source": "native_pack/editing/constructions.rs:258"
+  },
+  {
+    "code": "INVALID_CONSTRUCTION",
+    "params": {
+      "context": "INVALID_CONSTRUCTION_ACTION_OPTIONS"
+    },
+    "expected": "Une Action créée depuis un raccord porte au moins une option.",
+    "source": "native_pack/editing/constructions.rs:392"
+  },
+  {
+    "code": "INVALID_CONSTRUCTION",
+    "params": {
+      "context": "INVALID_CONSTRUCTION_SELECTED_OPTION"
+    },
+    "expected": "L'option choisie doit appartenir à l'Action créée, ou être aléatoire.",
+    "source": "native_pack/editing/constructions.rs:397"
+  },
+  {
+    "code": "INVALID_CONSTRUCTION",
+    "params": {
+      "context": "INVALID_CONSTRUCTION_MISSING_DESTINATION"
+    },
+    "expected": "La destination à compléter n'existe plus à cette place.",
+    "source": "native_pack/editing/constructions.rs:459"
+  },
+  {
+    "code": "EXPORT_REVIEW_ADDRESS_MISSING",
+    "params": {},
+    "expected": "adresse absente de la relecture",
+    "source": "native_pack/assets/advanced/oracle.rs:65"
+  },
+  {
+    "code": "GRAPH_REFERENCE_BINDING_MISSING",
+    "params": {},
+    "expected": "aucune liaison ne porte cette référence",
+    "source": "native_pack/assets/advanced/inventory.rs:233"
+  },
+  {
+    "code": "VALIDATION_MEDIA_BINDING_FILE_MISSING",
+    "params": {},
+    "expected": "la liaison ne désigne aucun fichier",
+    "source": "native_pack/assets/advanced/inventory.rs:243"
+  },
+  {
+    "code": "VALIDATION_MEDIA_BINDING_DIRECTORY",
+    "params": {},
+    "expected": "la liaison désigne un répertoire",
+    "source": "native_pack/assets/advanced/inventory.rs:260"
+  },
+  {
+    "code": "GENERATION_OUTPUT_FILE_EMPTY",
+    "params": {},
+    "expected": "le fichier ne porte aucun octet",
+    "source": "native_pack/assets/advanced/inventory.rs:295"
+  },
+  {
+    "code": "GENERATION_DECODED_IMAGE_EMPTY",
+    "params": {},
+    "expected": "l'image décodée est vide",
+    "source": "native_pack/assets/advanced/inventory.rs:428"
+  },
+  {
+    "code": "GENERATION_OUTPUT_ADDRESS_FOREIGN",
+    "params": {
+      "output": "Exemple output"
+    },
+    "expected": "l'adresse de sortie Exemple output est occupée par un contenu que cette préparation n'a pas produit",
+    "source": "native_pack/assets/advanced/executor.rs:158"
+  },
+  {
+    "code": "GENERATION_TASK_OUTPUT_MISSING",
+    "params": {
+      "task_key": "Exemple task_key"
+    },
+    "expected": "la tâche Exemple task_key n'a pas produit de sortie",
+    "source": "native_pack/assets/advanced/executor.rs:215"
+  },
+  {
+    "code": "GENERATION_TASK_OUTPUT_ADDRESS_EMPTY",
+    "params": {
+      "task_key": "Exemple task_key"
+    },
+    "expected": "la tâche Exemple task_key n'a laissé aucune sortie à son adresse",
+    "source": "native_pack/assets/advanced/executor.rs:249"
+  },
+  {
+    "code": "IMPORT_READABLE_JSON_EXPECTED",
+    "params": {},
+    "expected": "un JSON relisible",
+    "source": "native_pack/archive_review.rs:210"
+  },
+  {
+    "code": "EXPORT_UNPARSED_STORY_EXPECTED",
+    "params": {},
+    "expected": "un story.json que la relecture ne parse pas",
+    "source": "native_pack/archive_review.rs:211"
+  },
+  {
+    "code": "LABEL_ARCHIVE_ENTRY_VALUE",
+    "params": {
+      "assets_prefix": "Exemple assets_prefix",
+      "name": "Exemple name"
+    },
+    "expected": "l'entrée 'Exemple assets_prefixExemple name' dans l'archive",
+    "source": "native_pack/archive_review.rs:242"
+  },
+  {
+    "code": "EXPORT_REFERENCE_FILE_EXPECTED",
+    "params": {},
+    "expected": "une référence sans fichier",
+    "source": "native_pack/archive_review.rs:243"
+  },
+  {
+    "code": "EXPORT_USED_MEDIA_EXPECTED",
+    "params": {},
+    "expected": "un média utilisé dans le pack",
+    "source": "native_pack/archive_review.rs:255"
+  },
+  {
+    "code": "EXPORT_UNUSED_FILE_EXPECTED",
+    "params": {},
+    "expected": "un fichier qu'aucun élément du pack ne désigne",
+    "source": "native_pack/archive_review.rs:256"
+  },
+  {
+    "code": "LABEL_DISTINCT_ARCHIVE_NAMES_COUNT",
+    "params": {
+      "expected_distinct_names": 2
+    },
+    "expected": "2 noms d'archive distincts",
+    "source": "native_pack/archive_review.rs:269"
+  },
+  {
+    "code": "LABEL_COPIED_REFERENCE_COUNT",
+    "params": {
+      "referenced": 2
+    },
+    "expected": "2 référencés par la copie",
+    "source": "native_pack/archive_review.rs:270"
+  },
+  {
+    "code": "EXPORT_READABLE_ARCHIVE_EXPECTED",
+    "params": {},
+    "expected": "une archive relisible",
+    "source": "native_pack/archive_review.rs:304"
+  },
+  {
+    "code": "EXPORT_ARCHIVE_MEMBER_MISSING",
+    "params": {},
+    "expected": "absente de l'archive",
+    "source": "native_pack/archive_review.rs:315"
+  },
+  {
+    "code": "GENERATION_REPORT_NO_ISSUES",
+    "params": {
+      "self_label": "Exemple self_label"
+    },
+    "expected": "  ✔ Exemple self_label : rien à signaler.",
+    "source": "native_pack/observed_gates.rs:237"
+  },
+  {
+    "code": "GENERATION_LOG_GATE_NOT_OBSERVED",
+    "params": {
+      "self_label": "Exemple self_label",
+      "self_note": "Exemple self_note"
+    },
+    "expected": "  · Exemple self_label : Exemple self_note",
+    "source": "native_pack/observed_gates.rs:238"
+  },
+  {
+    "code": "GENERATION_PUBLICATION_REFUSED_SUMMARY",
+    "params": {
+      "self_label": "Exemple self_label",
+      "self_reasons": 2
+    },
+    "expected": "  ✖ Exemple self_label : 2 motifs de refus — la production est arrêtée, aucune archive n'est publiée.",
+    "source": "native_pack/observed_gates.rs:241"
+  },
+  {
+    "code": "GENERATION_REFUSALS_OBSERVED_SUMMARY",
+    "params": {
+      "self_label": "Exemple self_label",
+      "self_reasons": 2
+    },
+    "expected": "  ⚠ Exemple self_label : 2 motifs de refus observés — la production continue (contrôle en observation).",
+    "source": "native_pack/observed_gates.rs:247"
+  },
+  {
+    "code": "GENERATION_LOG_GATE_REASON",
+    "params": {
+      "reason_code": "Exemple reason_code",
+      "reason_path": "Exemple reason_path",
+      "reason_message": "Exemple reason_message"
+    },
+    "expected": "\n      Exemple reason_code Exemple reason_path — Exemple reason_message",
+    "source": "native_pack/observed_gates.rs:254"
+  },
+  {
+    "code": "LABEL_ADDITIONAL_ITEMS_COUNT",
+    "params": {
+      "self_reasons_len_5": 2
+    },
+    "expected": "\n      … et 2 autres.",
+    "source": "native_pack/observed_gates.rs:260"
+  },
+  {
+    "code": "EXPORT_INTEROPERABILITY_DIMENSIONS_COUNT",
+    "params": {
+      "readiness_interoperability": "Exemple readiness_interoperability",
+      "readiness_dimensions": 2,
+      "readiness_unevaluated": "Exemple readiness_unevaluated"
+    },
+    "expected": "interopérabilité Exemple readiness_interoperability, 2 dimensions évaluées, NaN non évaluées",
+    "source": "native_pack/observed_gates.rs:298"
+  },
+  {
+    "code": "LABEL_SELECTED_IDENTITY_VALUE",
+    "params": {
+      "value": "Exemple value"
+    },
+    "expected": "identité retenue « Exemple value »",
+    "source": "native_pack/observed_gates.rs:343"
+  },
+  {
+    "code": "LABEL_SOURCE_ORIGIN_VALUE",
+    "params": {
+      "payload_context_pack_identity_origin": "Exemple payload_context_pack_identity_origin"
+    },
+    "expected": "origine Exemple payload_context_pack_identity_origin",
+    "source": "native_pack/observed_gates.rs:357"
+  },
+  {
+    "code": "EXPORT_STAGED_FILES_UNREADABLE",
+    "params": {
+      "unreadable": 2
+    },
+    "expected": "2 fichiers étagés illisibles : contrôle d'octets non concluant.",
+    "source": "native_pack/observed_gates.rs:410"
+  },
+  {
+    "code": "EXPORT_ENTRIES_REATTACHED_LABEL",
+    "params": {
+      "review_entry_names": 2
+    },
+    "expected": "2 entrées relues et rattachées",
+    "source": "native_pack/observed_gates.rs:428"
+  },
+  {
+    "code": "EXPORT_ENTRIES_REVIEWED_LABEL",
+    "params": {
+      "review_entry_names": 2
+    },
+    "expected": "2 entrées relues",
+    "source": "native_pack/observed_gates.rs:450"
+  },
+  {
+    "code": "LABEL_REFUSAL_REASONS_COUNT",
+    "params": {
+      "observation_label": "Exemple observation_label",
+      "observation_reasons": 2
+    },
+    "expected": "\n• Exemple observation_label — 2 motifs :",
+    "source": "native_pack/observed_gates.rs:494"
+  },
+  {
+    "code": "GENERATION_REFUSAL_GATE_REASON",
+    "params": {
+      "reason_code": "Exemple reason_code",
+      "reason_path": "Exemple reason_path",
+      "reason_message": "Exemple reason_message"
+    },
+    "expected": "\n    Exemple reason_code Exemple reason_path — Exemple reason_message",
+    "source": "native_pack/observed_gates.rs:500"
+  },
+  {
+    "code": "GENERATION_REFUSAL_MORE_REASONS",
+    "params": {
+      "observation_reasons_len_3": 2
+    },
+    "expected": "\n    … et 2 autres.",
+    "source": "native_pack/observed_gates.rs:506"
+  },
+  {
+    "code": "EXPORT_PUBLICATION_GATE_REFUSED",
+    "params": {},
+    "expected": "Production refusée avant publication. Aucune archive n'a été écrite dans le dossier de sortie.",
+    "source": "native_pack/observed_gates.rs:0"
+  },
+  {
+    "code": "LABEL_EXPORT_READINESS_VALUE",
+    "params": {},
+    "expected": "Readiness d'export",
+    "source": "native_pack/observed_gates.rs:0"
+  },
+  {
+    "code": "LABEL_PACK_IDENTITY_VALUE",
+    "params": {},
+    "expected": "Identité du pack",
+    "source": "native_pack/observed_gates.rs:0"
+  },
+  {
+    "code": "LABEL_ARCHIVE_REVIEW_OPERATION",
+    "params": {},
+    "expected": "Relecture de l'archive",
+    "source": "native_pack/observed_gates.rs:0"
+  },
+  {
+    "code": "EXPORT_ARCHIVE_GATES_LABEL",
+    "params": {},
+    "expected": "🛂 Contrôles d'archive :",
+    "source": "native_pack/observed_gates.rs:0"
+  },
+  {
+    "code": "EXPORT_ARCHIVE_GATES_OBSERVATION",
+    "params": {},
+    "expected": "🔭 Contrôles d'archive, en observation (ils ne refusent rien) :",
+    "source": "native_pack/observed_gates.rs:0"
+  },
+  {
+    "code": "EXPORT_DOCUMENT_IDENTITY_UNREADABLE",
+    "params": {},
+    "expected": "document non décodable : l'identité n'est pas observable.",
+    "source": "native_pack/observed_gates.rs:0"
+  },
+  {
+    "code": "GENERATION_LOG_LINES",
+    "params": {
+      "lines": {
+        "messages": [
+          {
+            "code": "GENERATION_CANCELLED",
+            "params": {}
+          },
+          "\n"
+        ],
+        "separator": ""
+      }
+    },
+    "expected": "Génération annulée.\n",
+    "source": "native_pack/observed_gates.rs:log composition"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_MISSING_FIELD",
+    "params": {
+      "field": "Exemple field",
+      "label": "Exemple label"
+    },
+    "expected": "Exemple label — Exemple field à ajouter",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_BROKEN_FIELD",
+    "params": {
+      "field": "Exemple field",
+      "label": "Exemple label"
+    },
+    "expected": "Exemple label — Fichier Exemple field introuvable",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_MISSING_TARGET",
+    "params": {
+      "label": "Exemple label",
+      "what": "Exemple what"
+    },
+    "expected": "Exemple label — destination Exemple what introuvable",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_EMPTY_TARGET",
+    "params": {
+      "label": "Exemple label",
+      "what": "Exemple what"
+    },
+    "expected": "Exemple label — destination Exemple what vide",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_NO_TYPE",
+    "params": {},
+    "expected": "Type de projet à choisir.",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_UI_IMPORTED_TRANSITION",
+    "params": {},
+    "expected": "Transition importée à vérifier.",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_ROOT_RESERVED",
+    "params": {},
+    "expected": "Identifiant réservé à corriger — aucun élément ne doit porter l'id root",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_MISSING_ID",
+    "params": {
+      "label": "Exemple label"
+    },
+    "expected": "Exemple label — Identifiant interne à corriger",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_UNSUPPORTED_TYPE",
+    "params": {
+      "label": "Exemple label"
+    },
+    "expected": "Exemple label — Type d'élément non pris en charge",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_RESERVED_ID",
+    "params": {
+      "label": "Exemple label"
+    },
+    "expected": "Exemple label — Identifiant réservé à corriger",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_DUPLICATE_ID",
+    "params": {
+      "count": 2,
+      "entryId": "Exemple entryId"
+    },
+    "expected": "Identifiant dupliqué — 2 éléments partagent l'id Exemple entryId",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_LOST_RETURN",
+    "params": {
+      "label": "Exemple label"
+    },
+    "expected": "Exemple label — Retour de fin introuvable",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_STORY_EXIT",
+    "params": {
+      "label": "Exemple label"
+    },
+    "expected": "Exemple label — Fin sans sortie : active le bouton Accueil de cette histoire, ou choisis « Enchaîner » dans « Après la lecture »",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_EMPTY_MENU",
+    "params": {
+      "label": "Exemple label"
+    },
+    "expected": "Exemple label — Histoire à ajouter",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_EMPTY_PACK",
+    "params": {},
+    "expected": "Histoire à ajouter dans le pack.",
+    "source": "store/validationMessages.js"
+  },
+  {
+    "code": "VALIDATION_MENU_DEPTH_LIMIT",
+    "params": {
+      "maxDepth": "Exemple maxDepth",
+      "observedDepth": 2
+    },
+    "expected": "Ce projet contient 2 Dossiers imbriqués. Story Studio en prend en charge au maximum Exemple maxDepth.",
+    "source": "domain/project_limits.rs ↔ store/projectModel/menuDepth.js"
+  },
+  {
+    "code": "PACK_IDENTITY_UNREADABLE",
+    "params": {
+      "identity": "Exemple identity"
+    },
+    "expected": "L'UUID du pack « Exemple identity » n'est pas lisible par STUdio et Lunii.QT.",
+    "source": "dialect.rs:pack_identity_refusal (presentation only)"
+  },
+  {
+    "code": "INVALID_PACK_IDENTITY",
+    "params": {
+      "identity": "Exemple identity",
+      "context": "INVALID_PACK_IDENTITY_UNREADABLE"
+    },
+    "expected": "L'UUID du pack « Exemple identity » n'est pas lisible par STUdio et Lunii.QT.",
+    "source": "editing/metadata.rs:identity refusal"
+  },
+  {
+    "code": "OPTION_INDEX_OUT_OF_DIALECT",
+    "params": {
+      "index": "Exemple index"
+    },
+    "expected": "optionIndex doit être supérieur ou égal à -1, reçu Exemple index",
+    "source": "editing/transitions.rs, options.rs:selection"
+  },
+  {
+    "code": "STAGE_ID_EMPTY",
+    "params": {},
+    "expected": "Stage sans identifiant : le champ « uuid » est vide.",
+    "source": "integrity.rs:check_node_identifiers"
+  },
+  {
+    "code": "ACTION_ID_EMPTY",
+    "params": {},
+    "expected": "ActionNode sans identifiant : le champ « id » est vide.",
+    "source": "integrity.rs:check_node_identifiers"
+  },
+  {
+    "code": "DUPLICATE_STAGE_ID",
+    "params": {
+      "id": "Exemple id"
+    },
+    "expected": "Identifiant de Stage en double : « Exemple id ».",
+    "source": "integrity.rs:check_node_identifiers"
+  },
+  {
+    "code": "DUPLICATE_ACTION_ID",
+    "params": {
+      "id": "Exemple id"
+    },
+    "expected": "Identifiant de ActionNode en double : « Exemple id ».",
+    "source": "integrity.rs:check_node_identifiers"
+  },
+  {
+    "code": "GRAPH_COPY_INCLUDED_PACK",
+    "params": {},
+    "expected": "Ton projet contient un pack inclus. L'éditeur graphe ne sait pas encore le reprendre.",
+    "source": "graph_copy.rs:refusal"
+  },
+  {
+    "code": "GRAPH_COPY_INVALID_IDENTITY",
+    "params": {},
+    "expected": "L'identité du pack de ton projet est illisible : la copie graphe ne pourrait pas la garder.",
+    "source": "graph_copy.rs:refusal"
+  },
+  {
+    "code": "GRAPH_COPY_UNFAITHFUL",
+    "params": {},
+    "expected": "La copie graphe ne produirait pas exactement le même pack que ton projet. Rien n'a été créé.",
+    "source": "graph_copy.rs:refusal"
+  },
+  {
+    "code": "GRAPH_COPY_UNFAITHFUL_DETAIL",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "La copie graphe ne produirait pas exactement le même pack que ton projet. Rien n'a été créé.\nExemple reason",
+    "source": "graph_copy.rs:technical fidelity gaps"
+  },
+  {
+    "code": "EXPORT_TEMP_WORKSPACE_DELETE_FAILED",
+    "params": {
+      "self_root": "Exemple self_root",
+      "reason": "Exemple reason"
+    },
+    "expected": "L'espace de travail temporaire 'Exemple self_root' n'a pas pu être supprimé : Exemple reason",
+    "source": "native_pack/advanced_export/workspace.rs:53"
+  },
+  {
+    "code": "GENERATION_CANCEL_REQUESTED",
+    "params": {},
+    "expected": "⏹ Annulation demandée…",
+    "source": "commands/generation.rs:cancel"
+  },
+  {
+    "code": "HOME_LOOPS_TO_SELF",
+    "params": {
+      "context": "HOME_LOOPS_TO_SELF_ENTRY"
+    },
+    "expected": "Sur l'Écran d'entrée, le bouton Accueil ramènerait ici même : désactive-le.",
+    "source": "authoring.rs:diagnose_entry_stage"
+  },
+  {
+    "code": "HOME_LOOPS_TO_SELF",
+    "params": {},
+    "expected": "Le bouton Accueil ramène cet Écran sur lui-même, et la Lunii s'y bloque : retire sa destination pour revenir au début du pack.",
+    "source": "authoring.rs:diagnose_entry_stage"
+  },
+  {
+    "code": "OK_LOOPS_TO_SELF",
+    "params": {},
+    "expected": "Le bouton OK ramène cet Écran sur lui-même : choisis une autre destination.",
+    "source": "authoring.rs:diagnose_entry_stage"
+  },
+  {
+    "code": "OK_WITHOUT_USABLE_DESTINATION",
+    "params": {},
+    "expected": "OK ou la fin automatique est actif sans destination utilisable : relie une destination ou désactive ces déclencheurs.",
+    "source": "authoring.rs:diagnose_entry_stage"
+  },
+  {
+    "code": "NO_USABLE_EXIT",
+    "params": {},
+    "expected": "Cet Écran accessible ne permet aucune sortie, même par la molette : ajoute une sortie utilisable.",
+    "source": "authoring.rs:diagnose_entry_stage"
+  },
+  {
+    "code": "ENTRY_STAGE_AS_OPTION",
+    "params": {
+      "context": "ENTRY_STAGE_AS_OPTION_AUTHORING"
+    },
+    "expected": "Ce choix mène à l'Écran d'entrée, qui ne peut pas être une destination : retire-le ou change son Écran. On revient au début par le bouton Accueil laissé sans destination.",
+    "source": "authoring.rs:diagnose_entry_stage"
+  },
+  {
+    "code": "GENERATION_AUDIO_ROOT_LABEL",
+    "params": {},
+    "expected": "Accueil du pack",
+    "source": "assets/audio.rs:generation_audio_label"
+  },
+  {
+    "code": "GENERATION_AUDIO_NIGHT_LABEL",
+    "params": {},
+    "expected": "Mode nuit",
+    "source": "assets/audio.rs:generation_audio_label"
+  },
+  {
+    "code": "GENERATION_ASSET_TRANSFORMED",
+    "params": {},
+    "expected": "transformé",
+    "source": "assets/pipeline.rs:emit_asset_result"
+  },
+  {
+    "code": "GENERATION_ASSET_COPIED",
+    "params": {},
+    "expected": "copie",
+    "source": "assets/pipeline.rs:emit_asset_result"
+  },
+  {
+    "code": "GENERATION_ASSET_DEDUPLICATED",
+    "params": {},
+    "expected": " (dedup)",
+    "source": "assets/pipeline.rs:emit_asset_result"
+  },
+  {
+    "code": "GRAPH_AUTHORED_POSITION_MISSING",
+    "params": {
+      "path": "Exemple path"
+    },
+    "expected": "Position authored introuvable : Exemple path",
+    "source": "native_pack/authoring.rs:694"
+  },
+  {
+    "code": "GRAPH_POSITION_LAYOUT_SHORT_FORBIDDEN",
+    "params": {},
+    "expected": "Une disposition de position ne s'applique qu'à une position hors short.",
+    "source": "native_pack/authoring.rs:697"
+  },
+  {
+    "code": "GRAPH_POSITION_LOSS_INHERITANCE_REQUIRED",
+    "params": {},
+    "expected": "La perte d'affichage dans STUdio ne peut être acceptée que pour une position héritée d'une source STUdio.",
+    "source": "native_pack/authoring.rs:705"
+  },
+  {
+    "code": "EXPORT_OPAQUE_EXTENSION_MISSING",
+    "params": {
+      "path": "Exemple path",
+      "key": "Exemple key"
+    },
+    "expected": "Extension opaque introuvable : Exemple path/Exemple key",
+    "source": "native_pack/authoring.rs:776"
+  },
+  {
+    "code": "EXPORT_STANDARD_KEY_OMITTED",
+    "params": {},
+    "expected": "L'export standard n'émet pas cette clé connue.",
+    "source": "native_pack/authoring.rs:782"
+  },
+  {
+    "code": "EXPORT_STANDARD_EMISSION_POLICY_INVALID",
+    "params": {},
+    "expected": "NeverEmitStandard est réservé aux membres connus non canoniques.",
+    "source": "native_pack/authoring.rs:791"
+  },
+  {
+    "code": "GRAPH_POSITION_NODE_MISSING",
+    "params": {
+      "path": "Exemple path"
+    },
+    "expected": "Nœud de position introuvable : Exemple path",
+    "source": "native_pack/authoring.rs:809"
+  },
+  {
+    "code": "GRAPH_EDITOR_POSITION_MISSING",
+    "params": {
+      "path": "Exemple path"
+    },
+    "expected": "Position d'éditeur introuvable : Exemple path",
+    "source": "native_pack/authoring.rs:838"
+  },
+  {
+    "code": "GRAPH_ACTION_NODE_MISSING",
+    "params": {
+      "action_id": "Exemple action_id"
+    },
+    "expected": "Action introuvable : Exemple action_id",
+    "source": "native_pack/authoring.rs:860"
+  },
+  {
+    "code": "GRAPH_ACTION_OPTION_MISSING",
+    "params": {
+      "action_id": "Exemple action_id",
+      "option_index": "Exemple option_index"
+    },
+    "expected": "Option introuvable : Exemple action_id[Exemple option_index]",
+    "source": "native_pack/authoring.rs:864"
+  },
+  {
+    "code": "GRAPH_GROUP_NODE_MISSING",
+    "params": {
+      "group_id": "Exemple group_id"
+    },
+    "expected": "Groupe introuvable : Exemple group_id",
+    "source": "native_pack/authoring.rs:880"
+  },
+  {
+    "code": "GRAPH_GROUP_SHAPE_UNKNOWN",
+    "params": {
+      "group_id": "Exemple group_id"
+    },
+    "expected": "Le groupe « Exemple group_id » porte une forme inconnue ; aucun flatten sémantique n'est prétendu.",
+    "source": "native_pack/authoring.rs:882"
+  },
+  {
+    "code": "GENERATION_INVENTORIED_MEDIA_EXPECTED",
+    "params": {},
+    "expected": "un média inventorié",
+    "source": "native_pack/assets/advanced/oracle.rs:140"
+  },
+  {
+    "code": "LABEL_RESULT_NONE_MASCULINE",
+    "params": {},
+    "expected": "aucun",
+    "source": "native_pack/assets/advanced/oracle.rs:141"
+  },
+  {
+    "code": "LABEL_PROJECT_SNAPSHOT_VALUE",
+    "params": {
+      "inventoried_snapshot_sha256": "Exemple inventoried_snapshot_sha256"
+    },
+    "expected": "l'instantané Exemple inventoried_snapshot_sha256",
+    "source": "native_pack/assets/advanced/oracle.rs:160"
+  },
+  {
+    "code": "GENERATION_CONVERSION_TASK_EXPECTED",
+    "params": {},
+    "expected": "une tâche de conversion",
+    "source": "native_pack/assets/advanced/oracle.rs:171"
+  },
+  {
+    "code": "LABEL_RESULT_NONE_FEMININE",
+    "params": {},
+    "expected": "aucune",
+    "source": "native_pack/assets/advanced/oracle.rs:172"
+  },
+  {
+    "code": "GENERATION_TASK_OUTPUT_EXPECTED",
+    "params": {
+      "task_key": "Exemple task_key"
+    },
+    "expected": "une sortie pour la tâche Exemple task_key",
+    "source": "native_pack/assets/advanced/oracle.rs:186"
+  },
+  {
+    "code": "LABEL_RESULT_NONE_FEMININE",
+    "params": {},
+    "expected": "aucune",
+    "source": "native_pack/assets/advanced/oracle.rs:187"
+  },
+  {
+    "code": "LABEL_TASK_OUTPUT_VALUE",
+    "params": {
+      "task_key": "Exemple task_key"
+    },
+    "expected": "la sortie Exemple task_key",
+    "source": "native_pack/assets/advanced/oracle.rs:210"
+  },
+  {
+    "code": "EXPORT_ARCHIVE_NAME_EXPECTED",
+    "params": {},
+    "expected": "un nom d'archive",
+    "source": "native_pack/assets/advanced/oracle.rs:221"
+  },
+  {
+    "code": "LABEL_RESULT_NONE_MASCULINE",
+    "params": {},
+    "expected": "aucun",
+    "source": "native_pack/assets/advanced/oracle.rs:222"
+  },
+  {
+    "code": "EXPORT_FILE_EXTENSION_EXPECTED",
+    "params": {
+      "expected_extension": "Exemple expected_extension"
+    },
+    "expected": "une extension .Exemple expected_extension",
+    "source": "native_pack/assets/advanced/oracle.rs:229"
+  },
+  {
+    "code": "LABEL_CONTENT_DERIVED_FILENAME",
+    "params": {
+      "task_key": "Exemple task_key"
+    },
+    "expected": "le nom dérivé des octets de Exemple task_key",
+    "source": "native_pack/assets/advanced/oracle.rs:241"
+  },
+  {
+    "code": "EXPORT_DOCUMENT_REFERENCE_EXPECTED",
+    "params": {},
+    "expected": "une référence du document",
+    "source": "native_pack/assets/advanced/oracle.rs:284"
+  },
+  {
+    "code": "EXPORT_TABLE_REFERENT_EXPECTED",
+    "params": {
+      "archive_name": "Exemple archive_name"
+    },
+    "expected": "une entrée de table sans référent : Exemple archive_name",
+    "source": "native_pack/assets/advanced/oracle.rs:285"
+  },
+  {
+    "code": "EXPORT_UNIQUE_SUFFIX_EXPECTED",
+    "params": {
+      "other": "Exemple other"
+    },
+    "expected": "un suffixe unique pour Exemple other",
+    "source": "native_pack/assets/advanced/oracle.rs:300"
+  },
+  {
+    "code": "LABEL_SHARED_SUFFIX_VALUE",
+    "params": {
+      "name": "Exemple name",
+      "suffix": "Exemple suffix"
+    },
+    "expected": "Exemple name partage le suffixe Exemple suffix",
+    "source": "native_pack/assets/advanced/oracle.rs:301"
+  },
+  {
+    "code": "ROOT_UUID_DIVERGENT",
+    "params": {
+      "identity": "identity",
+      "rootUuid": "root"
+    },
+    "expected": "La racine uuid `root` ne désigne pas l'identité du pack `identity` ; elle est conservée sans faire autorité.",
+    "source": "readiness/observation.rs: warning (adapted at IPC boundary)"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_AUDIO",
+    "params": {},
+    "expected": "Audio",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_INTRO_AUDIO",
+    "params": {},
+    "expected": "Audio d'accueil",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_TITLE_AUDIO",
+    "params": {},
+    "expected": "Audio de sélection",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_STORY",
+    "params": {},
+    "expected": "Histoire",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_IMAGE",
+    "params": {},
+    "expected": "Image",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_COVER_IMAGE",
+    "params": {},
+    "expected": "Image de couverture",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_LIBRARY_IMAGE",
+    "params": {},
+    "expected": "Image bibliothèque",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_ZIP",
+    "params": {},
+    "expected": "Archive ZIP",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_ENDING_AUDIO",
+    "params": {},
+    "expected": "audio de fin d'histoire",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_HOME_AUDIO",
+    "params": {},
+    "expected": "audio de la réaction Accueil",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_HOME_IMAGE",
+    "params": {},
+    "expected": "image de la réaction Accueil",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_CATALOG_IMAGE",
+    "params": {},
+    "expected": "vignette catalogue",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_FOLDER",
+    "params": {},
+    "expected": "dossier",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_PROJECT_FIELD_ELEMENT",
+    "params": {},
+    "expected": "Élément",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_FIELD_ENDING_AUDIO_NUMBERED",
+    "params": {
+      "index": 2
+    },
+    "expected": "audio de fin 2",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "VALIDATION_FIELD_ENDING_IMAGE_NUMBERED",
+    "params": {
+      "index": 2
+    },
+    "expected": "image de fin 2",
+    "source": "store/validationMessages.js:fieldLabel"
+  },
+  {
+    "code": "FFMPEG_UNKNOWN_ERROR",
+    "params": {},
+    "expected": "Erreur FFmpeg inconnue",
+    "source": "native_pack/assets/audio.rs: FFmpeg failure without stderr"
+  },
+  {
+    "code": "GENERATION_QUEUE_CANCEL_REQUESTED",
+    "params": {},
+    "expected": "⏹ Demande d’annulation envoyée…",
+    "source": "hooks/useRenderQueueExecutor.js: step of shared render queue"
+  },
+  {
+    "code": "GENERATION_QUEUE_CANCEL_FAILED",
+    "params": {
+      "reason": "Exemple reason"
+    },
+    "expected": "⚠️ Impossible de demander l’annulation : Exemple reason",
+    "source": "hooks/useRenderQueueExecutor.js: step of shared render queue"
+  },
+  {
+    "code": "GENERATION_QUEUE_START",
+    "params": {
+      "projectName": "Exemple projectName"
+    },
+    "expected": "▶ Démarrage de la fabrication : Exemple projectName",
+    "source": "hooks/useRenderQueueExecutor.js: step of shared render queue"
+  },
+  {
+    "code": "GENERATION_QUEUE_OUTPUT_FOLDER",
+    "params": {
+      "outputFolder": "Exemple outputFolder"
+    },
+    "expected": "  Dossier de sortie : Exemple outputFolder",
+    "source": "hooks/useRenderQueueExecutor.js: step of shared render queue"
+  },
+  {
+    "code": "GENERATION_QUEUE_CANCELLED",
+    "params": {},
+    "expected": "⏹ Fabrication annulée.",
+    "source": "hooks/useRenderQueueExecutor.js: step of shared render queue"
+  },
+  {
+    "code": "GENERATION_GATE_PUBLICATION_FOLLOWS",
+    "params": {},
+    "expected": "Contrôle bloquant : la publication lui est postérieure.",
+    "source": "store/production/productionGates.js: advanced gate note"
+  },
+  {
+    "code": "EXPORT_ARCHIVE_ENTRY_EXPECTED",
+    "params": {
+      "name": "Nom d’auteur"
+    },
+    "expected": "l'entrée 'Nom d’auteur'",
+    "source": "ExportReport : entrée attendue dans l’archive"
+  },
+  {
+    "code": "EXPORT_IDENTITY_EXPECTED_LABEL",
+    "params": {
+      "expected": "id-attendue"
+    },
+    "expected": "identité attendue « id-attendue »",
+    "source": "productionGates : identité attendue"
+  },
+  {
+    "code": "LABEL_PROJECT_ROOT_AUDIO",
+    "params": {},
+    "expected": "Audio racine",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_COVER_IMAGE",
+    "params": {},
+    "expected": "Image de couverture",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_LIBRARY_IMAGE",
+    "params": {},
+    "expected": "Image bibliotheque (STUdio/LuniiQt)",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_NIGHT_AUDIO",
+    "params": {},
+    "expected": "Audio mode nuit",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_MAIN_AUDIO",
+    "params": {},
+    "expected": "Histoire principale : audio",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_ROOT",
+    "params": {},
+    "expected": "Racine",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_SHARED",
+    "params": {},
+    "expected": "Éléments partagés",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_END_MESSAGE",
+    "params": {},
+    "expected": "Message de fin",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_COLLECTION",
+    "params": {},
+    "expected": "Collection",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_ELEMENT",
+    "params": {},
+    "expected": "Element",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_STORY",
+    "params": {},
+    "expected": "Histoire",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_ROOT_ELEMENT",
+    "params": {},
+    "expected": "Element racine",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_SHARED_ELEMENT",
+    "params": {},
+    "expected": "Element partage",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_AFTER_PLAY_TARGET",
+    "params": {},
+    "expected": "la destination de navigation après lecture",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_HOME_TARGET",
+    "params": {},
+    "expected": "la destination du bouton Accueil",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_TITLE_HOME_TARGET",
+    "params": {},
+    "expected": "la destination du bouton Accueil du titre",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_PROMPT_OK_TARGET",
+    "params": {},
+    "expected": "la destination OK du prompt final",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_PROMPT_HOME_TARGET",
+    "params": {},
+    "expected": "la destination Accueil du prompt final",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_ENDING_HOME_OK_TARGET",
+    "params": {},
+    "expected": "la destination OK du retour Home de fin",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_ENDING_HOME_HOME_TARGET",
+    "params": {},
+    "expected": "la destination Accueil du retour Home de fin",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_END_MESSAGE_TARGET",
+    "params": {},
+    "expected": "la destination après le message",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_ZIP",
+    "params": {
+      "context": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur : ZIP",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_AUDIO",
+    "params": {
+      "context": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur : audio",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_TITLE_AUDIO",
+    "params": {
+      "context": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur : audio titre",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_IMAGE",
+    "params": {
+      "context": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur : image",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_PATH",
+    "params": {
+      "context": "Nom d’auteur",
+      "name": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur / Nom d’auteur",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_MENU_AUDIO",
+    "params": {
+      "context": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur : audio menu",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_MENU_IMAGE",
+    "params": {
+      "context": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur : image menu",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_ENDING_AUDIO",
+    "params": {
+      "context": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur : audio fin histoire",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_STEP_AUDIO",
+    "params": {
+      "context": "Nom d’auteur",
+      "index": 3
+    },
+    "expected": "Nom d’auteur : audio de fin 3",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_STEP_IMAGE",
+    "params": {
+      "context": "Nom d’auteur",
+      "index": 3
+    },
+    "expected": "Nom d’auteur : image de fin 3",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_HOME_AUDIO",
+    "params": {
+      "context": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur : audio de la réaction Accueil",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_HOME_IMAGE",
+    "params": {
+      "context": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur : image de la réaction Accueil",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_STEP_OK",
+    "params": {
+      "index": 3
+    },
+    "expected": "la destination OK fin 3",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_STEP_HOME",
+    "params": {
+      "index": 3
+    },
+    "expected": "la destination Accueil fin 3",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_NODE_STAGE",
+    "params": {},
+    "expected": "Stage",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_NODE_ACTION",
+    "params": {},
+    "expected": "ActionNode",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_NODE_STORY_KIND",
+    "params": {},
+    "expected": "story",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_NODE_MENU_KIND",
+    "params": {},
+    "expected": "menu",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "AUDIO_INVALID_LEVEL_LABEL",
+    "params": {},
+    "expected": "mesure de niveau invalide",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "CONTROL_OBJECT_ABSENT",
+    "params": {},
+    "expected": "l'objet est absent",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "CONTROL_OBJECT_NULL",
+    "params": {},
+    "expected": "l'objet est null",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "CONTROL_MEMBER_ABSENT",
+    "params": {
+      "name": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur (absent)",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "CONTROL_MEMBER_NULL",
+    "params": {
+      "name": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur (null)",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "CONTROL_MEMBERS_MISSING",
+    "params": {
+      "members": "wheel (absent), home (null)"
+    },
+    "expected": "contrôles non renseignés : wheel (absent), home (null)",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_UNNAMED_PACK",
+    "params": {},
+    "expected": "Pack sans nom",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_ROOT_MENU",
+    "params": {},
+    "expected": "Menu racine",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_PACK_CARD",
+    "params": {},
+    "expected": "Fiche du pack",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_END_AFTER",
+    "params": {},
+    "expected": "Message de fin — destination après le message",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_PROJECT_END_HOME",
+    "params": {},
+    "expected": "Message de fin — bouton Accueil",
+    "source": "Libellé P1 imbriqué ; rendu récursif dans la langue active"
+  },
+  {
+    "code": "LABEL_UI_ENDING_TARGET",
+    "params": {
+      "label": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur — destination de fin",
+    "source": "Validation JS : contexte de navigation affiché dans les erreurs projet"
+  },
+  {
+    "code": "LABEL_UI_HOME_BUTTON",
+    "params": {
+      "label": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur — bouton Accueil",
+    "source": "Validation JS : contexte de navigation affiché dans les erreurs projet"
+  },
+  {
+    "code": "LABEL_UI_ENDING_OK",
+    "params": {
+      "label": "Nom d’auteur",
+      "index": 3
+    },
+    "expected": "Nom d’auteur — OK fin 3",
+    "source": "Validation JS : contexte de navigation affiché dans les erreurs projet"
+  },
+  {
+    "code": "LABEL_UI_FOLDER_HOME",
+    "params": {
+      "label": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur — Accueil du dossier",
+    "source": "Validation JS : contexte de navigation affiché dans les erreurs projet"
+  },
+  {
+    "code": "LABEL_UI_REACTION_HOME",
+    "params": {
+      "label": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur — Accueil de la réaction Accueil",
+    "source": "Validation JS : contexte de navigation affiché dans les erreurs projet"
+  },
+  {
+    "code": "LABEL_UI_STORIES_TARGET",
+    "params": {
+      "label": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur — destination des histoires",
+    "source": "Validation JS : contexte de navigation affiché dans les erreurs projet"
+  },
+  {
+    "code": "LABEL_UI_TITLE_HOME",
+    "params": {
+      "label": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur — Accueil du titre",
+    "source": "Validation JS : contexte de navigation affiché dans les erreurs projet"
+  },
+  {
+    "code": "LABEL_UI_PROMPT_HOME",
+    "params": {
+      "label": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur — Accueil du prompt final",
+    "source": "Validation JS : contexte de navigation affiché dans les erreurs projet"
+  },
+  {
+    "code": "LABEL_UI_ENDING_HOME",
+    "params": {
+      "label": "Nom d’auteur",
+      "index": 3
+    },
+    "expected": "Nom d’auteur — Accueil fin 3",
+    "source": "Validation JS : contexte de navigation affiché dans les erreurs projet"
+  },
+  {
+    "code": "LABEL_UI_REACTION_OK",
+    "params": {
+      "label": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur — OK de la réaction Accueil",
+    "source": "Validation JS : contexte de navigation affiché dans les erreurs projet"
+  },
+  {
+    "code": "LABEL_UI_PROMPT_OK",
+    "params": {
+      "label": "Nom d’auteur"
+    },
+    "expected": "Nom d’auteur — OK du prompt final",
+    "source": "Validation JS : contexte de navigation affiché dans les erreurs projet"
+  },
+  {
+    "code": "control-settings-incomplete",
+    "params": {
+      "detail": {
+        "code": "CONTROL_OBJECT_ABSENT",
+        "params": {}
+      }
+    },
+    "expected": "Contrôles incomplets conservés tels quels : l'objet est absent. Les cinq booléens doivent être renseignés explicitement avant tout export standard.",
+    "source": "Corrections après revue : sources FR originales, références imbriquées"
+  },
+  {
+    "code": "story-document-invalid",
+    "params": {
+      "reason": "missing field `uuid`"
+    },
+    "expected": "missing field `uuid`",
+    "source": "Corrections après revue : sources FR originales, références imbriquées"
+  },
+  {
+    "code": "VALIDATION_FIELD_MISSING_MASCULINE",
+    "params": {
+      "label": {
+        "code": "LABEL_PROJECT_ROOT_AUDIO",
+        "params": {}
+      }
+    },
+    "expected": "Audio racine manquant.",
+    "source": "Corrections après revue : sources FR originales, références imbriquées"
+  },
+  {
+    "code": "VALIDATION_FIELD_MISSING_MASCULINE",
+    "params": {
+      "label": {
+        "code": "LABEL_PROJECT_MENU_AUDIO",
+        "params": {
+          "context": {
+            "code": "LABEL_PROJECT_PATH",
+            "params": {
+              "context": {
+                "code": "LABEL_PROJECT_ROOT",
+                "params": {}
+              },
+              "name": "Mon nom français"
+            }
+          }
+        }
+      }
+    },
+    "expected": "Racine / Mon nom français : audio menu manquant.",
+    "source": "Corrections après revue : sources FR originales, références imbriquées"
+  },
+  {
+    "code": "VALIDATION_PROJECT_TARGET_MISSING",
+    "params": {
+      "entry_name": {
+        "code": "LABEL_PROJECT_END_MESSAGE",
+        "params": {}
+      },
+      "target_label": {
+        "code": "LABEL_PROJECT_HOME_TARGET",
+        "params": {}
+      }
+    },
+    "expected": "Message de fin : la destination du bouton Accueil est introuvable.",
+    "source": "Corrections après revue : sources FR originales, références imbriquées"
+  },
+  {
+    "code": "AUDIO_NEAR_MUTE_BOOST",
+    "params": {
+      "label": {
+        "code": "GENERATION_AUDIO_ROOT_LABEL",
+        "params": {}
+      }
+    },
+    "expected": "L'audio « Accueil du pack » était presque muet et a été fortement amplifié ; le bruit de fond peut être plus audible.",
+    "source": "Corrections après revue : sources FR originales, références imbriquées"
+  },
+  {
+    "code": "AUDIO_STRONG_LIMITING",
+    "params": {
+      "label": {
+        "code": "GENERATION_AUDIO_NIGHT_LABEL",
+        "params": {}
+      }
+    },
+    "expected": "L'audio « Mode nuit » a nécessité une forte limitation pour être harmonisé ; certaines pointes peuvent sembler comprimées.",
+    "source": "Corrections après revue : sources FR originales, références imbriquées"
+  },
+  {
+    "code": "control-settings-incomplete",
+    "params": {
+      "detail": {
+        "code": "CONTROL_MEMBERS_MISSING",
+        "params": {
+          "members": {
+            "messages": [
+              {
+                "code": "CONTROL_MEMBER_ABSENT",
+                "params": {
+                  "name": "wheel"
+                }
+              },
+              {
+                "code": "CONTROL_MEMBER_NULL",
+                "params": {
+                  "name": "pause"
+                }
+              }
+            ],
+            "separator": ", "
+          }
+        }
+      }
+    },
+    "expected": "Contrôles incomplets conservés tels quels : contrôles non renseignés : wheel (absent), pause (null). Les cinq booléens doivent être renseignés explicitement avant tout export standard.",
+    "source": "Corrections après revue : sources FR originales, références imbriquées"
+  },
+  {
+    "code": "ACTION_STILL_TARGETED",
+    "params": {
+      "count": 1
+    },
+    "expected": "1 transition référence encore cet ActionNode : la retirer ou la rediriger est une décision explicite.",
+    "source": "native_pack/editing/structure.rs:563 ; forme one"
+  },
+  {
+    "code": "ACTION_STILL_TARGETED",
+    "params": {
+      "count": 2
+    },
+    "expected": "2 transitions référencent encore cet ActionNode : les retirer ou les rediriger est une décision explicite.",
+    "source": "native_pack/editing/structure.rs:563 ; forme other"
+  },
+  {
+    "code": "ACTION_STILL_TARGETED",
+    "params": {
+      "count": 1000000
+    },
+    "expected": "1000000 transitions référencent encore cet ActionNode : les retirer ou les rediriger est une décision explicite.",
+    "source": "native_pack/editing/structure.rs:563 ; forme many"
+  },
+  {
+    "code": "AMBIGUOUS_NODE",
+    "params": {
+      "kind": "Exemple kind",
+      "wanted": "Exemple wanted",
+      "count": 1
+    },
+    "expected": "1 élément de type Exemple kind porte l'identifiant « Exemple wanted » : lever le doublon avant d'éditer.",
+    "source": "native_pack/editing/structure.rs:137 ; forme one"
+  },
+  {
+    "code": "AMBIGUOUS_NODE",
+    "params": {
+      "kind": "Exemple kind",
+      "wanted": "Exemple wanted",
+      "count": 2
+    },
+    "expected": "2 éléments de type Exemple kind portent l'identifiant « Exemple wanted » : lever le doublon avant d'éditer.",
+    "source": "native_pack/editing/structure.rs:137 ; forme other"
+  },
+  {
+    "code": "AMBIGUOUS_NODE",
+    "params": {
+      "kind": "Exemple kind",
+      "wanted": "Exemple wanted",
+      "count": 1000000
+    },
+    "expected": "1000000 éléments de type Exemple kind portent l'identifiant « Exemple wanted » : lever le doublon avant d'éditer.",
+    "source": "native_pack/editing/structure.rs:137 ; forme many"
+  },
+  {
+    "code": "GENERATION_AUDIO_WARNINGS_ATTACHED",
+    "params": {
+      "warnings": 1
+    },
+    "expected": "  ⚠️  1 avertissement audio sera joint au résultat.",
+    "source": "native_pack/assets/pipeline.rs:428 ; forme one"
+  },
+  {
+    "code": "GENERATION_AUDIO_WARNINGS_ATTACHED",
+    "params": {
+      "warnings": 2
+    },
+    "expected": "  ⚠️  2 avertissements audio seront joints au résultat.",
+    "source": "native_pack/assets/pipeline.rs:428 ; forme other"
+  },
+  {
+    "code": "GENERATION_AUDIO_WARNINGS_ATTACHED",
+    "params": {
+      "warnings": 1000000
+    },
+    "expected": "  ⚠️  1000000 avertissements audio seront joints au résultat.",
+    "source": "native_pack/assets/pipeline.rs:428 ; forme many"
+  },
+  {
+    "code": "GENERATION_ENTRIES_REATTACHED_LOG",
+    "params": {
+      "entry_names": 1
+    },
+    "expected": "  1 entrée relue et rattachée.",
+    "source": "native_pack/advanced_export/mod.rs:428 ; forme one"
+  },
+  {
+    "code": "GENERATION_ENTRIES_REATTACHED_LOG",
+    "params": {
+      "entry_names": 2
+    },
+    "expected": "  2 entrées relues et rattachées.",
+    "source": "native_pack/advanced_export/mod.rs:428 ; forme other"
+  },
+  {
+    "code": "GENERATION_ENTRIES_REATTACHED_LOG",
+    "params": {
+      "entry_names": 1000000
+    },
+    "expected": "  1000000 entrées relues et rattachées.",
+    "source": "native_pack/advanced_export/mod.rs:428 ; forme many"
+  },
+  {
+    "code": "GENERATION_MEDIA_PREPARED_SUMMARY",
+    "params": {
+      "prepared_assets_assets": 1,
+      "prepared_assets_archive_entries": "Exemple prepared_assets_archive_entries"
+    },
+    "expected": "  1 média préparé, NaN fichiers à écrire.",
+    "source": "native_pack/advanced_export/mod.rs:385 ; forme one"
+  },
+  {
+    "code": "GENERATION_MEDIA_PREPARED_SUMMARY",
+    "params": {
+      "prepared_assets_assets": 2,
+      "prepared_assets_archive_entries": "Exemple prepared_assets_archive_entries"
+    },
+    "expected": "  2 médias préparés, NaN fichiers à écrire.",
+    "source": "native_pack/advanced_export/mod.rs:385 ; forme other"
+  },
+  {
+    "code": "GENERATION_MEDIA_PREPARED_SUMMARY",
+    "params": {
+      "prepared_assets_assets": 1000000,
+      "prepared_assets_archive_entries": "Exemple prepared_assets_archive_entries"
+    },
+    "expected": "  1000000 médias préparés, NaN fichiers à écrire.",
+    "source": "native_pack/advanced_export/mod.rs:385 ; forme many"
+  },
+  {
+    "code": "GENERATION_PUBLICATION_REFUSED_SUMMARY",
+    "params": {
+      "self_label": "Exemple self_label",
+      "self_reasons": 1
+    },
+    "expected": "  ✖ Exemple self_label : 1 motif de refus — la production est arrêtée, aucune archive n'est publiée.",
+    "source": "native_pack/observed_gates.rs:241 ; forme one"
+  },
+  {
+    "code": "GENERATION_PUBLICATION_REFUSED_SUMMARY",
+    "params": {
+      "self_label": "Exemple self_label",
+      "self_reasons": 2
+    },
+    "expected": "  ✖ Exemple self_label : 2 motifs de refus — la production est arrêtée, aucune archive n'est publiée.",
+    "source": "native_pack/observed_gates.rs:241 ; forme other"
+  },
+  {
+    "code": "GENERATION_PUBLICATION_REFUSED_SUMMARY",
+    "params": {
+      "self_label": "Exemple self_label",
+      "self_reasons": 1000000
+    },
+    "expected": "  ✖ Exemple self_label : 1000000 motifs de refus — la production est arrêtée, aucune archive n'est publiée.",
+    "source": "native_pack/observed_gates.rs:241 ; forme many"
+  },
+  {
+    "code": "GENERATION_REFUSALS_OBSERVED_SUMMARY",
+    "params": {
+      "self_label": "Exemple self_label",
+      "self_reasons": 1
+    },
+    "expected": "  ⚠ Exemple self_label : 1 motif de refus observé — la production continue (contrôle en observation).",
+    "source": "native_pack/observed_gates.rs:247 ; forme one"
+  },
+  {
+    "code": "GENERATION_REFUSALS_OBSERVED_SUMMARY",
+    "params": {
+      "self_label": "Exemple self_label",
+      "self_reasons": 2
+    },
+    "expected": "  ⚠ Exemple self_label : 2 motifs de refus observés — la production continue (contrôle en observation).",
+    "source": "native_pack/observed_gates.rs:247 ; forme other"
+  },
+  {
+    "code": "GENERATION_REFUSALS_OBSERVED_SUMMARY",
+    "params": {
+      "self_label": "Exemple self_label",
+      "self_reasons": 1000000
+    },
+    "expected": "  ⚠ Exemple self_label : 1000000 motifs de refus observés — la production continue (contrôle en observation).",
+    "source": "native_pack/observed_gates.rs:247 ; forme many"
+  },
+  {
+    "code": "GENERATION_PACK_AUDIO_WARNINGS",
+    "params": {
+      "warnings": 1
+    },
+    "expected": "⚠️  Pack généré avec 1 avertissement audio :",
+    "source": "commands/generation.rs:235 ; forme one"
+  },
+  {
+    "code": "GENERATION_PACK_AUDIO_WARNINGS",
+    "params": {
+      "warnings": 2
+    },
+    "expected": "⚠️  Pack généré avec 2 avertissements audio :",
+    "source": "commands/generation.rs:235 ; forme other"
+  },
+  {
+    "code": "GENERATION_PACK_AUDIO_WARNINGS",
+    "params": {
+      "warnings": 1000000
+    },
+    "expected": "⚠️  Pack généré avec 1000000 avertissements audio :",
+    "source": "commands/generation.rs:235 ; forme many"
+  },
+  {
+    "code": "GENERATION_ASSETS_PREPROCESS_START",
+    "params": {
+      "requests": 1
+    },
+    "expected": "  Prétraitement assets : 1 élément",
+    "source": "native_pack/assets/pipeline.rs:241 ; forme one"
+  },
+  {
+    "code": "GENERATION_ASSETS_PREPROCESS_START",
+    "params": {
+      "requests": 2
+    },
+    "expected": "  Prétraitement assets : 2 éléments",
+    "source": "native_pack/assets/pipeline.rs:241 ; forme other"
+  },
+  {
+    "code": "GENERATION_ASSETS_PREPROCESS_START",
+    "params": {
+      "requests": 1000000
+    },
+    "expected": "  Prétraitement assets : 1000000 éléments",
+    "source": "native_pack/assets/pipeline.rs:241 ; forme many"
+  },
+  {
+    "code": "GENERATION_ZIP_VALIDATION_ERRORS",
+    "params": {
+      "err_count": 1
+    },
+    "expected": "⚠️  ZIP généré avec 1 erreur de validation non bloquante.",
+    "source": "commands/generation.rs:284 ; forme one"
+  },
+  {
+    "code": "GENERATION_ZIP_VALIDATION_ERRORS",
+    "params": {
+      "err_count": 2
+    },
+    "expected": "⚠️  ZIP généré avec 2 erreurs de validation non bloquantes.",
+    "source": "commands/generation.rs:284 ; forme other"
+  },
+  {
+    "code": "GENERATION_ZIP_VALIDATION_ERRORS",
+    "params": {
+      "err_count": 1000000
+    },
+    "expected": "⚠️  ZIP généré avec 1000000 erreurs de validation non bloquantes.",
+    "source": "commands/generation.rs:284 ; forme many"
+  },
+  {
+    "code": "GENERATION_ZIP_VALIDATION_WARNINGS",
+    "params": {
+      "warn_count": 1
+    },
+    "expected": "✅ ZIP valide (1 avertissement)",
+    "source": "commands/generation.rs:272 ; forme one"
+  },
+  {
+    "code": "GENERATION_ZIP_VALIDATION_WARNINGS",
+    "params": {
+      "warn_count": 2
+    },
+    "expected": "✅ ZIP valide (2 avertissements)",
+    "source": "commands/generation.rs:272 ; forme other"
+  },
+  {
+    "code": "GENERATION_ZIP_VALIDATION_WARNINGS",
+    "params": {
+      "warn_count": 1000000
+    },
+    "expected": "✅ ZIP valide (1000000 avertissements)",
+    "source": "commands/generation.rs:272 ; forme many"
+  },
+  {
+    "code": "GENERATION_REFUSAL_MORE_REASONS",
+    "params": {
+      "observation_reasons_len_3": 1
+    },
+    "expected": "\n    … et 1 autre.",
+    "source": "native_pack/observed_gates.rs:506 ; forme one"
+  },
+  {
+    "code": "GENERATION_REFUSAL_MORE_REASONS",
+    "params": {
+      "observation_reasons_len_3": 2
+    },
+    "expected": "\n    … et 2 autres.",
+    "source": "native_pack/observed_gates.rs:506 ; forme other"
+  },
+  {
+    "code": "GENERATION_REFUSAL_MORE_REASONS",
+    "params": {
+      "observation_reasons_len_3": 1000000
+    },
+    "expected": "\n    … et 1000000 autres.",
+    "source": "native_pack/observed_gates.rs:506 ; forme many"
+  },
+  {
+    "code": "INVALID_OPTION_PERMUTATION",
+    "params": {
+      "count": 1,
+      "rankCount": "Exemple new_position_of_old"
+    },
+    "expected": "La permutation porte NaN rangs pour 1 option : chaque occurrence doit recevoir une place.",
+    "source": "native_pack/editing/options.rs:372 ; forme one"
+  },
+  {
+    "code": "INVALID_OPTION_PERMUTATION",
+    "params": {
+      "count": 2,
+      "rankCount": "Exemple new_position_of_old"
+    },
+    "expected": "La permutation porte NaN rangs pour 2 options : chaque occurrence doit recevoir une place.",
+    "source": "native_pack/editing/options.rs:372 ; forme other"
+  },
+  {
+    "code": "INVALID_OPTION_PERMUTATION",
+    "params": {
+      "count": 1000000,
+      "rankCount": "Exemple new_position_of_old"
+    },
+    "expected": "La permutation porte NaN rangs pour 1000000 options : chaque occurrence doit recevoir une place.",
+    "source": "native_pack/editing/options.rs:372 ; forme many"
+  },
+  {
+    "code": "EXPORT_ENTRIES_REVIEWED_LABEL",
+    "params": {
+      "review_entry_names": 1
+    },
+    "expected": "1 entrée relue",
+    "source": "native_pack/observed_gates.rs:450 ; forme one"
+  },
+  {
+    "code": "EXPORT_ENTRIES_REVIEWED_LABEL",
+    "params": {
+      "review_entry_names": 2
+    },
+    "expected": "2 entrées relues",
+    "source": "native_pack/observed_gates.rs:450 ; forme other"
+  },
+  {
+    "code": "EXPORT_ENTRIES_REVIEWED_LABEL",
+    "params": {
+      "review_entry_names": 1000000
+    },
+    "expected": "1000000 entrées relues",
+    "source": "native_pack/observed_gates.rs:450 ; forme many"
+  },
+  {
+    "code": "EXPORT_ENTRIES_REATTACHED_LABEL",
+    "params": {
+      "review_entry_names": 1
+    },
+    "expected": "1 entrée relue et rattachée",
+    "source": "native_pack/observed_gates.rs:428 ; forme one"
+  },
+  {
+    "code": "EXPORT_ENTRIES_REATTACHED_LABEL",
+    "params": {
+      "review_entry_names": 2
+    },
+    "expected": "2 entrées relues et rattachées",
+    "source": "native_pack/observed_gates.rs:428 ; forme other"
+  },
+  {
+    "code": "EXPORT_ENTRIES_REATTACHED_LABEL",
+    "params": {
+      "review_entry_names": 1000000
+    },
+    "expected": "1000000 entrées relues et rattachées",
+    "source": "native_pack/observed_gates.rs:428 ; forme many"
+  },
+  {
+    "code": "LABEL_ADDITIONAL_ITEMS_COUNT",
+    "params": {
+      "self_reasons_len_5": 1
+    },
+    "expected": "\n      … et 1 autre.",
+    "source": "native_pack/observed_gates.rs:260 ; forme one"
+  },
+  {
+    "code": "LABEL_ADDITIONAL_ITEMS_COUNT",
+    "params": {
+      "self_reasons_len_5": 2
+    },
+    "expected": "\n      … et 2 autres.",
+    "source": "native_pack/observed_gates.rs:260 ; forme other"
+  },
+  {
+    "code": "LABEL_ADDITIONAL_ITEMS_COUNT",
+    "params": {
+      "self_reasons_len_5": 1000000
+    },
+    "expected": "\n      … et 1000000 autres.",
+    "source": "native_pack/observed_gates.rs:260 ; forme many"
+  },
+  {
+    "code": "EXPORT_STAGED_FILES_UNREADABLE",
+    "params": {
+      "unreadable": 1
+    },
+    "expected": "1 fichier étagé illisible : contrôle d'octets non concluant.",
+    "source": "native_pack/observed_gates.rs:410 ; forme one"
+  },
+  {
+    "code": "EXPORT_STAGED_FILES_UNREADABLE",
+    "params": {
+      "unreadable": 2
+    },
+    "expected": "2 fichiers étagés illisibles : contrôle d'octets non concluant.",
+    "source": "native_pack/observed_gates.rs:410 ; forme other"
+  },
+  {
+    "code": "EXPORT_STAGED_FILES_UNREADABLE",
+    "params": {
+      "unreadable": 1000000
+    },
+    "expected": "1000000 fichiers étagés illisibles : contrôle d'octets non concluant.",
+    "source": "native_pack/observed_gates.rs:410 ; forme many"
+  },
+  {
+    "code": "EXPORT_INTEROPERABILITY_DIMENSIONS_COUNT",
+    "params": {
+      "readiness_interoperability": "Exemple readiness_interoperability",
+      "readiness_dimensions": 1,
+      "readiness_unevaluated": "Exemple readiness_unevaluated"
+    },
+    "expected": "interopérabilité Exemple readiness_interoperability, 1 dimension évaluée, NaN non évaluées",
+    "source": "native_pack/observed_gates.rs:298 ; forme one"
+  },
+  {
+    "code": "EXPORT_INTEROPERABILITY_DIMENSIONS_COUNT",
+    "params": {
+      "readiness_interoperability": "Exemple readiness_interoperability",
+      "readiness_dimensions": 2,
+      "readiness_unevaluated": "Exemple readiness_unevaluated"
+    },
+    "expected": "interopérabilité Exemple readiness_interoperability, 2 dimensions évaluées, NaN non évaluées",
+    "source": "native_pack/observed_gates.rs:298 ; forme other"
+  },
+  {
+    "code": "EXPORT_INTEROPERABILITY_DIMENSIONS_COUNT",
+    "params": {
+      "readiness_interoperability": "Exemple readiness_interoperability",
+      "readiness_dimensions": 1000000,
+      "readiness_unevaluated": "Exemple readiness_unevaluated"
+    },
+    "expected": "interopérabilité Exemple readiness_interoperability, 1000000 dimensions évaluées, NaN non évaluées",
+    "source": "native_pack/observed_gates.rs:298 ; forme many"
+  },
+  {
+    "code": "LABEL_REFUSAL_REASONS_COUNT",
+    "params": {
+      "observation_label": "Exemple observation_label",
+      "observation_reasons": 1
+    },
+    "expected": "\n• Exemple observation_label — 1 motif :",
+    "source": "native_pack/observed_gates.rs:494 ; forme one"
+  },
+  {
+    "code": "LABEL_REFUSAL_REASONS_COUNT",
+    "params": {
+      "observation_label": "Exemple observation_label",
+      "observation_reasons": 2
+    },
+    "expected": "\n• Exemple observation_label — 2 motifs :",
+    "source": "native_pack/observed_gates.rs:494 ; forme other"
+  },
+  {
+    "code": "LABEL_REFUSAL_REASONS_COUNT",
+    "params": {
+      "observation_label": "Exemple observation_label",
+      "observation_reasons": 1000000
+    },
+    "expected": "\n• Exemple observation_label — 1000000 motifs :",
+    "source": "native_pack/observed_gates.rs:494 ; forme many"
+  },
+  {
+    "code": "LABEL_DISTINCT_ARCHIVE_NAMES_COUNT",
+    "params": {
+      "expected_distinct_names": 1
+    },
+    "expected": "1 nom d'archive distinct",
+    "source": "native_pack/archive_review.rs:269 ; forme one"
+  },
+  {
+    "code": "LABEL_DISTINCT_ARCHIVE_NAMES_COUNT",
+    "params": {
+      "expected_distinct_names": 2
+    },
+    "expected": "2 noms d'archive distincts",
+    "source": "native_pack/archive_review.rs:269 ; forme other"
+  },
+  {
+    "code": "LABEL_DISTINCT_ARCHIVE_NAMES_COUNT",
+    "params": {
+      "expected_distinct_names": 1000000
+    },
+    "expected": "1000000 noms d'archive distincts",
+    "source": "native_pack/archive_review.rs:269 ; forme many"
+  },
+  {
+    "code": "GRAPH_POSITION_SHORT_DECISION_REQUIRED",
+    "params": {
+      "excess": 1
+    },
+    "expected": "1 position sortirait de [-32768, 32767] : créer cette valeur demande une décision explicite.",
+    "source": "native_pack/editing/positions.rs:394 ; forme one"
+  },
+  {
+    "code": "GRAPH_POSITION_SHORT_DECISION_REQUIRED",
+    "params": {
+      "excess": 2
+    },
+    "expected": "2 positions sortiraient de [-32768, 32767] : créer cette valeur demande une décision explicite.",
+    "source": "native_pack/editing/positions.rs:394 ; forme other"
+  },
+  {
+    "code": "GRAPH_POSITION_SHORT_DECISION_REQUIRED",
+    "params": {
+      "excess": 1000000
+    },
+    "expected": "1000000 positions sortiraient de [-32768, 32767] : créer cette valeur demande une décision explicite.",
+    "source": "native_pack/editing/positions.rs:394 ; forme many"
+  },
+  {
+    "code": "LABEL_COPIED_REFERENCE_COUNT",
+    "params": {
+      "referenced": 1
+    },
+    "expected": "1 référencé par la copie",
+    "source": "native_pack/archive_review.rs:270 ; forme one"
+  },
+  {
+    "code": "LABEL_COPIED_REFERENCE_COUNT",
+    "params": {
+      "referenced": 2
+    },
+    "expected": "2 référencés par la copie",
+    "source": "native_pack/archive_review.rs:270 ; forme other"
+  },
+  {
+    "code": "LABEL_COPIED_REFERENCE_COUNT",
+    "params": {
+      "referenced": 1000000
+    },
+    "expected": "1000000 référencés par la copie",
+    "source": "native_pack/archive_review.rs:270 ; forme many"
+  },
+  {
+    "code": "EXPORT_ARCHIVE_NAME_TABLE_INCOMPLETE",
+    "params": {
+      "missing": 1,
+      "missing_2": "assets/a, assets/b"
+    },
+    "expected": "Table des noms d'archive incomplète : 1 référence sans nom (assets/a, assets/b).",
+    "source": "native_pack/preparation.rs:423 ; forme one"
+  },
+  {
+    "code": "EXPORT_ARCHIVE_NAME_TABLE_INCOMPLETE",
+    "params": {
+      "missing": 2,
+      "missing_2": "assets/a, assets/b"
+    },
+    "expected": "Table des noms d'archive incomplète : 2 références sans nom (assets/a, assets/b).",
+    "source": "native_pack/preparation.rs:423 ; forme other"
+  },
+  {
+    "code": "EXPORT_ARCHIVE_NAME_TABLE_INCOMPLETE",
+    "params": {
+      "missing": 1000000,
+      "missing_2": "assets/a, assets/b"
+    },
+    "expected": "Table des noms d'archive incomplète : 1000000 références sans nom (assets/a, assets/b).",
+    "source": "native_pack/preparation.rs:423 ; forme many"
+  },
+  {
+    "code": "OPTION_ORDINAL_OUT_OF_RANGE",
+    "params": {
+      "action_id": "Exemple action_id",
+      "count": 1,
+      "ordinal": "Exemple ordinal",
+      "bound": "Exemple bound"
+    },
+    "expected": "L'ActionNode « Exemple action_id » porte 1 option : le rang Exemple ordinal n'est pas adressable (maximum Exemple bound).",
+    "source": "native_pack/editing/options.rs:285 ; forme one"
+  },
+  {
+    "code": "OPTION_ORDINAL_OUT_OF_RANGE",
+    "params": {
+      "action_id": "Exemple action_id",
+      "count": 2,
+      "ordinal": "Exemple ordinal",
+      "bound": "Exemple bound"
+    },
+    "expected": "L'ActionNode « Exemple action_id » porte 2 options : le rang Exemple ordinal n'est pas adressable (maximum Exemple bound).",
+    "source": "native_pack/editing/options.rs:285 ; forme other"
+  },
+  {
+    "code": "OPTION_ORDINAL_OUT_OF_RANGE",
+    "params": {
+      "action_id": "Exemple action_id",
+      "count": 1000000,
+      "ordinal": "Exemple ordinal",
+      "bound": "Exemple bound"
+    },
+    "expected": "L'ActionNode « Exemple action_id » porte 1000000 options : le rang Exemple ordinal n'est pas adressable (maximum Exemple bound).",
+    "source": "native_pack/editing/options.rs:285 ; forme many"
+  },
+  {
+    "code": "OPTION_SELECTION_INVALID",
+    "params": {
+      "field": "Exemple field",
+      "stage": "Exemple stage_uuid",
+      "selection": "Exemple transition_selection",
+      "optionCount": 1
+    },
+    "expected": "La transition Exemple field du Stage « Exemple stage_uuid » sélectionne Exemple transition_selection sur un ActionNode de 1 option.",
+    "source": "native_pack/integrity.rs:342 ; forme one"
+  },
+  {
+    "code": "OPTION_SELECTION_INVALID",
+    "params": {
+      "field": "Exemple field",
+      "stage": "Exemple stage_uuid",
+      "selection": "Exemple transition_selection",
+      "optionCount": 2
+    },
+    "expected": "La transition Exemple field du Stage « Exemple stage_uuid » sélectionne Exemple transition_selection sur un ActionNode de 2 options.",
+    "source": "native_pack/integrity.rs:342 ; forme other"
+  },
+  {
+    "code": "OPTION_SELECTION_INVALID",
+    "params": {
+      "field": "Exemple field",
+      "stage": "Exemple stage_uuid",
+      "selection": "Exemple transition_selection",
+      "optionCount": 1000000
+    },
+    "expected": "La transition Exemple field du Stage « Exemple stage_uuid » sélectionne Exemple transition_selection sur un ActionNode de 1000000 options.",
+    "source": "native_pack/integrity.rs:342 ; forme many"
+  },
+  {
+    "code": "OPTION_SELECTION_OUT_OF_BOUNDS",
+    "params": {
+      "action_id": "Exemple action_id",
+      "remaining": 1,
+      "selection": "Exemple selection"
+    },
+    "expected": "Après retrait, l'ActionNode « Exemple action_id » porte 1 option : Exemple selection n'en désigne aucune.",
+    "source": "native_pack/editing/options.rs:499 ; forme one"
+  },
+  {
+    "code": "OPTION_SELECTION_OUT_OF_BOUNDS",
+    "params": {
+      "action_id": "Exemple action_id",
+      "remaining": 2,
+      "selection": "Exemple selection"
+    },
+    "expected": "Après retrait, l'ActionNode « Exemple action_id » porte 2 options : Exemple selection n'en désigne aucune.",
+    "source": "native_pack/editing/options.rs:499 ; forme other"
+  },
+  {
+    "code": "OPTION_SELECTION_OUT_OF_BOUNDS",
+    "params": {
+      "action_id": "Exemple action_id",
+      "remaining": 1000000,
+      "selection": "Exemple selection"
+    },
+    "expected": "Après retrait, l'ActionNode « Exemple action_id » porte 1000000 options : Exemple selection n'en désigne aucune.",
+    "source": "native_pack/editing/options.rs:499 ; forme many"
+  },
+  {
+    "code": "VALIDATION_ELEMENT_ID_DUPLICATED",
+    "params": {
+      "count": 1,
+      "entry_id": "Exemple entry_id"
+    },
+    "expected": "Identifiant dupliqué : 1 élément partage l'id Exemple entry_id.",
+    "source": "domain/validation.rs:1087 ; forme one"
+  },
+  {
+    "code": "VALIDATION_ELEMENT_ID_DUPLICATED",
+    "params": {
+      "count": 2,
+      "entry_id": "Exemple entry_id"
+    },
+    "expected": "Identifiant dupliqué : 2 éléments partagent l'id Exemple entry_id.",
+    "source": "domain/validation.rs:1087 ; forme other"
+  },
+  {
+    "code": "VALIDATION_ELEMENT_ID_DUPLICATED",
+    "params": {
+      "count": 1000000,
+      "entry_id": "Exemple entry_id"
+    },
+    "expected": "Identifiant dupliqué : 1000000 éléments partagent l'id Exemple entry_id.",
+    "source": "domain/validation.rs:1087 ; forme many"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_DUPLICATE_ID",
+    "params": {
+      "count": 1,
+      "entryId": "Exemple entryId"
+    },
+    "expected": "Identifiant dupliqué — 1 élément partage l'id Exemple entryId",
+    "source": "store/validationMessages.js ; forme one"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_DUPLICATE_ID",
+    "params": {
+      "count": 2,
+      "entryId": "Exemple entryId"
+    },
+    "expected": "Identifiant dupliqué — 2 éléments partagent l'id Exemple entryId",
+    "source": "store/validationMessages.js ; forme other"
+  },
+  {
+    "code": "VALIDATION_PROJECT_UI_DUPLICATE_ID",
+    "params": {
+      "count": 1000000,
+      "entryId": "Exemple entryId"
+    },
+    "expected": "Identifiant dupliqué — 1000000 éléments partagent l'id Exemple entryId",
+    "source": "store/validationMessages.js ; forme many"
+  },
+  {
+    "code": "STAGE_STILL_TARGETED",
+    "params": {
+      "count": 1
+    },
+    "expected": "1 occurrence d'options désigne encore ce Stage : il faut décider explicitement de la rediriger ou de la retirer.",
+    "source": "native_pack/editing/structure.rs:439 ; forme one"
+  },
+  {
+    "code": "STAGE_STILL_TARGETED",
+    "params": {
+      "count": 2
+    },
+    "expected": "2 occurrences d'options désignent encore ce Stage : il faut décider explicitement de les rediriger ou de les retirer.",
+    "source": "native_pack/editing/structure.rs:439 ; forme other"
+  },
+  {
+    "code": "STAGE_STILL_TARGETED",
+    "params": {
+      "count": 1000000
+    },
+    "expected": "1000000 occurrences d'options désignent encore ce Stage : il faut décider explicitement de les rediriger ou de les retirer.",
+    "source": "native_pack/editing/structure.rs:439 ; forme many"
+  },
+  {
+    "code": "VALIDATION_MENU_DEPTH_LIMIT",
+    "params": {
+      "maxDepth": "Exemple maxDepth",
+      "observedDepth": 1
+    },
+    "expected": "Ce projet contient 1 Dossier imbriqué. Story Studio en prend en charge au maximum Exemple maxDepth.",
+    "source": "domain/project_limits.rs ↔ store/projectModel/menuDepth.js ; forme one"
+  },
+  {
+    "code": "VALIDATION_MENU_DEPTH_LIMIT",
+    "params": {
+      "maxDepth": "Exemple maxDepth",
+      "observedDepth": 2
+    },
+    "expected": "Ce projet contient 2 Dossiers imbriqués. Story Studio en prend en charge au maximum Exemple maxDepth.",
+    "source": "domain/project_limits.rs ↔ store/projectModel/menuDepth.js ; forme other"
+  },
+  {
+    "code": "VALIDATION_MENU_DEPTH_LIMIT",
+    "params": {
+      "maxDepth": "Exemple maxDepth",
+      "observedDepth": 1000000
+    },
+    "expected": "Ce projet contient 1000000 Dossiers imbriqués. Story Studio en prend en charge au maximum Exemple maxDepth.",
+    "source": "domain/project_limits.rs ↔ store/projectModel/menuDepth.js ; forme many"
+  },
+  {
+    "code": "INVALID_OPTION_PERMUTATION_OUT_RANGE",
+    "params": {
+      "position": "Exemple position",
+      "count": 1
+    },
+    "expected": "La permutation désigne la place Exemple position hors des rangs disponibles : 1 rang.",
+    "source": "native_pack/editing/options.rs:384 ; forme one"
+  },
+  {
+    "code": "INVALID_OPTION_PERMUTATION_OUT_RANGE",
+    "params": {
+      "position": "Exemple position",
+      "count": 2
+    },
+    "expected": "La permutation désigne la place Exemple position hors des 2 rangs.",
+    "source": "native_pack/editing/options.rs:384 ; forme other"
+  },
+  {
+    "code": "INVALID_OPTION_PERMUTATION_OUT_RANGE",
+    "params": {
+      "position": "Exemple position",
+      "count": 1000000
+    },
+    "expected": "La permutation désigne la place Exemple position hors des 1000000 rangs.",
+    "source": "native_pack/editing/options.rs:384 ; forme many"
+  },
+  {
+    "code": "OPTION_SELECTION_OUT_OF_BOUNDS_TRANSITION",
+    "params": {
+      "action_node": "Exemple action_node",
+      "action_options": 1,
+      "selection": "Exemple selection"
+    },
+    "expected": "L'ActionNode « Exemple action_node » porte 1 option : Exemple selection n'en désigne aucune.",
+    "source": "native_pack/editing/transitions.rs:122 ; forme one"
+  },
+  {
+    "code": "OPTION_SELECTION_OUT_OF_BOUNDS_TRANSITION",
+    "params": {
+      "action_node": "Exemple action_node",
+      "action_options": 2,
+      "selection": "Exemple selection"
+    },
+    "expected": "L'ActionNode « Exemple action_node » porte 2 options : Exemple selection n'en désigne aucune.",
+    "source": "native_pack/editing/transitions.rs:122 ; forme other"
+  },
+  {
+    "code": "OPTION_SELECTION_OUT_OF_BOUNDS_TRANSITION",
+    "params": {
+      "action_node": "Exemple action_node",
+      "action_options": 1000000,
+      "selection": "Exemple selection"
+    },
+    "expected": "L'ActionNode « Exemple action_node » porte 1000000 options : Exemple selection n'en désigne aucune.",
+    "source": "native_pack/editing/transitions.rs:122 ; forme many"
+  },
+  {
+    "code": "POSITION_OUT_OF_SHORT_RANGE",
+    "params": {
+      "count": 1
+    },
+    "source": "support/user_message/codes.rs : contrat POSITION_OUT_OF_SHORT_RANGE ; forme one",
+    "expected": "1 position sortirait de [-32768, 32767] : créer cette valeur demande une décision explicite."
+  },
+  {
+    "code": "POSITION_OUT_OF_SHORT_RANGE",
+    "params": {
+      "count": 2
+    },
+    "source": "support/user_message/codes.rs : contrat POSITION_OUT_OF_SHORT_RANGE ; forme other",
+    "expected": "2 positions sortiraient de [-32768, 32767] : créer cette valeur demande une décision explicite."
+  },
+  {
+    "code": "POSITION_OUT_OF_SHORT_RANGE",
+    "params": {
+      "count": 1000000
+    },
+    "source": "support/user_message/codes.rs : contrat POSITION_OUT_OF_SHORT_RANGE ; forme many",
+    "expected": "1000000 positions sortiraient de [-32768, 32767] : créer cette valeur demande une décision explicite."
+  },
+  {
+    "code": "archive-name-collision",
+    "params": {
+      "count": 1
+    },
+    "source": "support/user_message/codes.rs : contrat archive-name-collision ; forme one",
+    "expected": "Collision de nom d'archive sur 1 référence."
+  },
+  {
+    "code": "archive-name-collision",
+    "params": {
+      "count": 2
+    },
+    "source": "support/user_message/codes.rs : contrat archive-name-collision ; forme other",
+    "expected": "Collision de nom d'archive sur 2 références."
+  },
+  {
+    "code": "archive-name-collision",
+    "params": {
+      "count": 1000000
+    },
+    "source": "support/user_message/codes.rs : contrat archive-name-collision ; forme many",
+    "expected": "Collision de nom d'archive sur 1000000 références."
+  },
+  {
+    "code": "duplicate-root-key-last-wins",
+    "params": {
+      "discarded": "Exemple discarded",
+      "discardedCount": 1,
+      "retained": "Exemple retained"
+    },
+    "source": "support/user_message/codes.rs : contrat duplicate-root-key-last-wins ; forme one",
+    "expected": "Clé racine dupliquée : dernière valeur retenue (Exemple retained), 1 valeur écartée (Exemple discarded)."
+  },
+  {
+    "code": "duplicate-root-key-last-wins",
+    "params": {
+      "discarded": "Exemple discarded",
+      "discardedCount": 2,
+      "retained": "Exemple retained"
+    },
+    "source": "support/user_message/codes.rs : contrat duplicate-root-key-last-wins ; forme other",
+    "expected": "Clé racine dupliquée : dernière valeur retenue (Exemple retained), 2 valeurs écartées (Exemple discarded)."
+  },
+  {
+    "code": "duplicate-root-key-last-wins",
+    "params": {
+      "discarded": "Exemple discarded",
+      "discardedCount": 1000000,
+      "retained": "Exemple retained"
+    },
+    "source": "support/user_message/codes.rs : contrat duplicate-root-key-last-wins ; forme many",
+    "expected": "Clé racine dupliquée : dernière valeur retenue (Exemple retained), 1000000 valeurs écartées (Exemple discarded)."
+  },
+  {
+    "code": "media-oracle",
+    "params": {
+      "count": 1
+    },
+    "source": "support/user_message/codes.rs : contrat media-oracle ; forme one",
+    "expected": "Rattachement des médias en désaccord sur 1 destination : aucune archive n'est publiée."
+  },
+  {
+    "code": "media-oracle",
+    "params": {
+      "count": 2
+    },
+    "source": "support/user_message/codes.rs : contrat media-oracle ; forme other",
+    "expected": "Rattachement des médias en désaccord sur 2 destinations : aucune archive n'est publiée."
+  },
+  {
+    "code": "media-oracle",
+    "params": {
+      "count": 1000000
+    },
+    "source": "support/user_message/codes.rs : contrat media-oracle ; forme many",
+    "expected": "Rattachement des médias en désaccord sur 1000000 destinations : aucune archive n'est publiée."
+  },
+  {
+    "code": "media-unavailable",
+    "params": {
+      "count": 1
+    },
+    "source": "support/user_message/codes.rs : contrat media-unavailable ; forme one",
+    "expected": "1 média indisponible : l'export est arrêté avant toute écriture d'archive."
+  },
+  {
+    "code": "media-unavailable",
+    "params": {
+      "count": 2
+    },
+    "source": "support/user_message/codes.rs : contrat media-unavailable ; forme other",
+    "expected": "2 médias indisponibles : l'export est arrêté avant toute écriture d'archive."
+  },
+  {
+    "code": "media-unavailable",
+    "params": {
+      "count": 1000000
+    },
+    "source": "support/user_message/codes.rs : contrat media-unavailable ; forme many",
+    "expected": "1000000 médias indisponibles : l'export est arrêté avant toute écriture d'archive."
+  }
+]

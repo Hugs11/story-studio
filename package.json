@@ -1,7 +1,7 @@
 {
   "name": "story-studio",
   "private": true,
-  "version": "0.9.9",
+  "version": "0.9.10",
   "description": "Open-source desktop editor for creating Lunii-compatible story packs",
   "license": "MIT",
   "type": "module",
@@ -40,9 +40,12 @@
     "knip": "knip",
     "audit:css": "node scripts/audit-unused-css.mjs",
     "convert:legacy-project": "node scripts/convert-legacy-project.mjs",
+    "check:i18n": "node scripts/check-i18n.mjs",
+    "check:official-uuid-digests": "node scripts/official-uuid-digests.mjs --check src-tauri/resources/official-uuid-digests.v1.bin",
     "check:version": "node scripts/checkVersionConsistency.mjs",
     "check:blank-lines": "node scripts/check-blank-lines.mjs",
     "regression:preflight": "node scripts/regression-preflight.mjs",
+    "test:examples-native": "node scripts/advancedExamplesNative.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
@@ -57,8 +60,10 @@
     "@tauri-apps/plugin-log": "^2.8.0",
     "@tauri-apps/plugin-opener": "^2",
     "cytoscape": "^3.34.3",
+    "i18next": "^26.4.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-i18next": "^17.0.15",
     "wavesurfer.js": "^7.12.6"
   },
   "devDependencies": {
@@ -67,6 +72,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.4",
+    "eslint-plugin-i18next": "^6.1.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-unused-imports": "^4.4.1",

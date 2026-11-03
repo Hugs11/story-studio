@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
@@ -16,19 +17,23 @@ pub(crate) fn stage_imported_zip_bundle(
 ) -> Result<(ImportedZipBundle, Vec<PreparedAsset>), String> {
     let imported = ensure_studio_pack_zip(zip_path)?;
     let zip_path_buf = imported.zip_path.clone();
-    let zip_file =
-        fs::File::open(&zip_path_buf).map_err(|e| format!("Ouverture ZIP impossible : {}", e))?;
+    let zip_file = fs::File::open(&zip_path_buf).map_err(|e| {
+        UserMessage::new(codes::IMPORT_ZIP_OPEN_FAILED)
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })?;
     let mut archive = zip::ZipArchive::new(zip_file).map_err(|e| e.to_string())?;
 
-    let mut story_json = String::new();
-    archive
-        .by_name("story.json")
-        .map_err(|_| format!("story.json introuvable dans {}", zip_path_buf.display()))?
-        .read_to_string(&mut story_json)
-        .map_err(|e| format!("Lecture story.json impossible : {}", e))?;
+    let story_json = crate::native_pack::output_identity::read_story_text(&zip_path_buf)
+        .map_err(UserMessage::into_transport)?;
 
-    let decoded = decode_story_document(&story_json)
-        .map_err(|error| format!("story.json import invalide : {error}"))?;
+    let decoded = decode_story_document(&story_json).map_err(|error| {
+        UserMessage::new(codes::IMPORT_STORY_DOCUMENT_INVALID)
+            .param("reason", (error).to_string())
+            .with_detail((error).to_string())
+            .into_transport()
+    })?;
     let context = imported.conversion_context(&decoded.document);
     let decoded = decoded.with_conversion_context(context);
     decoded.context.log_warnings();
@@ -44,11 +49,19 @@ pub(crate) fn stage_imported_zip_bundle(
     for asset_name in referenced_assets {
         let mut zip_entry = archive
             .by_name(&format!("assets/{}", asset_name))
-            .map_err(|_| format!("Asset importe introuvable : {}", asset_name))?;
+            .map_err(|_| {
+                UserMessage::new(codes::IMPORT_IMPORTED_ASSET_MISSING)
+                    .param("asset_name", (asset_name).to_string())
+                    .into_transport()
+            })?;
         let mut bytes = Vec::new();
-        zip_entry
-            .read_to_end(&mut bytes)
-            .map_err(|e| format!("Lecture asset importe impossible {} : {}", asset_name, e))?;
+        zip_entry.read_to_end(&mut bytes).map_err(|e| {
+            UserMessage::new(codes::IMPORT_ASSET_FILE_READ_FAILED)
+                .param("asset_name", (asset_name).to_string())
+                .param("reason", (e).to_string())
+                .with_detail((e).to_string())
+                .into_transport()
+        })?;
 
         let prepared = stage_binary_asset_bytes(
             &format!("{} / imported {}", role, asset_name),
@@ -102,27 +115,38 @@ fn imported_zip_anchors(
         .stage_nodes
         .iter()
         .find(|stage| stage.is_square_one())
-        .ok_or_else(|| format!("ZIP importe sans squareOne : {}", zip_path_buf.display()))?;
+        .ok_or_else(|| {
+            UserMessage::new(codes::IMPORT_ZIP_ENTRY_STAGE_MISSING)
+                .param("zip_path_buf", (zip_path_buf.display()).to_string())
+                .into_transport()
+        })?;
     let square_one_stage_id = square_one_stage.uuid.clone();
     let root_action_id = square_one_stage
         .ok_transition
         .value()
         .map(|transition| transition.action_node.clone())
         .ok_or_else(|| {
-            format!(
-                "ZIP importe sans action racine : {}",
-                zip_path_buf.display()
-            )
+            UserMessage::new(codes::IMPORT_ZIP_ROOT_ACTION_MISSING)
+                .param("zip_path_buf", (zip_path_buf.display()).to_string())
+                .into_transport()
         })?;
     let root_action = document
         .action_nodes
         .iter()
         .find(|action| action.id == root_action_id)
-        .ok_or_else(|| format!("Action racine introuvable dans {}", zip_path_buf.display()))?;
+        .ok_or_else(|| {
+            UserMessage::new(codes::IMPORT_ROOT_ACTION_MISSING)
+                .param("zip_path_buf", (zip_path_buf.display()).to_string())
+                .into_transport()
+        })?;
     let post_root_stage_id = root_action
         .option_target(0)
         .map(str::to_string)
-        .ok_or_else(|| format!("Action racine vide dans {}", zip_path_buf.display()))?;
+        .ok_or_else(|| {
+            UserMessage::new(codes::IMPORT_ROOT_ACTION_EMPTY)
+                .param("zip_path_buf", (zip_path_buf.display()).to_string())
+                .into_transport()
+        })?;
     Ok((square_one_stage_id, root_action_id, post_root_stage_id))
 }
 
@@ -159,19 +183,36 @@ pub(crate) fn read_imported_zip_for_simulation(
 ) -> Result<(ImportedZipBundle, Vec<SimulationMedia>), String> {
     let imported = ensure_studio_pack_zip(zip_path)?;
     let zip_path_buf = imported.zip_path.clone();
-    let zip_file =
-        fs::File::open(&zip_path_buf).map_err(|e| format!("Ouverture ZIP impossible : {}", e))?;
+    let zip_file = fs::File::open(&zip_path_buf).map_err(|e| {
+        UserMessage::new(codes::IMPORT_ZIP_OPEN_FAILED)
+            .param("reason", (e).to_string())
+            .with_detail((e).to_string())
+            .into_transport()
+    })?;
     let mut archive = zip::ZipArchive::new(zip_file).map_err(|e| e.to_string())?;
 
     let mut story_json = String::new();
     archive
         .by_name("story.json")
-        .map_err(|_| format!("story.json introuvable dans {}", zip_path_buf.display()))?
+        .map_err(|_| {
+            UserMessage::new(codes::IMPORT_STORY_FILE_MISSING)
+                .param("zip_path_buf", (zip_path_buf.display()).to_string())
+                .into_transport()
+        })?
         .read_to_string(&mut story_json)
-        .map_err(|e| format!("Lecture story.json impossible : {}", e))?;
+        .map_err(|e| {
+            UserMessage::new(codes::IMPORT_STORY_JSON_READ_FAILED)
+                .param("reason", (e).to_string())
+                .with_detail((e).to_string())
+                .into_transport()
+        })?;
 
-    let decoded = decode_story_document(&story_json)
-        .map_err(|error| format!("story.json import invalide : {error}"))?;
+    let decoded = decode_story_document(&story_json).map_err(|error| {
+        UserMessage::new(codes::IMPORT_STORY_DOCUMENT_INVALID)
+            .param("reason", (error).to_string())
+            .with_detail((error).to_string())
+            .into_transport()
+    })?;
     let context = imported.conversion_context(&decoded.document);
     let decoded = decoded.with_conversion_context(context);
     let mut document = decoded.document;

@@ -368,7 +368,10 @@ fn a_near_mute_sound_is_reported_like_the_menu_editor_does() {
     };
     assert_eq!(warning.code, "AUDIO_NEAR_MUTE_BOOST");
     assert_eq!(warning.label, "Écran du souffle");
-    assert!(warning.message.contains("« Écran du souffle »"));
+    assert!(crate::support::user_message::contains_code(
+        &warning.message,
+        "AUDIO_NEAR_MUTE_BOOST"
+    ));
     assert!(warning.gain_db > 0.0);
     assert!(warning.final_integrated_lufs.is_some());
 }

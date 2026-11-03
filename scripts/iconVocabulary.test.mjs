@@ -13,7 +13,6 @@ import { readFile } from 'node:fs/promises';
 import {
   ADVANCED_NATURES,
   HIERARCHICAL_NATURES,
-  ICON_ARROW_RIGHT,
   ICON_WAYPOINTS,
   ICON_FILE_ARCHIVE,
   ICON_FOLDER,
@@ -46,7 +45,6 @@ test('la table couvre toutes les natures de l\'éditeur par menus', () => {
     menu: ICON_FOLDER_OPEN,
     story: ICON_MUSIC,
     zip: ICON_FILE_ARCHIVE,
-    ref: ICON_ARROW_RIGHT,
     'end-node': ICON_SQUARE,
     'end-night': ICON_MOON,
   });
@@ -120,7 +118,7 @@ test('chaque nom de la table est peint, et rien d\'autre ne l\'est', async () =>
   const source = await readSource('src/components/icons/NodeIcon.jsx');
   const constants = {
     ICON_HOUSE, ICON_FOLDER, ICON_FOLDER_OPEN, ICON_MUSIC, ICON_FILE_ARCHIVE,
-    ICON_ARROW_RIGHT, ICON_SQUARE, ICON_FULLSCREEN, ICON_MOON, ICON_WAYPOINTS,
+    ICON_SQUARE, ICON_FULLSCREEN, ICON_MOON, ICON_WAYPOINTS,
   };
   const painted = [...source.matchAll(/\[(ICON_[A-Z_]+)\]:\s*(\w+),/g)]
     .map(([, constant, component]) => {

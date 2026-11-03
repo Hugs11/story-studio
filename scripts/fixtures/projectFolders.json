@@ -1,0 +1,82 @@
+[
+  [
+    "",
+    "Projet sans titre"
+  ],
+  [
+    "   ",
+    "Projet sans titre"
+  ],
+  [
+    ".",
+    "Projet sans titre"
+  ],
+  [
+    "..",
+    "Projet sans titre"
+  ],
+  [
+    ".Azuro. ",
+    "Azuro"
+  ],
+  [
+    "Été Azuro",
+    "Été Azuro"
+  ],
+  [
+    "A<B>:C\"D/E\\F|G?H*I",
+    "A_B__C_D_E_F_G_H_I"
+  ],
+  [
+    "CON",
+    "CON_"
+  ],
+  [
+    "con.txt",
+    "con_.txt"
+  ],
+  [
+    "LPT9",
+    "LPT9_"
+  ],
+  [
+    "COM0",
+    "COM0"
+  ],
+  [
+    "a\u0000bc",
+    "a_b_c"
+  ],
+  [
+    "été",
+    "été"
+  ],
+  [
+    "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+    "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+  ],
+  [
+    "CON.txt",
+    "CON_.txt"
+  ],
+  [
+    "NUL.mp3",
+    "NUL_.mp3"
+  ],
+  [
+    "COM1.foo",
+    "COM1_.foo"
+  ],
+  [
+    "LPT9.bar",
+    "LPT9_.bar"
+  ],
+  [
+    "NUL.😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+    "NUL_.😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+  ],
+  [
+    "CON.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.y",
+    "CON_.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  ]
+]

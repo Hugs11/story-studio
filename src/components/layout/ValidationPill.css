@@ -113,7 +113,7 @@
   position: absolute;
   top: calc(100% + 12px);
   right: 0;
-  width: 360px;
+  width: min(360px, calc(100vw - 24px));
   max-height: min(430px, calc(100vh - 112px));
   display: flex;
   flex-direction: column;
@@ -125,15 +125,6 @@
   z-index: 260;
   animation: validation-pill-dd-in 0.12s ease-out;
   overflow: visible;
-}
-
-.validation-pill-dd.is-advanced {
-  width: min(680px, calc(100vw - 24px));
-  max-height: min(680px, calc(100vh - 112px));
-}
-
-.validation-pill-dd.is-advanced .validation-pill-dd-body {
-  max-height: min(580px, calc(100vh - 190px));
 }
 
 .validation-pill-dd::before {
@@ -166,6 +157,16 @@
   flex-shrink: 0;
 }
 
+.validation-pill-dd-head.has-action {
+  position: relative;
+  padding-right: 30px;
+}
+
+.validation-pill-dd-head .validation-pill-item-dismiss {
+  top: -3px;
+  right: 0;
+}
+
 .validation-pill-dd-title {
   font-size: 12px;
   font-weight: 700;
@@ -193,30 +194,6 @@
 .validation-pill-dd-body::-webkit-scrollbar-thumb {
   background: var(--borderLt);
   border-radius: 3px;
-}
-
-.validation-pill-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 0 7px 6px;
-}
-
-.validation-pill-filters button {
-  padding: 3px 8px;
-  border: 1px solid var(--borderLt);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: 10.5px;
-  cursor: pointer;
-}
-
-.validation-pill-filters button[aria-pressed='true'] {
-  border-color: currentcolor;
-  color: var(--text);
-  font-weight: 700;
 }
 
 .validation-pill-group-head {
@@ -285,24 +262,12 @@
   background: var(--warning);
 }
 
-.validation-pill-item[data-severity='error'] .validation-pill-item-dot {
-  background: var(--danger, #d64d4d);
-}
-
-.validation-pill-item-severity {
-  flex: 0 0 auto;
-  font-size: 9.5px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-}
-
 .validation-pill-item-label {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .validation-pill-item-go {
@@ -373,4 +338,186 @@
   .validation-pill-dd {
     width: min(360px, calc(100vw - 24px));
   }
+}
+
+/* Le graphe déplie les résolutions sans élargir le popover commun. */
+.validation-pill-details > summary {
+  list-style: none;
+}
+
+.validation-pill-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.validation-pill-details > summary .validation-pill-item-go {
+  transition: transform 0.12s;
+}
+
+.validation-pill-details[open] > summary .validation-pill-item-go {
+  transform: rotate(90deg);
+}
+
+.validation-pill-details-body {
+  padding: 4px 8px 10px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.validation-pill-details-category {
+  margin: 0;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.validation-pill-details-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.validation-pill-details-actions .btn-xs {
+  max-width: 100%;
+  min-height: 26px;
+  height: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.validation-pill-details-actions .btn-xs:not(.btn-danger-outline):not(:disabled) {
+  color: var(--warning-text);
+  border-color: var(--warning-border);
+  background: transparent;
+}
+
+.validation-pill-details-actions .btn-xs:not(.btn-danger-outline):not(:disabled):hover,
+.validation-pill-details-actions .btn-xs:not(.btn-danger-outline):not(:disabled):active {
+  background: var(--warning-bg);
+}
+
+.validation-pill-details-body .validation-pill-empty {
+  margin: 0;
+}
+
+/* ── Socle commun (StatusPill) : états neutres et entrées effaçables ────────
+   L'ambre reste réservé à ce qui est à régler. Une information ou un travail
+   en cours prend le neutre de « vérification », mais reste ouvrable. */
+.validation-pill.is-info,
+.validation-pill.is-progress {
+  border-color: var(--borderLt);
+  color: var(--text-secondary);
+}
+
+.validation-pill.is-info:hover,
+.validation-pill.is-progress:hover,
+.validation-pill.is-info.is-active,
+.validation-pill.is-progress.is-active {
+  background: var(--control-bg-hover);
+}
+
+.validation-pill.is-info .validation-pill-count {
+  background: var(--bg2);
+  border-color: var(--borderLt);
+  color: var(--text-secondary);
+}
+
+.validation-pill.is-info .validation-pill-caret,
+.validation-pill.is-progress .validation-pill-caret,
+.validation-pill.is-ok .validation-pill-caret {
+  color: currentColor;
+  opacity: 0.7;
+}
+
+.validation-pill.is-ok:hover,
+.validation-pill.is-ok.is-active {
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+}
+
+.validation-pill-entry {
+  position: relative;
+}
+
+.validation-pill-entry.has-dismiss > .validation-pill-item {
+  padding-right: 34px;
+}
+
+.validation-pill-item.is-static {
+  cursor: default;
+}
+
+.validation-pill-item.is-static:hover {
+  background: transparent;
+}
+
+.validation-pill-entry.is-info .validation-pill-item-dot,
+.validation-pill-entry.is-progress .validation-pill-item-dot {
+  background: var(--muted);
+}
+
+.validation-pill-entry.is-success .validation-pill-item-dot {
+  background: var(--success);
+}
+
+.validation-pill-entry:not(.is-issue) .validation-pill-item-go {
+  color: var(--text-secondary);
+}
+
+.validation-pill-item-dismiss {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.validation-pill-item-dismiss:hover {
+  background: var(--control-bg-hover);
+  color: var(--text);
+}
+
+.validation-pill-item-dismiss:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.validation-pill-details-text {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.validation-pill-details-list {
+  margin: 0;
+  padding-left: 14px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.validation-pill-details-progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--accent);
+}
+
+.validation-pill-entry:not(.is-issue) .validation-pill-details-actions .btn-xs:not(.btn-danger-outline):not(:disabled) {
+  color: var(--control-text);
+  border-color: var(--borderLt);
+}
+
+.validation-pill-entry:not(.is-issue) .validation-pill-details-actions .btn-xs:not(.btn-danger-outline):not(:disabled):hover {
+  background: var(--control-bg-hover);
 }

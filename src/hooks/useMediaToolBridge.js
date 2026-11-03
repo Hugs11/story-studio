@@ -4,6 +4,7 @@ import {
   haveSameMediaPathMultiset,
   validateMediaAudioToolRequest,
 } from '../store/mediaToolContext.js';
+import { mediaRef, mediaRefusal, translateMedia } from '../i18n/mediaPresentation.js';
 
 let requestSequence = 0;
 
@@ -12,8 +13,9 @@ function nextRequestId() {
   return `media-tool-${Date.now()}-${requestSequence}`;
 }
 
-function invalidResult(code, reason) {
-  return { ok: false, code, reason };
+// Raison gardée en descripteur (reasonRef) ; `reason` se lit dans la langue active.
+function invalidResult(code, reasonRef) {
+  return mediaRefusal({ ok: false, code }, reasonRef.key, reasonRef.params);
 }
 
 export function useMediaToolBridge({
@@ -49,8 +51,8 @@ export function useMediaToolBridge({
     });
     if (!built.valid) {
       showErrorDialog?.({
-        title: 'Outil audio indisponible',
-        message: built.reason,
+        get title() { return translateMedia('media:tool.unavailable.title'); },
+        get message() { return built.reason; },
         variant: 'warning',
       });
       return built;
@@ -85,17 +87,17 @@ export function useMediaToolBridge({
 
   const validateRequest = useCallback((request) => {
     if (!request || activeRequestRef.current?.requestId !== request.requestId) {
-      return { valid: false, code: 'inactive-request', reason: 'Cette opération contextuelle n’est plus active.' };
+      return mediaRefusal({ valid: false, code: 'inactive-request' }, 'media:tool.refusal.inactiveRequest');
     }
     if (request.projectRevision !== projectRevisionRef.current) {
-      return { valid: false, code: 'project-changed', reason: 'Le projet a changé pendant le traitement.' };
+      return mediaRefusal({ valid: false, code: 'project-changed' }, 'media:tool.refusal.projectChanged');
     }
     return validateMediaAudioToolRequest(projectRef.current, request, statusByPathRef.current);
   }, []);
 
   const applyProjectAction = useCallback(({ request, action, result }) => {
     const validation = validateRequest(request);
-    if (!validation.valid) return invalidResult(validation.code, validation.reason);
+    if (!validation.valid) return invalidResult(validation.code, validation.reasonRef);
 
     let outcome;
     if (action === 'replace-stories-with-assembly') {
@@ -103,7 +105,7 @@ export function useMediaToolBridge({
         request.tool !== 'assemble'
         || !haveSameMediaPathMultiset(result?.inputPaths, request.sourcePaths)
       ) {
-        return invalidResult('action-not-allowed', 'Les fichiers assemblés ne correspondent plus aux histoires sélectionnées.');
+        return invalidResult('action-not-allowed', mediaRef('media:tool.refusal.actionNotAllowed'));
       }
       outcome = mutations.handleReplaceStoriesWithAssembledStory({
         request,
@@ -111,10 +113,10 @@ export function useMediaToolBridge({
         logicalName: result?.logicalName,
       });
     } else {
-      return invalidResult('unknown-action', 'Cette action projet n’est pas reconnue.');
+      return invalidResult('unknown-action', mediaRef('media:tool.refusal.unknownAction'));
     }
 
-    if (!outcome?.ok) return invalidResult(outcome?.code ?? 'mutation-refused', outcome?.reason ?? 'La modification du projet a été refusée.');
+    if (!outcome?.ok) return invalidResult(outcome?.code ?? 'mutation-refused', outcome?.reasonRef ?? mediaRef('media:tool.refusal.mutationRefused'));
     invalidateRequest(request.requestId);
     return outcome;
   }, [invalidateRequest, mutations, validateRequest]);

@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { appendFileSync, createWriteStream, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createWriteStream, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { APP_IDENTIFIER, DEV_ORIGIN, REPO_DIR, requireConfig, appDataDirs } from '../config.mjs';
@@ -107,10 +107,6 @@ export async function launchLinux({ runDir, fresh = false, workspaceDir = null, 
     await client.command('POST', '/timeouts', { script: timeoutMs, pageLoad: 60_000, implicit: 0 });
     page = new WebDriverPage(client);
     events = attachCollectors(page, runDir);
-    // Le collecteur partagé ne termine pas son lot par un saut de ligne.
-    // Sous Linux, les relances partagent runDir : séparer leurs lots JSONL.
-    const flush = events.flush;
-    events.flush = () => { flush(); appendFileSync(join(runDir, 'ipc.jsonl'), '\n'); };
     await page.waitForLoadState('domcontentloaded');
     if (!exePath && !await page.evaluate(() => window.__E2E_WD_COLLECTOR_READY__)) throw new Error('Collecteur absent avant le frontend');
     timer = setInterval(() => page.drain().catch(() => {}), 200);

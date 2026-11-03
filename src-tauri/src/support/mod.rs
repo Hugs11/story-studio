@@ -1,7 +1,9 @@
 pub(crate) mod archive_limits;
+pub(crate) mod audio_duration;
 pub(crate) mod audio_norm;
 pub(crate) mod executable;
 pub mod ffmpeg;
+pub(crate) mod file_sync;
 pub(crate) mod fs_pack_diagnostics;
 pub mod fs_pack_reader;
 pub mod imported_pack;
@@ -14,3 +16,6 @@ pub(crate) mod network;
 pub mod paths;
 pub mod temp;
 pub(crate) mod tool_resolver;
+pub(crate) mod user_message;
+
+pub(crate) mod startup_log;

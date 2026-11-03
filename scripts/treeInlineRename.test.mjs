@@ -11,7 +11,6 @@ test('inline rename is limited to folders and stories', () => {
   assert.equal(canInlineRenameTreeNode('story'), true);
   assert.equal(canInlineRenameTreeNode('root'), false);
   assert.equal(canInlineRenameTreeNode('zip'), false);
-  assert.equal(canInlineRenameTreeNode('ref'), false);
   assert.equal(canInlineRenameTreeNode('end-node'), false);
 });
 

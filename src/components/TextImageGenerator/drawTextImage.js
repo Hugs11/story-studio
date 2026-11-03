@@ -1,8 +1,9 @@
+import { translateAi as t } from '../../i18n/aiPresentation.js';
 export const TEXT_IMG_W = 320;
 export const TEXT_IMG_H = 240;
 
 export function drawTextImage(ctx, text) {
-  const label = (text || 'Sans titre').trim() || 'Sans titre';
+  const label = (text || t("ai:textImage.title.fallback")).trim() || t("ai:textImage.title.fallback");
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, TEXT_IMG_W, TEXT_IMG_H);
   ctx.fillStyle = '#ffffff';

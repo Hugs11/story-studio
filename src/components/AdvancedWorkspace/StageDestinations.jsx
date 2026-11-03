@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import { graphTranslationEngine, translateGraph as t } from '../../i18n/graphPresentation.js';
 // Les deux sorties d'un Écran, chacune dans son encadré : la **suite du
 // parcours** (`okTransition`) et le **bouton Accueil** (`homeTransition`).
 //
@@ -43,41 +45,41 @@ import {
 
 const EXITS = {
   ok: {
-    title: 'Suite du parcours',
+    title: 'graph:controls.route.title',
     term: 'okTransition',
-    copy: 'Où l’on va après cet Écran ?',
+    copy: 'graph:destinations.route.copy',
     triggers: ['ok', 'autoplay'],
-    triggerLabel: 'Se déclenche',
-    triggerHelp: 'Les deux déclencheurs mènent au même endroit : appuyer sur OK ou arriver à la fin du son ouvre la même liste, sur le même choix. Sans aucun déclencheur, l’Écran n’a pas de suite.',
-    destinationLabel: 'Mène à',
-    idle: 'Aucun déclencheur : cet Écran n’a pas de suite.',
-    unused: 'Cette destination est enregistrée mais ne sera jamais utilisée : aucun déclencheur n’est actif.',
-    formTitle: 'Configurer la suite du parcours',
-    formNote: 'La liste de choix ouverte après cet Écran, par l’appui sur OK comme à la fin du son.',
+    triggerLabel: 'graph:destinations.route.trigger',
+    triggerHelp: 'graph:destinations.route.help',
+    destinationLabel: 'graph:destinations.route.label',
+    idle: 'graph:destinations.route.idle',
+    unused: 'graph:destinations.route.unused',
+    formTitle: 'graph:destinations.route.formTitle',
+    formNote: 'graph:destinations.route.formNote',
   },
   home: {
-    title: 'Bouton Accueil',
+    title: 'graph:controls.home.label',
     term: 'homeTransition',
-    copy: 'Où ramène le bouton Accueil ?',
+    copy: 'graph:destinations.home.copy',
     triggers: ['home'],
     triggerLabel: null,
-    destinationLabel: 'Ramène à',
+    destinationLabel: 'graph:destinations.home.label',
     // « Bouton Accueil désactivé » se lit sur l'interrupteur : rien à ajouter.
     idle: null,
-    unused: 'Cette destination est enregistrée mais ne sera jamais utilisée : le bouton Accueil est désactivé.',
-    formTitle: 'Configurer le bouton Accueil',
-    formNote: 'La liste de choix que le bouton Accueil ouvre depuis cet Écran.',
+    unused: 'graph:destinations.home.unused',
+    formTitle: 'graph:destinations.home.formTitle',
+    formNote: 'graph:destinations.home.formNote',
   },
 };
 
 // Le choix sur lequel on commence dans la liste, réglable sur place : changer
 // la valeur l'applique aussitôt, comme les interrupteurs de l'encadré.
-function ExitLanding({ stage, row, disabled, onGesture }) {
+function ExitLanding({ stage, row, index, disabled, onGesture }) {
   return (
     <LandingSelect
       id={`advanced-landing-${row.slot}`}
       landing={row.landing}
-      choices={row.options}
+      choices={row.options.map((option) => ({ ...option, label: index?.byPath.get(option.stagePath)?.label?.label ?? option.label }))}
       disabled={disabled}
       onChange={(value) => onGesture(landingGesture(stage.uuid, row.slot, row.action.node.id, value))}
     />
@@ -94,7 +96,8 @@ function directStage(row) {
 }
 
 function DestinationActions({ row, label, disabled, onEdit, onRemove }) {
-  const removeLabel = `Supprimer la transition ${row.slot === 'ok' ? 'OK' : 'Accueil'}`;
+  useTranslation('graph', { i18n: graphTranslationEngine() });
+  const removeLabel = t('graph:destinations.remove.aria', { slot: row.slot === 'ok' ? t('graph:exit.ok.label') : t('graph:exit.home.label') });
   return (
     <div className="advanced-exit__actions">
       <Tooltip text={label} asChild>
@@ -119,7 +122,8 @@ function DestinationActions({ row, label, disabled, onEdit, onRemove }) {
 // verbe — c'est l'intitulé qui le porte, pour toutes les formes. Le stylo
 // change la liste, la corbeille retire le raccord ; le point de départ se
 // règle directement dans la ligne.
-function Destination({ stage, row, disabled, thumbnails, onGesture, onFocusPath, onEdit, onRemove }) {
+function Destination({ stage, row, index, disabled, thumbnails, onGesture, onFocusPath, onEdit, onRemove }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const count = row.options.length;
   const direct = directStage(row);
 
@@ -129,14 +133,14 @@ function Destination({ stage, row, disabled, thumbnails, onGesture, onFocusPath,
         <div className="advanced-options__row advanced-exit__row">
           <span className="advanced-options__target">
             <NodeThumbnail path={direct.stagePath} thumbnails={thumbnails} />
-            <NodeLink path={direct.stagePath} label={direct.label} onFocusPath={onFocusPath} />
+            <NodeLink path={direct.stagePath} label={index?.byPath.get(direct.stagePath)?.label?.label ?? direct.label} onFocusPath={onFocusPath} />
           </span>
-          <DestinationActions row={row} label="Changer de destination" disabled={disabled} onEdit={onEdit} onRemove={onRemove} />
+          <DestinationActions row={row} label={t('graph:destinations.change.stage')} disabled={disabled} onEdit={onEdit} onRemove={onRemove} />
         </div>
         <div className="advanced-options__place advanced-options__place--flush">
-          <span>via la liste</span>
-          <NodeLink path={row.actionPath} label={row.actionLabel} onFocusPath={onFocusPath} />
-          <span>(un seul choix)</span>
+          <span>{t('graph:destinations.via.label')}</span>
+          <NodeLink path={row.actionPath} label={row.action?.label?.label ?? row.actionLabel} onFocusPath={onFocusPath} />
+          <span>{t('graph:destinations.single.label')}</span>
         </div>
       </li>
     );
@@ -147,40 +151,37 @@ function Destination({ stage, row, disabled, thumbnails, onGesture, onFocusPath,
       <div className="advanced-options__row advanced-exit__row">
         <span className="advanced-options__target">
           <NodeThumbnail path={row.actionPath} thumbnails={thumbnails} nature="action" />
-          <NodeLink path={row.actionPath} label={row.actionLabel} onFocusPath={onFocusPath} />
-          <span className="advanced-count">{count} choix</span>
+          <NodeLink path={row.actionPath} label={row.action?.label?.label ?? row.actionLabel} onFocusPath={onFocusPath} />
+          <span className="advanced-count">{t('graph:destinations.choices.count', { count })}</span>
         </span>
-        <DestinationActions row={row} label="Changer de liste" disabled={disabled} onEdit={onEdit} onRemove={onRemove} />
+        <DestinationActions row={row} label={t('graph:destinations.change.list')} disabled={disabled} onEdit={onEdit} onRemove={onRemove} />
       </div>
       {count === 0 || !row.action
-        ? <p className="advanced-field__absent">Liste vide : aucun Écran à lancer.</p>
-        : <ExitLanding stage={stage} row={row} disabled={disabled} onGesture={onGesture} />}
+        ? <p className="advanced-field__absent">{t('graph:destinations.empty.label')}</p>
+        : <ExitLanding stage={stage} row={row} index={index} disabled={disabled} onGesture={onGesture} />}
     </li>
   );
 }
 
-const DEVICE_RETURN_HELP = 'Ce retour n’est pas écrit dans le pack : sans destination Accueil, la Lunii revient d’elle-même à l’Écran d’entrée. Le graphe le dessine en pointillé estompé. « Choisir une autre destination » écrit un vrai raccord à la place.';
+const DEVICE_RETURN_HELP = 'graph:destinations.home.help';
 
 // Accueil sans destination enregistrée : la Lunii et le simulateur reviennent
 // à l'Écran d'entrée du pack (`defaultHomeReturns.js`, la même règle que le
 // trait dérivé du graphe). Le panneau dit ce comportement réel, et qu'il vient
 // de l'appareil, au lieu d'un « ne mène nulle part » qui serait faux.
 function HomeFallback({ stage, index, thumbnails, onFocusPath }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const entryPath = defaultHomeTarget(index);
   if (entryPath && entryPath === stage.path) {
     // Le retour par défaut ramènerait ici même : Accueil tournerait en rond,
     // ce que STUdio refuse. Seul un document importé peut arriver ici.
     return (
-      <p className="advanced-field__warning">
-        Sur l’Écran d’entrée, Accueil ramènerait ici même : désactivez le bouton Accueil.
-      </p>
+      <p className="advanced-field__warning">{t('graph:destinations.home.loop')}</p>
     );
   }
   if (!entryPath) {
     return (
-      <p className="advanced-field__warning">
-        Le pack n’a pas d’Écran d’entrée unique : la Lunii ne saurait pas où revenir. Voir « À corriger ».
-      </p>
+      <p className="advanced-field__warning">{t('graph:destinations.home.missing')}</p>
     );
   }
   return (
@@ -189,8 +190,8 @@ function HomeFallback({ stage, index, thumbnails, onFocusPath }) {
         <NodeThumbnail path={entryPath} thumbnails={thumbnails} />
         <NodeLink path={entryPath} label={index.byPath.get(entryPath)?.label?.label} onFocusPath={onFocusPath} />
         <span className="advanced-exit__landing-label">
-          <HelpHint text={DEVICE_RETURN_HELP} />
-          <span className="advanced-options__verb">retour par défaut de la Lunii</span>
+          <HelpHint text={t(DEVICE_RETURN_HELP)} />
+          <span className="advanced-options__verb">{t('graph:destinations.home.default')}</span>
         </span>
       </span>
     </div>
@@ -200,6 +201,7 @@ function HomeFallback({ stage, index, thumbnails, onFocusPath }) {
 // Le formulaire d'une sortie, posé dans son encadré. Il part de la liste déjà
 // choisie, s'il y en a une.
 function ExitForm({ stage, row, index, disabled, onGesture, onClose }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const [actionPath, setActionPath] = useState(row.actionPath);
   const initialSelection = row.landing?.random
     ? 'random'
@@ -229,9 +231,9 @@ function ExitForm({ stage, row, index, disabled, onGesture, onClose }) {
   const id = `advanced-slot-${row.slot}`;
   return (
     <div className="advanced-field__form">
-      <div className="advanced-field__form-title">{exit.formTitle}</div>
-      <p className="advanced-field__note">{exit.formNote}</p>
-      <label htmlFor={id}>Liste ouverte</label>
+      <div className="advanced-field__form-title">{t(exit.formTitle)}</div>
+      <p className="advanced-field__note">{t(exit.formNote)}</p>
+      <label htmlFor={id}>{t('graph:destinations.form.list')}</label>
       <NodePicker
         id={id}
         index={index}
@@ -243,8 +245,8 @@ function ExitForm({ stage, row, index, disabled, onGesture, onClose }) {
       {!chosen && (
         <p className="advanced-field__note">
           {row.slot === 'home'
-            ? 'Sans liste ouverte, Accueil ramène par défaut à l’Écran d’entrée.'
-            : 'Sans liste ouverte, cet Écran n’a pas de suite.'}
+            ? t('graph:destinations.form.homeEmpty')
+            : t('graph:destinations.form.routeEmpty')}
         </p>
       )}
       <ActionSelectionFields
@@ -256,10 +258,8 @@ function ExitForm({ stage, row, index, disabled, onGesture, onClose }) {
         disabled={disabled}
       />
       <div className="advanced-field__actions">
-        <Button size="sm" onClick={onClose}>Annuler</Button>
-        <Button size="sm" variant="primary" disabled={disabled} onClick={apply}>
-          Appliquer
-        </Button>
+        <Button size="sm" onClick={onClose}>{t('common:dialog.cancel.label')}</Button>
+        <Button size="sm" variant="primary" disabled={disabled} onClick={apply}>{t('graph:controls.completion.apply')}</Button>
       </div>
     </div>
   );
@@ -274,6 +274,7 @@ function ExitForm({ stage, row, index, disabled, onGesture, onClose }) {
 function ExitCard({
   stage, row, index, disabled, thumbnails, highlight, editing, onGesture, onFocusPath, onEdit, onClose,
 }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const exit = EXITS[row.slot];
   // Sur l'Écran d'entrée, Accueil n'a rien à faire : l'enfant est déjà au
   // début du pack, et le retour par défaut tournerait en rond. L'encadré ne
@@ -288,12 +289,10 @@ function ExitCard({
       <section className="card advanced-editor__section advanced-controls advanced-exit" data-highlight={highlight ? 'true' : undefined}>
         <div className="card-title-row">
           <div className="card-title">
-            {exit.title} <em className="advanced-editor__term">{exit.term}</em>
+            {t(exit.title)} <em className="advanced-editor__term">{exit.term}</em>
           </div>
         </div>
-        <p className="advanced-field__note">
-          Sur l’Écran d’entrée, le bouton Accueil reste désactivé : on y est déjà au début du pack.
-        </p>
+        <p className="advanced-field__note">{t('graph:destinations.home.entryIdle')}</p>
       </section>
     );
   }
@@ -310,6 +309,7 @@ function ExitCard({
         <Destination
           stage={stage}
           row={row}
+          index={index}
           disabled={disabled}
           thumbnails={thumbnails}
           onGesture={onGesture}
@@ -325,22 +325,22 @@ function ExitCard({
   } else if (row.slot === 'home') {
     destination = <HomeFallback stage={stage} index={index} thumbnails={thumbnails} onFocusPath={onFocusPath} />;
   } else {
-    destination = <p className="advanced-field__absent">Aucune destination pour l’instant.</p>;
+    destination = <p className="advanced-field__absent">{t('graph:destinations.route.absent')}</p>;
   }
 
   return (
     <section className="card advanced-editor__section advanced-controls advanced-exit" data-highlight={highlight ? 'true' : undefined}>
       <div className="card-title-row">
         <div className="card-title">
-          {exit.title} <em className="advanced-editor__term">{exit.term}</em>
+          {t(exit.title)} <em className="advanced-editor__term">{exit.term}</em>
         </div>
-        <div className="card-copy card-copy--inline">{exit.copy}</div>
+        <div className="card-copy card-copy--inline">{t(exit.copy)}</div>
       </div>
 
       {exit.triggerLabel && (
         <div className="advanced-exit__label">
-          {exit.triggerLabel}
-          {exit.triggerHelp && <HelpHint text={exit.triggerHelp} />}
+          {t(exit.triggerLabel)}
+          {exit.triggerHelp && <HelpHint text={t(exit.triggerHelp)} />}
         </div>
       )}
       <div className="sequence-controls advanced-controls__toggles">
@@ -358,21 +358,21 @@ function ExitCard({
 
       {showsDestination ? (
         <>
-          <div className="advanced-exit__label">{exit.destinationLabel}</div>
+          <div className="advanced-exit__label">{t(exit.destinationLabel)}</div>
           {destination}
           {wired && !armed && !undetermined && (
-            <p className="advanced-field__warning">{exit.unused}</p>
+            <p className="advanced-field__warning">{t(exit.unused)}</p>
           )}
           {!wired && !editing && (
             <div className="advanced-field__actions">
               <Button size="sm" disabled={disabled} onClick={onEdit}>
-                <Pencil /> {row.slot === 'home' ? 'Choisir une autre destination' : 'Choisir la destination'}
+                <Pencil /> {row.slot === 'home' ? t('graph:destinations.home.choose') : t('graph:destinations.route.choose')}
               </Button>
             </div>
           )}
         </>
       ) : exit.idle && (
-        <p className="advanced-field__note">{exit.idle}</p>
+        <p className="advanced-field__note">{t(exit.idle)}</p>
       )}
 
       {editing && (
@@ -393,6 +393,7 @@ function ExitCard({
 export function StageDestinations({
   stage, rows, index, disabled, thumbnails, highlight = false, onGesture, onFocusPath,
 }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const [editing, setEditing] = useState(null);
 
   // Changer d'Écran ferme le formulaire : un brouillon appartient au nœud sur

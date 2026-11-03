@@ -1,3 +1,5 @@
+import frGraph from '../../locales/fr/graph.json' with { type: 'json' };
+import i18next from 'i18next';
 // Le nom donné à un nœud créé sans nom dans l'Éditeur graphe.
 //
 // Un Écran sans nom s'affichait par son UUID, une Action par le repli
@@ -14,19 +16,13 @@
 
 import { STAGE_KIND } from '../advancedGraphView/graphViewModel.js';
 
-const DEFAULT_STAGE_PREFIX = 'Écran';
-const DEFAULT_ACTION_PREFIX = 'Liste';
-
-function prefixOf(kind) {
-  return kind === STAGE_KIND ? DEFAULT_STAGE_PREFIX : DEFAULT_ACTION_PREFIX;
-}
-
 // `reserved` porte les noms déjà promis à des créations que l'index ne montre
 // pas encore : la vue est relue par un aller-retour **après** le geste, et une
 // création enchaînée dans cette fenêtre recevrait sinon le même numéro.
 export function nextDefaultNodeName(index, kind, reserved = []) {
-  const prefix = prefixOf(kind);
-  const pattern = new RegExp(`^${prefix} (\\d+)$`);
+  const pattern = kind === STAGE_KIND
+    ? /^(?:Écran|Ecran|Stage|Screen|Schermata) (\d+)$/
+    : /^(?:Liste|Action|Action node|List|Choice list|Lista) (\d+)$/;
   let highest = 0;
   const consider = (text) => {
     const match = typeof text === 'string' ? pattern.exec(text.trim()) : null;
@@ -38,7 +34,9 @@ export function nextDefaultNodeName(index, kind, reserved = []) {
     if (name?.presence === 'value') consider(name.value);
   }
   for (const name of reserved ?? []) consider(name);
-  return `${prefix} ${highest + 1}`;
+  return kind === STAGE_KIND
+    ? (i18next.t('graph:node.defaultStageName', { number: highest + 1 }) ?? frGraph['node.defaultStageName'].replace('{{number}}', highest + 1))
+    : (i18next.t('graph:node.defaultActionName', { number: highest + 1 }) ?? frGraph['node.defaultActionName'].replace('{{number}}', highest + 1));
 }
 
 // Les noms promis que l'index ne porte pas encore. Comme les places réservées,

@@ -1,0 +1,53 @@
+{
+  "list": {
+    "revision": 4,
+    "items": [
+      {
+        "id": "c",
+        "label": "Été",
+        "count": 2,
+        "countUnreferenced": 1,
+        "revision": 3
+      }
+    ]
+  },
+  "outcome": {
+    "catalogueRevision": 5,
+    "affectedCardIds": [
+      "a",
+      "b"
+    ],
+    "report": null
+  },
+  "mutations": [
+    {
+      "kind": "setFavorite",
+      "requestKey": "favorite",
+      "ficheIds": [
+        "a",
+        "b"
+      ],
+      "value": true,
+      "expectedFicheRevisions": {
+        "a": 1,
+        "b": 2
+      }
+    },
+    {
+      "kind": "changeTags",
+      "requestKey": "tags",
+      "ficheIds": [
+        "a"
+      ],
+      "addLabels": [
+        "Lune"
+      ],
+      "addTagIds": [
+        "t"
+      ],
+      "removeTagIds": [
+        "u"
+      ]
+    }
+  ]
+}

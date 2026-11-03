@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import { translateGraph as t, graphTranslationEngine, presentGraphLandmarks } from '../../i18n/graphPresentation.js';
 // La couche HTML posée au-dessus du canvas : noms, pastilles, bandeaux de
 // groupe et repères de la vue éloignée.
 //
@@ -19,7 +21,7 @@ import {
 
 
 function nodeBadge(node) {
-  return node.isEntry ? { label: 'RACINE', tone: 'entry' } : null;
+  return node.isEntry ? { label: t("graph:overlay.entree.label"), tone: 'entry' } : null;
 }
 
 // La prise peinte qui correspond à une entrée de la liste fonctionnelle.
@@ -42,6 +44,7 @@ function portAnchor(node, port) {
 }
 
 function LinkPortIcon({ id }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   if (id === GRAPH_LINK_PORTS.STAGE_OK) return <Check />;
   if (id === GRAPH_LINK_PORTS.STAGE_HOME) return <House />;
   return <Plus />;
@@ -56,12 +59,13 @@ export function GraphNodeOverlays({
   // HTML, au-dessus d'eux, qui reçoit le pointeur.
   onSelectLandmark = null,
 }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const {
     detailLevel = 'full', nodes = [], zoom = 1, bounds = null, viewport = null,
   } = overlay ?? {};
   const simplified = detailLevel === 'simplified';
   if (simplified) {
-    const marks = farLandmarkMarks(nodes, { bounds, viewport });
+    const marks = presentGraphLandmarks(farLandmarkMarks(nodes, { bounds, viewport }), 'graph:overlay.landmark.linkCount');
     const callouts = marks.filter((mark) => mark.callout);
     const select = (path) => (event) => {
       event.stopPropagation();
@@ -104,7 +108,7 @@ export function GraphNodeOverlays({
           // regroupée, le nombre de nœuds qu'elle couvre.
           <Tooltip
             key={node.path}
-            text={grouped ? `${count} nœuds dans cette zone` : title}
+            text={grouped ? t('graph:overlay.nodes.zoneCount', { count }) : title}
             asChild
             disabled={!grouped && !title}
           >
@@ -171,7 +175,7 @@ export function GraphNodeOverlays({
             }}
           >
             {full && node.kind === 'action' && (
-              <Tooltip text={`${node.outgoingCount} choix dans cette liste`} asChild>
+              <Tooltip text={t('graph:overlay.choices.listCount', { count: node.outgoingCount })} asChild>
                 <span className="advanced-node-overlay__action-count">
                   {node.outgoingCount}
                 </span>
@@ -187,12 +191,12 @@ export function GraphNodeOverlays({
             {node.ports && onLinkPortPointerDown && (
               <div className={`advanced-node-overlay__ports is-${node.kind}`}>
                 {(node.linkPorts ?? []).map((port) => [port, portAnchor(node, port)]).map(([port, anchor]) => anchor && (
-                  <Tooltip key={port.id} text={port.active ? portHint(port) : `${port.label} — ouvrir les contrôles`} asChild wrap>
+                  <Tooltip key={port.id} text={port.active ? portHint(port) : t("graph:overlay.openControls.label", { label: portLabel(port) })} asChild wrap>
                     <button
                       type="button"
                       style={handlePlacement(node, anchor)}
                       className={`${port.active ? 'is-active' : 'is-inactive'} is-${port.id}${port.active && port.activateControl ? ' is-activation-required' : ''}${anchor.revealed ? ' is-revealed' : ''}${isAddPort(node, port, anchor) ? ' is-add' : ''}`}
-                      aria-label={port.active ? portHint(port) : `${port.label} — contrôle désactivé`}
+                      aria-label={port.active ? portHint(port) : t("graph:overlay.controlDisabled.label", { label: portLabel(port) })}
                       onPointerDown={port.active ? (event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -234,9 +238,17 @@ function isAddPort(node, port, anchor) {
 
 // Une prise d'Écran dont la touche est éteinte reste tirable : le raccord
 // allume le bouton. L'infobulle le dit avant le geste.
+
+function portLabel(port) {
+  if (port.id === GRAPH_LINK_PORTS.STAGE_OK) return t('graph:overlay.port.okLabel');
+  if (port.id === GRAPH_LINK_PORTS.STAGE_HOME) return t('graph:overlay.port.homeLabel');
+  return port.missingOptionIndex !== null && port.missingOptionIndex !== undefined
+    ? t('graph:overlay.port.missingChoice') : t('graph:overlay.port.addChoice');
+}
+
 function portHint(port) {
-  if (!port.activateControl) return port.label;
-  return `${port.label} — allume aussi le bouton ${port.slot === 'home' ? 'Accueil' : 'OK'}`;
+  if (!port.activateControl) return portLabel(port);
+  return port.slot === 'home' ? t('graph:overlay.port.homeEnables', { label: portLabel(port) }) : t('graph:overlay.port.okEnables', { label: portLabel(port) });
 }
 
 function groupTone(id) {
@@ -246,6 +258,7 @@ function groupTone(id) {
 }
 
 export function GraphGroupOverlays({ overlay }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   // Sous 3 %, les zones colorées disparaissent : à ce régime la surface doit
   // porter les repères, pas des aplats qui les noient.
   if (overlay?.detailLevel === 'simplified') return null;

@@ -1,0 +1,6 @@
+{
+  "planId": "removal-plan",
+  "targetToken": "sha256-and-identity",
+  "stage": "targets",
+  "token": "first-receipt"
+}

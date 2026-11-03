@@ -387,7 +387,7 @@ test("un Écran expose sa vignette liée et, sans média, ne pose plus d'icône 
   // sonore est normal. C'est la carte, repeinte en `--graph-card-bg`, qui
   // porte l'Écran ; rien ne la remplace dans la couche HTML.
   assert.doesNotMatch(html, /advanced-node-overlay__image-placeholder/);
-  assert.match(html, />RACINE<\/span>/);
+  assert.match(html, />ENTRÉE<\/span>/);
 });
 
 test('le badge d’entrée suit la disparition des libellés', () => {
@@ -408,7 +408,7 @@ test('le badge d’entrée suit la disparition des libellés', () => {
     overlay: overlay('simplified'),
   })).html;
   assert.match(simplified, /advanced-landmark--entry/);
-  assert.match(simplified, />RACINE</, 'le repère fixe reste disponible au régime très éloigné');
+  assert.match(simplified, />ENTRÉE</, 'le repère fixe reste disponible au régime très éloigné');
 });
 
 test('sous 3 %, seuls les repères de navigation restent sur le graphe', () => {
@@ -432,7 +432,7 @@ test('sous 3 %, seuls les repères de navigation restent sur le graphe', () => {
     },
   }));
   assert.match(html, /advanced-landmark--entry/);
-  assert.match(html, />RACINE</, 'le libellé RACINE ne tombe plus au régime éloigné');
+  assert.match(html, />ENTRÉE</, 'le libellé ENTRÉE ne tombe plus au régime éloigné');
   assert.doesNotMatch(html, /advanced-landmark--warning/);
   assert.doesNotMatch(html, /faute/);
   assert.match(html, /Carrefour océan · 31 liens/);
@@ -492,5 +492,5 @@ test('les erreurs ne produisent plus de pastille sur les nœuds', () => {
   assert.doesNotMatch(card({ diagnosed: true }), />À CORRIGER</);
   assert.doesNotMatch(card({ isolated: true }), />ISOLÉ</);
   assert.doesNotMatch(card({ noIncoming: true }), />SANS ENTRÉE</);
-  assert.match(card({ isEntry: true }), />RACINE</);
+  assert.match(card({ isEntry: true }), />ENTRÉE</);
 });

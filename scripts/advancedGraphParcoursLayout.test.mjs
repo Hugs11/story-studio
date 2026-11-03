@@ -94,6 +94,123 @@ function chain() {
   });
 }
 
+function choiceFan(targets = ['c', 'f', 'a', 'e', 'b', 'd']) {
+  return {
+    entry: 'depart',
+    stages: ['depart', ...new Set(targets)],
+    actions: [['choix', targets]],
+    edges: [okEdge('depart', 'choix'), ...targets.map((id, ordinal) => optionEdge('choix', id, ordinal))],
+  };
+}
+
+function assertVerticalOrder(layout, targets) {
+  for (let rank = 1; rank < targets.length; rank += 1) {
+    const before = layout.positions.get(stagePath(targets[rank - 1]));
+    const after = layout.positions.get(stagePath(targets[rank]));
+    assert.equal(before.x, after.x, 'les enfants restent dans la même colonne');
+    assert.ok(before.y < after.y, `${targets[rank - 1]} doit précéder ${targets[rank]}`);
+  }
+}
+
+test('six choix rangent les Écrans selon les ports malgré leurs identifiants désordonnés', () => {
+  const shape = choiceFan();
+  assertVerticalOrder(parcoursLayout(indexOf(shape)), shape.actions[0][1]);
+});
+
+test('inverser les ordinaux inverse les Écrans sans changer les cibles des liens', () => {
+  const shape = choiceFan();
+  shape.edges.slice(1).forEach((edge) => { edge.ordinal = 5 - edge.ordinal; });
+  assertVerticalOrder(parcoursLayout(indexOf(shape)), [...shape.actions[0][1]].reverse());
+});
+
+function sharedChoices() {
+  return {
+    entry: 'depart',
+    stages: ['depart', 'z-parent', 'a-parent', 'z', 'a', 'm'],
+    actions: [['entree', ['z-parent', 'a-parent']], ['premiere', ['z', 'a']], ['seconde', ['a', 'm', 'z']]],
+    edges: [
+      okEdge('depart', 'entree'), optionEdge('entree', 'z-parent', 0), optionEdge('entree', 'a-parent', 1),
+      okEdge('z-parent', 'premiere'), optionEdge('premiere', 'z', 0), optionEdge('premiere', 'a', 1),
+      okEdge('a-parent', 'seconde'), optionEdge('seconde', 'a', 0), optionEdge('seconde', 'm', 1),
+      optionEdge('seconde', 'z', 2),
+    ],
+  };
+}
+
+test('les Écrans partagés suivent la première Liste rencontrée dans le parcours des choix', () => {
+  const shape = sharedChoices();
+  assertVerticalOrder(parcoursLayout(indexOf(shape)), ['z', 'a']);
+  // Seul l'ordre des parents depuis l'entrée change : la seconde Liste gagne.
+  shape.edges[1].ordinal = 1;
+  shape.edges[2].ordinal = 0;
+  assertVerticalOrder(parcoursLayout(indexOf(shape)), ['a', 'm', 'z']);
+});
+
+test('plusieurs choix vers un même Écran gardent sa première occurrence et une seule position', () => {
+  const shape = choiceFan(['z', 'a', 'z', 'b', 'a']);
+  const layout = parcoursLayout(indexOf(shape));
+  assertVerticalOrder(layout, ['z', 'a', 'b']);
+  assert.equal(layout.positions.size, shape.stages.length + shape.actions.length);
+});
+
+test('un cycle ne réattribue pas le premier parent et positionne tous les nœuds', () => {
+  const shape = sharedChoices();
+  shape.actions.push(['cycle', ['depart', 'a-parent']]);
+  shape.edges.push(okEdge('z', 'cycle'), optionEdge('cycle', 'depart', 0), optionEdge('cycle', 'a-parent', 1));
+  const layout = parcoursLayout(indexOf(shape));
+  assertVerticalOrder(layout, ['z-parent', 'a-parent']);
+  assertVerticalOrder(layout, ['z', 'a']);
+  assert.equal(layout.positions.size, shape.stages.length + shape.actions.length);
+  for (const { x, y } of layout.positions.values()) assert.ok(Number.isFinite(x) && Number.isFinite(y));
+});
+
+test('les retours Home ne changent ni le premier parent ni les positions des choix', () => {
+  const shape = sharedChoices();
+  const plain = parcoursLayout(indexOf(shape));
+  shape.edges.push(homeEdge('depart', 'seconde'), homeEdge('z', 'entree'), homeEdge('a', 'premiere'));
+  assert.deepEqual(parcoursLayout(indexOf(shape)).positions, plain.positions);
+});
+
+test('le barycentre ne peut pas inverser deux enfants du même premier parent', () => {
+  const shape = {
+    entry: 'depart',
+    stages: ['depart', 'p', 'q', 'z', 'a'],
+    actions: [['entree', ['p', 'q']], ['premiere', ['z', 'a']], ['seconde', ['z']]],
+    edges: [
+      okEdge('depart', 'entree'), optionEdge('entree', 'p', 0), optionEdge('entree', 'q', 1),
+      okEdge('p', 'premiere'), optionEdge('premiere', 'z', 0), optionEdge('premiere', 'a', 1),
+      okEdge('q', 'seconde'), optionEdge('seconde', 'z', 0),
+    ],
+  };
+  // z reçoit aussi le parent du bas : son barycentre vaut 0,5 contre 0 pour a.
+  // La dernière passe descendante voudrait donc placer a avant z.
+  assertVerticalOrder(parcoursLayout(indexOf(shape)), ['z', 'a']);
+});
+
+test('des ordinaux égaux ou absents sont départagés par les identifiants', () => {
+  for (const ordinal of [0, undefined]) {
+    const shape = choiceFan();
+    shape.edges.slice(1).forEach((edge) => { edge.ordinal = ordinal; });
+    assertVerticalOrder(parcoursLayout(indexOf(shape)), ['a', 'b', 'c', 'd', 'e', 'f']);
+  }
+});
+
+test('permuter les collections conserve exactement les positions, même avec partages et cycles', () => {
+  const shape = sharedChoices();
+  shape.actions.push(['cycle', ['depart']]);
+  shape.edges.push(okEdge('z', 'cycle'), optionEdge('cycle', 'depart'));
+  const plain = parcoursLayout(indexOf(shape));
+  for (let shift = 0; shift < shape.edges.length; shift += 1) {
+    const permuted = {
+      ...shape,
+      stages: [...shape.stages].reverse(),
+      actions: [...shape.actions].reverse(),
+      edges: [...shape.edges.slice(shift), ...shape.edges.slice(0, shift)].reverse(),
+    };
+    assert.deepEqual(parcoursLayout(indexOf(permuted)).positions, plain.positions);
+  }
+});
+
 // ── Le graphe de mise en page ────────────────────────────────────────────────
 
 test('une Action qui n’appartient qu’à un Écran ne prend pas de rang à elle', () => {

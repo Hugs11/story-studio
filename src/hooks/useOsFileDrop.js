@@ -1,3 +1,4 @@
+import { translateImport as t } from '../i18n/importPresentation.js';
 import { useEffect, useRef } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { classifyOsDroppedFiles } from '../store/projectHelpers';
@@ -5,9 +6,11 @@ import { logger } from '../utils/logger';
 import { releaseTauriListener } from '../utils/tauriListener';
 import { isTauriRuntime } from '../utils/tauriRuntime';
 import { importFilesToMediaLibrary } from './mediaLibraryImport';
+import { readPathKinds } from '../utils/packFolder';
 
 export function useOsFileDrop({
   dispatchFiles,
+  captureImport = null,
   maybeCopyToProject,
   copyGeneratedMediaToProject,
   extractAudioEmbeddedImage,
@@ -15,6 +18,7 @@ export function useOsFileDrop({
   setImporting,
   setActiveDropZone,
   getImportDisplayName,
+  showErrorDialog = null,
 }) {
   const osDropScaleFactorRef = useRef(typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1);
   const osFileDropHandlerRef = useRef(null);
@@ -51,32 +55,45 @@ export function useOsFileDrop({
       const el = document.elementFromPoint(cssPosition.x, cssPosition.y);
       const zone = el?.closest('[data-os-drop-zone]')?.dataset?.osDropZone ?? null;
       if (!zone) return;
-      const { audio, images, archives } = classifyOsDroppedFiles(paths);
+      // Le type réel vient du moteur : un dossier nommé `x.mp3` n'est pas de l'audio.
+      const kinds = await readPathKinds(paths);
+      const { audio, images, archives, folders } = classifyOsDroppedFiles(paths, kinds);
       if (zone === 'treepanel') {
-        const relevant = [...audio, ...archives];
+        // L'ordre du dépôt est celui de l'utilisateur, dossiers compris.
+        const wanted = new Set([...audio, ...archives, ...folders]);
+        const relevant = paths.filter((path) => wanted.has(path));
         if (relevant.length === 0) return;
-        setImporting({ name: getImportDisplayName(relevant[0]), index: 0, total: relevant.length, phase: "Préparation de l'import..." });
+        setImporting({ name: getImportDisplayName(relevant[0]), index: 0, total: relevant.length, get phase() { return t('import:media.preparation.progress'); } });
         try {
-          await dispatchFiles(null, relevant);
+          await dispatchFiles(null, relevant, null, { folders });
         } finally {
           setImporting(null);
         }
       } else if (zone === 'mediaexplorer') {
+        if (folders.length > 0) {
+          showErrorDialog?.({
+            get title() { return t('import:folder.import.title'); },
+            get message() { return t('import:folder.drop.mediaLibrary'); },
+            variant: 'info',
+          });
+        }
         const relevant = [...audio, ...images, ...archives];
         if (relevant.length === 0) return;
+        const request = captureImport?.();
         const total = relevant.length;
-        setImporting({ name: getImportDisplayName(relevant[0]), index: 0, total, phase: "Préparation de l'import..." });
+        setImporting({ name: getImportDisplayName(relevant[0]), index: 0, total, get phase() { return t('import:media.preparation.progress'); } });
         try {
           const nextPaths = await importFilesToMediaLibrary({
             files: relevant,
-            maybeCopyToProject,
-            copyGeneratedMediaToProject,
+            maybeCopyToProject: (path) => maybeCopyToProject(path, request?.copies),
+            copyGeneratedMediaToProject: copyGeneratedMediaToProject ? (path) => copyGeneratedMediaToProject(path, request?.copies) : null,
             extractAudioEmbeddedImage,
             setImporting,
             getImportDisplayName,
           });
-          addPathsToMediaLibrary(nextPaths);
+          if (!request || request.isCurrent()) addPathsToMediaLibrary(nextPaths);
         } finally {
+          request?.release();
           setImporting(null);
         }
       }

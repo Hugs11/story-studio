@@ -1,3 +1,5 @@
+import { useMessageLanguage } from '../i18n/useMessageLanguage.js';
+import { presentStoredError } from '../i18n/userMessage.js';
 // L'écoute d'un projet du mode Libre, projetée par le générateur.
 //
 // # Pourquoi elle passe par Rust
@@ -36,6 +38,7 @@ async function invokeProjection(project) {
 }
 
 export function useProjectedSimulation({ project, projectEpoch = null, launch, projectStory = invokeProjection }) {
+  useMessageLanguage();
   const [state, setState] = useState(IDLE);
   // Le projet est lu **au lancement**, par ref : le mettre en dépendance
   // reprojetterait à chaque frappe, et chaque projection rend des identifiants
@@ -69,13 +72,13 @@ export function useProjectedSimulation({ project, projectEpoch = null, launch, p
         if (cancelled) return;
         // Les refus du générateur ressortent tels quels : un projet qu'il ne
         // sait pas projeter le dit avec ses propres mots, jamais réécrits.
-        setState({ status: 'failed', graph: null, error: String(error?.message ?? error) });
+        setState({ status: 'failed', graph: null, error });
       });
     return () => { cancelled = true; };
   }, [launch, projectEpoch, projectStory]);
 
   // Ne pas exposer l'ancien graphe pendant le rendu qui précède les effets.
-  return !launch || launchOwnerRef.current?.projectEpoch !== projectEpoch ? IDLE : state;
+  return !launch || launchOwnerRef.current?.projectEpoch !== projectEpoch ? IDLE : { ...state, error: state.error ? presentStoredError(state.error) : null };
 }
 
 /**

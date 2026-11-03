@@ -128,11 +128,10 @@ fn edge_class_totals(
     totals
 }
 
-fn count_imported(entries: &[serde_json::Value], counts: &mut (usize, usize, usize)) {
+fn count_imported(entries: &[serde_json::Value], counts: &mut (usize, usize)) {
     for e in entries {
         match e.get("type").and_then(|v| v.as_str()).unwrap_or("story") {
             "menu" => counts.0 += 1,
-            "ref" => counts.2 += 1,
             _ => counts.1 += 1,
         }
         if let Some(children) = e.get("children").and_then(|v| v.as_array()) {
@@ -166,7 +165,7 @@ fn run_metrics(label: &str, path: &Path) {
         .and_then(|v| v.as_array())
         .cloned()
         .unwrap_or_default();
-    let mut imported = (0usize, 0usize, 0usize);
+    let mut imported = (0usize, 0usize);
     count_imported(&entries, &mut imported);
     let native_graph = result
         .get("nativeGraph")
@@ -198,9 +197,10 @@ fn run_metrics(label: &str, path: &Path) {
     );
     if let Some(graph_import) = graph_import {
         println!(
-            "graph import  : root={} shared={} diagnostics={}",
+            "graph import  : root={} shared={} horsArbre={} diagnostics={}",
             graph_import.root_entries.len(),
             graph_import.shared_entries.len(),
+            graph_import.out_of_tree_edges.len(),
             graph_import.diagnostics.len()
         );
         for diagnostic in graph_import.diagnostics.iter().take(5) {
@@ -208,11 +208,11 @@ fn run_metrics(label: &str, path: &Path) {
         }
     }
     println!(
-        "import actuel : top={} menus={} stories={} refs={} nativeGraph={} usesGraphProjection={}",
+        "import actuel : top={} menus={} stories={} horsArbre={} nativeGraph={} usesGraphProjection={}",
         entries.len(),
         imported.0,
         imported.1,
-        imported.2,
+        result["outOfTreeEdgeCount"],
         native_graph,
         uses_graph_projection
     );

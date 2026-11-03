@@ -5,6 +5,7 @@
 // Les stores SD/XTTS sont passés entiers : le hook en dérive
 // sdSettings/sdJobs/xttsJobs/onRemoveSdResult.
 export function useProjectContextValue({
+  mediaStorage,
   savePath,
   projectName,
   workspaceDir,
@@ -14,6 +15,7 @@ export function useProjectContextValue({
   xttsStore,
   pathAudit,
   maybeCopyToProject,
+  keepFolderPack,
   extractAudioEmbeddedImage,
   handleSaveProject,
   handleOpenSDGenerate,
@@ -22,6 +24,7 @@ export function useProjectContextValue({
   handleMediaCreated,
 }) {
   return {
+    mediaStorage,
     savePath,
     projectName,
     workspaceDir,
@@ -32,6 +35,8 @@ export function useProjectContextValue({
     xttsJobs: xttsStore.jobs,
     pathAudit,
     onImportFile: maybeCopyToProject,
+    // Réservation de la destination jusqu'à l'affectation de l'archive produite.
+    onKeepFolderPack: keepFolderPack,
     onExtractAudioEmbeddedImage: extractAudioEmbeddedImage,
     onSave: handleSaveProject,
     onOpenSDGenerate: handleOpenSDGenerate,

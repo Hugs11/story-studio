@@ -1,3 +1,5 @@
+import { translateCommon as t } from '../i18n/commonPresentation.js';
+import { MediaSubscriptionsPanel } from './MediaSubscriptions/MediaSubscriptionsPanel';
 import { lazy } from 'react';
 import { MediaTransferProvider } from '../store/MediaTransferContext';
 import { ProjectContext } from '../store/ProjectContext';
@@ -23,6 +25,7 @@ const BottomWorkspacePanel = lazy(() => import('./BottomWorkspacePanel/BottomWor
 // `WorkspaceView` reste `lazy` + `renderDeferred` : le code-split est préservé.
 export function AppShell({
   mediaTransfer,
+  subscriptions,
   projectContextValue,
   projectActions,
   // Le panneau du bas et la bottombar suivent « un projet est-il ouvert ? »,
@@ -58,6 +61,8 @@ export function AppShell({
         showProjectMeta={titleBar.showProjectMeta}
         onOpenPackMetadata={titleBar.onOpenPackMetadata}
         onOpenCredits={titleBar.onOpenCredits}
+        onOpenPreferences={titleBar.onOpenPreferences}
+        preferencesShortcut={toolbar.shortcutLabels?.tabOptions}
       />
 
       {projectOpen && (
@@ -66,6 +71,7 @@ export function AppShell({
           shortcutLabels={toolbar.shortcutLabels}
           suspensionNotice={toolbar.suspensionNotice}
           onNewProject={toolbar.onNewProject}
+          onReturnToCatalogue={toolbar.onReturnToCatalogue}
           onOpenProject={toolbar.onOpenProject}
           onOpenPack={toolbar.onOpenPack}
           onSaveProject={toolbar.onSaveProject}
@@ -73,7 +79,6 @@ export function AppShell({
           onContinueInGraph={toolbar.onContinueInGraph}
           onUndo={toolbar.onUndo}
           onRedo={toolbar.onRedo}
-          onOpenPreferences={toolbar.onOpenPreferences}
           panels={toolbar.panels}
           panelOrder={toolbar.panelOrder}
           onMovePanel={toolbar.onMovePanel}
@@ -82,11 +87,6 @@ export function AppShell({
           onToggleDiagram={toolbar.onToggleDiagram}
           onToggleNodeList={toolbar.onToggleNodeList}
           onToggleInspector={toolbar.onToggleInspector}
-          packOptionsOpen={toolbar.packOptionsOpen}
-          onPackOptionsOpenChange={toolbar.onPackOptionsOpenChange}
-          projectType={toolbar.projectType}
-          globalOptions={toolbar.globalOptions}
-          onUpdateGlobalOption={toolbar.onUpdateGlobalOption}
           onGenerate={toolbar.onGenerate}
           issueKind={toolbar.issueKind}
           validationIssues={toolbar.validationIssues}
@@ -113,6 +113,7 @@ export function AppShell({
               onYoutubeFunnel={workspace.onYoutubeFunnel}
               onAggregatePacks={workspace.onAggregatePacks}
               onCheckPack={workspace.onCheckPack}
+              onOpenCatalogue={workspace.onOpenCatalogue}
               pendingSimulateZipPath={workspace.pendingSimulateZipPath}
               onSimulateConsumed={workspace.onSimulateConsumed}
               onOpenProject={workspace.onOpenProject}
@@ -180,6 +181,7 @@ export function AppShell({
       </div>
 
       <AppModals {...appModalsProps} />
+      <MediaSubscriptionsPanel {...subscriptions} />
 
       {/* Bottom bar */}
       <div className="bottombar">
@@ -188,9 +190,7 @@ export function AppShell({
           <button
             className="rq-bottombar-btn"
             onClick={bottomBar.onOpenMedia}
-          >
-            Médias
-            <span>({bottomBar.mediaLibraryCount})</span>
+          >{t('common:workspace.media.tab')}<span>({bottomBar.mediaLibraryCount})</span>
           </button>
         )}
         {bottomBar.projectOpen && !bottomBar.open && (
@@ -198,9 +198,7 @@ export function AppShell({
             className={`rq-bottombar-btn${bottomBar.renderQueueActiveCount > 0 ? ' has-active' : ''}`}
             onClick={bottomBar.onOpenRenderQueue}
           >
-            {bottomBar.renderQueueActiveCount > 0 && <span className="rq-spinner" />}
-            File de rendu
-            {bottomBar.renderQueueActiveCount > 0 && <span className="bottom-status-pill">{bottomBar.renderQueueActiveCount}</span>}
+            {bottomBar.renderQueueActiveCount > 0 && <span className="rq-spinner" />}{t('common:workspace.renderQueue.tab')}{bottomBar.renderQueueActiveCount > 0 && <span className="bottom-status-pill">{bottomBar.renderQueueActiveCount}</span>}
             {bottomBar.renderQueueActiveCount === 0 && bottomBar.renderQueueHasResults && <span className="bottom-status-pill is-done">✓</span>}
           </button>
         )}
@@ -209,9 +207,7 @@ export function AppShell({
             className={`rq-bottombar-btn${bottomBar.aiQueueActiveCount > 0 ? ' has-active' : ''}`}
             onClick={bottomBar.onOpenAiQueue}
           >
-            {bottomBar.aiQueueActiveCount > 0 && <span className="rq-spinner" />}
-            File IA
-            {bottomBar.aiQueueActiveCount > 0 && <span className="bottom-status-pill">{bottomBar.aiQueueActiveCount}</span>}
+            {bottomBar.aiQueueActiveCount > 0 && <span className="rq-spinner" />}{t('common:workspace.aiQueue.tab')}{bottomBar.aiQueueActiveCount > 0 && <span className="bottom-status-pill">{bottomBar.aiQueueActiveCount}</span>}
             {bottomBar.aiQueueActiveCount === 0 && bottomBar.aiQueueHasResults && <span className="bottom-status-pill is-done">✓</span>}
           </button>
         )}

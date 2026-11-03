@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { releaseProjectMediaJob } from './projectMediaOutput';
+import { useCallback, useState, useRef } from 'react';
 
 function genId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -6,6 +7,12 @@ function genId() {
 
 export function useXttsStore() {
   const [jobs, setJobs] = useState([]);
+
+  const jobsRef = useRef(jobs);
+  const mutateJobs = useCallback((transform) => {
+    jobsRef.current = transform(jobsRef.current);
+    setJobs(jobsRef.current);
+  }, []);
 
   const addJob = useCallback((job) => {
     const nextJob = {
@@ -19,21 +26,31 @@ export function useXttsStore() {
       createdAt: Date.now(),
       ...job,
     };
-    setJobs(prev => [...prev, nextJob]);
+    mutateJobs(prev => [...prev, nextJob]);
     return nextJob.id;
-  }, []);
+  }, [mutateJobs]);
 
   const updateJob = useCallback((id, fields) => {
-    setJobs(prev => prev.map(job => job.id === id ? { ...job, ...fields } : job));
-  }, []);
+    const terminal = fields.status === 'done' || fields.status === 'error';
+    const job = jobsRef.current.find((candidate) => candidate.id === id);
+    if (terminal) releaseProjectMediaJob(job);
+    mutateJobs(prev => prev.flatMap(candidate => candidate.id !== id ? [candidate]
+      : terminal && candidate.removeWhenFinished ? [] : [{ ...candidate, ...fields }]));
+  }, [mutateJobs]);
 
   const removeJob = useCallback((id) => {
-    setJobs(prev => prev.filter(job => job.id !== id));
-  }, []);
+    const job = jobsRef.current.find((candidate) => candidate.id === id);
+    if (!job) return;
+    // Keep a running producer tracked until its native write finishes.
+    const running = job.status === 'submitting' || job.status === 'running';
+    if (!running) releaseProjectMediaJob(job);
+    mutateJobs(prev => prev.flatMap(candidate => candidate.id !== id ? [candidate]
+      : running ? [{ ...candidate, removeWhenFinished: true }] : []));
+  }, [mutateJobs]);
 
   const clearDone = useCallback(() => {
-    setJobs(prev => prev.filter(job => job.status !== 'done' && job.status !== 'error'));
-  }, []);
+    mutateJobs(prev => prev.filter(job => job.status !== 'done' && job.status !== 'error'));
+  }, [mutateJobs]);
 
   const pendingCount = jobs.filter(job =>
     job.status === 'pending' || job.status === 'submitting' || job.status === 'running'

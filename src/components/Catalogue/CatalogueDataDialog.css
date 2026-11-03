@@ -1,0 +1,20 @@
+/* Fenêtres du catalogue : surface `.dialog-panel`, centrée, espacements de l'app. */
+.dialog-panel.catalogue-data-dialog {
+  width: min(46rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  margin: auto;
+  padding: var(--space-4);
+  overflow: auto;
+  box-sizing: border-box;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+}
+/* Littéral : avant Safari 17.4 (macOS 11–13), ::backdrop n'hérite pas des variables de :root. */
+.catalogue-data-dialog::backdrop { background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(2px); }
+.catalogue-data-dialog label { display: block; margin-block: var(--space-2); }
+.catalogue-data-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* En-tête : titre et fermeture sur une ligne, comme `.dialog-header`. */
+.catalogue-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) var(--space-3); padding: 8px 10px 8px 16px; border-bottom: 1px solid var(--border); }
+.catalogue-data-dialog .catalogue-dialog-head h2 { margin: 0; }
+.catalogue-data-dialog form label { display: inline-flex; align-items: center; gap: var(--space-2); margin: 0; }

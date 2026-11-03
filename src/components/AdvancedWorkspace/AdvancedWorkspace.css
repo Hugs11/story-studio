@@ -36,6 +36,17 @@
 .advanced-panel-slot--advanced-graph {
   flex: 1 1 640px;
   min-width: 360px;
+  /* Comme les deux autres panneaux : la largeur vient du flex de
+     `.advanced-workspace` (base 640px, plancher 360px), jamais du contenu,
+     ce que le confinement en ligne exige. */
+  container: graph-panel / inline-size;
+}
+
+/* Panneau Graphe réduit : les commandes de création de l'en-tête (Écran,
+   Liste de choix) ne gardent que leur icône, pour laisser la place au menu
+   Exemples. Leur nom reste annoncé par `aria-label` et l'infobulle. */
+@container graph-panel (max-width: 520px) {
+  .advanced-panel--graph .advanced-create-command .chrome-toolbar-btn-label { display: none; }
 }
 
 .advanced-panel-slot--advanced-node-list {
@@ -152,6 +163,7 @@
 
 .advanced-inspector--editor {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
   border-left: 0;
@@ -163,14 +175,18 @@
   flex-direction: column;
   gap: 16px;
   padding: 14px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.advanced-editor > .card {
+.advanced-editor > .card,
+.advanced-selection-editor > .card {
+  min-width: 0;
   padding: 16px;
 }
 
 .advanced-editor__media-card .media-split {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
 }
 
@@ -301,7 +317,7 @@
 
 .advanced-editor__fallback,
 .advanced-field__absent {
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
   font-style: italic;
 }
 
@@ -351,6 +367,7 @@
 
 .advanced-editor__section-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
@@ -423,6 +440,7 @@
 /* ── Champs ────────────────────────────────────────────────────────────── */
 
 .advanced-field {
+  min-inline-size: 0;
   margin: 0;
   padding: 10px 11px;
   border: 1px solid var(--border);
@@ -451,11 +469,11 @@
   display: block;
   margin-top: 8px;
   font-size: 12px;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
 }
 
 .advanced-field__note {
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
 }
 
 .advanced-field__warning {
@@ -481,7 +499,7 @@
 .advanced-field__form {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px dashed var(--border-1, #2a2f35);
+  border-top: 1px dashed var(--border);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -516,7 +534,7 @@
   align-items: center;
   gap: 7px;
   padding: 8px 10px;
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg1);
   cursor: pointer;
@@ -577,7 +595,7 @@
 .advanced-controls__completion {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px dashed var(--border-1, #2a2f35);
+  border-top: 1px dashed var(--border);
 }
 
 .advanced-inspector--editor .advanced-inspector__empty {
@@ -609,7 +627,7 @@
   align-items: center;
   gap: 6px;
   padding: 4px;
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   border-radius: 3px;
   background: var(--bg1);
   font-size: 12px;
@@ -704,7 +722,7 @@
 }
 
 /* « ouvre cette liste sur » : le verbe de la ligne d'arrivée, secondaire. */
-.advanced-options__verb { color: var(--text-2, #9aa2ab); }
+.advanced-options__verb { color: var(--text-secondary); }
 
 /* La place d'un choix dans sa liste, « 19/40 » : plus large qu'un rang. */
 .advanced-options__position { min-width: 40px; }
@@ -717,7 +735,7 @@
   align-items: baseline;
   gap: 4px;
   margin: -2px 0 0 30px;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
   font-size: 11px;
 }
 
@@ -725,7 +743,7 @@
    okTransition ». Discret, pour qui lit le format ou la documentation STUdio. */
 .advanced-editor__term {
   margin-left: 6px;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 400;
   font-style: italic;
@@ -734,7 +752,7 @@
 /* « Se déclenche » / « Destination » : les deux temps d'une sortie. */
 .advanced-exit__label {
   margin: 10px 0 6px;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .06em;
@@ -772,7 +790,7 @@
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
   font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -795,7 +813,7 @@
   letter-spacing: 0;
 }
 
-.advanced-exit__landing select {
+.advanced-exit__landing .select-trigger {
   flex: 1 1 12em;
   min-width: 0;
   max-width: 100%;
@@ -830,7 +848,7 @@
   flex-direction: column;
   gap: 6px;
   padding: 8px 10px;
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg1);
   font-size: 12px;
@@ -843,7 +861,7 @@
   min-width: 0;
 }
 
-.advanced-arrival__place { color: var(--text-2, #9aa2ab); white-space: nowrap; }
+.advanced-arrival__place { color: var(--text-secondary); white-space: nowrap; }
 .advanced-arrival__remove { margin-left: auto; flex: 0 0 auto; }
 
 .advanced-arrival__line {
@@ -854,7 +872,7 @@
 }
 
 .advanced-arrival__label {
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 700;
 }
@@ -876,13 +894,13 @@
   min-width: 0;
 }
 
-.advanced-arrival__how { color: var(--text-2, #9aa2ab); }
+.advanced-arrival__how { color: var(--text-secondary); }
 
 .advanced-arrival__warning { margin: 0; }
 
 .advanced-wheel__side {
   display: inline-flex;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
 }
 .advanced-wheel__side svg { width: 14px; height: 14px; }
 
@@ -932,7 +950,7 @@
 /* L'état d'un bouton, après son nom : « Bouton Accueil  activé ». */
 .advanced-controls__state {
   margin-left: 8px;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
@@ -943,7 +961,7 @@
   align-items: center;
   gap: 6px;
   margin: 2px 0 6px;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
   font-size: 12px;
   list-style: none;
 }
@@ -973,7 +991,7 @@
   min-width: 22px;
   text-align: center;
   font-variant-numeric: tabular-nums;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
 }
 
 .advanced-options__target {
@@ -998,7 +1016,7 @@
 
 .advanced-link:disabled {
   cursor: default;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
   text-decoration: none;
 }
 
@@ -1008,7 +1026,7 @@
   margin: 12px 12px 0;
   padding: 8px 10px;
   border-radius: 4px;
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   font-size: 12px;
 }
 
@@ -1034,29 +1052,12 @@
 
 .advanced-feedback__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 6px;
 }
 
 /* ── Diagnostics ───────────────────────────────────────────────────────── */
-
-.advanced-diagnostics {
-  border-top: 1px solid var(--border-1, #2a2f35);
-  max-height: 40%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.advanced-diagnostics--popover {
-  border-top: 0;
-  max-height: none;
-}
-
-.advanced-diagnostics--popover .advanced-diagnostics__list {
-  padding: 0;
-  overflow: visible;
-}
 
 .advanced-issues-popover {
   display: flex;
@@ -1069,59 +1070,19 @@
 .advanced-issues-popover > .advanced-export__running {
   margin: 0;
   padding-top: 12px;
-  border-top: 1px solid var(--border-1, #2a2f35);
+  border-top: 1px solid var(--border);
 }
 
-.advanced-diagnostics__list {
-  margin: 0;
-  padding: 0 12px 12px;
-  list-style: none;
-  overflow-y: auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* Les refus affichés dans « À corriger » gardent les accents ambre de la liste. */
+.advanced-issues-popover .advanced-export__outcome--refused,
+.advanced-issues-popover .advanced-export__row {
+  border-color: var(--warning-border);
 }
 
-.advanced-diagnostics__item {
-  padding: 8px;
-  border: 1px solid var(--border-1, #2a2f35);
-  border-left-width: 4px;
-  border-radius: 3px;
-}
-
-.advanced-diagnostics__item[data-severity='ACTION_REQUIRED'],
-.advanced-diagnostics__item[data-severity='error'] {
-  border-left-color: var(--danger-1, #b3261e);
-}
-
-.advanced-diagnostics__item[data-severity='WARNING'],
-.advanced-diagnostics__item[data-severity='warning'] {
-  border-left-color: var(--warning-1, #e8b339);
-}
-
-.advanced-diagnostics__head {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: baseline;
-  font-size: 11px;
-}
-
-.advanced-diagnostics__message {
-  margin: 4px 0;
-  font-size: 12px;
-}
-
-.advanced-diagnostics__actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.advanced-diagnostics__empty {
-  color: var(--text-2, #9aa2ab);
-  font-size: 12px;
+.advanced-issues-popover .advanced-export__actions .btn-xs {
+  max-width: 100%;
+  height: auto;
+  white-space: normal;
 }
 
 /* ── Panneaux étroits ──────────────────────────────────────────────────── */
@@ -1131,7 +1092,7 @@
 /* Ces classes peignent la qualification et les refus dans la pastille du haut.
  * Ce popover reste hors du triptyque de panneaux. */
 .advanced-export {
-  border-top: 1px solid var(--border-1, #2a2f35);
+  border-top: 1px solid var(--border);
   max-height: 46%;
   display: flex;
   flex-direction: column;
@@ -1169,7 +1130,7 @@
 .advanced-export__group-title {
   margin: 8px 0 4px;
   font-size: 12px;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
 }
 
 /* Le verdict ne repose pas sur la couleur : le mot « bloqué » le dit, et le
@@ -1188,7 +1149,7 @@
 }
 
 .advanced-export__verdict-label {
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
 }
 
 .advanced-export__stale {
@@ -1220,7 +1181,7 @@
 
 .advanced-export__row {
   padding: 6px 8px;
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   border-left-width: 4px;
   border-radius: 3px;
   overflow-wrap: anywhere;
@@ -1237,7 +1198,7 @@
 
 .advanced-export__row-source {
   text-transform: uppercase;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
   font-size: 11px;
 }
 
@@ -1249,7 +1210,7 @@
 .advanced-export__row-path {
   margin: 2px 0;
   font-size: 11px;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
   overflow-wrap: anywhere;
 }
 
@@ -1274,7 +1235,7 @@
 .advanced-export__details > summary,
 .advanced-export__limits > summary {
   cursor: pointer;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
 }
 
 .advanced-export__progress {
@@ -1288,7 +1249,7 @@
   padding: 6px 8px;
   max-height: 160px;
   overflow: auto;
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   border-radius: 3px;
   font-size: 11px;
   white-space: pre-wrap;
@@ -1297,7 +1258,7 @@
 
 .advanced-export__outcome {
   padding: 8px 10px;
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   border-radius: 4px;
 }
 
@@ -1322,9 +1283,9 @@
   flex-wrap: wrap;
   gap: 4px 10px;
   padding: 6px 10px;
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--surface-2, #1c2027);
+  background: var(--bg2);
   font-size: 12px;
 }
 
@@ -1342,11 +1303,11 @@
 
 .advanced-review-banner__path {
   overflow-wrap: anywhere;
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
 }
 
 .advanced-review-banner__state {
-  color: var(--text-2, #9aa2ab);
+  color: var(--text-secondary);
 }
 
 @media (width <= 1100px) {
@@ -1366,6 +1327,22 @@
 
   .advanced-editor > .card {
     padding: 10px;
+  }
+
+  .advanced-editor__name-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .advanced-editor__identity {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .advanced-editor .btn,
+  .advanced-editor .btn-xs {
+    max-width: 100%;
+    height: auto;
+    white-space: normal;
   }
 
   .advanced-editor__section-heading--list {
@@ -1398,8 +1375,8 @@
     gap: 5px;
   }
 
-  .advanced-controls__row.is-undefined > select,
-  .advanced-controls__completion .advanced-controls__row > select {
+  .advanced-controls__row.is-undefined > .select-trigger,
+  .advanced-controls__completion .advanced-controls__row > .select-trigger {
     width: 100%;
     min-width: 0;
   }
@@ -1442,7 +1419,49 @@
 /* Sélection de plusieurs nœuds : les cartes de la sélection multiple du Libre. */
 .advanced-selection-editor {
   display: grid;
+  /* Une piste auto garde le minimum intrinsèque des cartes (titres, palette)
+     et déborde du panneau de 200 px, même si la ligne de génération se replie. */
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  overflow-wrap: anywhere;
   gap: 10px;
+}
+
+.advanced-inspector--editor .card-title-row .card-title {
+  min-width: 0;
+  flex-shrink: 1;
+  overflow-wrap: anywhere;
+}
+
+/* La palette du menu contextuel tient sur une ligne ; dans une carte de
+   l'inspecteur elle doit pouvoir se replier sans réduire ses cibles. */
+.advanced-inspector--editor .ctx-color-row {
+  flex-wrap: wrap;
+}
+
+.advanced-inspector--editor .ctx-color-row > button {
+  flex-shrink: 0;
+}
+
+/* Le sélecteur est aussi utilisé dans les dialogues, où son plancher de
+   180 px convient. Dans l'inspecteur, il suit la largeur de la carte. */
+.advanced-inspector--editor .advanced-picker,
+.advanced-inspector--editor .advanced-picker__query {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@container settings-panel (max-width: 320px) {
+  .advanced-selection-editor > .card {
+    padding: 10px;
+  }
+
+  .advanced-selection-editor .batch-generate-btn {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 
 .advanced-selection-editor__banner {
@@ -1462,13 +1481,13 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg2);
 }
 
 .advanced-create-stage-split__toggle {
-  border-left: 1px solid var(--border-1, #2a2f35);
+  border-left: 1px solid var(--border);
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
 }
@@ -1478,7 +1497,7 @@
 }
 
 .advanced-panel--graph .advanced-create-command {
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg2);
 }
@@ -1506,7 +1525,7 @@
 .advanced-create-stage-menu__item {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg2);
   color: var(--text);

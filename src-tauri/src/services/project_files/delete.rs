@@ -1,3 +1,5 @@
+use crate::support::user_message;
+use crate::support::user_message::codes;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -39,10 +41,39 @@ pub fn scan_unused_files(
         if !dir.is_dir() {
             continue;
         }
-        let entries =
-            fs::read_dir(&dir).map_err(|e| format!("Impossible de lire {} : {}", dir_name, e))?;
+        let entries = fs::read_dir(&dir).map_err(|e| {
+            let _msg_dir_name = (dir_name).to_string();
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::FILES_PATH_BYTES_READ_FAILED)
+                .param(
+                    "dirName",
+                    user_message::transport_param(_msg_dir_name.clone()),
+                )
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Impossible de lire {_msg_dir_name} : {_msg_error}",
+                    _msg_dir_name = user_message::transport_detail(&_msg_dir_name),
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
         for entry in entries {
-            let entry = entry.map_err(|e| format!("Erreur lecture {} : {}", dir_name, e))?;
+            let entry = entry.map_err(|e| {
+                let _msg_dir_name = (dir_name).to_string();
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(codes::FILES_DELETE_METADATA_READ_FAILED)
+                    .param(
+                        "dirName",
+                        user_message::transport_param(_msg_dir_name.clone()),
+                    )
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Erreur lecture {_msg_dir_name} : {_msg_error}",
+                        _msg_dir_name = user_message::transport_detail(&_msg_dir_name),
+                        _msg_error = user_message::transport_detail(&_msg_error)
+                    ))
+                    .into_transport()
+            })?;
             let path = entry.path();
             if !path.is_file() {
                 continue;
@@ -80,7 +111,16 @@ pub fn delete_unused_files(paths: &[String], save_path: &str) -> Result<usize, S
     let mut count = 0;
     for path in paths {
         ensure_managed_project_file(path, Some(save_path))?;
-        fs::remove_file(path).map_err(|e| format!("Suppression impossible : {}", e))?;
+        fs::remove_file(path).map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::FILES_DELETION_IMPOSSIBLE)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Suppression impossible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
         count += 1;
     }
     Ok(count)
@@ -88,7 +128,16 @@ pub fn delete_unused_files(paths: &[String], save_path: &str) -> Result<usize, S
 
 pub fn delete_file(path: &str, save_path: Option<&str>) -> Result<(), String> {
     let validated = ensure_managed_project_file(path, save_path)?;
-    fs::remove_file(&validated).map_err(|e| format!("Suppression impossible : {}", e))
+    fs::remove_file(&validated).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_DELETION_IMPOSSIBLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Suppression impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })
 }
 
 /// Sous-dossiers du workspace dans lesquels la suppression disque est autorisée.
@@ -108,27 +157,86 @@ pub fn delete_workspace_media_file(
     workspace_dir: &str,
     preserve_paths: &[String],
 ) -> Result<(), String> {
+    delete_workspace_media_file_with_cascade(path, workspace_dir, preserve_paths, true)
+}
+
+/// Retire une sortie abandonnée : aucune sauvegarde, aucun sidecar ni voisin
+/// ne lui appartient implicitement. Partage les gardes de la suppression média.
+pub fn delete_workspace_media_file_only(path: &str, workspace_dir: &str) -> Result<(), String> {
+    delete_workspace_media_file_with_cascade(path, workspace_dir, &[], false)
+}
+
+fn delete_workspace_media_file_with_cascade(
+    path: &str,
+    workspace_dir: &str,
+    preserve_paths: &[String],
+    cascade: bool,
+) -> Result<(), String> {
     let workspace_dir = workspace_dir.trim();
     if workspace_dir.is_empty() {
-        return Err("Workspace non défini : suppression disque refusée.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::FILES_DELETE_WORKSPACE_REQUIRED)
+                .with_detail("Workspace non défini : suppression disque refusée.".to_string())
+                .into_transport(),
+        );
     }
     let path_trimmed = path.trim();
     if path_trimmed.is_empty() {
-        return Err("Chemin du fichier à supprimer vide.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::FILES_FILE_PATH_DELETE_EMPTY)
+                .with_detail("Chemin du fichier à supprimer vide.".to_string())
+                .into_transport(),
+        );
     }
 
-    let workspace_canonical = fs::canonicalize(workspace_dir)
-        .map_err(|e| format!("Workspace introuvable ou inaccessible : {}", e))?;
-    let target_canonical = fs::canonicalize(path_trimmed)
-        .map_err(|e| format!("Fichier à supprimer introuvable ou inaccessible : {}", e))?;
+    let workspace_canonical = fs::canonicalize(workspace_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_WORKSPACE_NOT_FOUND_INACCESSIBLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Workspace introuvable ou inaccessible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    let target_canonical = fs::canonicalize(path_trimmed).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_DELETE_TARGET_MISSING)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Fichier à supprimer introuvable ou inaccessible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
-    let metadata = fs::metadata(&target_canonical)
-        .map_err(|e| format!("Fichier à supprimer inaccessible : {}", e))?;
+    let metadata = fs::metadata(&target_canonical).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_DELETE_FILE_INACCESSIBLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Fichier à supprimer inaccessible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
     if !metadata.is_file() {
-        return Err(format!(
-            "Suppression refusée : la cible n'est pas un fichier ({}).",
-            target_canonical.display()
-        ));
+        return Err({
+            let _msg_target_canonical = (target_canonical.display()).to_string();
+            user_message::UserMessage::new(
+                codes::FILES_DELETE_TARGET_IRREGULAR,
+            )
+                .param(
+                    "targetCanonical",
+                    user_message::transport_param(_msg_target_canonical.clone()),
+                )
+                .with_detail(format!(
+                    "Suppression refusée : la cible n'est pas un fichier ({_msg_target_canonical}).",
+                    _msg_target_canonical =
+                    user_message::transport_detail(&_msg_target_canonical)
+                ))
+                .into_transport()
+        });
     }
 
     for dir_name in DELETABLE_WORKSPACE_DIRS {
@@ -138,23 +246,46 @@ pub fn delete_workspace_media_file(
             Err(_) => continue,
         };
         if target_canonical.starts_with(&managed_canonical) {
-            fs::remove_file(&target_canonical)
-                .map_err(|e| format!("Suppression impossible : {}", e))?;
-            cascade_delete_audio_edit_artifacts(
-                &target_canonical,
-                &managed_canonical,
-                preserve_paths,
-            );
-            cascade_delete_image_edit_artifacts(&target_canonical, &managed_canonical);
+            fs::remove_file(&target_canonical).map_err(|e| {
+                let _msg_error = (e).to_string();
+                user_message::UserMessage::new(codes::FILES_DELETION_IMPOSSIBLE)
+                    .param("error", user_message::transport_param(_msg_error.clone()))
+                    .with_detail(format!(
+                        "Suppression impossible : {_msg_error}",
+                        _msg_error = user_message::transport_detail(&_msg_error)
+                    ))
+                    .into_transport()
+            })?;
+            if cascade {
+                cascade_delete_audio_edit_artifacts(
+                    &target_canonical,
+                    &managed_canonical,
+                    preserve_paths,
+                );
+                cascade_delete_image_edit_artifacts(&target_canonical, &managed_canonical);
+            }
             return Ok(());
         }
     }
 
-    Err(format!(
-        "Suppression disque refusée : le fichier doit être sous workspace/{} (reçu : {}).",
-        DELETABLE_WORKSPACE_DIRS.join(", workspace/"),
-        target_canonical.display()
-    ))
+    Err({
+        let managed_directory_names = (DELETABLE_WORKSPACE_DIRS.join(", workspace/")).to_string();
+        let _msg_target_canonical = (target_canonical.display()).to_string();
+        user_message::UserMessage::new(
+            codes::FILES_DELETE_PATH_OUTSIDE,
+        )
+            .param("managedDirectories", user_message::transport_param(managed_directory_names.clone()))
+            .param(
+                "targetCanonical",
+                user_message::transport_param(_msg_target_canonical.clone()),
+            )
+            .with_detail(format!(
+                "Suppression disque refusée : le fichier doit être sous workspace/{managed_directory_names} (reçu : {_msg_target_canonical}).",
+                _msg_target_canonical = user_message::transport_detail(&_msg_target_canonical),
+                managed_directory_names = user_message::transport_detail(&managed_directory_names),
+            ))
+            .into_transport()
+    })
 }
 
 /// Supprime uniquement le sidecar de l'image ciblée. Le `sourcePath` qu'il

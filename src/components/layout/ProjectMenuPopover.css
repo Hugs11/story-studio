@@ -16,25 +16,57 @@
   height: 14px;
 }
 
-.project-menu {
-  position: absolute;
-  z-index: 260;
-  top: calc(100% + 12px);
-  left: 0;
-  width: 260px;
+/* Fond, bordure, rayon et ombre communs au menu et à ses sous-menus en cascade. */
+.project-menu,
+.project-submenu {
+  box-sizing: border-box;
   padding: 10px;
   border: 1px solid var(--borderLt);
   border-radius: var(--radius-lg);
   background: var(--bg1);
   color: var(--text);
   box-shadow: var(--shadow-lg);
+}
+
+.project-menu {
+  position: absolute;
+  z-index: 260;
+  top: calc(100% + 12px);
+  left: 0;
+  width: max-content;
+  min-width: 260px;
+  max-width: calc(100vw - 16px);
   animation: project-menu-in var(--dur-fast) ease-out;
+}
+
+/* Sous-menu en cascade (MenuSubmenu) : posé en `fixed` par le composant, à côté du
+   menu parent, donc jamais rogné par le défilement de celui-ci ; sans encoche. */
+.project-submenu-wrap {
+  display: block;
+}
+
+.project-submenu {
+  position: fixed;
+  z-index: 1;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(320px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: project-submenu-in var(--dur-fast) ease-out;
+}
+
+@keyframes project-submenu-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .project-menu::before {
   content: '';
   position: absolute;
-  left: 22px;
+  /* Suit le bouton quand le placement décale le menu (MenuPopover). */
+  left: var(--project-menu-notch-left, 22px);
   top: -7px;
   width: 12px;
   height: 12px;
@@ -82,7 +114,8 @@
   color: var(--text);
   border-radius: var(--radius-md);
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
+  white-space: nowrap;
   gap: 10px;
   align-items: start;
   padding: 8px 7px;

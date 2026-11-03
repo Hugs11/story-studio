@@ -1,3 +1,5 @@
+import { productionRef, productionTextFields } from '../../i18n/productionPresentation.js';
+import { rustMessageEnvelope } from '../../i18n/userMessage.js';
 // Une file, deux natures de travail.
 //
 // La file de rendu sert deux genres de travail : un document Libre sérialisé,
@@ -80,12 +82,14 @@ export function newRenderJob({
   epoch = null,
   ticketDocument = null,
   readinessSummary = null,
+  onGenerated = null,
 } = {}) {
   return {
+    ...(typeof onGenerated === 'function' ? { onGenerated } : {}),
     id,
     createdAt,
     nature,
-    projectName: projectName || '(sans nom)',
+    projectName: projectName || '',
     savePath,
     outputFolder,
     status: JOB_STATUS.PENDING,
@@ -172,7 +176,7 @@ export function freeJobOutcome(generationResult) {
   const resultPath = typeof generationResult === 'string'
     ? generationResult
     : generationResult?.zipPath ?? null;
-  if (!resultPath) throw new Error('Le moteur n’a renvoyé aucun chemin de ZIP.');
+  if (!resultPath) throw Object.assign(Object.defineProperties(new Error('PRODUCTION_ZIP_PATH_MISSING'), Object.getOwnPropertyDescriptors(productionTextFields({ message: productionRef('production:work.result.missing') }))), { presentationRef: productionRef('production:work.result.missing') });
   return {
     resultPath,
     warnings: Array.isArray(generationResult?.warnings) ? generationResult.warnings : [],
@@ -184,8 +188,8 @@ export function freeJobOutcome(generationResult) {
   };
 }
 
-// Une panne dont le message dit l'annulation en est une : le moteur rend son
-// abandon par le message, et la file ne le range pas dans les erreurs.
+// Le code fourni par le moteur distingue l’abandon d’une panne,
+// quelle que soit la langue du détail.
 export function readsAsCancellation(message) {
-  return String(message ?? '').toLowerCase().includes('annul');
+  return rustMessageEnvelope(message)?.code === 'GENERATION_CANCELLED';
 }

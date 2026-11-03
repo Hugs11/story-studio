@@ -1,3 +1,6 @@
+import { measuredIssueSummary, saturatedSummary, silenceSummaryParts, volumeSummary } from './packCheckerIssueClassification.js';
+import { CheckerTrans, useCheckerTranslation } from '../../i18n/useCheckerTranslation.js';
+import { translateChecker } from '../../i18n/checkerPresentation.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../common/Button';
 import { CommunityPackMetadataModal } from './CommunityPackMetadataModal';
@@ -22,124 +25,119 @@ import {
   audioMeasureRows,
   cleanLabel,
   expectedImageOk,
-  formatLufs,
-  formatPeak,
-  formatSeconds,
   imageMeasureRows,
 } from './packCheckerMeasures';
 import { ConformingSection } from './CommunityPackConforming';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
 import {
+  issueHasMeasure,
+  isAudioFormatIssue,
+  isSaturatedIssue,
+  hasMeasureIssue as hasMeasureIssues,
   automaticCorrectionCount,
   categoryConformanceStats,
   isAutomaticSilenceIssue,
   isAutomaticVolumeIssue,
   isOptionalSilenceIssue,
   optionalSilenceSelectionKey,
-  silenceEdgeForIssue,
 } from './packCheckerIssueClassification';
 import './CommunityPackChecker.css';
 
-const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
-
+// Sections : clés de présentation, résolues à l'affichage ; le classement reste
+// porté par category/code (`match`), jamais par le texte.
 const PROBLEM_SECTIONS = [
   {
     id: 'quality',
-    title: 'Audio de mauvaise qualité (source saturée)',
-    badge: 'Source',
+    titleKey: 'checker:issue.saturated.title',
+    badgeKey: 'checker:issue.badge.source',
     bucket: 'listen',
     Icon: TriangleAlert,
-    explanation: "La saturation est présente dans le fichier d'origine : aucune correction ne la rattrape. Reprends le pack depuis une meilleure source.",
-    action: 'Reprends le pack depuis une meilleure source.',
+    explanationKey: 'checker:issue.saturated.explanation',
+    actionKey: 'checker:issue.saturated.action',
     match: (issue) => (
       issue.category === 'audio'
       && !issue.autoFixAvailable
-      && (issue.message || '').toLowerCase().includes('satur')
+      && isSaturatedIssue(issue)
     ),
   },
   {
     id: 'listen',
-    title: 'À écouter',
-    badge: 'Manuel',
+    titleKey: 'checker:issue.listen.title',
+    badgeKey: 'checker:issue.badge.manual',
     bucket: 'listen',
     Icon: Info,
-    explanation: "L'outil ne sait pas corriger ce point tout seul.",
-    action: "Écoute ou vérifie ces fichiers avant de valider le pack.",
+    explanationKey: 'checker:issue.listen.explanation',
+    actionKey: 'checker:issue.listen.action',
     match: (issue) => !isOptionalSilenceIssue(issue) && !issue.autoFixAvailable && issue.category !== 'structure' && issue.category !== 'title',
   },
   {
     id: 'silence',
-    title: 'Silence début / fin incorrect',
-    badge: 'Auto',
+    titleKey: 'checker:issue.silence.title',
+    badgeKey: 'checker:issue.badge.auto',
     bucket: 'fix',
     Icon: Scissors,
-    explanation: 'Le blanc avant ou après la voix sort de la fenêtre attendue.',
-    action: `On ajuste le silence vers ${EDGE_SILENCE_LABEL}.`,
+    explanationKey: 'checker:issue.silence.explanation',
+    actionKey: 'checker:issue.silence.action',
     match: isAutomaticSilenceIssue,
   },
   {
     id: 'optionalSilence',
-    title: 'Suggestions facultatives',
-    badge: 'Facultatif',
+    titleKey: 'checker:issue.optionalSilence.title',
+    badgeKey: 'checker:issue.badge.optional',
     bucket: 'optional',
     Icon: Scissors,
-    explanation: 'Ces silences longs peuvent être volontaires. Le pack reste conforme.',
-    action: `Chaque bord peut être ramené à ${EDGE_SILENCE_LABEL} si tu le souhaites.`,
+    explanationKey: 'checker:issue.optionalSilence.explanation',
+    actionKey: 'checker:issue.optionalSilence.action',
     match: isOptionalSilenceIssue,
   },
   {
     id: 'volume',
-    title: 'Niveau sonore incorrect',
-    badge: 'Auto',
+    titleKey: 'checker:issue.volume.title',
+    badgeKey: 'checker:issue.badge.auto',
     bucket: 'fix',
     Icon: Music,
-    explanation: 'Le niveau moyen est trop faible ou trop fort par rapport au reste.',
-    action: 'On normalise le volume au bon niveau.',
+    explanationKey: 'checker:issue.volume.explanation',
+    actionKey: 'checker:issue.volume.action',
     match: isAutomaticVolumeIssue,
   },
   {
     id: 'audioFormat',
-    title: 'Format audio à convertir',
-    badge: 'Auto',
+    titleKey: 'checker:issue.audioFormat.title',
+    badgeKey: 'checker:issue.badge.auto',
     bucket: 'fix',
     Icon: Wrench,
-    explanation: "L'audio n'est pas dans le format attendu.",
-    action: 'On reconvertit en MP3 mono 44,1 kHz.',
-    match: (issue) => {
-      const message = issue.message.toLowerCase();
-      return issue.autoFixAvailable && issue.category === 'audio' && (
-        message.includes('format') || message.includes('fréquence') || message.includes('mono')
-      );
-    },
+    explanationKey: 'checker:issue.audioFormat.explanation',
+    actionKey: 'checker:issue.audioFormat.action',
+    match: isAudioFormatIssue,
   },
   {
     id: 'image',
-    title: 'Image à corriger',
-    badge: 'Auto',
+    titleKey: 'checker:issue.imageCorrection.title',
+    badgeKey: 'checker:issue.badge.auto',
     bucket: 'fix',
     Icon: Image,
-    explanation: "L'image n'a pas le format ou la taille attendue.",
-    action: 'On convertit ou redimensionne en 320×240.',
+    explanationKey: 'checker:issue.image.explanation',
+    actionKey: 'checker:issue.image.action',
     match: (issue) => issue.autoFixAvailable && issue.category === 'image',
   },
   {
     id: 'title',
-    title: 'Nom du pack à corriger',
-    badge: 'Assisté',
+    titleKey: 'checker:issue.packName.title',
+    badgeKey: 'checker:issue.badge.assisted',
     bucket: 'fix',
     Icon: FilePen,
-    explanation: 'Le nom ou la convention du pack demande une correction.',
-    action: 'On ouvre les métadonnées avant de créer le ZIP corrigé.',
+    explanationKey: 'checker:issue.packName.explanation',
+    actionKey: 'checker:issue.packName.action',
     match: (issue) => issue.category === 'title',
   },
   {
     id: 'structure',
-    title: 'Structure à vérifier',
-    badge: 'Manuel',
+    titleKey: 'checker:issue.structure.title',
+    badgeKey: 'checker:issue.badge.manual',
     bucket: 'listen',
     Icon: Network,
-    explanation: 'Un lien, une référence ou un champ du pack demande une vérification.',
-    action: 'Vérifie la navigation ou les fichiers référencés.',
+    explanationKey: 'checker:issue.structure.explanation',
+    actionKey: 'checker:issue.structure.action',
     match: (issue) => issue.category === 'structure',
   },
 ];
@@ -151,86 +149,38 @@ function IconFrame({ Icon }) {
 function severityLabel(severity) {
   switch (severity) {
     case 'error':
-      return 'Erreur';
+      return translateChecker('checker:severity.error.label');
     case 'warning':
-      return 'Avertissement';
+      return translateChecker('checker:severity.warning.label');
     case 'info':
-      return 'Info';
+      return translateChecker('checker:severity.info.label');
     case 'ok':
-      return 'OK';
+      return translateChecker('checker:severity.ok.label');
     default:
-      return severity || 'Info';
+      return severity || translateChecker('checker:severity.info.label');
   }
 }
 
-function measuredIssueSummary(issue, item, kind) {
-  const message = issue.message || '';
-  const lower = message.toLowerCase();
-  if (kind === 'audio') {
-    if (lower.includes('silence')) {
-      const sides = silenceSummaryParts([issue], item);
-      return sides.length ? sides.join(' | ') : message;
-    }
-    if (lower.includes('volume')) {
-      const lufs = item?.integratedLufs;
-      const direction = typeof lufs === 'number' && lufs > -10
-        ? 'trop haut'
-        : 'trop bas';
-      return `Niveau sonore ${direction} (${formatLufs(lufs)})`;
-    }
-    if (lower.includes('fréquence')) {
-      return `Échantillonnage incorrect (${item?.sampleRate ? `${item.sampleRate} Hz` : 'non mesuré'})`;
-    }
-    if (lower.includes('mono')) {
-      return `Audio non mono (${item?.channels || 'canaux non mesurés'})`;
-    }
-    if (lower.includes('format')) {
-      return `Mauvais format audio (${item?.codec || 'format non mesuré'})`;
-    }
-  }
-  if (kind === 'image') {
-    const dimensions = item?.width && item?.height ? `${item.width}×${item.height}` : 'dimensions non mesurées';
-    const format = item?.format || 'format non mesuré';
-    if (lower.includes('format')) return `Mauvais format image (${format})`;
-    if (lower.includes('dimension') || lower.includes('taille')) return `Dimensions incorrectes (${dimensions})`;
-    return `Image incorrecte (${dimensions} · ${format})`;
-  }
-  return message;
-}
-
-function silenceSummaryParts(issues, item) {
-  const hasStart = issues.some((issue) => {
-    if (silenceEdgeForIssue(issue) === 'leading') return true;
-    const message = (issue.message || '').toLowerCase();
-    return message.includes('début') || message.includes('debut');
-  });
-  const hasEnd = issues.some((issue) => (
-    silenceEdgeForIssue(issue) === 'trailing'
-    || (issue.message || '').toLowerCase().includes('fin')
-  ));
-  const parts = [];
-  if (hasStart) parts.push(`Silence début = ${formatSeconds(item?.leadingSilenceSecs)}`);
-  if (hasEnd) parts.push(`Silence fin = ${formatSeconds(item?.trailingSilenceSecs)}`);
-  return parts;
+// Texte affiché d'une section : résolu au rendu, dans la langue active.
+function sectionText(group) {
+  const key = group.bucket === 'fix' ? group.actionKey : group.explanationKey;
+  return translateChecker(key, { duration: formatPackAudioEdgeSilence() });
 }
 
 function recordProblemSummary(record) {
   const scopedIssues = record.sectionIssues?.length ? record.sectionIssues : [record.issue];
   if (record.kind === 'audio') {
-    if (scopedIssues.some((issue) => (issue.message || '').toLowerCase().includes('satur'))) {
-      const peak = record.item?.truePeakDb;
-      return typeof peak === 'number' ? `Saturé · crête ${formatPeak(peak)}` : 'Saturé (source)';
+    if (scopedIssues.some((issue) => isSaturatedIssue(issue))) {
+      return saturatedSummary(record.item?.truePeakDb);
     }
-    const silenceIssues = scopedIssues.filter((issue) => (issue.message || '').toLowerCase().includes('silence'));
+    const silenceIssues = scopedIssues.filter((issue) => (issueHasMeasure(issue, 'silenceStart') || issueHasMeasure(issue, 'silenceEnd')));
     if (silenceIssues.length > 0) {
       const parts = silenceSummaryParts(silenceIssues, record.item);
       if (parts.length > 0) return parts.join(' | ');
     }
 
-    if (scopedIssues.some((issue) => (issue.message || '').toLowerCase().includes('volume'))) {
-      const lufs = record.item?.integratedLufs;
-      const direction = typeof lufs === 'number' && lufs > -10 ? 'trop haut' : 'trop bas';
-      return `Niveau sonore ${direction} (${formatLufs(lufs)})`;
+    if (scopedIssues.some((issue) => (issueHasMeasure(issue, 'volume') && issue.code !== 'CHECKER_AUDIO_NEAR_MUTE'))) {
+      return volumeSummary(record.item?.integratedLufs);
     }
   }
 
@@ -247,41 +197,15 @@ function recordProblemSummary(record) {
     .join(' · ');
 }
 
-function issueText(issue) {
-  return `${issue.message || ''} ${issue.autoFixDescription || ''} ${issue.technicalDetails || ''}`.toLowerCase();
-}
-
 function hasMeasureIssue(record, key) {
-  const scopedIssues = record.sectionIssues?.length ? record.sectionIssues : record.issues;
-  const messages = scopedIssues.map(issueText);
-  switch (key) {
-    case 'format':
-      return messages.some((message) => message.includes('format') || message.includes('mono'));
-    case 'sampleRate':
-      return messages.some((message) => (
-        message.includes('fréquence') || message.includes('frequence') || message.includes('échantillonnage')
-      ));
-    case 'silenceStart':
-      return messages.some((message) => message.includes('silence') && (message.includes('début') || message.includes('debut')));
-    case 'silenceEnd':
-      return messages.some((message) => message.includes('silence') && message.includes('fin'));
-    case 'volume':
-      return messages.some((message) => message.includes('volume') || message.includes('niveau sonore'));
-    case 'peak':
-      return messages.some((message) => message.includes('crête') || message.includes('crete') || message.includes('satur') || message.includes('clipping'));
-    case 'dimensions':
-      return messages.some((message) => message.includes('dimension') || message.includes('taille'));
-    case 'imageFormat':
-      return messages.some((message) => message.includes('format'));
-    default:
-      return false;
-  }
+  const issues = record.sectionIssues?.length ? record.sectionIssues : record.issues;
+  return hasMeasureIssues(issues, key);
 }
 
 function roleLabel(record) {
-  const raw = record.item?.itemType || record.issue?.itemType || record.issue?.category || 'Fichier';
-  if (raw === 'image') return 'Image';
-  if (raw === 'audio') return 'Audio';
+  const raw = record.item?.itemType || record.issue?.itemType || record.issue?.category || translateChecker('checker:file.label.fallback');
+  if (raw === 'image') return translateChecker('checker:file.role.image');
+  if (raw === 'audio') return translateChecker('checker:file.role.audio');
   return raw;
 }
 
@@ -307,7 +231,7 @@ function buildItemMap(report) {
 }
 
 function uniqueIssueKey(issue) {
-  return issue.filePath || `${issue.category}:${issue.label}:${issue.message}`;
+  return issue.filePath || `${issue.category}:${issue.code ?? issue.label}`;
 }
 
 function buildProblemGroups(report) {
@@ -373,77 +297,31 @@ function summarizeGroups(groups, report) {
     group.bucket === 'listen' && group.records.some((record) => record.issue.severity === 'error')
   ));
 
+  // Titre et sous-titre : clés et compte, résolus au rendu (changement de langue à chaud).
+  const verdict = (tone, Icon, titleKey, subtitleKey, titleCount) => ({
+    tone, Icon, titleKey, subtitleKey, titleCount, listenCount, fixCount, optionalCount,
+  });
   if (!groups.length) {
-    return {
-      tone: 'ok',
-      Icon: CircleCheck,
-      title: 'Pack conforme',
-      subtitle: 'Aucun problème automatique ou manuel détecté.',
-      listenCount,
-      fixCount,
-      optionalCount,
-    };
+    return verdict('ok', CircleCheck, 'checker:verdict.conform.title', 'checker:verdict.conform.subtitle');
   }
   if (hasBlocking) {
-    return {
-      tone: 'listen',
-      Icon: TriangleAlert,
-      title: 'Pack à vérifier avant export',
-      subtitle: 'Certains points demandent une vérification manuelle.',
-      listenCount,
-      fixCount,
-      optionalCount,
-    };
+    return verdict('listen', TriangleAlert, 'checker:verdict.blocking.title', 'checker:verdict.blocking.subtitle');
   }
   // Audio saturé : défaut de qualité que la correction ne résout pas → on ne
   // promet jamais « corrigeable en un clic », on conseille de repartir d'une
   // source propre.
   if (saturatedCount > 0) {
-    return {
-      tone: 'quality',
-      Icon: TriangleAlert,
-      title: fixCount > 0 ? 'Pack corrigeable, mais audio déjà saturé' : 'Audio déjà saturé',
-      subtitle: fixCount > 0
-        ? "Le reste sera corrigé ; l'audio saturé doit être repris depuis une source propre."
-        : 'Nous conseillons de refaire le pack depuis une source audio propre.',
-      listenCount,
-      fixCount,
-      optionalCount,
-    };
+    return fixCount > 0
+      ? verdict('quality', TriangleAlert, 'checker:verdict.saturatedFixable.title', 'checker:verdict.saturatedFixable.subtitle')
+      : verdict('quality', TriangleAlert, 'checker:verdict.saturated.title', 'checker:verdict.saturated.subtitle');
   }
   if (listenCount > 0) {
-    return {
-      tone: 'listen',
-      Icon: Info,
-      title: listenCount === 1
-        ? 'Pack corrigeable, avec un fichier à écouter'
-        : `Pack corrigeable, avec ${listenCount} fichiers à écouter`,
-      subtitle: 'Le reste peut être corrigé automatiquement.',
-      listenCount,
-      fixCount,
-      optionalCount,
-    };
+    return verdict('listen', Info, 'checker:verdict.listen.title', 'checker:verdict.listen.subtitle', listenCount);
   }
   if (fixCount === 0 && listenCount === 0 && optionalCount > 0) {
-    return {
-      tone: 'ok',
-      Icon: CircleCheck,
-      title: `Pack conforme, avec ${optionalCount} ajustement${optionalCount > 1 ? 's' : ''} facultatif${optionalCount > 1 ? 's' : ''}`,
-      subtitle: 'Les pauses longues peuvent être conservées telles quelles.',
-      listenCount,
-      fixCount,
-      optionalCount,
-    };
+    return verdict('ok', CircleCheck, 'checker:verdict.optional.title', 'checker:verdict.optional.subtitle', optionalCount);
   }
-  return {
-    tone: 'fix',
-    Icon: Wrench,
-    title: 'Pack corrigeable en un clic',
-    subtitle: 'Aucun point manuel détecté.',
-    listenCount,
-    fixCount,
-    optionalCount,
-  };
+  return verdict('fix', Wrench, 'checker:verdict.fixable.title', 'checker:verdict.fixable.subtitle');
 }
 
 export function titleNeedsCorrection(report) {
@@ -462,18 +340,21 @@ function SummaryTile({ title, Icon, tone = 'neutral', children }) {
   );
 }
 
+const STRONG = { strong: <strong /> };
+
 function SplitStat({ ok, needsFix }) {
   return (
     <div className="checker-split-stat">
-      <span className="checker-split-stat-ok"><strong>{ok}</strong> OK</span>
+      <span className="checker-split-stat-ok"><CheckerTrans i18nKey="checker:summary.split.ok" values={{ value: ok }} components={STRONG} /></span>
       <span className={`checker-split-stat-fix ${needsFix === 0 ? 'is-clean' : ''}`}>
-        <strong>{needsFix}</strong> à corriger
+        <CheckerTrans i18nKey="checker:summary.split.fix" values={{ value: needsFix }} components={STRONG} />
       </span>
     </div>
   );
 }
 
 function SummaryTiles({ report, saturatedCount = 0 }) {
+  const { t } = useCheckerTranslation();
   const audio = categoryConformanceStats(report.audioSummary);
   const images = categoryConformanceStats(report.imageSummary);
   const title = categoryConformanceStats(report.titleSummary);
@@ -481,29 +362,29 @@ function SummaryTiles({ report, saturatedCount = 0 }) {
   const structureOk = report.structureSummary?.luniiCompatible && report.structureSummary?.storyStudioEditable;
   const nightMode = Boolean(report.nightMode?.detected);
   return (
-    <div className="checker-summary-tiles" aria-label="Résumé du pack">
-      <SummaryTile title="Audio" Icon={Music} tone={saturatedCount > 0 ? 'danger' : (audio.needsFix > 0 ? 'fix' : 'ok')}>
+    <div className="checker-summary-tiles" aria-label={t('checker:summary.tiles.aria')}>
+      <SummaryTile title={t('checker:summary.audio.title')} Icon={Music} tone={saturatedCount > 0 ? 'danger' : (audio.needsFix > 0 ? 'fix' : 'ok')}>
         <SplitStat ok={audio.ok} needsFix={audio.needsFix} />
       </SummaryTile>
-      <SummaryTile title="Images" Icon={Image} tone={images.needsFix ? 'fix' : 'ok'}>
+      <SummaryTile title={t('checker:summary.images.title')} Icon={Image} tone={images.needsFix ? 'fix' : 'ok'}>
         <SplitStat ok={images.ok} needsFix={images.needsFix} />
       </SummaryTile>
-      <SummaryTile title="Nom du pack" Icon={FilePen} tone={titleOk ? 'ok' : 'fix'}>
+      <SummaryTile title={t('checker:summary.packName.title')} Icon={FilePen} tone={titleOk ? 'ok' : 'fix'}>
         <div className="checker-single-stat">
-          <strong>{titleOk ? 'Valide' : 'À corriger'}</strong>
-          <span>{titleOk ? 'Convention OK' : 'Métadonnées'}</span>
+          <strong>{titleOk ? t('checker:summary.packName.valid') : t('checker:summary.packName.toFix')}</strong>
+          <span>{titleOk ? t('checker:summary.packName.conventionOk') : t('checker:summary.packName.metadata')}</span>
         </div>
       </SummaryTile>
-      <SummaryTile title="Structure" Icon={Network} tone={structureOk ? 'ok' : 'listen'}>
+      <SummaryTile title={t('checker:summary.structure.title')} Icon={Network} tone={structureOk ? 'ok' : 'listen'}>
         <div className="checker-single-stat">
-          <strong>{structureOk ? 'Correcte' : 'Vérification manuelle'}</strong>
-          <span>{report.structureSummary?.stageCount ?? 0} étapes</span>
+          <strong>{structureOk ? t('checker:summary.structure.correct') : t('checker:summary.structure.manual')}</strong>
+          <span>{t('checker:summary.structure.steps', { count: report.structureSummary?.stageCount ?? 0 })}</span>
         </div>
       </SummaryTile>
-      <SummaryTile title="Mode nuit" Icon={Moon} tone={nightMode ? 'ok' : 'neutral'}>
+      <SummaryTile title={t('checker:summary.nightMode.title')} Icon={Moon} tone={nightMode ? 'ok' : 'neutral'}>
         <div className="checker-single-stat">
-          <strong>{nightMode ? 'Disponible' : 'Absent'}</strong>
-          <span>{nightMode ? 'Détecté dans le pack' : 'Non bloquant'}</span>
+          <strong>{nightMode ? t('checker:summary.nightMode.available') : t('checker:summary.nightMode.absent')}</strong>
+          <span>{nightMode ? t('checker:summary.nightMode.detected') : t('checker:summary.nightMode.notBlocking')}</span>
         </div>
       </SummaryTile>
     </div>
@@ -511,11 +392,12 @@ function SummaryTiles({ report, saturatedCount = 0 }) {
 }
 
 function TechnicalDetail({ record }) {
+  const { t } = useCheckerTranslation();
   const item = record.item;
   return (
     <div className="checker-tech-detail">
       <div>
-        <div className="checker-tech-title">Mesures</div>
+        <div className="checker-tech-title">{t('checker:detail.measures.title')}</div>
         {record.kind === 'audio' ? (
           audioMeasureRows(item).map((row) => (
             <Measure
@@ -537,14 +419,14 @@ function TechnicalDetail({ record }) {
                 status={hasMeasureIssue(record, row.key) ? 'bad' : 'ok'}
               />
             ))}
-            <Measure label="Attendu" value="320×240" status={expectedImageOk(item) ? 'ok' : 'bad'} />
+            <Measure label={t('checker:detail.expected.label')} value="320×240" status={expectedImageOk(item) ? 'ok' : 'bad'} />
           </>
         ) : (
-          <Measure label="Catégorie" value={record.issue.category} status={record.issue.severity === 'ok' ? 'ok' : 'bad'} />
+          <Measure label={t('checker:detail.category.label')} value={record.issue.category} status={record.issue.severity === 'ok' ? 'ok' : 'bad'} />
         )}
       </div>
       <div>
-        <div className="checker-tech-title">Ce qu'on va faire</div>
+        <div className="checker-tech-title">{t('checker:detail.actions.title')}</div>
         {(record.sectionIssues?.length ? record.sectionIssues : record.issues).map((issue, index) => (
           <div className="checker-tech-action" key={`${issue.message}-${index}`}>
             <IconFrame Icon={issue.autoFixAvailable ? Wrench : Info} />
@@ -560,6 +442,7 @@ function TechnicalDetail({ record }) {
 }
 
 function MiniFile({ record, open, onToggle }) {
+  useCheckerTranslation();
   const firstIssue = record.issue;
   const issueSummary = recordProblemSummary(record);
   return (
@@ -591,19 +474,20 @@ function ProblemGroupCard({
   selectedOptionalSilences = new Set(),
   onToggleOptionalSilence,
 }) {
+  const { t } = useCheckerTranslation();
   const [openFile, setOpenFile] = useState(null);
   const Icon = group.Icon;
-  const displayedCountLabel = countLabel || (countValue > 1 ? 'fichiers' : 'fichier');
+  const displayedCountLabel = countLabel || t('checker:group.count.files', { count: countValue });
   return (
     <div className={`checker-group checker-group--${group.bucket} checker-group--${group.id} ${expanded ? 'is-expanded' : ''}`}>
       <button type="button" className="checker-group-head" onClick={onToggle}>
         <span className="checker-group-icon"><IconFrame Icon={Icon} /></span>
         <span className="checker-group-copy">
           <span className="checker-group-title-row">
-            <strong>{group.title}</strong>
-            <span className="checker-group-badge">{group.badge}</span>
+            <strong>{t(group.titleKey)}</strong>
+            <span className="checker-group-badge">{t(group.badgeKey)}</span>
           </span>
-          <span>{group.bucket === 'fix' ? group.action : group.explanation}</span>
+          <span>{sectionText(group)}</span>
         </span>
         <span className="checker-group-count">
           <strong>{countValue}</strong>
@@ -623,7 +507,7 @@ function ProblemGroupCard({
                       checked={selectedOptionalSilences.has(optionalSilenceSelectionKey(record.issue))}
                       onChange={() => onToggleOptionalSilence?.(record.issue)}
                     />
-                    <span>{record.issue.autoFixDescription || `Ramener ce silence à ${EDGE_SILENCE_LABEL}`}</span>
+                    <span>{record.issue.autoFixDescription || t('checker:group.optional.choice', { duration: formatPackAudioEdgeSilence() })}</span>
                   </label>
                 ) : null}
                 <MiniFile
@@ -637,7 +521,7 @@ function ProblemGroupCard({
           {group.bucket === 'listen' ? (
             <div className="checker-group-help">
               <IconFrame Icon={Info} />
-              Ces fichiers ne sont pas corrigés automatiquement.
+              {t('checker:group.listen.help')}
             </div>
           ) : null}
         </div>
@@ -647,6 +531,7 @@ function ProblemGroupCard({
 }
 
 export function FixableCorrectionsList({ report, selectedOptionalSilences, onToggleOptionalSilence }) {
+  const { t } = useCheckerTranslation();
   const groups = useMemo(
     () => buildProblemGroups(report).filter((group) => group.bucket === 'fix' || group.bucket === 'optional'),
     [report],
@@ -656,7 +541,7 @@ export function FixableCorrectionsList({ report, selectedOptionalSilences, onTog
     return (
       <div className="checker-empty checker-empty--success">
         <IconFrame Icon={Check} />
-        Aucune correction automatique à appliquer.
+        {t('checker:corrections.empty')}
       </div>
     );
   }
@@ -671,8 +556,8 @@ export function FixableCorrectionsList({ report, selectedOptionalSilences, onTog
           onToggle={() => {}}
           countValue={group.bucket === 'optional' ? group.count : group.fixCount}
           countLabel={group.bucket === 'optional'
-            ? (group.count > 1 ? 'suggestions' : 'suggestion')
-            : (group.fixCount > 1 ? 'corrections' : 'correction')}
+            ? t('checker:group.count.suggestions', { count: group.count })
+            : t('checker:group.count.corrections', { count: group.fixCount })}
           selectedOptionalSilences={selectedOptionalSilences}
           onToggleOptionalSilence={onToggleOptionalSilence}
         />
@@ -692,6 +577,7 @@ export function ReportView({
   selectedOptionalSilences,
   onToggleOptionalSilence,
 }) {
+  const { t } = useCheckerTranslation();
   const groups = useMemo(() => buildProblemGroups(report), [report]);
   const summary = useMemo(() => summarizeGroups(groups, report), [groups, report]);
   const saturatedCount = useMemo(() => saturatedFileCount(groups), [groups]);
@@ -714,12 +600,18 @@ export function ReportView({
         <span className="checker-report-orb"><IconFrame Icon={SummaryIcon} /></span>
         <div className="checker-report-copy">
           <div className="checker-pack-name" title={report.packName}>{report.packName}</div>
-          <strong>{summary.title}</strong>
-          <span>{summary.subtitle}</span>
+          <strong>{t(summary.titleKey, { count: summary.titleCount })}</strong>
+          <span>{t(summary.subtitleKey)}</span>
         </div>
         <div className="checker-report-callout">
           <Info className="checker-icon" aria-hidden="true" />
-          <span><strong>{summary.listenCount}</strong> à écouter · <strong>{summary.fixCount}</strong> automatiques · <strong>{summary.optionalCount}</strong> facultatives</span>
+          <span>
+            <CheckerTrans i18nKey="checker:report.callout.listen" count={summary.listenCount} components={STRONG} />
+            {' · '}
+            <CheckerTrans i18nKey="checker:report.callout.automatic" count={summary.fixCount} components={STRONG} />
+            {' · '}
+            <CheckerTrans i18nKey="checker:report.callout.optional" count={summary.optionalCount} components={STRONG} />
+          </span>
         </div>
       </div>
 
@@ -728,7 +620,7 @@ export function ReportView({
       {groups.length === 0 ? (
         <div className="checker-empty checker-empty--success">
           <IconFrame Icon={Check} />
-          Tout est conforme dans ce rapport.
+          {t('checker:report.empty')}
         </div>
       ) : (
         <div className="checker-groups">
@@ -748,10 +640,14 @@ export function ReportView({
       <ConformingSection report={report} />
 
       <div className="checker-report-footer">
-        <span><strong>{summary.fixCount}</strong> corrections prêtes · <strong>{summary.optionalCount}</strong> suggestions.</span>
+        <span>
+          <CheckerTrans i18nKey="checker:report.footer.ready" count={summary.fixCount} components={STRONG} />
+          {' · '}
+          <CheckerTrans i18nKey="checker:report.footer.suggestions" count={summary.optionalCount} components={STRONG} />
+        </span>
         <Button size="sm" onClick={() => onExportReport('report')}>
           <Download className="checker-button-icon" aria-hidden="true" />
-          Exporter le rapport
+          {t('checker:report.export.action')}
         </Button>
         {showFixButton ? (
           <button
@@ -760,7 +656,7 @@ export function ReportView({
             onClick={startFixFlow}
             disabled={!canFix || busy}
           >
-            {busy ? 'Correction...' : 'Corriger le pack'}
+            {busy ? t('checker:fix.busy.label') : t('checker:fix.start.action')}
           </button>
         ) : null}
       </div>
@@ -781,14 +677,15 @@ export function ReportView({
 }
 
 export function TechnicalLog({ report, onCopyLog, onExportLog, onExportJson }) {
+  const { t } = useCheckerTranslation();
   if (!report) return null;
   return (
     <details className="checker-log">
-      <summary>Journal technique</summary>
+      <summary>{t('checker:log.technical.title')}</summary>
       <div className="checker-log-actions">
-        <Button size="sm" onClick={onCopyLog}>Copier le log</Button>
-        <Button size="sm" onClick={() => onExportLog('log')}>Exporter le log</Button>
-        <Button size="sm" onClick={() => onExportJson('json')}>Exporter JSON</Button>
+        <Button size="sm" onClick={onCopyLog}>{t('checker:log.copy.action')}</Button>
+        <Button size="sm" onClick={() => onExportLog('log')}>{t('checker:log.export.action')}</Button>
+        <Button size="sm" onClick={() => onExportJson('json')}>{t('checker:log.exportJson.action')}</Button>
       </div>
       <pre>{(report.technicalLog || []).join('\n')}</pre>
     </details>
@@ -796,6 +693,7 @@ export function TechnicalLog({ report, onCopyLog, onExportLog, onExportJson }) {
 }
 
 export function ProcessLog({ status, lines }) {
+  const { t } = useCheckerTranslation();
   const linesRef = useRef(null);
   useEffect(() => {
     const node = linesRef.current;
@@ -805,10 +703,10 @@ export function ProcessLog({ status, lines }) {
 
   if (!lines?.length) return null;
   const title = status === 'fixing'
-    ? 'Correction en cours'
+    ? t('checker:process.fixing.title')
     : status === 'analyzing'
-      ? 'Analyse en cours'
-      : 'Dernières opérations';
+      ? t('checker:process.analyzing.title')
+      : t('checker:process.recent.title');
   return (
     <div className={`checker-process-log ${status === 'idle' ? 'is-idle' : 'is-active'}`}>
       <div className="checker-process-log-head">

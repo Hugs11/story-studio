@@ -26,6 +26,7 @@ import {
 } from '../src/store/projectWorkState.js';
 
 const LABELS = {
+  returnToCatalogue: 'Ctrl+Alt+C',
   newProject: 'Ctrl+N',
   openProject: 'Ctrl+O',
   openPack: 'Ctrl+Maj+P',
@@ -33,9 +34,8 @@ const LABELS = {
   saveAs: 'Ctrl+Maj+S',
   undo: 'Ctrl+Z',
   redo: 'Ctrl+Maj+Z',
-  tabOptions: 'Ctrl+Maj+O',
+  tabOptions: 'Ctrl+,',
   generate: 'Ctrl+G',
-  storySettings: 'Ctrl+,',
   toggleTree: 'Ctrl+1',
   toggleSettings: 'Ctrl+2',
   toggleDiagram: 'Ctrl+3',
@@ -67,12 +67,8 @@ test('les commandes universelles sont exactement les mêmes des deux côtés', (
   const graph = scoped(inventory(WORKSPACE_MODE_ADVANCED), TOOLBAR_SCOPE_UNIVERSAL);
 
   assert.deepEqual(ids(free), [
-    'newProject', 'openProject', 'openPack', 'saveProject', 'saveProjectAs',
+    'returnToCatalogue', 'newProject', 'openProject', 'openPack', 'saveProject', 'saveProjectAs',
     'undo', 'redo',
-    // Le tiroir d'options du pack sert les deux éditeurs : ils fabriquent le
-    // même pack pour le même appareil, et le graphe n'a pas de second jeu de
-    // réglages audio dans son tiroir d'export.
-    'openPackOptions',
     // La liste « à corriger » a la place du Libre et le contenu riche du
     // graphe. Elle est universelle, au même rang.
     'toggleValidation',
@@ -106,9 +102,7 @@ test('seuls les groupes liés à la structure changent', () => {
   assert.deepEqual(shared, []);
 });
 
-test('l’éditeur graphe atteint les préférences, que seul le tiroir d’options portait', () => {
-  // Les préférences ne passent pas que par la passerelle du tiroir d'options
-  // du pack — un groupe structurel que le graphe n'a pas.
+test('l’éditeur graphe conserve la commande Préférences dans l’inventaire commun', () => {
   const graph = inventory(WORKSPACE_MODE_ADVANCED);
   const preferences = graph.find((entry) => entry.id === 'openPreferences');
   assert.equal(preferences.scope, TOOLBAR_SCOPE_UNIVERSAL);
@@ -216,7 +210,7 @@ test('la production est indisponible dans les deux éditeurs quand des correctio
 
   const graph = toolbarAvailability(inventory(WORKSPACE_MODE_ADVANCED, { generateDisabled: true }));
   assert.equal(graph.generate.available, false);
-  assert.match(graph.generate.unavailableReason, /à corriger/);
+  assert.match(graph.generate.unavailableReason, /À corriger/);
 });
 
 test('le graphe attend une qualification courante avant de proposer la production', () => {
@@ -248,7 +242,7 @@ test('côté graphe, la production attend que le document ait été lu une fois'
 test('la production libre reste tenue par la liste des problèmes', () => {
   const blocked = toolbarAvailability(inventory(WORKSPACE_MODE_HIERARCHICAL, { generateDisabled: true }));
   assert.equal(blocked.generate.available, false);
-  assert.match(blocked.generate.unavailableReason, /à corriger/);
+  assert.match(blocked.generate.unavailableReason, /À corriger/);
 });
 
 test('la liste à corriger reste ouvrable à zéro dans les deux éditeurs', () => {

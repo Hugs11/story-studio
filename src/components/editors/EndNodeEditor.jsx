@@ -1,10 +1,11 @@
+import { useTreeTranslation } from "../../i18n/useTreeTranslation.jsx";
+import { translateTree as t } from "../../i18n/treePresentation.js";
 import { Toggle } from '../common/Toggle';
 import { AudioField } from './AudioField';
-import { NavigationTargetSelect } from './story/storyUtils';
+import { packStartReturnLabel, NavigationTargetSelect } from './story/storyUtils';
 import { Trash2 } from '../icons/LucideLocal';
 import {
   collectEndMessagePresentations,
-  getPackStartReturnLabel,
 } from '../../store/generatedNavigation';
 import {
   getEffectiveEndMessageControlState,
@@ -14,7 +15,7 @@ import { EndMessagePlaybackControl } from './EndMessagePlaybackControl';
 import './EditorPanel.css';
 
 export function EndNodeEditor({
-  endNodeName = 'Message de fin',
+  endNodeName = t("tree:endNode.card.title"),
   nightModeAudio,
   nightModeActive,
   nightModeReturn,
@@ -33,8 +34,9 @@ export function EndNodeEditor({
   onExamineStory,
   onAttachStory,
 }) {
+  useTreeTranslation();
   const hasAudio = typeof nightModeAudio === 'string' && nightModeAudio.trim().length > 0;
-  const packStartReturnLabel = getPackStartReturnLabel(project);
+  const startReturnLabel = packStartReturnLabel(project);
   const presentations = collectEndMessagePresentations(project);
   const globalStories = presentations.filter((item) => item.presentationKind === 'global');
   const localStories = presentations.filter((item) => item.presentationKind === 'local_prompt' || item.presentationKind === 'local_sequence');
@@ -51,24 +53,23 @@ export function EndNodeEditor({
     <>
       <div className="card">
         <div className="card-title-row">
-          <div className="card-title">Message de fin</div>
-          <div className="card-copy card-copy--inline">
-            Audio joué après chaque histoire, avant la destination finale.
-          </div>
+          <div className="card-title">{t("tree:endNode.card.title")}</div>
+          <div className="card-copy card-copy--inline">{t("tree:endNode.card.description")}</div>
         </div>
 
         <div className="field-row">
-          <span className="field-label">Nom</span>
+          <span className="field-label">{t("tree:zip.name.label")}</span>
           <input
             className="field-input"
             value={endNodeName}
             onChange={(event) => onUpdateEndNodeName?.(event.target.value)}
-            placeholder="Message de fin"
+            placeholder={t("tree:endNode.card.title")}
           />
         </div>
 
         <AudioField
-          label="Audio de fin d'histoire"
+          label={t("tree:endNode.audio.label")}
+          labelRef={{ key: "tree:endNode.audio.label" }}
           file={nightModeAudio}
           ttsTextSuggestion={endNodeName || ''}
           ttsFilenameHint={`fin-histoire-${projectName || 'projet'}`}
@@ -78,21 +79,17 @@ export function EndNodeEditor({
         />
 
         {!hasAudio && (
-          <div className="info-box warn">
-            Audio requis pour la génération.
-          </div>
+          <div className="info-box warn">{t("tree:endNode.audio.required")}</div>
         )}
         {localStories.length > 0 && (
           <div className="end-node-local-list">
-            <span className="field-label">Fins locales</span>
+            <span className="field-label">{t("tree:endNode.local.label")}</span>
             {localStories.map((item) => (
               <div key={item.entry.id} className="end-node-local-list-row">
                 <button type="button" className="link-button" onClick={() => onExamineStory?.(item.entry.id)}>
-                  Examiner {item.entry.name || 'cette histoire'}
+                  {t("tree:endNode.story.examine", { name: item.entry.name || t("tree:endNode.story.fallback") })}
                 </button>
-                <button type="button" className="link-button" onClick={() => onAttachStory?.(item.entry.id)}>
-                  Rattacher au message du pack
-                </button>
+                <button type="button" className="link-button" onClick={() => onAttachStory?.(item.entry.id)}>{t("tree:endNode.global.attach")}</button>
               </div>
             ))}
           </div>
@@ -101,15 +98,13 @@ export function EndNodeEditor({
 
       <div className="card">
         <div className="card-title-row">
-          <div className="card-title">Pendant la lecture</div>
+          <div className="card-title">{t("tree:playback.during.title")}</div>
         </div>
         <div className="editor-setting-stack">
           <div className="editor-setting-row end-node-setting-row">
             <div className="editor-setting-copy end-node-setting-copy">
-              <div className="editor-setting-title">Bouton Accueil</div>
-              <div className="editor-setting-desc">
-                Destination si l'enfant appuie sur Accueil pendant le message de fin.
-              </div>
+              <div className="editor-setting-title">{t("tree:control.home.label")}</div>
+              <div className="editor-setting-desc">{t("tree:endNode.home.description")}</div>
             </div>
             <div className="editor-setting-control">
               <NavigationTargetSelect
@@ -118,7 +113,7 @@ export function EndNodeEditor({
                 allMenus={allMenus}
                 allStories={allStories}
                 currentStoryId={null}
-                emptyLabel={packStartReturnLabel}
+                emptyLabel={startReturnLabel}
                 includeStoryPlay={false}
                 flagMissingValue
               />
@@ -129,15 +124,13 @@ export function EndNodeEditor({
 
       <div className="card">
         <div className="card-title-row">
-          <div className="card-title">Après la lecture</div>
+          <div className="card-title">{t("tree:playback.after.title")}</div>
         </div>
         <div className="editor-setting-stack">
           <div className="editor-setting-row end-node-setting-row end-node-playback-row">
             <div className="editor-setting-copy">
-              <div className="editor-setting-title">Quand passer à la suite ?</div>
-              <div className="editor-setting-desc">
-                Le retour vers la destination configurée ci-dessous s’effectue dès la fin du message ou après un appui sur OK.
-              </div>
+              <div className="editor-setting-title">{t("tree:endNode.continuation.label")}</div>
+              <div className="editor-setting-desc">{t("tree:endNode.continuation.description")}</div>
             </div>
             <EndMessagePlaybackControl
               summary={playbackSummary}
@@ -146,11 +139,11 @@ export function EndNodeEditor({
           </div>
           <div className="editor-setting-row end-node-setting-row">
             <div className="editor-setting-copy end-node-setting-copy">
-              <div className="editor-setting-title">Retour après le message</div>
+              <div className="editor-setting-title">{t("tree:endNode.return.label")}</div>
               <div className="editor-setting-desc">
                 {nightModeReturn
-                  ? 'Cette destination remplace les réglages individuels des histoires.'
-                  : 'Chaque histoire utilise sa destination individuelle, héritée ou par défaut.'}
+                  ? t("tree:endNode.return.override")
+                  : t("tree:endNode.return.individual")}
               </div>
             </div>
             <div className="editor-setting-control">
@@ -160,7 +153,7 @@ export function EndNodeEditor({
                 allMenus={allMenus}
                 allStories={allStories}
                 currentStoryId={null}
-                emptyLabel="Selon chaque histoire"
+                emptyLabel={t("tree:navigation.individual.label")}
                 flagMissingValue
               />
             </div>
@@ -170,13 +163,13 @@ export function EndNodeEditor({
 
       <div className="card">
         <div className="card-title-row">
-          <div className="card-title">Réglage du message de fin</div>
+          <div className="card-title">{t("tree:endNode.settings.title")}</div>
         </div>
         <div className="editor-setting-stack">
           <div className="editor-setting-row is-toggle-row end-node-setting-row end-node-toggle-row">
             <Toggle on={nightModeActive} onChange={onUpdateNightMode} />
             <div className="editor-setting-copy end-node-setting-copy">
-              <div className="editor-setting-title">Activer le mode nuit</div>
+              <div className="editor-setting-title">{t("tree:endNode.night.enable")}</div>
             </div>
           </div>
         </div>
@@ -188,14 +181,12 @@ export function EndNodeEditor({
             className="card-danger-trash"
             type="button"
             onClick={() => onRemove?.()}
-            aria-label="Supprimer le message de fin"
+            aria-label={t("tree:endNode.delete.action")}
           >
             <Trash2 className="card-danger-icon" />
           </button>
-          <span className="card-danger-title">Supprimer le message de fin</span>
-          <p className="card-danger-desc">
-            Retire le message de fin du pack. Les histoires ne joueront plus de message commun à leur conclusion. Désactive aussi le mode nuit.
-          </p>
+          <span className="card-danger-title">{t("tree:endNode.delete.action")}</span>
+          <p className="card-danger-desc">{t("tree:endNode.delete.description")}</p>
         </div>
       </div>
     </>

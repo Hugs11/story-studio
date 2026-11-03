@@ -85,7 +85,7 @@ test('formatHtmlReport builds a standalone browser document', () => {
   assert.match(text, /Example pack\.zip/);
   assert.match(text, /Imprimer \/ PDF/);
   assert.match(text, /Suggestions facultatives/);
-  assert.match(text, /<strong>1<\/strong> facultatives/);
+  assert.match(text, /<strong>1<\/strong> facultative/);
 });
 
 test('optional silence classification and counters stay separate from automatic fixes', () => {
@@ -144,6 +144,7 @@ test('near-mute audio is classified as an automatic volume correction', () => {
   assert.equal(isAutomaticVolumeIssue({
     severity: 'warning',
     category: 'audio',
+    code: 'CHECKER_AUDIO_NEAR_MUTE',
     message: 'Cet audio semble presque muet.',
     technicalDetails: 'Volume moyen mesuré : -50.0 LUFS.',
     autoFixDescription: 'Amplifier et normaliser le volume.',

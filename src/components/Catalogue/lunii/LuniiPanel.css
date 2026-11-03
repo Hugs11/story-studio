@@ -1,0 +1,134 @@
+.lunii-panel { position: relative; flex: 0 0 auto; min-width: 0; max-width: none; background: var(--bg1); border-right: .5px solid var(--border); display: flex; flex-direction: column; }
+.lunii-tabpanel { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.lunii-panel > .resize-handle { position: absolute; top: 0; right: -3px; bottom: 0; width: 6px; z-index: 3; cursor: col-resize; }
+.lunii-panel > .resize-handle::after { content: ''; position: absolute; width: 3px; height: 36px; top: calc(50% - 18px); background: var(--borderLt); border-radius: 999px; }
+.lunii-panel :focus-visible, .lunii-fiche :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.lunii-header { padding: 12px 10px 12px 14px; border-bottom: .5px solid var(--border); }
+.lunii-header-top { display: flex; gap: 4px; align-items: center; }
+/* Icône à ses proportions (23×14), centrée sur les majuscules du nom et non sur sa boîte de ligne. */
+.lunii-header-top > svg { flex: none; position: relative; top: -3px; }
+.lunii-header h2 { white-space: nowrap; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; margin: 0; }
+/* Nom et stylo de renommage côte à côte ; le stylo n'apparaît qu'au survol ou au focus (D39). */
+.lunii-header-name { flex: 1; min-width: 0; display: flex; align-items: center; }
+.lunii-header-name h2 { flex: 0 1 auto; }
+.lunii-header progress { display: block; appearance: none; width: 100%; height: 5px; margin: 12px 0 8px; border: 0; border-radius: 999px; background: var(--bg3); accent-color: var(--text-secondary); }
+.lunii-header progress::-webkit-progress-bar { background: var(--bg3); border-radius: 999px; }
+.lunii-header progress::-webkit-progress-value { background: var(--text-secondary); border-radius: 999px; }
+.lunii-counters { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; font-size: 11.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.lunii-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.lunii-stories { padding: 4px 6px; }
+.lunii-story { display: grid; grid-template-columns: 16px 26px minmax(0, 1fr) auto; align-items: center; min-height: 50px; border-radius: 6px; padding: 0 4px; }
+.lunii-story.is-selected { background: var(--accent-2-dim); }
+.lunii-number { font-size: 11.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.lunii-story-cell { min-width: 0; }
+.lunii-story-select { width: 100%; border: 0; border-radius: 4px; background: transparent; color: var(--text); min-width: 0; display: flex; align-items: center; gap: 6px; padding: 6px 2px; cursor: pointer; text-align: start; font: inherit; }
+.lunii-cover { width: 42px; height: 32px; border-radius: 4px; flex-shrink: 0; background: var(--bg3); display: grid; place-items: center; overflow: hidden; color: var(--text-secondary); }
+.lunii-cover img { width: 100%; height: 100%; object-fit: cover; }
+.lunii-story-text { display: flex; flex-direction: column; min-width: 0; gap: 2px; font-size: 13px; }
+.lunii-story-text > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lunii-story-text small:not(.catalogue-official-tag) { font-size: 11px; color: var(--muted); }
+.lunii-untitled { font-style: italic; color: var(--text-secondary); }
+.lunii-story.is-hidden .lunii-cover { opacity: .4; filter: grayscale(.7); }
+.lunii-story.is-hidden .lunii-story-text { color: var(--text-secondary); }
+.lunii-story.is-orphan .lunii-cover, .lunii-story.is-orphan .lunii-story-text > span { opacity: .5; }
+.lunii-story-text .lunii-orphan-note { color: var(--warning-text); }
+/* Pastille commune .catalogue-official-tag (CatalogueViews.css) ; seule sa place dans la ligne est propre au panneau. */
+.lunii-story-text .lunii-official { align-self: flex-start; }
+.lunii-stories.is-damaged .lunii-story { opacity: .4; }
+.lunii-tabs { display: flex; overflow-x: auto; flex-shrink: 0; border-bottom: .5px solid var(--border); }
+.lunii-tabs [role='tab'] { flex: 1; border: .5px solid transparent; border-radius: 0; padding: 6px 10px; background: transparent; color: var(--text-secondary); font: inherit; min-height: 32px; white-space: nowrap; }
+.lunii-tabs [aria-selected='true'] { background: var(--bg0); color: var(--text); border-color: var(--border); }
+.lunii-panel.is-collapsed { align-items: center; gap: 12px; padding-top: 12px; }
+.lunii-panel.is-collapsed button { position: relative; }
+.lunii-panel.is-collapsed small { position: absolute; right: 0; bottom: 0; background: var(--bg3); border-radius: 999px; padding: 0 3px; font-variant-numeric: tabular-nums; font-size: 9.5px; }
+.lunii-banner { margin: 10px; padding: 12px; border: .5px solid var(--border); border-radius: 6px; background: var(--bg2); }
+.lunii-banner h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 600; }
+.lunii-banner h3 svg { flex-shrink: 0; }
+.lunii-banner p, .lunii-empty p { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; overflow-wrap: anywhere; }
+.lunii-banner--danger { background: var(--danger-bg); border-color: var(--danger-border); }
+.lunii-banner--info { background: var(--info-bg); border-color: var(--info-border); }
+.lunii-banner--warning { background: var(--warning-bg); border-color: var(--warning-border); }
+.lunii-empty { padding: 32px 16px; display: flex; align-items: center; flex-direction: column; text-align: center; }
+.lunii-empty-icon { width: 48px; height: 48px; display: grid; place-items: center; background: var(--bg3); border-radius: 999px; }
+.lunii-empty h3 { font-size: 14px; font-weight: 600; }
+.lunii-readonly { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; margin-top: 8px; }
+.lunii-fiche { padding: 0 16px 16px; }
+.lunii-fiche-bar { display: flex; align-items: center; gap: 4px; min-height: 44px; }
+.lunii-fiche-bar > span { flex: 1; font-size: 12px; font-variant-numeric: tabular-nums; }
+.lunii-fiche-cover { aspect-ratio: 4 / 3; display: grid; place-items: center; background: var(--bg2); border-radius: 6px; overflow: hidden; }
+.lunii-fiche-cover img { width: 100%; height: 100%; object-fit: cover; }
+.lunii-fiche h2 { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.lunii-fiche-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lunii-fiche-actions > * { flex: 1; }
+.lunii-fiche-actions > .tooltip-wrap > .btn { flex: 1; }
+.lunii-fiche-note { padding: 12px; border-radius: 6px; background: var(--bg2); font-size: 12.5px; line-height: 1.5; }
+.lunii-fiche-note svg { margin-inline-end: 6px; }
+.lunii-fiche-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12.5px; padding: 16px 0; }
+.lunii-fiche-info dt { color: var(--text-secondary); }
+.lunii-fiche-info dd { margin: 0; overflow-wrap: anywhere; }
+.lunii-fiche .lunii-remove { color: var(--danger-text); }
+.catalogue-card-lunii { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: var(--bg1); color: var(--text); }
+.lunii-spinner { animation: lunii-spin 1s linear infinite; }
+@keyframes lunii-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .lunii-spinner { animation: none; } }
+
+.lunii-fiche-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.lunii-empty-icon--success { background: var(--success-bg); }
+.lunii-number { position: relative; padding-left: 4px; }
+.lunii-checkbox { width: 15px; height: 15px; margin: 0; display: none; accent-color: var(--accent-2); }
+.lunii-story:hover .lunii-checkbox, .lunii-story:focus-within .lunii-checkbox, .lunii-stories:has(.is-selected) .lunii-checkbox { display: block; }
+.lunii-story:hover .lunii-number > span, .lunii-story:focus-within .lunii-number > span, .lunii-stories:has(.is-selected) .lunii-number > span { display: none; }
+.lunii-story[aria-busy='true'] { opacity: .6; }
+.lunii-story[data-insertion='true'] { border-top: 2px solid var(--accent-2); }
+/* Eye and bin: shown on hover, on keyboard focus inside the row or on the selected row, always reachable by Tab. */
+.lunii-story-actions { display: flex; flex-shrink: 0; align-items: center; }
+.lunii-story-actions button { opacity: 0; }
+.lunii-story-actions .lunii-story-name { opacity: 1; }
+.lunii-story:hover .lunii-story-actions button, .lunii-story:focus-within .lunii-story-actions button, .lunii-story.is-selected .lunii-story-actions button, .lunii-story[aria-busy='true'] .lunii-story-actions button, .lunii-story-actions button:focus-visible { opacity: 1; }
+.lunii-header form { min-width: 0; flex: 1; display: flex; flex-wrap: wrap; }
+.lunii-header input, .lunii-fiche input { min-width: 0; max-width: 100%; background: var(--bg2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px; }
+.lunii-fiche .catalogue-selection-preview img { width: 45%; object-fit: cover; }
+
+.dialog-panel--lunii { width: min(280px, 100%); border-radius: 10px; box-shadow: var(--shadow-modal); }
+.dialog-panel--lunii .dialog-actions { flex-wrap: wrap; }
+.dialog-panel--lunii .dialog-actions button { white-space: normal; }
+
+/* Send: drop target, gauge, rows being copied. */
+.lunii-panel.is-drop-target { box-shadow: inset 0 0 0 1.5px var(--accent-2); }
+.lunii-panel.is-drop-refused { cursor: not-allowed; }
+.lunii-gauge { display: flex; width: 100%; height: 5px; margin: 12px 0 8px; border-radius: 999px; background: var(--bg3); overflow: hidden; }
+.lunii-gauge-used { background: var(--text-secondary); }
+.lunii-gauge-added { background: var(--accent-2); }
+.lunii-gauge-added.is-overflow { background: var(--danger-text); }
+.lunii-counters--drop span:first-child { color: var(--accent-2-text); }
+.lunii-insertion-end { height: 2px; margin: 2px 4px; background: var(--accent-2); border-radius: 999px; }
+.lunii-story.is-sending, .lunii-story.is-sending[aria-busy='true'] { background: var(--accent-2-dim); opacity: 1; }
+.lunii-story.is-sending .lunii-sending-step { color: var(--accent-2-text); }
+.lunii-story.is-sending.is-sent .lunii-sending-step, .lunii-sent-icon { color: var(--success-text); }
+.lunii-story.is-sending .lunii-story-select { cursor: default; }
+/* Small spinner beside the step label, in the sending row and in the activity bubble. */
+.lunii-sending-step, .lunii-send-current { display: flex; align-items: center; gap: 6px; }
+.lunii-step-spinner { flex: none; }
+.lunii-sending-step > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lunii-drag-ghost { pointer-events: none; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 6px; border: 1px solid var(--accent-2); border-radius: 8px; background: var(--bg2); color: var(--text); box-shadow: var(--shadow-menu); font-size: 12.5px; white-space: nowrap; }
+.lunii-drag-ghost img { width: 28px; height: 22px; border-radius: 3px; object-fit: cover; }
+.lunii-drag-ghost-position { color: var(--accent-2-text); }
+.lunii-drag-ghost-refused { color: var(--text-secondary); }
+
+/* Send button of the cards and the inspector. */
+.catalogue-card .catalogue-card-actions > .catalogue-send { width: 26px; padding: 0; border: 0; background: var(--catalogue-cover-action-bg); color: var(--catalogue-cover-text); }
+.catalogue-card .catalogue-card-actions > .catalogue-send[aria-disabled='true'] { opacity: .6; cursor: default; }
+.catalogue-card .catalogue-card-actions > .catalogue-send[data-state='official'], .catalogue-card .catalogue-card-actions > .catalogue-send[data-state='blocked'] { opacity: .35; }
+.catalogue-card.is-dragging, .catalogue-row.is-dragging { opacity: .5; }
+/* Pointer drags must not start a native image drag (it would cancel them). */
+.catalogue-card img, .catalogue-row img, .lunii-story img { -webkit-user-drag: none; user-select: none; }
+.catalogue-fiche-send { display: flex; flex-direction: column; gap: 4px; padding: 0 16px 8px; }
+.catalogue-fiche-send > .btn { width: 100%; justify-content: center; gap: 6px; }
+.catalogue-fiche-send > .btn[aria-disabled='true'] { opacity: .6; }
+.catalogue-fiche-send p { margin: 0; font-size: 11.5px; color: var(--text-secondary); }
+.catalogue-send--present-wide { border: 1px dashed var(--borderLt); background: transparent; }
+
+/* Lunii stories dragged out to the catalogue: ready to repatriate, or refused (reason in the ghost). */
+.catalogue-scroll[data-repatriate='ready'] { box-shadow: inset 0 0 0 1.5px var(--accent-2); }
+.catalogue-scroll[data-repatriate='refused'], .catalogue-scroll[data-repatriate='refused'] * { cursor: not-allowed; }

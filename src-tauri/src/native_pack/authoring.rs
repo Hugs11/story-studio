@@ -5,6 +5,7 @@
 //! une décision de l'auteur et conserve cette décision avec la valeur exacte à
 //! laquelle elle s'applique.
 
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::{BTreeMap, HashSet};
 
 use serde::{Deserialize, Serialize};
@@ -73,6 +74,8 @@ pub(crate) struct AuthoringDiagnostic {
     pub(crate) code: String,
     pub(crate) path: String,
     pub(crate) message: String,
+    #[serde(default)]
+    pub(crate) params: serde_json::Map<String, serde_json::Value>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) resolutions: Vec<AuthoringResolution>,
 }
@@ -98,7 +101,12 @@ impl AuthoringDiagnostic {
             path: path.into(),
             message: message.into(),
             resolutions,
+            params: serde_json::Map::new(),
         }
+    }
+    fn with_user_message(mut self, message: UserMessage) -> Self {
+        self.params = message.params;
+        self
     }
 }
 
@@ -161,7 +169,9 @@ fn diagnose_unknown_types(
                         "Type de Stage inconnu « {stage_type} », conservé sans remapping ni sémantique déduite."
                     ),
                     Vec::new(),
-                ));
+                )
+.with_user_message(UserMessage::new(codes::ENRICHED_TYPE_UNKNOWN)
+.param("stage_type", (stage_type).to_string())));
             }
         }
     }
@@ -176,7 +186,9 @@ fn diagnose_unknown_types(
                         "Type d'Action inconnu « {action_type} », conservé sans remapping ni sémantique déduite."
                     ),
                     Vec::new(),
-                ));
+                )
+.with_user_message(UserMessage::new(codes::ENRICHED_TYPE_UNKNOWN)
+.param("action_type", (action_type).to_string()).param("context", codes::ENRICHED_TYPE_UNKNOWN_ACTION)));
             }
         }
     }
@@ -298,7 +310,9 @@ fn diagnose_groups(
                     "Forme de groupe enrichi inconnue « {group_id} », conservée sans interprétation."
                 ),
                 Vec::new(),
-            )),
+            )
+.with_user_message(UserMessage::new(codes::ENRICHED_GROUP_UNKNOWN)
+.param("group_id", (group_id).to_string()))),
             KnownGroupKind::Story | KnownGroupKind::Menu => {}
         }
     }
@@ -331,6 +345,16 @@ fn incoherent_group_diagnostic(group_id: &str, path: String, kind: &str) -> Auth
             AuthoringResolution::FlattenKnownGroup,
         ],
     )
+.with_user_message(UserMessage::new(codes::ENRICHED_GROUP_INCOHERENT)
+.param("kind", serde_json::json!({
+    "code": if kind == "story" {
+        codes::LABEL_NODE_STORY_KIND
+    } else {
+        codes::LABEL_NODE_MENU_KIND
+    },
+    "params": {}
+}))
+.param("group_id", (group_id).to_string()))
 }
 
 fn story_group_is_coherent(document: &StoryDocument, group: &GroupMembers) -> bool {
@@ -436,21 +460,22 @@ fn diagnose_orphan_actions(
             || !action.group_id.is_absent()
             || payload.context.opaque_members.iter().any(|member| {
                 member.path == *path
-                    && (member.kind == OpaqueMemberKind::UnknownExtension
-                        || (member.kind == OpaqueMemberKind::KnownAlias
-                            && member.export_disposition
-                                != Some(OpaqueExportDisposition::NeverEmitStandard)))
+                    && member.kind == OpaqueMemberKind::KnownAlias
+                    && member.export_disposition != Some(OpaqueExportDisposition::NeverEmitStandard)
             });
         let strict_empty_scaffold = action.options.is_empty() && !has_authored_metadata;
 
         if strict_empty_scaffold {
-            diagnostics.push(AuthoringDiagnostic::new(
-                AuthoringDiagnosticLevel::Info,
-                "ORPHAN_ACTION_EMPTY_SCAFFOLD",
-                path,
-                "Action orpheline strictement vide : aucun contenu authored ne serait perdu.",
-                Vec::new(),
-            ));
+            diagnostics.push(
+                AuthoringDiagnostic::new(
+                    AuthoringDiagnosticLevel::Info,
+                    "ORPHAN_ACTION_EMPTY_SCAFFOLD",
+                    path,
+                    "Action orpheline strictement vide : aucun contenu authored ne serait perdu.",
+                    Vec::new(),
+                )
+                .with_user_message(UserMessage::new(codes::ORPHAN_ACTION_EMPTY_SCAFFOLD)),
+            );
         } else if has_valid_option || has_authored_metadata || !action.options.is_empty() {
             diagnostics.push(AuthoringDiagnostic::new(
                 AuthoringDiagnosticLevel::ActionRequired,
@@ -458,7 +483,8 @@ fn diagnose_orphan_actions(
                 path,
                 "Action orpheline porte du contenu authored que les passerelles supprimeraient silencieusement.",
                 vec![AuthoringResolution::ConnectOrRemoveOrphan],
-            ));
+            )
+.with_user_message(UserMessage::new(codes::ORPHAN_ACTION_AUTHORED_CONTENT)));
         }
     }
 }
@@ -487,7 +513,8 @@ fn diagnose_opaque_members(
                     path,
                     "Extension opaque préservée tel quel par décision explicite ; sa dimension d'interopérabilité reste UNTESTED.",
                     Vec::new(),
-                ));
+                )
+.with_user_message(UserMessage::new(codes::OPAQUE_EXTENSION_PRESERVED_UNTESTED)));
             }
             continue;
         }
@@ -522,7 +549,8 @@ fn diagnose_incomplete_controls(
                 format!("{path}/controlSettings"),
                 "Les cinq booléens de contrôle doivent être renseignés explicitement avant export standard.",
                 vec![AuthoringResolution::CompleteControlSettings],
-            ));
+            )
+.with_user_message(UserMessage::new(codes::CONTROL_SETTINGS_INCOMPLETE)));
         }
     }
 }
@@ -542,45 +570,54 @@ fn diagnose_entry_stage(
     diagnostics: &mut Vec<AuthoringDiagnostic>,
 ) {
     for violation in port_violations(document) {
-        let (path, message, resolutions) = match violation {
+        let (path, message, ui_message, resolutions) = match violation {
             PortViolation::HomeLoopsToSelf { stage, implicit: true } => (
                 format!("{}/controlSettings/home", stage_paths[stage]),
                 "Sur l'Écran d'entrée, le bouton Accueil ramènerait ici même : désactivez-le.",
+                UserMessage::new("HOME_LOOPS_TO_SELF").param("context", codes::HOME_LOOPS_TO_SELF_ENTRY),
                 vec![AuthoringResolution::DisableHome],
             ),
             PortViolation::HomeLoopsToSelf { stage, implicit: false } => (
                 format!("{}/homeTransition", stage_paths[stage]),
                 "Le bouton Accueil ramène cet Écran sur lui-même, et la Lunii s'y bloque : retirez sa destination pour revenir au début du pack.",
+                UserMessage::new("HOME_LOOPS_TO_SELF"),
                 vec![AuthoringResolution::ClearHomeTransition],
             ),
             PortViolation::OkLoopsToSelf { stage } => (
                 format!("{}/okTransition", stage_paths[stage]),
                 "Le bouton OK ramène cet Écran sur lui-même : choisissez une autre destination.",
+                UserMessage::new("OK_LOOPS_TO_SELF"),
                 Vec::new(),
             ),
             PortViolation::OkWithoutUsableDestination { stage } => (
                 format!("{}/okTransition", stage_paths[stage]),
                 "OK ou la fin automatique est actif sans destination utilisable : reliez une destination ou désactivez ces déclencheurs.",
+                UserMessage::new("OK_WITHOUT_USABLE_DESTINATION"),
                 vec![AuthoringResolution::MakeEnding],
             ),
             PortViolation::NoUsableExit { stage } => (
                 format!("{}/controlSettings", stage_paths[stage]),
                 "Cet Écran accessible ne permet aucune sortie, même par la molette : ajoutez une sortie utilisable.",
+                UserMessage::new("NO_USABLE_EXIT"),
                 vec![AuthoringResolution::EnableHome],
             ),
             PortViolation::EntryStageAsOption { action, option } => (
                 format!("{}/options/{option}", action_paths[action]),
                 "Ce choix mène à l'Écran d'entrée, qui ne peut pas être une destination : retirez-le ou changez son Écran. On revient au début par le bouton Accueil laissé sans destination.",
+                UserMessage::new("ENTRY_STAGE_AS_OPTION").param("context", codes::ENTRY_STAGE_AS_OPTION_AUTHORING),
                 Vec::new(),
             ),
         };
-        diagnostics.push(AuthoringDiagnostic::new(
-            AuthoringDiagnosticLevel::ActionRequired,
-            violation.code(),
-            path,
-            message,
-            resolutions,
-        ));
+        diagnostics.push(
+            AuthoringDiagnostic::new(
+                AuthoringDiagnosticLevel::ActionRequired,
+                violation.code(),
+                path,
+                message,
+                resolutions,
+            )
+            .with_user_message(ui_message),
+        );
     }
 }
 
@@ -627,7 +664,9 @@ fn diagnose_severed_transitions(
                     "Un retrait a laissé cet Écran sans destination {control} : le raccorder, ou désactiver ce bouton."
                 ),
                 Vec::new(),
-            ));
+            )
+.with_user_message(UserMessage::new(codes::TRANSITION_SEVERED_BY_REMOVAL)
+.param("control", (control).to_string())));
         }
     }
 }
@@ -671,10 +710,14 @@ pub(crate) fn set_position_export_disposition(
 ) -> Result<(), String> {
     let position = authored_position(&payload.document, path)
         .cloned()
-        .ok_or_else(|| format!("Position authored introuvable : {path}"))?;
+        .ok_or_else(|| {
+            UserMessage::new(codes::GRAPH_AUTHORED_POSITION_MISSING)
+                .param("path", (path).to_string())
+                .into_transport()
+        })?;
     if !position_is_out_of_short_range(&position) {
         return Err(
-            "Une disposition de position ne s'applique qu'à une position hors short.".to_string(),
+            UserMessage::new(codes::GRAPH_POSITION_LAYOUT_SHORT_FORBIDDEN).into_transport(),
         );
     }
     let origin = value_origin(payload, path);
@@ -682,8 +725,7 @@ pub(crate) fn set_position_export_disposition(
         && origin != ValueOrigin::SourceStudio
     {
         return Err(
-            "La perte d'affichage dans STUdio ne peut être acceptée que pour une position héritée d'une source Studio."
-                .to_string(),
+            UserMessage::new(codes::GRAPH_POSITION_LOSS_INHERITANCE_REQUIRED).into_transport(),
         );
     }
     payload
@@ -753,22 +795,31 @@ pub(crate) fn set_opaque_export_disposition(
                 && member.key == key
                 && member.source_occurrence == source_occurrence
         })
-        .ok_or_else(|| format!("Extension opaque introuvable : {path}/{key}"))?;
+        .ok_or_else(|| {
+            UserMessage::new(codes::EXPORT_OPAQUE_EXTENSION_MISSING)
+                .param("path", (path).to_string())
+                .param("key", (key).to_string())
+                .into_transport()
+        })?;
     if matches!(
         disposition,
         OpaqueExportDisposition::PreserveUntested | OpaqueExportDisposition::PromoteAfterProof
     ) && opaque_member_never_emitted(payload, &payload.context.opaque_members[index])
     {
-        return Err("L'export standard n'émet pas cette clé connue.".to_string());
+        return Err(UserMessage::new(codes::EXPORT_STANDARD_KEY_OMITTED).into_transport());
     }
     let member = &mut payload.context.opaque_members[index];
     if disposition == OpaqueExportDisposition::NeverEmitStandard
         && !matches!(
             member.kind,
-            OpaqueMemberKind::KnownAlias | OpaqueMemberKind::KnownNeverEmitted
+            OpaqueMemberKind::KnownAlias
+                | OpaqueMemberKind::KnownNeverEmitted
+                | OpaqueMemberKind::OutputDecisionOnly
         )
     {
-        return Err("NeverEmitStandard est réservé aux membres connus non canoniques.".to_string());
+        return Err(
+            UserMessage::new(codes::EXPORT_STANDARD_EMISSION_POLICY_INVALID).into_transport(),
+        );
     }
     member.export_disposition = Some(disposition);
     member.export_disposition_value = Presence::from_json(member.value.clone());
@@ -785,8 +836,11 @@ pub(crate) fn set_authored_position(
     path: &str,
     position: Position,
 ) -> Result<(), String> {
-    let target = authored_position_mut(&mut payload.document, path)
-        .ok_or_else(|| format!("Nœud de position introuvable : {path}"))?;
+    let target = authored_position_mut(&mut payload.document, path).ok_or_else(|| {
+        UserMessage::new(codes::GRAPH_POSITION_NODE_MISSING)
+            .param("path", (path).to_string())
+            .into_transport()
+    })?;
     *target = Presence::Value(position);
     payload
         .context
@@ -815,7 +869,11 @@ pub(crate) fn apply_editor_position_to_authoring(
         .editor_positions
         .iter()
         .position(|entry| entry.path == path)
-        .ok_or_else(|| format!("Position d'éditeur introuvable : {path}"))?;
+        .ok_or_else(|| {
+            UserMessage::new(codes::GRAPH_EDITOR_POSITION_MISSING)
+                .param("path", (path).to_string())
+                .into_transport()
+        })?;
     let position = payload.context.editor_positions[index].position.clone();
     set_authored_position(payload, path, position)?;
     payload.context.editor_positions.remove(index);
@@ -837,11 +895,17 @@ pub(crate) fn with_action_option_target(
         .action_nodes
         .iter_mut()
         .find(|action| action.id == action_id)
-        .ok_or_else(|| format!("Action introuvable : {action_id}"))?;
-    let option = action
-        .options
-        .get_mut(option_index)
-        .ok_or_else(|| format!("Option introuvable : {action_id}[{option_index}]"))?;
+        .ok_or_else(|| {
+            UserMessage::new(codes::GRAPH_ACTION_NODE_MISSING)
+                .param("action_id", (action_id).to_string())
+                .into_transport()
+        })?;
+    let option = action.options.get_mut(option_index).ok_or_else(|| {
+        UserMessage::new(codes::GRAPH_ACTION_OPTION_MISSING)
+            .param("action_id", (action_id).to_string())
+            .param("option_index", (option_index).to_string())
+            .into_transport()
+    })?;
     *option = target;
     Ok(edited)
 }
@@ -855,13 +919,15 @@ pub(crate) fn flatten_known_group(
     group_id: &str,
 ) -> Result<StoryDocument, String> {
     let groups = collect_groups(document);
-    let group = groups
-        .get(group_id)
-        .ok_or_else(|| format!("Groupe introuvable : {group_id}"))?;
+    let group = groups.get(group_id).ok_or_else(|| {
+        UserMessage::new(codes::GRAPH_GROUP_NODE_MISSING)
+            .param("group_id", (group_id).to_string())
+            .into_transport()
+    })?;
     if classify_group(document, group) == KnownGroupKind::Unknown {
-        return Err(format!(
-            "Le groupe « {group_id} » porte une forme inconnue ; aucun flatten sémantique n'est prétendu."
-        ));
+        return Err(UserMessage::new(codes::GRAPH_GROUP_SHAPE_UNKNOWN)
+            .param("group_id", (group_id).to_string())
+            .into_transport());
     }
 
     let mut flattened = document.clone();

@@ -1,6 +1,8 @@
 {
   "schemaVersion": 3,
   "authoringMode": "free",
+  "officialProvenance": "unknown",
+  "containsOfficialContent": false,
   "version": 2,
   "projectName": "Histoire de test",
   "packMetadata": {
@@ -11,7 +13,7 @@
     "producer": "",
     "bonus": "",
     "description": "",
-    "uuid": "00000000-0000-4000-8000-000000000001",
+    "uuid": "00000000-0000-4000-8000-000000000003",
     "originalUuid": "",
     "namingMode": "convention",
     "legacyExportName": "",
@@ -46,7 +48,7 @@
   "importWarnings": [],
   "rootEntries": [
     {
-      "id": "00000000-0000-4000-8000-000000000002",
+      "id": "00000000-0000-4000-8000-000000000004",
       "type": "story",
       "name": "",
       "treeColor": null,
@@ -89,5 +91,5 @@
   "name": "3+]Histoire_de_test[by_Auteur_de_test",
   "packVersion": 1,
   "packDescription": "",
-  "packUuid": "00000000-0000-4000-8000-000000000001"
+  "packUuid": "00000000-0000-4000-8000-000000000003"
 }

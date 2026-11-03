@@ -19,6 +19,7 @@
 //! Les règles elles-mêmes vivent dans `OptionSelection` et ne sont pas réécrites
 //! ici : ce module les invoque et rend leurs effets observables.
 
+use crate::support::user_message::{codes, UserMessage};
 use serde::{Deserialize, Serialize};
 
 use super::structure::unique_action_index;
@@ -64,6 +65,7 @@ pub(crate) fn resolve_option_target(
                 path,
                 "Aucun Stage n'est créé par ce geste : désigner la destination par son identifiant.".to_string(),
             )
+.with_user_message(UserMessage::new(codes::NO_CREATED_STAGE))
         }),
         ActionOptionTarget::Stage { uuid } => {
             let Some(stage) = document.stage_nodes.iter().find(|stage| stage.uuid == *uuid) else {
@@ -71,7 +73,9 @@ pub(crate) fn resolve_option_target(
                     "UNKNOWN_STAGE",
                     path,
                     format!("L'option désigne un Stage introuvable : « {uuid} »."),
-                ));
+                )
+.with_user_message(UserMessage::new(codes::UNKNOWN_STAGE)
+.param("uuid", (uuid).to_string())));
             };
             // L'Écran d'entrée n'est jamais une destination : STUdio lui retire
             // sa prise d'arrivée et écrit `null` à la place d'un tel lien. On y
@@ -82,7 +86,8 @@ pub(crate) fn resolve_option_target(
                     "ENTRY_STAGE_AS_OPTION",
                     path,
                     "L'Écran d'entrée ne peut pas être le choix d'une liste : on y revient par le bouton Accueil laissé sans destination.".to_string(),
-                ));
+                )
+.with_user_message(UserMessage::new(codes::ENTRY_STAGE_AS_OPTION)));
             }
             Ok(Some(uuid.clone()))
         }
@@ -154,7 +159,8 @@ impl<'a> DecisionBook<'a> {
                     &transition_path(&decision.stage_uuid, decision.slot),
                     "Cette transition conserve sa destination : le geste ne demande aucune décision ici."
                         .to_string(),
-                ));
+                )
+.with_user_message(UserMessage::new(codes::UNEXPECTED_SELECTION_DECISION)));
             }
         }
         Ok(())
@@ -289,6 +295,11 @@ fn out_of_range(action_id: &str, ordinal: usize, count: usize, bound: usize) -> 
             "L'ActionNode « {action_id} » porte {count} option(s) : le rang {ordinal} n'est pas adressable (maximum {bound})."
         ),
     )
+.with_user_message(UserMessage::new(codes::OPTION_ORDINAL_OUT_OF_RANGE)
+.param("action_id", (action_id).to_string())
+.param("count", (count).to_string())
+.param("ordinal", (ordinal).to_string())
+.param("bound", (bound).to_string()))
 }
 
 /// Insertion d'une occurrence au rang `index`.
@@ -376,7 +387,10 @@ pub(crate) fn reorder_options(
                 "La permutation porte {} rang(s) pour {count} option(s) : chaque occurrence doit recevoir une place.",
                 new_position_of_old.len()
             ),
-        ));
+        )
+.with_user_message(UserMessage::new(codes::INVALID_OPTION_PERMUTATION)
+.param("rankCount", (new_position_of_old.len()).to_string())
+.param("count", (count).to_string())));
     }
     let mut seen = vec![false; count];
     for position in new_position_of_old {
@@ -385,6 +399,12 @@ pub(crate) fn reorder_options(
                 "INVALID_OPTION_PERMUTATION",
                 &path,
                 format!("La permutation désigne la place {position} hors des {count} rangs."),
+            )
+            .with_user_message(
+                UserMessage::new(codes::INVALID_OPTION_PERMUTATION)
+                    .param("position", (position).to_string())
+                    .param("count", (count).to_string())
+                    .param("context", codes::INVALID_OPTION_PERMUTATION_OUT_RANGE),
             ));
         };
         if std::mem::replace(slot, true) {
@@ -392,6 +412,11 @@ pub(crate) fn reorder_options(
                 "INVALID_OPTION_PERMUTATION",
                 &path,
                 format!("Deux occurrences reçoivent la place {position}."),
+            )
+            .with_user_message(
+                UserMessage::new(codes::INVALID_OPTION_PERMUTATION)
+                    .param("position", (position).to_string())
+                    .param("context", codes::INVALID_OPTION_PERMUTATION_DUPLICATE),
             ));
         }
     }
@@ -467,6 +492,8 @@ pub(crate) fn remove_option(
                     "Le retrait du rang {ordinal} prive cette transition de sa destination : il faut décider explicitement de la rediriger ou de la retirer."
                 ),
             )
+.with_user_message(UserMessage::new(codes::OPTION_SELECTION_DECISION_REQUIRED)
+.param("ordinal", (ordinal).to_string()))
             .with_references(
                 pending
                     .iter()
@@ -502,7 +529,11 @@ pub(crate) fn remove_option(
                         format!(
                             "Après retrait, l'ActionNode « {action_id} » porte {remaining} option(s) : {selection} n'en désigne aucune."
                         ),
-                    ));
+                    )
+.with_user_message(UserMessage::new(codes::OPTION_SELECTION_OUT_OF_BOUNDS)
+.param("action_id", (action_id).to_string())
+.param("remaining", (remaining).to_string())
+.param("selection", (selection).to_string())));
                 }
                 Presence::Value(Transition {
                     action_node: action_id.to_string(),

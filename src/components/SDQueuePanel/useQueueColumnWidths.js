@@ -2,13 +2,13 @@ import { useRef, useState } from 'react';
 import { KEYS, read, write } from '../../store/persistentSettings';
 
 export const QUEUE_COLUMNS = [
-  { id: 'type', label: 'Type', defaultWidth: 76, minWidth: 62, grow: 0.2 },
-  { id: 'name', label: 'Nom', defaultWidth: 220, minWidth: 130, grow: 1.3 },
-  { id: 'target', label: 'Destination', defaultWidth: 190, minWidth: 92, grow: 1 },
-  { id: 'result', label: 'Résultat', defaultWidth: 300, minWidth: 130, grow: 1.6 },
-  { id: 'status', label: 'Statut', defaultWidth: 96, minWidth: 82, grow: 0.25 },
-  { id: 'usage', label: 'Usage', defaultWidth: 100, minWidth: 76, grow: 0.25 },
-  { id: 'date', label: 'Date', defaultWidth: 92, minWidth: 72, grow: 0.2 },
+  { id: 'type', labelKey: "ai:queue.column.type", defaultWidth: 76, minWidth: 62, grow: 0.2 },
+  { id: 'name', labelKey: "ai:queue.column.name", defaultWidth: 220, minWidth: 130, grow: 1.3 },
+  { id: 'target', labelKey: "ai:queue.column.target", defaultWidth: 190, minWidth: 92, grow: 1 },
+  { id: 'result', labelKey: "ai:queue.column.result", defaultWidth: 300, minWidth: 130, grow: 1.6 },
+  { id: 'status', labelKey: "ai:queue.column.status", defaultWidth: 96, minWidth: 82, grow: 0.25 },
+  { id: 'usage', labelKey: "ai:queue.column.usage", defaultWidth: 100, minWidth: 76, grow: 0.25 },
+  { id: 'date', labelKey: "ai:queue.column.date", defaultWidth: 92, minWidth: 72, grow: 0.2 },
   { id: 'actions', label: '', defaultWidth: 58, minWidth: 48, grow: 0 },
 ];
 

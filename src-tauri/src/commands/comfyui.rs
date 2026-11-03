@@ -3,27 +3,38 @@ use crate::services::comfyui::{
     list_workflows_sync, poll_job_sync, resolve_paths, submit_job_sync, watch_progress_sync,
     ComfyProgressEvent, ComfyUiSettings, SdGenerateRequest, SdPollResult, WorkflowManifest,
 };
+use crate::support::user_message::UserMessage;
 use tauri::Emitter;
 
 #[tauri::command]
-pub async fn comfyui_check(settings: ComfyUiSettings) -> Result<bool, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        ensure_comfyui_sync(&settings)
-            .map(|_| true)
-            .inspect_err(|err| log::warn!(target: "comfyui", "comfyui_check failed: {}", err))
-    })
-    .await
-    .map_err(|e| e.to_string())?
+pub async fn comfyui_check(settings: ComfyUiSettings) -> Result<bool, UserMessage> {
+    let result: Result<_, String> = async {
+        tauri::async_runtime::spawn_blocking(move || {
+            ensure_comfyui_sync(&settings)
+                .map(|_| true)
+                .inspect_err(|err| log::warn!(target: "comfyui", "comfyui_check failed: {}", err))
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    .await;
+    result.map_err(UserMessage::from)
 }
 
 #[tauri::command]
 pub async fn comfyui_list_workflows(
     app: tauri::AppHandle,
-) -> Result<Vec<WorkflowManifest>, String> {
-    let (resource_dir, app_data_dir) = resolve_paths(&app)?;
-    tauri::async_runtime::spawn_blocking(move || list_workflows_sync(resource_dir, app_data_dir))
+) -> Result<Vec<WorkflowManifest>, UserMessage> {
+    let result: Result<_, String> = async {
+        let (resource_dir, app_data_dir) = resolve_paths(&app)?;
+        tauri::async_runtime::spawn_blocking(move || {
+            list_workflows_sync(resource_dir, app_data_dir)
+        })
         .await
         .map_err(|e| e.to_string())?
+    }
+    .await;
+    result.map_err(UserMessage::from)
 }
 
 #[tauri::command]
@@ -31,26 +42,34 @@ pub async fn comfyui_import_workflow(
     app: tauri::AppHandle,
     api_json_path: String,
     config_json_path: String,
-) -> Result<WorkflowManifest, String> {
-    let (_, app_data_dir) = resolve_paths(&app)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        import_workflow_sync(app_data_dir, api_json_path, config_json_path)
-    })
-    .await
-    .map_err(|e| e.to_string())?
+) -> Result<WorkflowManifest, UserMessage> {
+    let result: Result<_, String> = async {
+        let (_, app_data_dir) = resolve_paths(&app)?;
+        tauri::async_runtime::spawn_blocking(move || {
+            import_workflow_sync(app_data_dir, api_json_path, config_json_path)
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    .await;
+    result.map_err(UserMessage::from)
 }
 
 #[tauri::command]
 pub async fn comfyui_delete_workflow(
     app: tauri::AppHandle,
     workflow_id: String,
-) -> Result<(), String> {
-    let (_, app_data_dir) = resolve_paths(&app)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        delete_custom_workflow_sync(app_data_dir, workflow_id)
-    })
-    .await
-    .map_err(|e| e.to_string())?
+) -> Result<(), UserMessage> {
+    let result: Result<_, String> = async {
+        let (_, app_data_dir) = resolve_paths(&app)?;
+        tauri::async_runtime::spawn_blocking(move || {
+            delete_custom_workflow_sync(app_data_dir, workflow_id)
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    .await;
+    result.map_err(UserMessage::from)
 }
 
 #[tauri::command]
@@ -58,15 +77,20 @@ pub async fn comfyui_submit_job(
     app: tauri::AppHandle,
     settings: ComfyUiSettings,
     request: SdGenerateRequest,
-) -> Result<String, String> {
-    let (resource_dir, app_data_dir) = resolve_paths(&app)?;
-    log::info!(target: "comfyui", "comfyui_submit_job: workflow='{}'", request.workflow_id);
-    tauri::async_runtime::spawn_blocking(move || {
-        submit_job_sync(resource_dir, app_data_dir, settings, request)
-            .inspect_err(|err| log::error!(target: "comfyui", "comfyui_submit_job failed: {}", err))
-    })
-    .await
-    .map_err(|e| e.to_string())?
+) -> Result<String, UserMessage> {
+    let result: Result<_, String> = async {
+        let (resource_dir, app_data_dir) = resolve_paths(&app)?;
+        log::info!(target: "comfyui", "comfyui_submit_job: workflow='{}'", request.workflow_id);
+        tauri::async_runtime::spawn_blocking(move || {
+            submit_job_sync(resource_dir, app_data_dir, settings, request).inspect_err(
+                |err| log::error!(target: "comfyui", "comfyui_submit_job failed: {}", err),
+            )
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    .await;
+    result.map_err(UserMessage::from)
 }
 
 #[tauri::command]
@@ -75,34 +99,42 @@ pub async fn comfyui_watch_progress(
     settings: ComfyUiSettings,
     client_id: String,
     job_id: String,
-) -> Result<(), String> {
-    std::thread::spawn(move || {
-        let emit = |event: ComfyProgressEvent| {
-            let _ = app.emit("comfyui-progress", event);
-        };
-        if let Err(error) = watch_progress_sync(settings, client_id, job_id.clone(), &emit) {
-            let _ = app.emit(
-                "comfyui-progress",
-                ComfyProgressEvent {
-                    job_id,
-                    progress: None,
-                    progress_label: None,
-                    error: Some(error),
-                },
-            );
-        }
-    });
-    Ok(())
+) -> Result<(), UserMessage> {
+    let result: Result<_, String> = async {
+        std::thread::spawn(move || {
+            let emit = |event: ComfyProgressEvent| {
+                let _ = app.emit("comfyui-progress", event);
+            };
+            if let Err(error) = watch_progress_sync(settings, client_id, job_id.clone(), &emit) {
+                let _ = app.emit(
+                    "comfyui-progress",
+                    ComfyProgressEvent {
+                        job_id,
+                        progress: None,
+                        progress_label: None,
+                        error: Some(error),
+                    },
+                );
+            }
+        });
+        Ok(())
+    }
+    .await;
+    result.map_err(UserMessage::from)
 }
 
 #[tauri::command]
 pub async fn comfyui_poll_job(
     settings: ComfyUiSettings,
     prompt_id: String,
-) -> Result<SdPollResult, String> {
-    tauri::async_runtime::spawn_blocking(move || poll_job_sync(settings, prompt_id))
-        .await
-        .map_err(|e| e.to_string())?
+) -> Result<SdPollResult, UserMessage> {
+    let result: Result<_, String> = async {
+        tauri::async_runtime::spawn_blocking(move || poll_job_sync(settings, prompt_id))
+            .await
+            .map_err(|e| e.to_string())?
+    }
+    .await;
+    result.map_err(UserMessage::from)
 }
 
 #[tauri::command]
@@ -113,19 +145,25 @@ pub async fn comfyui_download_output(
     subfolder: String,
     prompt_id: String,
     workspace_dir: Option<String>,
-) -> Result<String, String> {
-    let fallback_dir =
-        crate::support::temp::app_cache_subdir(&app, crate::support::temp::TEMP_IMAGES_DIR)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        download_output_sync(
-            settings,
-            filename,
-            subfolder,
-            prompt_id,
-            workspace_dir,
-            fallback_dir,
-        )
-    })
-    .await
-    .map_err(|e| e.to_string())?
+    project_destination: Option<crate::services::project_files::ProjectMediaDestination>,
+) -> Result<String, UserMessage> {
+    let result: Result<_, String> = async {
+        let fallback_dir =
+            crate::support::temp::app_cache_subdir(&app, crate::support::temp::TEMP_IMAGES_DIR)?;
+        tauri::async_runtime::spawn_blocking(move || {
+            download_output_sync(
+                settings,
+                filename,
+                subfolder,
+                prompt_id,
+                workspace_dir,
+                fallback_dir,
+                project_destination.as_ref(),
+            )
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    .await;
+    result.map_err(UserMessage::from)
 }

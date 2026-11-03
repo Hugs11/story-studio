@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import { graphTranslationEngine, translateGraph as t } from '../../i18n/graphPresentation.js';
 // L'éditeur d'un Écran : ce que MVP-A permet d'y changer, et rien de plus.
 //
 // Le nom d'un Écran est modifié par le geste natif `set-node-name` : le champ
@@ -41,6 +43,7 @@ export function StageEditor({
   onNameFocusHandled = null,
   onViewConnections,
 }) {
+  useTranslation('graph', { i18n: graphTranslationEngine() });
   const stage = inspected.node;
   const isEntry = stage.squareOne?.presence === 'value' && stage.squareOne.value === true;
   const destinations = useMemo(
@@ -72,34 +75,33 @@ export function StageEditor({
     <div className="advanced-editor">
       <section className="card advanced-editor__identity-card">
       <header className="advanced-editor__header">
-        <span className="advanced-editor__kind advanced-editor__kind--stage">Écran</span>
+        <span className="advanced-editor__kind advanced-editor__kind--stage">{t('graph:type.stage.label')}</span>
         <h2 className="advanced-editor__title">
           {inspected.label.label}
           {inspected.label.isFallback && (
-            <Tooltip text="Repli d'affichage, pas un nom d'auteur" asChild>
+            <Tooltip text={t('graph:stage.name.fallbackHelp')} asChild>
               <em className="advanced-editor__fallback">
-                {' '}(sans nom)
-              </em>
+                {' '}{t('graph:stage.name.fallback')}</em>
             </Tooltip>
           )}
         </h2>
         {isEntry && (
-          <Tooltip text="Écran d’entrée : le pack commence ici" asChild>
-            <span className="advanced-editor__badge">racine</span>
+          <Tooltip text={t('graph:stage.entry.help')} asChild>
+            <span className="advanced-editor__badge">{t('graph:stage.entry.label')}</span>
           </Tooltip>
         )}
         {/* L'identifiant, discret à côté du nom : sélectionnable, jamais une
             section à déplier. */}
-        <Tooltip text="Identifiant" asChild>
+        <Tooltip text={t('graph:stage.id.label')} asChild>
           <code className="advanced-editor__identifier">
             {inspected.identifier}
-            {stage.occurrence > 0 && ` — occurrence ${stage.occurrence}`}
+            {stage.occurrence > 0 && t('graph:stage.id.occurrence', { ordinal: stage.occurrence })}
           </code>
         </Tooltip>
       </header>
 
       <div className="field-row advanced-editor__name-row">
-        <span className="field-label">Nom</span>
+        <span className="field-label">{t('graph:name.field.aria')}</span>
         <div className="advanced-editor__name-control">
           <NodeNameEditor
             kind="stage"
@@ -115,20 +117,20 @@ export function StageEditor({
 
       <section className="card advanced-editor__media-card">
         <div className="card-title-row">
-          <div className="card-title">Médias</div>
-          <div className="card-copy card-copy--inline">L’image et le son de cet Écran.</div>
+          <div className="card-title">{t('graph:stage.media.title')}</div>
+          <div className="card-copy card-copy--inline">{t('graph:stage.media.description')}</div>
         </div>
 
         {/* La vignette catalogue se choisit dans la fiche du pack : l'Écran
             d'entrée n'a que son image Lunii et son son. */}
         <div className="media-split">
           <div className="media-split-left">
-            <div className="media-col-header">Image</div>
+            <div className="media-col-header">{t('graph:stage.media.image')}</div>
             <MediaSlotEditor stage={stage} field="image" usage={usage} disabled={disabled} onGesture={onGesture} onAssignMedia={onAssignMedia} projectEpoch={projectEpoch} />
           </div>
           <div className="media-split-divider" />
           <div className="media-split-right">
-            <div className="media-col-header">Son</div>
+            <div className="media-col-header">{t('graph:stage.media.audio')}</div>
             <MediaSlotEditor stage={stage} field="audio" usage={usage} disabled={disabled} onGesture={onGesture} onAssignMedia={onAssignMedia} projectEpoch={projectEpoch} />
           </div>
         </div>
@@ -159,6 +161,7 @@ export function StageEditor({
 
       {/* La troisième sortie : les choix voisins de la liste. */}
       <StageWheel
+        index={index}
         stage={stage}
         memberships={memberships}
         disabled={disabled}
@@ -169,7 +172,7 @@ export function StageEditor({
 
       <section className="card advanced-editor__section advanced-controls">
         <div className="card-title-row">
-          <div className="card-title">Pendant la lecture</div>
+          <div className="card-title">{t('graph:controls.pause.title')}</div>
         </div>
         <div className="sequence-controls advanced-controls__toggles">
           <ControlRow
@@ -197,12 +200,12 @@ export function StageEditor({
       />
 
       <details className="advanced-editor__technical">
-        <summary>Informations techniques</summary>
+        <summary>{t('graph:stage.technical.title')}</summary>
       <section className="advanced-editor__section">
-        <h3>Disposition</h3>
+        <h3>{t('graph:stage.layout.title')}</h3>
         <dl className="advanced-editor__identity">
           {/* Un nœud n'a qu'une position, celle du graphe à plat. */}
-          <dt>Position</dt>
+          <dt>{t('graph:stage.layout.position')}</dt>
           <dd>{Math.round(stage.layout.x)}, {Math.round(stage.layout.y)}</dd>
         </dl>
       </section>
@@ -217,14 +220,12 @@ export function StageEditor({
               type="button"
               disabled={disabled}
               onClick={onDelete}
-              aria-label="Supprimer cet Écran"
+              aria-label={t('graph:stage.remove.label')}
             >
               <Trash2 className="card-danger-icon" />
             </button>
-            <span className="card-danger-title">Supprimer cet Écran</span>
-            <p className="card-danger-desc">
-              L’Écran est retiré du pack. Les listes de choix qui le proposaient gardent un choix à compléter ; les raccords depuis les autres Écrans restent en place.
-            </p>
+            <span className="card-danger-title">{t('graph:stage.remove.label')}</span>
+            <p className="card-danger-desc">{t('graph:stage.remove.description')}</p>
           </div>
         </div>
       )}

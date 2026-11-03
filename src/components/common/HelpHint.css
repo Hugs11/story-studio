@@ -18,6 +18,6 @@
 
 .help-hint:hover,
 .help-hint:focus-visible {
-  border-color: var(--text-2, #9aa2ab);
+  border-color: var(--text-secondary);
   color: var(--text);
 }

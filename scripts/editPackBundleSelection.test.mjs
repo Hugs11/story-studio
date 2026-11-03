@@ -1,3 +1,6 @@
+import i18next from 'i18next';
+import { createTestI18n } from './i18nTestSetup.mjs';
+i18next.init(createTestI18n().options);
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
@@ -56,7 +59,7 @@ test('un pack en lecture seule reste choisissable : le funnel lui offre la simul
 
 test('le motif brut d’un enfant chiffré n’est pas le message affiché', () => {
   const raw = 'story.json non simulable par Story Studio (Audio stage 0 : Nom asset invalide).';
-  const verdict = describeChildVerdict(child({ status: BUNDLE_CHILD_STATUS.unsupported, reason: raw }));
+  const verdict = describeChildVerdict(child({ status: BUNDLE_CHILD_STATUS.unsupported, reason: raw, reasonCode: 'IMPORT_UNSUPPORTED_VARIANT' }));
   assert.match(verdict.reason, /chiffré|variante/);
   assert.equal(verdict.technicalDetail, raw);
 });

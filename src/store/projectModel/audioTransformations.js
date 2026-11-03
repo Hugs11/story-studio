@@ -1,5 +1,6 @@
 import { normalizeStoryEntry } from './schema.js';
 import { getAssemblyReplacementEligibility, validateMediaAudioToolRequest } from '../mediaToolContext.js';
+import { mediaRefusal } from '../../i18n/mediaPresentation.js';
 
 const TERMINAL_FIELDS = [
   'controlSettings',
@@ -15,8 +16,10 @@ const TERMINAL_FIELDS = [
   'afterPlaybackHomeStep',
 ];
 
-function failure(project, code, reason, details = {}) {
-  return { ok: false, project, code, reason, ...details };
+// La raison reste un descripteur ; son texte est résolu à la lecture.
+function failure(project, code, reasonRef, details = {}) {
+  const { reason: _reason, reasonRef: _reasonRef, ...rest } = details;
+  return mediaRefusal({ ok: false, project, code, ...rest }, reasonRef.key, reasonRef.params);
 }
 
 function terminalFieldsFrom(story) {
@@ -51,11 +54,11 @@ export function replaceStoriesWithAssembledStory(project, {
   const ids = entryIds ?? request?.entryIds ?? [];
   if (request) {
     const validation = validateMediaAudioToolRequest(project, request);
-    if (!validation.valid) return failure(project, validation.code, validation.reason);
+    if (!validation.valid) return failure(project, validation.code, validation.reasonRef);
   }
-  if (!outputPath) return failure(project, 'missing-output', 'Le fichier assemblé est introuvable.');
+  if (!outputPath) return failure(project, 'missing-output', { key: 'media:tool.refusal.missingOutput' });
   const eligibility = getAssemblyReplacementEligibility(project, ids);
-  if (!eligibility.valid) return failure(project, eligibility.code, eligibility.reason, eligibility);
+  if (!eligibility.valid) return failure(project, eligibility.code, eligibility.reasonRef, eligibility);
 
   const first = eligibility.stories[0];
   const last = eligibility.stories.at(-1);

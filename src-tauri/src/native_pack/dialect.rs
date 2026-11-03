@@ -1,3 +1,4 @@
+use crate::support::user_message::{codes, UserMessage};
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
@@ -20,26 +21,7 @@ const ROOT_FIELDS: &[&str] = &[
     "image",
     "official",
 ];
-const STAGE_FIELDS: &[&str] = &[
-    "uuid",
-    "id",
-    "name",
-    "type",
-    "squareOne",
-    "groupId",
-    "audio",
-    "image",
-    "controlSettings",
-    "homeTransition",
-    "okTransition",
-    "position",
-];
-const ACTION_FIELDS: &[&str] = &[
-    "id", "uuid", "name", "type", "groupId", "options", "position",
-];
-const TRANSITION_FIELDS: &[&str] = &["actionNode", "optionIndex"];
 const CONTROL_FIELDS: &[&str] = &["wheel", "ok", "home", "pause", "autoplay"];
-const POSITION_FIELDS: &[&str] = &["x", "y"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -72,9 +54,14 @@ pub(crate) enum ExtensionScope {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum OpaqueMemberKind {
+    /// Héritage de lecture seulement : le décodeur ne capture plus les clés
+    /// inconnues (ignorées comme dans l'éditeur par menus). La variante reste
+    /// pour relire un projet enregistré avant ce changement ;
+    /// `decode_authoring_payload` en retire alors les membres.
     UnknownExtension,
     KnownAlias,
     KnownNeverEmitted,
+    OutputDecisionOnly,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -217,6 +204,8 @@ pub(crate) enum DiagnosticSeverity {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ImportDiagnostic {
+    #[serde(default, skip_serializing_if = "Map::is_empty")]
+    pub(crate) params: Map<String, Value>,
     pub(crate) severity: DiagnosticSeverity,
     pub(crate) code: String,
     pub(crate) path: String,
@@ -373,6 +362,24 @@ impl PackIdentity {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct StoryDocumentContext {
+    #[serde(default)]
+    pub(crate) official_provenance: crate::domain::official_provenance::OfficialProvenance,
+    #[serde(
+        rename = "officialOriginUuid",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub(crate) official_origin_uuid: Option<String>,
+    #[serde(
+        rename = "containsOfficialContent",
+        default,
+        skip_serializing_if = "std::ops::Not::not"
+    )]
+    // Graph copies flatten entry provenance; this persistent marker survives their edits.
+    pub(crate) contains_official_content: bool,
+    /// Foreign entry origins and pack UUIDs, recognized again on every export.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) foreign_pack_uuids: Vec<String>,
     pub(crate) document_origin: DocumentOrigin,
     /// Provenance implicite de toute valeur qui n'a pas d'override plus précis.
     pub(crate) default_value_origin: ValueOrigin,
@@ -410,6 +417,10 @@ impl StoryDocumentContext {
     #[allow(dead_code)] // Seul appelant : l'acquisition du projet, pas encore raccordée.
     pub(crate) fn created() -> Self {
         Self {
+            official_provenance: Default::default(),
+            official_origin_uuid: None,
+            contains_official_content: false,
+            foreign_pack_uuids: Vec::new(),
             document_origin: DocumentOrigin::Created,
             default_value_origin: ValueOrigin::Authored,
             pack_identity: PackIdentity::requires_generation(
@@ -429,6 +440,10 @@ impl StoryDocumentContext {
 
     fn imported_studio() -> Self {
         Self {
+            official_provenance: Default::default(),
+            official_origin_uuid: None,
+            contains_official_content: false,
+            foreign_pack_uuids: Vec::new(),
             document_origin: DocumentOrigin::ImportedStudio,
             default_value_origin: ValueOrigin::SourceStudio,
             pack_identity: PackIdentity::default(),
@@ -453,6 +468,10 @@ impl StoryDocumentContext {
     /// `projection-derived`.
     pub(crate) fn imported_fs(document: &StoryDocument, directory_identity: &str) -> Self {
         let mut context = Self {
+            official_provenance: Default::default(),
+            official_origin_uuid: None,
+            contains_official_content: false,
+            foreign_pack_uuids: Vec::new(),
             document_origin: DocumentOrigin::ImportedFs,
             default_value_origin: ValueOrigin::SourceNativeDerived,
             pack_identity: PackIdentity::derive(document, PackIdentityOrigin::FsEntryStage),
@@ -689,6 +708,7 @@ pub(crate) fn decode_story_document(
             let retained = values.last().cloned().expect("non-empty occurrences");
             let discarded = values[..values.len() - 1].to_vec();
             context.diagnostics.push(ImportDiagnostic {
+                params: Map::new(),
                 severity: DiagnosticSeverity::Warning,
                 code: "duplicate-root-key-last-wins".to_string(),
                 path: format!("/{}", pointer_segment(key)),
@@ -708,33 +728,28 @@ pub(crate) fn decode_story_document(
         }
     }
 
+    // Une clé racine inconnue est ignorée, comme dans l'éditeur par menus :
+    // ni capturée, ni diagnostiquée, ni réémise. Seules `image` et `official`,
+    // connues mais jamais émises telles quelles, sont tracées.
     for (key, values) in &occurrences {
         let kind = match key.as_str() {
-            "image" | "official" => Some(OpaqueMemberKind::KnownNeverEmitted),
-            known if ROOT_FIELDS.contains(&known) => None,
-            _ => Some(OpaqueMemberKind::UnknownExtension),
+            "image" => OpaqueMemberKind::KnownNeverEmitted,
+            "official" => OpaqueMemberKind::OutputDecisionOnly,
+            _ => continue,
         };
-        if let Some(kind) = kind {
-            for (source_occurrence, value) in values.iter().enumerate() {
-                context.opaque_members.push(OpaqueMember {
-                    scope: ExtensionScope::Root,
-                    path: "/".to_string(),
-                    key: key.clone(),
-                    source_occurrence,
-                    kind,
-                    origin: context.default_value_origin,
-                    value: value.clone(),
-                    export_disposition: (kind != OpaqueMemberKind::UnknownExtension)
-                        .then_some(OpaqueExportDisposition::NeverEmitStandard),
-                    export_disposition_value: if kind != OpaqueMemberKind::UnknownExtension {
-                        Presence::from_json(value.clone())
-                    } else {
-                        Presence::Absent
-                    },
-                    export_disposition_origin: (kind != OpaqueMemberKind::UnknownExtension)
-                        .then_some(context.default_value_origin),
-                });
-            }
+        for (source_occurrence, value) in values.iter().enumerate() {
+            context.opaque_members.push(OpaqueMember {
+                scope: ExtensionScope::Root,
+                path: "/".to_string(),
+                key: key.clone(),
+                source_occurrence,
+                kind,
+                origin: context.default_value_origin,
+                value: value.clone(),
+                export_disposition: Some(OpaqueExportDisposition::NeverEmitStandard),
+                export_disposition_value: Presence::from_json(value.clone()),
+                export_disposition_origin: Some(context.default_value_origin),
+            });
         }
     }
 
@@ -751,6 +766,9 @@ pub(crate) fn decode_story_document(
     let document =
         serde_json::from_value(source_value.clone()).map_err(|error| StoryDecodeError {
             diagnostics: vec![ImportDiagnostic {
+                params: UserMessage::new("story-document-invalid")
+                    .param("reason", error.to_string())
+                    .params,
                 severity: DiagnosticSeverity::Error,
                 code: "story-document-invalid".to_string(),
                 path: "/".to_string(),
@@ -803,6 +821,10 @@ impl<'de> Deserialize<'de> for RootMembers {
     }
 }
 
+/// Parcourt les nœuds pour les seuls membres que le graphe doit tracer : les
+/// alias connus (`Stage.id`, `Action.uuid`) et la provenance des positions.
+/// Une clé inconnue, à quelque niveau que ce soit, est ignorée comme dans
+/// l'éditeur par menus : elle n'est ni capturée, ni diagnostiquée, ni réémise.
 fn classify_nested_members(document: &Value, context: &mut StoryDocumentContext) {
     let Some(root) = document.as_object() else {
         return;
@@ -811,45 +833,9 @@ fn classify_nested_members(document: &Value, context: &mut StoryDocumentContext)
     if let Some(stages) = root.get("stageNodes").and_then(Value::as_array) {
         let paths = stable_value_paths(stages, "stageNodes", "uuid");
         for (stage, path) in stages.iter().zip(paths) {
-            classify_object(
-                stage,
-                ExtensionScope::Stage,
-                &path,
-                STAGE_FIELDS,
-                context,
-                |_| None,
-            );
             if let Some(object) = stage.as_object() {
                 capture_known_alias(object, ExtensionScope::Stage, &path, "uuid", "id", context);
-                classify_child_object(
-                    object.get("controlSettings"),
-                    ExtensionScope::ControlSettings,
-                    &format!("{path}/controlSettings"),
-                    CONTROL_FIELDS,
-                    context,
-                );
-                classify_child_object(
-                    object.get("position"),
-                    ExtensionScope::Position,
-                    &format!("{path}/position"),
-                    POSITION_FIELDS,
-                    context,
-                );
-                if object.get("position").is_some_and(|value| !value.is_null()) {
-                    context.value_provenance.push(ValueProvenance {
-                        path: format!("{path}/position"),
-                        origin: ValueOrigin::SourceStudio,
-                    });
-                }
-                for transition_name in ["okTransition", "homeTransition"] {
-                    classify_child_object(
-                        object.get(transition_name),
-                        ExtensionScope::Transition,
-                        &format!("{path}/{transition_name}"),
-                        TRANSITION_FIELDS,
-                        context,
-                    );
-                }
+                record_source_position(object, &path, context);
             }
         }
     }
@@ -857,71 +843,24 @@ fn classify_nested_members(document: &Value, context: &mut StoryDocumentContext)
     if let Some(actions) = root.get("actionNodes").and_then(Value::as_array) {
         let paths = stable_value_paths(actions, "actionNodes", "id");
         for (action, path) in actions.iter().zip(paths) {
-            classify_object(
-                action,
-                ExtensionScope::Action,
-                &path,
-                ACTION_FIELDS,
-                context,
-                |_| None,
-            );
             if let Some(object) = action.as_object() {
                 capture_known_alias(object, ExtensionScope::Action, &path, "id", "uuid", context);
-                classify_child_object(
-                    object.get("position"),
-                    ExtensionScope::Position,
-                    &format!("{path}/position"),
-                    POSITION_FIELDS,
-                    context,
-                );
-                if object.get("position").is_some_and(|value| !value.is_null()) {
-                    context.value_provenance.push(ValueProvenance {
-                        path: format!("{path}/position"),
-                        origin: ValueOrigin::SourceStudio,
-                    });
-                }
+                record_source_position(object, &path, context);
             }
         }
     }
 }
 
-fn classify_object<F>(
-    value: &Value,
-    scope: ExtensionScope,
+fn record_source_position(
+    object: &Map<String, Value>,
     path: &str,
-    known_fields: &[&str],
     context: &mut StoryDocumentContext,
-    classify_known: F,
-) where
-    F: Fn(&str) -> Option<OpaqueMemberKind>,
-{
-    let Some(object) = value.as_object() else {
-        return;
-    };
-    for (key, value) in object {
-        let kind = classify_known(key).or_else(|| {
-            (!known_fields.contains(&key.as_str())).then_some(OpaqueMemberKind::UnknownExtension)
+) {
+    if object.get("position").is_some_and(|value| !value.is_null()) {
+        context.value_provenance.push(ValueProvenance {
+            path: format!("{path}/position"),
+            origin: ValueOrigin::SourceStudio,
         });
-        if let Some(kind) = kind {
-            context.opaque_members.push(OpaqueMember {
-                scope,
-                path: path.to_string(),
-                key: key.clone(),
-                source_occurrence: 0,
-                kind,
-                origin: context.default_value_origin,
-                value: value.clone(),
-                export_disposition: (kind == OpaqueMemberKind::KnownNeverEmitted)
-                    .then_some(OpaqueExportDisposition::NeverEmitStandard),
-                export_disposition_value: if kind == OpaqueMemberKind::KnownNeverEmitted {
-                    Presence::from_json(value.clone())
-                } else {
-                    Presence::Absent
-                },
-                export_disposition_origin: (kind == OpaqueMemberKind::KnownNeverEmitted)
-                    .then_some(context.default_value_origin),
-            });
-        }
     }
 }
 
@@ -955,26 +894,6 @@ fn capture_known_alias(
         },
         export_disposition_origin: redundant.then_some(context.default_value_origin),
     });
-}
-
-fn classify_child_object(
-    value: Option<&Value>,
-    scope: ExtensionScope,
-    path: &str,
-    known_fields: &[&str],
-    context: &mut StoryDocumentContext,
-) {
-    if value.is_none_or(Value::is_null) {
-        return;
-    }
-    classify_object(
-        value.expect("checked above"),
-        scope,
-        path,
-        known_fields,
-        context,
-        |_| None,
-    );
 }
 
 /// Clause d'entrée : la **forme** des contrôles est vérifiée avant
@@ -1067,7 +986,38 @@ fn qualify_incomplete_control_settings(
                 format!("contrôles non renseignés : {}", missing.join(", "))
             }
         };
+        let detail_message = match stage.control_settings.value() {
+            None => UserMessage::new(if stage.control_settings.is_absent() {
+                codes::CONTROL_OBJECT_ABSENT
+            } else {
+                codes::CONTROL_OBJECT_NULL
+            })
+            .into_transport(),
+            Some(controls) => {
+                let members: Vec<String> = controls
+                    .members()
+                    .into_iter()
+                    .filter(|(_, control)| !control.is_value())
+                    .map(|(name, control)| {
+                        UserMessage::new(if control.is_absent() {
+                            codes::CONTROL_MEMBER_ABSENT
+                        } else {
+                            codes::CONTROL_MEMBER_NULL
+                        })
+                        .param("name", name)
+                        .into_transport()
+                    })
+                    .collect();
+                UserMessage::new(codes::CONTROL_MEMBERS_MISSING)
+                    .param(
+                        "members",
+                        crate::support::user_message::message_list(&members, ", "),
+                    )
+                    .into_transport()
+            }
+        };
         context.diagnostics.push(ImportDiagnostic {
+            params: UserMessage::new("control-settings-incomplete").param("detail", detail_message).params,
             severity: DiagnosticSeverity::Warning,
             code: "control-settings-incomplete".to_string(),
             path: path.clone(),
@@ -1140,6 +1090,7 @@ fn validate_transition_shapes(document: &Value) -> Vec<ImportDiagnostic> {
 
 fn decode_error(code: &str, path: &str, message: &str) -> ImportDiagnostic {
     ImportDiagnostic {
+        params: Map::new(),
         severity: DiagnosticSeverity::Error,
         code: code.to_string(),
         path: path.to_string(),
@@ -1407,4 +1358,16 @@ fn python_decimal_digit(character: char) -> Option<u32> {
         .checked_sub(1)?;
     let digit = codepoint - ZEROES[index];
     (digit < 10).then_some(digit)
+}
+
+#[cfg(test)]
+mod user_message_compatibility_tests {
+    use super::*;
+    #[test]
+    fn old_import_diagnostic_without_params_roundtrips_unchanged() {
+        let old = serde_json::json!({"severity":"WARNING", "code":"control-settings-incomplete", "path":"/stageNodes/a", "message":"Texte historique"});
+        let diagnostic: ImportDiagnostic = serde_json::from_value(old.clone()).unwrap();
+        assert!(diagnostic.params.is_empty());
+        assert_eq!(serde_json::to_value(diagnostic).unwrap(), old);
+    }
 }

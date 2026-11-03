@@ -1,4 +1,8 @@
-import { useMemo, useState } from 'react';
+import { checkerOutputDirectory } from '../../store/catalogue/duplicateModel.js';
+import { TechnicalDetail } from '../common/UserMessage.jsx';
+import { useCheckerTranslation } from '../../i18n/useCheckerTranslation.js';
+import { translateChecker } from '../../i18n/checkerPresentation.js';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { openPath } from '@tauri-apps/plugin-opener';
 import {
@@ -10,7 +14,7 @@ import {
   FunnelShell,
   FunnelStepper,
   FunnelToolButton,
-} from '../funnels';
+} from '../funnels/index.js';
 import { CommunityPackMetadataModal } from './CommunityPackMetadataModal';
 import {
   FixableCorrectionsList,
@@ -32,29 +36,31 @@ import './CommunityPackChecker.css';
 import './CommunityPackCheckerFunnel.css';
 
 const STEPS = [
-  { key: 'pack', label: 'Pack' },
-  { key: 'report', label: 'Rapport' },
-  { key: 'output', label: 'Correction' },
+  { key: 'pack', labelKey: 'checker:funnel.step.pack' },
+  { key: 'report', labelKey: 'checker:funnel.step.report' },
+  { key: 'output', labelKey: 'checker:funnel.step.correction' },
 ];
 
 function latestLine(lines) {
   return lines?.length ? lines[lines.length - 1] : '';
 }
 
+// Comptes indépendants, chacun accordé à son nombre ; résolus au rendu.
 function correctionCount(result) {
   if (!result) return '';
   const parts = [];
-  if (result.audioFixed) parts.push(`${result.audioFixed} audio`);
-  if (result.imageFixed) parts.push(`${result.imageFixed} image${result.imageFixed > 1 ? 's' : ''}`);
-  if (result.metadataFixed) parts.push('métadonnées');
-  return parts.length ? parts.join(' · ') : 'Pack corrigé';
+  if (result.audioFixed) parts.push(translateChecker('checker:done.audio.count', { count: result.audioFixed }));
+  if (result.imageFixed) parts.push(translateChecker('checker:done.image.count', { count: result.imageFixed }));
+  if (result.metadataFixed) parts.push(translateChecker('checker:done.metadata.label'));
+  return parts.length ? parts.join(' · ') : translateChecker('checker:done.pack.fixed');
 }
 
-export function CommunityPackCheckerFunnel({ onClose }) {
-  const checker = useCommunityPackChecker();
+export function CommunityPackCheckerFunnel({ onClose, initialEntry = null, preparationLifetime = null }) {
+  const { t } = useCheckerTranslation();
+  const checker = useCommunityPackChecker(initialEntry, preparationLifetime);
   const [step, setStep] = useState(0);
   const [phase, setPhase] = useState('collect');
-  const [outputDir, setOutputDir] = useState(() => getLastExportDir() || '');
+  const [outputDir, setOutputDir] = useState(() => initialEntry ? checkerOutputDirectory(initialEntry) : getLastExportDir() || '');
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [result, setResult] = useState(null);
   const [localError, setLocalError] = useState('');
@@ -82,11 +88,18 @@ export function CommunityPackCheckerFunnel({ onClose }) {
     if (report) setStep(1);
   }
 
+  const initialStarted = useRef(false);
+  useEffect(() => {
+    if (!initialEntry || initialStarted.current) return;
+    initialStarted.current = true;
+    void analyzePath(initialEntry.zipPath);
+  });
+
   async function pickPack() {
     const selected = await openDialog({
       multiple: false,
-      title: 'Pack à vérifier',
-      filters: [{ name: 'Pack Lunii', extensions: ['zip', '7z'] }],
+      title: t('native:checker.pack.title'),
+      filters: [{ name: t('native:file.pack.filterLabel'), extensions: ['zip', '7z'] }],
     });
     if (selected) await analyzePath(Array.isArray(selected) ? selected[0] : selected);
   }
@@ -95,7 +108,7 @@ export function CommunityPackCheckerFunnel({ onClose }) {
     const selected = await openDialog({
       directory: true,
       multiple: false,
-      title: 'Dossier du pack corrigé',
+      title: t('native:checker.output.title'),
       defaultPath: outputDir || getLastExportDir() || undefined,
     });
     const nextOutputDir = Array.isArray(selected) ? selected[0] : selected;
@@ -130,7 +143,7 @@ export function CommunityPackCheckerFunnel({ onClose }) {
     if (step === 0) {
       // CTA actif seulement quand un pack est déjà choisi (zone de dépôt ou
       // bouton « Choisir un pack ») : le footer ne duplique plus le picker.
-      if (checker.zipPath) void analyzePath(checker.zipPath);
+      if (checker.zipPath) void analyzePath(checker.sourceFolder || checker.zipPath);
       return;
     }
     if (step === 1) {
@@ -153,10 +166,10 @@ export function CommunityPackCheckerFunnel({ onClose }) {
   }
 
   const primaryLabel = step === 0
-    ? 'Analyser'
+    ? t('checker:funnel.primary.analyze')
     : step === 1
-      ? (canCreateFixedPack ? 'Corriger le pack' : (correctionCounts.optional > 0 ? 'Voir les suggestions' : 'Terminer'))
-      : 'Créer le pack corrigé';
+      ? (canCreateFixedPack ? t('checker:fix.start.action') : (correctionCounts.optional > 0 ? t('checker:funnel.primary.suggestions') : t('checker:funnel.primary.finish')))
+      : t('checker:funnel.primary.create');
 
   function toggleOptionalSilence(issue) {
     const key = optionalSilenceSelectionKey(issue);
@@ -172,15 +185,16 @@ export function CommunityPackCheckerFunnel({ onClose }) {
   return (
     <FunnelShell
       icon={<Wrench />}
-      title="Vérifier / corriger un pack"
-      subtitle="Analyse un ZIP et crée une version corrigée si besoin."
+      title={t('checker:funnel.shell.title')}
+      subtitle={t('checker:funnel.shell.subtitle')}
       size="wide"
       onClose={busy ? () => {} : onClose}
+      closeDisabled={Boolean(initialEntry) && busy}
       showChrome={phase === 'collect'}
-      ariaLabel="Vérifier ou corriger un pack"
+      ariaLabel={t('checker:funnel.shell.aria')}
       stepper={(
         <FunnelStepper
-          steps={STEPS}
+          steps={STEPS.map((entry) => ({ key: entry.key, label: t(entry.labelKey) }))}
           current={step}
           onStepClick={handleStepClick}
         />
@@ -189,40 +203,41 @@ export function CommunityPackCheckerFunnel({ onClose }) {
         <FunnelFooter
           onBack={() => setStep(Math.max(0, step - 1))}
           backDisabled={step === 0}
-          stepLabel={`Étape ${step + 1} / ${STEPS.length}`}
+          stepLabel={t('home:funnel.footer.stepCount', { step: step + 1, total: STEPS.length })}
           onPrimary={handlePrimary}
           primaryLabel={primaryLabel}
           primaryDisabled={busy || (step === 0 && !checker.zipPath) || (step === 2 && !canCreateFixedPack)}
         />
       )}
     >
+      {initialEntry && <p className="catalogue-path">{initialEntry.source.path}</p>}
       {phase === 'analyzing' ? (
         <FunnelGenerationState
-          title="Analyse du pack…"
-          hint={latestLine(checker.liveLog) || 'Lecture du ZIP, des médias et de la structure.'}
+          title={t('checker:funnel.analyzing.title')}
+          hint={latestLine(checker.liveLog) || t('checker:funnel.analyzing.hint')}
         />
       ) : phase === 'fixing' ? (
         <FunnelGenerationState
-          title="Correction du pack…"
-          hint={latestLine(checker.liveLog) || 'Création du nouveau ZIP corrigé.'}
+          title={t('checker:funnel.fixing.title')}
+          hint={latestLine(checker.liveLog) || t('checker:funnel.fixing.hint')}
         />
       ) : phase === 'done' ? (
         <FunnelDoneState
-          title="Pack corrigé créé"
+          title={t('checker:funnel.done.title')}
           fileName={basename(result?.fixedZipPath) || result?.fixedZipPath}
           meta={correctionCount(result)}
         >
           <button type="button" className="funnel-btn" onClick={() => outputDir && openPath(outputDir)}>
             <FolderOpen />
-            Ouvrir le dossier
+            {t('checker:funnel.done.openFolder')}
           </button>
           <button type="button" className="funnel-btn" onClick={() => checker.exportReport('report')}>
             <Download />
-            Exporter le rapport
+            {t('checker:report.export.action')}
           </button>
           <button type="button" className="funnel-btn funnel-btn-primary" onClick={onClose}>
             <House />
-            Terminer
+            {t('checker:funnel.primary.finish')}
           </button>
         </FunnelDoneState>
       ) : (
@@ -231,37 +246,40 @@ export function CommunityPackCheckerFunnel({ onClose }) {
             <div className="funnel-step-content pack-checker-step">
               <FunnelSectionHeader
                 icon={<Package />}
-                title="Pack à vérifier"
-                description="Choisis ou dépose un fichier ZIP ou 7z. Le fichier source reste intact."
+                title={t('checker:funnel.pack.title')}
+                description={t('checker:funnel.pack.description')}
               />
               <FunnelDropZone
                 icon={<Package />}
-                title="Déposer un pack .zip ou .7z"
-                hint="L'analyse vérifie l'audio, les images, le nom, la structure et le mode nuit."
+                title={t('checker:funnel.drop.title')}
+                hint={t('checker:funnel.drop.hint')}
                 disabled={busy}
                 onFiles={(paths) => analyzePath(paths?.[0])}
               >
                 <button type="button" className="funnel-btn" onClick={pickPack} disabled={busy}>
-                  Choisir un pack
+                  {t('checker:funnel.pack.choose')}
+                </button>
+                <button type="button" className="funnel-btn" onClick={() => { void checker.pickFolderPack(); }} disabled={busy}>
+                  {t('checker:funnel.folder.choose')}
                 </button>
               </FunnelDropZone>
               {checker.zipPath ? (
-                <div className="pack-checker-selected" title={checker.zipPath}>
+                <div className="pack-checker-selected" title={checker.sourceFolder || checker.zipPath}>
                   <Package />
-                  <span>{checker.zipPath}</span>
+                  <span>{checker.sourceFolder || checker.zipPath}</span>
                 </div>
               ) : null}
               <ProcessLog status={checker.status} lines={checker.liveLog} />
-              {error ? <div className="funnel-error" role="alert">{error}</div> : null}
+              {error ? <div className="funnel-error" role="alert">{error}<TechnicalDetail value={localError ? null : checker.technicalDetail} /></div> : null}
             </div>
           ) : step === 1 ? (
             <div className="funnel-step-content pack-checker-step pack-checker-step--report">
               <FunnelSectionHeader
                 icon={<TriangleAlert />}
-                title="Rapport"
-                description="Lis les points conformes, les corrections possibles et les vérifications manuelles."
+                title={t('checker:funnel.report.title')}
+                description={t('checker:funnel.report.description')}
               />
-              {error ? <div className="funnel-error" role="alert">{error}</div> : null}
+              {error ? <div className="funnel-error" role="alert">{error}<TechnicalDetail value={localError ? null : checker.technicalDetail} /></div> : null}
               <ReportView
                 report={checker.report}
                 busy={busy}
@@ -284,8 +302,8 @@ export function CommunityPackCheckerFunnel({ onClose }) {
             <div className="funnel-step-content pack-checker-step">
               <FunnelSectionHeader
                 icon={<Wrench />}
-                title="Voici ce qui va être corrigé"
-                description="Le clic final ouvrira le choix du dossier de sortie, puis créera le ZIP corrigé."
+                title={t('checker:funnel.correction.title')}
+                description={t('checker:funnel.correction.description')}
               />
               <FixableCorrectionsList
                 report={checker.report}
@@ -293,10 +311,10 @@ export function CommunityPackCheckerFunnel({ onClose }) {
                 onToggleOptionalSilence={toggleOptionalSilence}
               />
               {checker.exportNotice ? <div className="info-box">{checker.exportNotice}</div> : null}
-              {error ? <div className="funnel-error" role="alert">{error}</div> : null}
+              {error ? <div className="funnel-error" role="alert">{error}<TechnicalDetail value={localError ? null : checker.technicalDetail} /></div> : null}
               <div className="pack-checker-inline-actions">
                 <FunnelToolButton icon={<Download />} accent="neutral" onClick={() => checker.exportReport('report')}>
-                  Exporter le rapport
+                  {t('checker:report.export.action')}
                 </FunnelToolButton>
               </div>
               {metadataOpen ? (

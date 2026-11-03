@@ -19,8 +19,10 @@
 import { FloatingSimulator } from '../FloatingSimulator/FloatingSimulator';
 import { Button } from '../common/Button';
 import { EDITOR_LAYOUT_SCOPE } from '../../store/persistentSettings.js';
+import { useCheckerTranslation } from '../../i18n/useCheckerTranslation.js';
 
 export function ZipReviewPanel({ review, onClose }) {
+  const { t } = useCheckerTranslation();
   if (!review) return null;
   return (
     <>
@@ -30,15 +32,15 @@ export function ZipReviewPanel({ review, onClose }) {
         data-current={review.isCurrentRevision ? 'true' : 'false'}
       >
         <span className="advanced-review-banner__title">
-          Simulation de l'archive exportée
+          {t('checker:review.banner.title')}
         </span>
         <code className="advanced-review-banner__path">{review.zipPath}</code>
         <span className="advanced-review-banner__state">
           {review.isCurrentRevision
-            ? "elle correspond au document actuellement ouvert"
-            : "le document a changé depuis cet export : ce n'est plus ce que tu édites"}
+            ? t('checker:review.banner.current')
+            : t('checker:review.banner.stale')}
         </span>
-        <Button size="sm" onClick={onClose}>Fermer la relecture</Button>
+        <Button size="sm" onClick={onClose}>{t('checker:review.close.action')}</Button>
       </div>
       <FloatingSimulator
         zipPath={review.zipPath}

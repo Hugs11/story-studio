@@ -26,6 +26,7 @@ import { DEFAULT_PACK_AUDIO_PROCESSING, PACK_SILENCE_MODES } from '../../config/
 import { readAuthoringPayload } from '../projectModel/authoring.js';
 import { authoringRevisionOf } from '../projectModel/authoringRevision.js';
 import { readMediaBindings } from '../projectModel/mediaBindings.js';
+import { translateChecker } from '../../i18n/checkerPresentation.js';
 
 // Réexport de la liste unique : les trois modes sont une propriété du pack,
 // pas de cette chaîne, et une seconde copie finirait par diverger.
@@ -77,14 +78,16 @@ export function buildExportRequest({
 } = {}) {
   const payload = readAuthoringPayload(project);
   if (payload === null) {
+    // Le consommateur affiche ce refus par son code ; le message n'est que le
+    // texte de l'Error, lu dans le catalogue partagé avec la production.
     throw new ExportRequestError(
       'ADVANCED_PAYLOAD_REQUIRED',
-      "Ce projet ne porte pas de document d'auteur avancé : il n'y a rien à exporter.",
+      translateChecker('production:work.request.payload'),
     );
   }
   const folder = typeof outputFolder === 'string' ? outputFolder.trim() : '';
   if (folder.length === 0) {
-    throw new ExportRequestError('OUTPUT_FOLDER_REQUIRED', 'Aucun dossier de sortie choisi.');
+    throw new ExportRequestError('OUTPUT_FOLDER_REQUIRED', translateChecker('production:work.request.folder'));
   }
   const archive = typeof archiveName === 'string' ? archiveName.trim() : '';
   // Le titre livré dans `story.json` : le nom de convention, comme la chaîne

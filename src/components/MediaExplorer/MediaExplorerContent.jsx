@@ -2,6 +2,7 @@ import { Package } from '../icons/LucideLocal';
 import { Button } from '../common/Button';
 import { COLUMNS } from './useColumnWidths';
 import { MediaTile } from './MediaTile';
+import { useMediaTranslation } from '../../i18n/useMediaTranslation.js';
 
 export function MediaExplorerContent({
   isEmpty,
@@ -45,6 +46,7 @@ export function MediaExplorerContent({
   onImportStories,
   onImportMediaFolder,
 }) {
+  const { t } = useMediaTranslation();
   const commonTileProps = {
     view,
     getMeta,
@@ -72,15 +74,15 @@ export function MediaExplorerContent({
     return (
       <div className="media-empty">
         <Package className="media-empty-icon" strokeWidth={1.8} absoluteStrokeWidth />
-        <span>Aucun média pour l'instant</span>
-        <p className="media-empty-hint">Tes médias importés, générés ou extraits apparaîtront ici, prêts à être glissés-déposés.</p>
+        <span>{t('media:explorer.empty.title')}</span>
+        <p className="media-empty-hint">{t('media:explorer.empty.hint')}</p>
         <div className="media-empty-actions">
           <Button className="media-empty-btn" onClick={onImportMedia || onImportStories}>
-            + Importer des médias
+            {t('media:explorer.media.importAction')}
           </Button>
           {onImportMediaFolder && (
             <Button className="media-empty-btn" onClick={onImportMediaFolder}>
-              + Importer un dossier
+              {t('media:explorer.folder.importAction')}
             </Button>
           )}
         </div>
@@ -92,7 +94,7 @@ export function MediaExplorerContent({
     return (
       <div className="media-empty">
         <Package className="media-empty-icon" strokeWidth={1.8} absoluteStrokeWidth />
-        <span>Aucun média pour ce filtre.</span>
+        <span>{t('media:explorer.filter.empty')}</span>
       </div>
     );
   }
@@ -105,7 +107,7 @@ export function MediaExplorerContent({
           {COLUMNS.filter((c) => visibleCols.has(c.id)).map((col) => (
             <div key={col.id} className={`me-col-head${sortCol === col.id ? ' is-sorted' : ''}`}>
               <button type="button" className="me-col-sort-btn" onClick={() => onSortClick(col.id)}>
-                {col.label}
+                {t(col.labelKey)}
                 {sortCol === col.id && <span className="me-col-sort-icon">{sortDir === 'asc' ? '↑' : '↓'}</span>}
               </button>
               <span className="me-col-resize" onPointerDown={(e) => onStartResize(e, col.id)} />

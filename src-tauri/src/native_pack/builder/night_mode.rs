@@ -5,13 +5,13 @@ use super::super::{
 use super::transitions::{
     action_node_name, default_stage_type, night_story_controls, no_authored_position, transition,
 };
+use crate::support::user_message::{codes, UserMessage};
 
 impl<'a> StoryBuilder<'a> {
     pub(in crate::native_pack) fn build_night_bridge(&mut self) -> Result<Transition, String> {
-        let root_action_id = self
-            .root_action_id
-            .clone()
-            .ok_or_else(|| "Action racine introuvable pour le bridge night.".to_string())?;
+        let root_action_id = self.root_action_id.clone().ok_or_else(|| {
+            UserMessage::new(codes::GENERATION_NIGHT_ROOT_ACTION_MISSING).into_transport()
+        })?;
         let fallback_return = transition(&root_action_id, 0);
         let (return_transition, home_transition) =
             self.compute_night_bridge_targets(&[], 0, fallback_return);

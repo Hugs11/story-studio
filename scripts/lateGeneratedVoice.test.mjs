@@ -17,6 +17,7 @@ const { useProjectStore } = await import('../src/store/projectStore.js');
 const { useXttsStore } = await import('../src/store/xttsStore.js');
 const { useAiGeneration } = await import('../src/hooks/useAiGeneration.js');
 const { useXttsJobs } = await import('../src/hooks/useXttsJobs.js');
+const { collectMediaLibrary } = await import('../src/store/mediaLibrary.js');
 const { normalizeProjectData, buildProjectIndex } = await import('../src/store/projectModel.js');
 
 const settle = async () => {
@@ -57,6 +58,7 @@ async function runVoice({ kind, backend, switchProject }) {
       xtts = useXttsStore();
       ai = useAiGeneration({
         store,
+        mediaStorageRef: { current: { root: 'C:/session', storage: store.project.storage, ephemeral: true } },
         sdStore: {},
         xttsStore: xtts,
         projectIndex: buildProjectIndex(store.project),
@@ -97,6 +99,8 @@ for (const kind of Object.keys(TARGETS)) {
       assert.equal(after.projectName, 'B');
       assert.deepEqual(after, before, 'le projet B reste inchangé');
       assert.equal(job.status, 'done');
+      const library = collectMediaLibrary({ project: after, xttsJobs: [job], sdJobs: [{ ...job, resultPaths: [job.resultPath] }] });
+      assert.ok(!library.some(item => item.path === job.resultPath), 'le catalogue B exclut les résultats A');
       assert.match(job.resultPath, /voix-generees.voix\.wav$/, 'le fichier produit reste disponible');
     });
   }

@@ -44,6 +44,7 @@ export function useLocalFile(path) {
           force,
         });
         if (cancelled) return;
+        if (snapshot.exists === null) return;
         if (!snapshot.exists) {
           releaseActive();
           setUrl(null);

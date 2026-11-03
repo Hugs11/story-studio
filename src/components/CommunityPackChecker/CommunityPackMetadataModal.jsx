@@ -5,7 +5,10 @@ import { CircleCheck, FilePen, Package, TriangleAlert, X } from '../icons/Lucide
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { generateConventionName, parseConventionName } from '../../utils/packConvention';
 import { generateUuid } from '../../utils/uuid';
-import { packIdentityRefusal } from '../../store/packIdentityCheck';
+import { Tooltip } from '../common/Tooltip';
+import { checkPackIdentity, presentIdentityRefusal } from '../../store/packIdentityCheck';
+import { checkerText, useCheckerTranslation } from '../../i18n/useCheckerTranslation.js';
+import { checkerRef } from '../../i18n/checkerPresentation.js';
 import { useErrorDialog } from '../common/Dialog';
 import './CommunityPackMetadataModal.css';
 
@@ -53,8 +56,9 @@ function defaultDraft(report) {
   };
 }
 
+// Le jeton vide n'a pas de texte : son libellé est résolu au rendu.
 function filenameTokens(exportName) {
-  if (!exportName) return [{ kind: 'empty', text: 'Titre requis' }];
+  if (!exportName) return [{ kind: 'empty', text: '' }];
   const tokens = [];
   const ageMatch = exportName.match(/^(\d+\+\])/);
   let rest = exportName;
@@ -82,6 +86,7 @@ export function CommunityPackMetadataModal({
   onCancel,
   onSubmit,
 }) {
+  const { t } = useCheckerTranslation();
   const [draft, setDraft] = useState(() => defaultDraft(report));
   const [uuidPromptOpen, setUuidPromptOpen] = useState(false);
   const [identityRefusal, setIdentityRefusal] = useState(null);
@@ -100,7 +105,7 @@ export function CommunityPackMetadataModal({
 
   useEffect(() => {
     const currentUuid = String(report?.packUuid || '').trim();
-    if (!currentUuid) {
+    if (!currentUuid || report?.identityLocked) {
       uuidPromptRequestRef.current = null;
       setUuidPromptOpen(false);
       return undefined;
@@ -113,14 +118,13 @@ export function CommunityPackMetadataModal({
       request = {
         uuid: currentUuid,
         report,
+        // Libellés vivants : le dialogue reste ouvert pendant un changement de langue.
         promise: showConfirmDialog({
-          title: 'Générer un nouvel UUID ?',
-          message:
-            'La correction crée une nouvelle archive. Un nouvel UUID permet de '
-            + "l'identifier comme un pack distinct.",
+          title: checkerText('checker:metadata.uuidPrompt.title'),
+          message: checkerRef('checker:metadata.uuidPrompt.message'),
           variant: 'warning',
-          okLabel: 'Générer un nouvel UUID',
-          cancelLabel: "Conserver l'UUID actuel",
+          okLabel: checkerText('checker:metadata.uuidPrompt.confirm'),
+          cancelLabel: checkerText('checker:metadata.uuidPrompt.keep'),
         }),
       };
       uuidPromptRequestRef.current = request;
@@ -138,9 +142,10 @@ export function CommunityPackMetadataModal({
     return () => {
       cancelled = true;
     };
-  }, [report?.packUuid, showConfirmDialog]);
+  }, [report?.packUuid, report?.identityLocked, showConfirmDialog]);
 
   function updateField(field, value) {
+    if (field === 'uuid' && report?.identityLocked) return;
     setDraft((current) => ({
       ...current,
       [field]: field === 'version' ? normalizeVersion(value) : value,
@@ -159,7 +164,8 @@ export function CommunityPackMetadataModal({
     if (!canSubmit) return;
     // Même contrôle que la fiche du pack : une graphie que les passerelles ne
     // liraient pas est refusée ici, avec sa raison.
-    const refusal = await packIdentityRefusal(normalized.uuid, invoke);
+    // Le refus garde l'erreur d'origine ; sa phrase est présentée au rendu.
+    const refusal = await checkPackIdentity(normalized.uuid, invoke, report?.packUuid, report?.officialProvenance);
     setIdentityRefusal(refusal);
     if (refusal) return;
     onSubmit?.(normalized);
@@ -171,18 +177,18 @@ export function CommunityPackMetadataModal({
       data-modal-surface=""
       role="dialog"
       aria-modal="true"
-      aria-label="Correction des métadonnées"
+      aria-label={t('checker:metadata.dialog.title')}
       onMouseDown={onCancel}
     >
       <div className="checker-meta-modal" onMouseDown={(event) => event.stopPropagation()}>
         <header className="checker-meta-header">
           <span className="checker-meta-header-icon"><FilePen className="checker-icon" aria-hidden="true" /></span>
           <div className="checker-meta-heading">
-            <span>Correction des métadonnées</span>
-            <h2 title={exportName || undefined}>{exportName || 'Nom du pack'}</h2>
-            <p>Chaque correction crée une nouvelle révision : la version est proposée à +1.</p>
+            <span>{t('checker:metadata.dialog.title')}</span>
+            <h2 title={exportName || undefined}>{exportName || t('checker:summary.packName.title')}</h2>
+            <p>{t('checker:metadata.dialog.revision')}</p>
           </div>
-          <button type="button" className="checker-meta-close" onClick={onCancel} aria-label="Fermer">
+          <button type="button" className="checker-meta-close" onClick={onCancel} aria-label={t('common:dialog.close.label')}>
             <X className="checker-icon" aria-hidden="true" />
           </button>
         </header>
@@ -193,7 +199,7 @@ export function CommunityPackMetadataModal({
               <Package className="checker-icon" aria-hidden="true" />
             </div>
             <div>
-              <strong>{report?.packName || 'Pack communautaire'}</strong>
+              <strong>{report?.packName || t('checker:metadata.pack.fallback')}</strong>
               <span title={report?.zipPath}>{report?.zipPath}</span>
             </div>
             {issues.length > 0 ? (
@@ -208,24 +214,24 @@ export function CommunityPackMetadataModal({
             ) : (
               <div className="checker-meta-ok">
                 <CircleCheck className="checker-icon" aria-hidden="true" />
-                <span>Le nom semble déjà valide.</span>
+                <span>{t('checker:metadata.name.valid')}</span>
               </div>
             )}
           </aside>
 
           <section className="checker-meta-form">
             <label>
-              <span>Titre du pack</span>
+              <span>{t('home:packName.title.label')}</span>
               <input
                 autoFocus
                 value={draft.title || ''}
                 onChange={(event) => updateField('title', event.target.value)}
-                placeholder="Titre du pack"
+                placeholder={t('home:packName.title.label')}
               />
             </label>
 
             <label>
-              <span>Âge minimum</span>
+              <span>{t('home:packName.age.label')}</span>
               <div className="checker-meta-age">
                 {AGE_CHIPS.map((age) => (
                   <button
@@ -241,63 +247,65 @@ export function CommunityPackMetadataModal({
                   value={customAge}
                   onChange={(event) => updateAge(event.target.value)}
                   inputMode="numeric"
-                  placeholder="Autre"
+                  placeholder={t('checker:metadata.age.other')}
                 />
               </div>
             </label>
 
             <div className="checker-meta-grid">
               <label>
-                <span>Auteur</span>
-                <input value={draft.author || ''} onChange={(event) => updateField('author', event.target.value)} placeholder="Nom de l'auteur" />
+                <span>{t('home:packName.author.label')}</span>
+                <input value={draft.author || ''} onChange={(event) => updateField('author', event.target.value)} placeholder={t('checker:metadata.author.placeholder')} />
               </label>
               <label>
-                <span>Version</span>
+                <span>{t('home:packName.version.label')}</span>
                 <input type="number" min="1" value={draft.version || 1} onChange={(event) => updateField('version', event.target.value)} />
               </label>
             </div>
 
             <div className="checker-meta-grid">
               <label>
-                <span>Producteur</span>
-                <input value={draft.producer || ''} onChange={(event) => updateField('producer', event.target.value)} placeholder="Ex. producteur..." />
+                <span>{t('home:packName.producer.label')}</span>
+                <input value={draft.producer || ''} onChange={(event) => updateField('producer', event.target.value)} placeholder={t('checker:metadata.producer.placeholder')} />
               </label>
               <label>
-                <span>Bonus</span>
-                <input value={draft.bonus || ''} onChange={(event) => updateField('bonus', event.target.value)} placeholder="facultatif" />
+                <span>{t('home:packName.bonus.label')}</span>
+                <input value={draft.bonus || ''} onChange={(event) => updateField('bonus', event.target.value)} placeholder={t('checker:metadata.bonus.placeholder')} />
               </label>
             </div>
 
             <label>
-              <span>Description</span>
-              <textarea value={draft.description || ''} onChange={(event) => updateField('description', event.target.value)} rows={3} placeholder="Description ou changelog..." />
+              <span>{t('home:packName.description.label')}</span>
+              <textarea value={draft.description || ''} onChange={(event) => updateField('description', event.target.value)} rows={3} placeholder={t('checker:metadata.description.placeholder')} />
             </label>
 
             <label>
-              <span>UUID</span>
+              <span>{t('checker:metadata.uuid.label')}</span>
+              <Tooltip text={t('home:packName.uuid.officialLocked')} disabled={!report?.identityLocked} asChild wrap>
               <div className="checker-meta-uuid">
-                <input value={draft.uuid || ''} onChange={(event) => updateField('uuid', event.target.value)} placeholder="UUID du pack" />
-                <button type="button" onClick={regenerateUuid}>Générer</button>
+                <input style={report?.identityLocked ? { pointerEvents: 'none' } : undefined} disabled={!!report?.identityLocked} value={draft.uuid || ''} onChange={(event) => updateField('uuid', event.target.value)} placeholder={t('checker:metadata.uuid.placeholder')} />
+                {!report?.identityLocked ? <button type="button" onClick={regenerateUuid}>{t('checker:metadata.uuid.generate')}</button> : null}
               </div>
-              {identityRefusal ? <p className="funnel-error" role="alert">{identityRefusal}</p> : null}
+              </Tooltip>
+              {identityRefusal ? <p className="funnel-error" role="alert">{presentIdentityRefusal(identityRefusal.error)}</p> : null}
             </label>
           </section>
         </div>
 
         <div className="checker-meta-preview">
-          <span>Aperçu convention communautaire</span>
+          <span>{t('checker:metadata.preview.title')}</span>
           <div title={exportName ? `${exportName}.zip` : undefined}>
             {tokens.map((token, index) => (
-              <em key={`${token.kind}-${index}-${token.text}`} className={`is-${token.kind}`}>{token.text}</em>
+              <em key={`${token.kind}-${index}-${token.text}`} className={`is-${token.kind}`}>{token.kind === 'empty' ? t('checker:metadata.preview.titleRequired') : token.text}</em>
             ))}
             <em className="is-ext">.zip</em>
           </div>
         </div>
 
         <footer className="checker-meta-footer">
-          <Button onClick={onCancel} disabled={busy}>Annuler</Button>
+          <Button onClick={onCancel} disabled={busy}>{t('common:dialog.cancel.label')}</Button>
           <button type="button" className="chrome-toolbar-cta checker-correction-cta" onClick={submit} disabled={!canSubmit}>
-            {busy ? 'Correction...' : 'Corriger le pack'}
+            {busy ? t('checker:fix.busy.label') : t('checker:fix.start.action')}
           </button>
         </footer>
       </div>

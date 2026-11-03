@@ -1,3 +1,4 @@
+import { translateTree as t, presentTreeNavigationTargetName } from '../../i18n/treePresentation.js';
 // Badges de navigation affiches dans le TreePanel (retour/Home modifies ou
 // par defaut, continuations importees, graphe natif preserve).
 //
@@ -20,7 +21,6 @@
 
 import {
   getGeneratedStoryNavigation,
-  getGeneratedNavigationTargetName,
   resolveGeneratedTargetForStory,
 } from '../../store/generatedNavigation.js';
 
@@ -35,12 +35,14 @@ function statusWithDefault(status, isDefault) {
   return status ?? (isDefault ? 'default' : null);
 }
 
+// Classement par identifiant stable posé par la validation (`issue.navigation`),
+// jamais par le texte : il suit la langue de l'interface.
 function returnStatusFromIssues(entryIssues) {
-  return getStrongestStatus(entryIssues.filter((issue) => issue.text.includes('destination de retour')));
+  return getStrongestStatus(entryIssues.filter((issue) => issue.navigation === 'return'));
 }
 
 function homeStatusFromIssues(entryIssues) {
-  return getStrongestStatus(entryIssues.filter((issue) => issue.text.includes('destination bouton Accueil') || issue.text.includes('destination Home spécifique inutile')));
+  return getStrongestStatus(entryIssues.filter((issue) => issue.navigation === 'home'));
 }
 
 function sequenceReturnTarget(entry, parentMenu, rootEntries, fallbackTarget) {
@@ -198,44 +200,44 @@ export function formatBadgeTitle(data, projectIndex) {
         key: 'native-graph',
         kind: 'graph',
         label: '◇',
-        title: 'Graphe interactif natif préservé pour le round-trip.',
+        title: t("tree:badge.graph.preserved"),
       };
     case 'continuation':
       return {
         key: 'continuation',
         kind: 'continuation',
         label: '⇒',
-        title: `Continuation native importée depuis ${data.sourceStoryName || 'une histoire'}.`,
+        title: t("tree:badge.continuation.source", { name: data.sourceStoryName || t('tree:badge.continuation.fallback') }),
       };
     case 'return': {
-      const returnName = getGeneratedNavigationTargetName(data.targetId, projectIndex);
+      const returnName = presentTreeNavigationTargetName(data.targetId, projectIndex);
       return {
         key: `return:${data.targetId}:${returnName}`,
         kind: 'return',
         status: data.status,
         label: '↩',
-        title: `À la fin de l'histoire → « ${returnName} »`,
+        title: t("tree:badge.story.return", { returnName }),
       };
     }
     case 'sequence-return': {
-      const returnName = getGeneratedNavigationTargetName(data.targetId, projectIndex);
+      const returnName = presentTreeNavigationTargetName(data.targetId, projectIndex);
       return {
         key: `sequence-return:${data.targetId}:${returnName}`,
         kind: 'sequence-return',
         status: data.status,
         label: '▤',
-        title: `À la fin de l'histoire : passage par le scénario de fin personnalisé → « ${returnName} »`,
+        title: t("tree:badge.sequence.return", { returnName }),
       };
     }
     case 'prompt-return': {
-      const returnName = getGeneratedNavigationTargetName(data.targetId, projectIndex);
-      const suffix = data.isInactive ? ', mais OK et autoplay sont désactivés sur le message de fin' : '';
+      const returnName = presentTreeNavigationTargetName(data.targetId, projectIndex);
+      const suffix = data.isInactive ? t("tree:badge.prompt.inactiveSuffix") : '';
       return {
         key: `prompt-return:${data.targetId}:${returnName}`,
         kind: 'prompt-return',
         status: data.status,
         label: '↩',
-        title: `À la fin de l'histoire : passage par le message de fin personnalisé → « ${returnName} »${suffix}`,
+        title: t("tree:badge.prompt.return", { returnName, suffix }),
       };
     }
     case 'home-none':
@@ -244,7 +246,7 @@ export function formatBadgeTitle(data, projectIndex) {
         kind: 'home-none',
         status: data.status,
         label: '⌂',
-        title: 'Bouton Accueil désactivé pendant la lecture',
+        title: t("tree:badge.home.disabled"),
       };
     case 'home-implicit': {
       if (!data.targetId) {
@@ -254,16 +256,16 @@ export function formatBadgeTitle(data, projectIndex) {
           kind: 'home-implicit',
           status: data.status,
           label: '⌂',
-          title: 'Appuie sur le bouton Accueil pendant la lecture → retour à la couverture du pack (retour par défaut de la Lunii)',
+          title: t("tree:badge.home.default"),
         };
       }
-      const homeName = getGeneratedNavigationTargetName(data.targetId, projectIndex);
+      const homeName = presentTreeNavigationTargetName(data.targetId, projectIndex);
       return {
         key: `home:implicit:${data.targetId}:${homeName}`,
         kind: 'home-implicit',
         status: data.status,
         label: '⌂',
-        title: `Appuie sur le bouton Accueil pendant la lecture → « ${homeName} »`,
+        title: t("tree:badge.home.target", { homeName }),
       };
     }
     case 'home': {
@@ -274,30 +276,30 @@ export function formatBadgeTitle(data, projectIndex) {
           kind: 'home',
           status: data.status,
           label: '⌂',
-          title: 'Appuie sur le bouton Accueil pendant la lecture → réaction Accueil de fin de cette histoire',
+          title: t("tree:badge.home.reaction"),
         };
       }
-      const homeName = getGeneratedNavigationTargetName(data.targetId, projectIndex);
+      const homeName = presentTreeNavigationTargetName(data.targetId, projectIndex);
       return {
         key: `home:${data.targetId}:${homeName}`,
         kind: 'home',
         status: data.status,
         label: '⌂',
         title: data.isInactive
-          ? `Appuie sur le bouton Accueil pendant la lecture → « ${homeName} », mais le bouton Accueil est désactivé pendant la lecture`
-          : `Appuie sur le bouton Accueil pendant la lecture → « ${homeName} »`,
+          ? t("tree:badge.home.inactiveTarget", { homeName })
+          : t("tree:badge.home.target", { homeName }),
       };
     }
     case 'end-node':
     case 'end-night': {
-      const returnName = getGeneratedNavigationTargetName(data.targetId, projectIndex);
-      const suffix = data.kind === 'end-night' ? ' (mode nuit)' : '';
+      const returnName = presentTreeNavigationTargetName(data.targetId, projectIndex);
+      const suffix = data.kind === 'end-night' ? t('tree:badge.night.suffix') : '';
       return {
         key: `${data.kind}:${data.targetId}:${returnName}`,
         kind: data.kind,
         status: data.status,
         label: data.kind === 'end-night' ? '☾' : '■',
-        title: `À la fin de l'histoire : passage par le message de fin${suffix} → « ${returnName} »`,
+        title: t("tree:badge.globalEnd.return", { suffix, returnName }),
       };
     }
     default:

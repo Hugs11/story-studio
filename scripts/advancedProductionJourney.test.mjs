@@ -10,7 +10,7 @@
 //
 // La seconde est celle que l'interface ne tenait pas : la commande
 // `export_advanced_pack` sait lire `leadingSilenceSec` et `trailingSilenceSec`
-// depuis son premier jour, et le tiroir ne les lui donnait jamais. La preuve se
+// depuis son premier jour, et l’ancien popover ne les lui donnait jamais. La preuve se
 // prend donc sur la demande transmise, jamais sur l'affichage.
 
 import test from 'node:test';
@@ -153,6 +153,9 @@ function journey({ readiness = HEALTHY, project = graphProject({ bindings: PRESE
         return readiness;
       },
       readReferencedMedia: async () => referencedAssetRefs,
+      // Le transport confirme ici l'absence du témoin « manquant » ; le
+      // dernier statut seul ne suffit plus à prononcer un refus.
+      verifyPath: async () => false,
       chooseFolder: async () => {
         trace.push('chooseFolder');
         return '/sorties';
@@ -325,6 +328,18 @@ test('changer la durée dans les préférences change ce qui part', () => {
   const sent = buildExportRequest({ project: graphProject(), outputFolder: '/s', options: after }).options;
   assert.equal(sent.leadingSilenceSec, 2);
   assert.equal(sent.trailingSilenceSec, 3);
+});
+
+test('les durées personnalisées du graphe remplacent les préférences côté export', () => {
+  const options = advancedPackAudioOptions({
+    silenceMode: 'add',
+    leadingSilenceSec: '0,25',
+    trailingSilenceSec: 0,
+  }, { leading: 1.5, trailing: 0.8 });
+  const sent = buildExportRequest({ project: graphProject(), outputFolder: '/s', options }).options;
+
+  assert.equal(sent.leadingSilenceSec, 0.25);
+  assert.equal(sent.trailingSilenceSec, 0);
 });
 
 test('en mode « ne rien faire », les durées ne sont pas transmises', () => {

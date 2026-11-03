@@ -47,23 +47,35 @@ fn twice(payload: &DecodedStoryDocument) -> DecodedStoryDocument {
 
 fn enriched() -> DecodedStoryDocument {
     // Import initial uniquement : doublons capturés avant leur réduction last-wins.
+    // Les clés inconnues (`duration`, extensions tierces) étant ignorées à
+    // l'import, les membres opaques témoins sont ceux que le décodeur capture
+    // encore : `image` racine (dupliquée, grands entiers), un alias `id` de
+    // Stage divergent (-0.0) et un alias `uuid` d'Action divergent (null).
     decode_story_document(r#"{
         "title":"écarté","title":null,"factoryDisabled":false,
-        "rootExtension":9007199254740993,"rootExtension":12345678901234567890,
+        "image":9007199254740993,"image":12345678901234567890,
         "stageNodes":[{"uuid":"stage-a","name":null,"type":"enriched-stage","groupId":"group",
-            "squareOne":true,"stageExtension":-0.0,
+            "squareOne":true,"id":-0.0,
             "controlSettings":{"wheel":false,"ok":true,"home":null,"pause":false,"controlExtension":[9007199254740993,0.1]},
             "okTransition":{"actionNode":"action-a","optionIndex":-1,"transitionExtension":{"deep":12345678901234567890}},
             "position":{"x":120.5,"y":-32769.5,"positionExtension":0.12345678901234568}},
             {"uuid":"stage-b","controlSettings":null}],
-        "actionNodes":[{"id":"action-a","uuid":"action-a","name":null,"groupId":"group",
+        "actionNodes":[{"id":"action-a","uuid":null,"name":null,"groupId":"group",
             "type":"enriched-action","options":["stage-a",null],"actionExtension":null}]
     }"#).unwrap()
 }
 
+/// Le membre opaque témoin des dispositions : l'alias `uuid` divergent de
+/// l'Action.
+fn is_action_alias(member: &crate::native_pack::OpaqueMember) -> bool {
+    member.scope == crate::native_pack::ExtensionScope::Action && member.key == "uuid"
+}
+
 #[test]
-fn six_scopes_duplicates_enriched_fields_and_numbers_survive_two_cycles() {
+fn opaque_scopes_duplicates_enriched_fields_and_numbers_survive_two_cycles() {
     let mut payload = enriched();
+    // Trois niveaux seulement : les clés inconnues des contrôles, transitions
+    // et positions sont ignorées à l'import.
     assert_eq!(
         payload
             .context
@@ -72,13 +84,21 @@ fn six_scopes_duplicates_enriched_fields_and_numbers_survive_two_cycles() {
             .map(|m| format!("{:?}", m.scope))
             .collect::<std::collections::HashSet<_>>()
             .len(),
-        6
+        3
     );
+    assert!(payload
+        .context
+        .opaque_members
+        .iter()
+        .all(|m| m.key != "controlExtension"
+            && m.key != "transitionExtension"
+            && m.key != "positionExtension"
+            && m.key != "actionExtension"));
     let action = payload
         .context
         .opaque_members
         .iter()
-        .find(|m| m.key == "actionExtension")
+        .find(|m| is_action_alias(m))
         .unwrap()
         .clone();
     set_opaque_export_disposition(
@@ -127,7 +147,7 @@ fn six_scopes_duplicates_enriched_fields_and_numbers_survive_two_cycles() {
         .context
         .opaque_members
         .iter()
-        .filter(|m| m.key == "rootExtension")
+        .filter(|m| m.key == "image")
         .collect();
     assert_eq!(roots[0].value.as_u64(), Some(9007199254740993));
     assert_eq!(roots[1].value.as_u64(), Some(12345678901234567890));
@@ -157,7 +177,7 @@ fn all_context_presence_states_and_real_disposition_consumers() {
                 .context
                 .opaque_members
                 .iter_mut()
-                .find(|m| m.key == "actionExtension")
+                .find(|m| is_action_alias(m))
                 .unwrap();
             member.export_disposition = Some(OpaqueExportDisposition::PreserveUntested);
             member.export_disposition_origin = Some(member.origin);
@@ -169,7 +189,7 @@ fn all_context_presence_states_and_real_disposition_consumers() {
                 diagnostics
                     .iter()
                     .any(|d| d.code == "OPAQUE_EXTENSION_DISPOSITION_STALE"
-                        && d.path.ends_with("/actionExtension")),
+                        && d.path.ends_with("/uuid")),
                 snapshot != Presence::Null
             );
         }
@@ -180,7 +200,7 @@ fn all_context_presence_states_and_real_disposition_consumers() {
         .context
         .opaque_members
         .iter()
-        .find(|m| m.key == "actionExtension")
+        .find(|m| is_action_alias(m))
         .unwrap()
         .clone();
     set_opaque_export_disposition(
@@ -195,7 +215,7 @@ fn all_context_presence_states_and_real_disposition_consumers() {
         .context
         .opaque_members
         .iter()
-        .find(|m| m.key == "actionExtension")
+        .find(|m| is_action_alias(m))
         .unwrap();
     assert_eq!(member.export_disposition_value, Presence::Null);
 }
@@ -489,7 +509,7 @@ fn production_disk_cycle_reopens_the_edited_advanced_project_without_touching_it
         .context
         .opaque_members
         .iter()
-        .find(|member| member.key == "actionExtension")
+        .find(|member| is_action_alias(member))
         .unwrap()
         .clone();
     set_opaque_export_disposition(
@@ -573,7 +593,7 @@ fn production_disk_cycle_reopens_the_edited_advanced_project_without_touching_it
 #[test]
 fn null_disposition_survives_into_the_real_preparation_serializer() {
     let mut source = serde_json::to_value(&nominal().document).unwrap();
-    source["actionNodes"][0]["actionExtension"] = Value::Null;
+    source["actionNodes"][0]["uuid"] = Value::Null;
     let mut payload = decode_story_document(&source.to_string()).unwrap();
     let member = payload.context.opaque_members[0].clone();
     set_opaque_export_disposition(
@@ -588,9 +608,82 @@ fn null_disposition_survives_into_the_real_preparation_serializer() {
     let prepared =
         crate::native_pack::preparation::prepare_graph_document_for_export(&reopened).unwrap();
     assert_eq!(
-        prepared.standard_value()["actionNodes"][0].get("actionExtension"),
+        prepared.standard_value()["actionNodes"][0].get("uuid"),
         Some(&Value::Null)
     );
+}
+
+#[test]
+fn a_saved_project_drops_its_legacy_unknown_extensions_at_reopening() {
+    // Un projet graphe enregistré avant que les clés inconnues soient ignorées
+    // porte encore des membres `unknown-extension`, sans décision ou préservés.
+    // La relecture les retire : aucun diagnostic, aucune réémission, et le
+    // prochain enregistrement ne les écrit plus. Les autres membres restent.
+    let mut source = serde_json::to_value(&nominal().document).unwrap();
+    source["actionNodes"][0]["uuid"] = json!("alias-divergent");
+    let mut legacy = decode_story_document(&source.to_string()).unwrap();
+    legacy.context.pack_identity.value = Some(ENTRY.to_string());
+    let alias = legacy.context.opaque_members[0].clone();
+    let stage_path = format!("/stageNodes/@uuid={ENTRY}#0");
+    for (path, key, disposition) in [
+        (stage_path.as_str(), "duration", None),
+        (
+            "/",
+            "storyStudioMetadata",
+            Some(OpaqueExportDisposition::PreserveUntested),
+        ),
+    ] {
+        legacy
+            .context
+            .opaque_members
+            .push(crate::native_pack::OpaqueMember {
+                scope: if path == "/" {
+                    crate::native_pack::ExtensionScope::Root
+                } else {
+                    crate::native_pack::ExtensionScope::Stage
+                },
+                path: path.to_string(),
+                key: key.to_string(),
+                source_occurrence: 0,
+                kind: crate::native_pack::OpaqueMemberKind::UnknownExtension,
+                origin: ValueOrigin::SourceStudio,
+                value: json!(1234),
+                export_disposition: disposition,
+                export_disposition_value: if disposition.is_some() {
+                    Presence::from_json(json!(1234))
+                } else {
+                    Presence::Absent
+                },
+                export_disposition_origin: disposition.map(|_| ValueOrigin::SourceStudio),
+            });
+    }
+    let encoded = encode_authoring_payload(&legacy).unwrap();
+    assert!(encoded.contains("unknown-extension"), "témoin hérité réel");
+
+    let reopened = decode_authoring_payload(&encoded).unwrap();
+    assert_eq!(reopened.context.opaque_members, vec![alias]);
+    assert!(!encode_authoring_payload(&reopened)
+        .unwrap()
+        .contains("unknown-extension"));
+    assert!(!diagnose_enriched_metadata(&reopened)
+        .iter()
+        .any(|d| { d.path.ends_with("/duration") || d.path.ends_with("/storyStudioMetadata") }));
+
+    let mut resolved = reopened.clone();
+    let alias = resolved.context.opaque_members[0].clone();
+    set_opaque_export_disposition(
+        &mut resolved,
+        &alias.path,
+        &alias.key,
+        0,
+        OpaqueExportDisposition::RemoveExplicitly,
+    )
+    .unwrap();
+    let prepared =
+        crate::native_pack::preparation::prepare_graph_document_for_export(&resolved).unwrap();
+    let standard = prepared.standard_value();
+    assert!(standard.get("storyStudioMetadata").is_none());
+    assert!(standard["stageNodes"][0].get("duration").is_none());
 }
 
 #[test]
@@ -651,7 +744,7 @@ fn context_unknown_enums_missing_opaque_values_and_array_structs_are_rejected() 
 
 #[test]
 fn opaque_fraction_uses_the_correctly_rounded_f64_value() {
-    let source = r#"{"stageNodes":[],"actionNodes":[],"fraction":-990.4606467901111}"#;
+    let source = r#"{"stageNodes":[],"actionNodes":[],"image":-990.4606467901111}"#;
     let payload = decode_story_document(source).unwrap();
     let reopened = twice(&payload);
     assert_eq!(
@@ -846,7 +939,7 @@ fn session_recovery_payload() -> String {
                 {"uuid":ENTRY, "squareOne":true, "audio":"a1b2c3.mp3", "image":null,
                  "controlSettings":{"wheel":false,"ok":true},
                  "okTransition":{"actionNode":"menu","optionIndex":0}, "homeTransition":null,
-                 "cadence":42},
+                 "id":42},
                 {"uuid":SECOND, "squareOne":false, "audio":null, "image":null,
                  "controlSettings":{"wheel":false,"ok":true,"home":null,"pause":false,"autoplay":false},
                  "okTransition":null, "homeTransition":null,
@@ -864,7 +957,7 @@ fn session_recovery_payload() -> String {
         .context
         .opaque_members
         .iter()
-        .find(|member| member.key == "cadence")
+        .find(|member| member.key == "id")
         .cloned()
         .expect("le membre opaque du témoin est capturé");
     set_opaque_export_disposition(

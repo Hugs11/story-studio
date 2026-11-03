@@ -472,7 +472,11 @@ fn a_real_write_failure_during_publication_is_not_reported_as_a_cancellation() {
         None,
         None,
         &|message| {
-            if message.contains("Transfert") && !locked.get() {
+            if crate::support::user_message::contains_code(
+                message,
+                "GENERATION_ARCHIVE_TRANSFER_START",
+            ) && !locked.get()
+            {
                 locked.set(true);
                 deny_writes(&output);
             }
@@ -493,4 +497,28 @@ fn a_real_write_failure_during_publication_is_not_reported_as_a_cancellation() {
         "l'export ne touche pas aux fichiers qui ne sont pas les siens"
     );
     nothing_published(&output);
+}
+
+#[test]
+fn flattened_official_content_is_refused_before_any_export_writes() {
+    for official in [false, true] {
+        let scratch = Scratch::new("official-contained");
+        let mut decoded = reopen(&created_payload(None, None));
+        decoded.context.contains_official_content = true;
+        if official {
+            decoded.context.official_provenance =
+                crate::domain::official_provenance::OfficialProvenance::Official;
+            decoded.context.official_origin_uuid = decoded.context.pack_identity.value.clone();
+        }
+        let payload = encode_authoring_payload(&decoded).unwrap();
+        let output = scratch.root.join("not-created");
+        let error = export(&payload, &[], &output).unwrap_err();
+        match error {
+            AdvancedExportError::OutputIdentity { message } => {
+                assert_eq!(message.code, codes::OFFICIAL_CONTENT_OUTPUT_REFUSED)
+            }
+            other => panic!("expected D7, got {other:?}"),
+        }
+        assert!(!output.exists());
+    }
 }

@@ -64,7 +64,8 @@ export async function rehearseUpToPermissionRequest(page, { toolId = 'record' } 
 export async function waitForPermissionOutcome(page, { timeout = 20_000 } = {}) {
   const startedAt = Date.now();
   const recording = page.locator('.record-timer').first();
-  const errored = page.locator('.record-hint', { hasText: "Impossible d'accéder au micro" }).first();
+  // 796ee5de : traduction FR du message micro, apostrophe typographique.
+  const errored = page.locator('.record-hint', { hasText: /Impossible d['’]accéder au micro/ }).first();
   await Promise.race([
     recording.waitFor({ timeout }).catch(() => {}),
     errored.waitFor({ timeout }).catch(() => {}),
@@ -119,11 +120,9 @@ export async function closeRecordModalAfterError(page) {
 // liste complète par défaut, root épinglé en tête — pas un simple
 // autocomplete) : oracle « aucun Écran créé » côté graphe, sans exiger un
 // enregistrement sur disque (donc utilisable sur une session temporaire).
-// `newProject(page, 'advanced')` rend la main dès que « Générer le pack »
-// est actif, ce qui précède l'affichage du canvas/de la liste de recherche
-// (« Ouverture de l'Éditeur graphe… » encore visible, quelques secondes,
-// quelques secondes). Compter les Écrans avant ce délai lirait 0 à
-// tort : on attend l'Écran racine (toujours présent) avant tout décompte.
+// `newProject(page, 'advanced')` attend désormais cette liste initiale ;
+// garder aussi cette barrière après une réouverture de projet, qui emprunte
+// un autre helper. Compter avant le montage lirait 0 à tort.
 export async function waitForGraphReady(page, { timeout = 30_000 } = {}) {
   await page.locator('li[role="option"][data-kind="stage"]:visible').first().waitFor({ timeout });
 }

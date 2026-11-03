@@ -58,6 +58,17 @@ function resolveGesture(intent, project) {
   return intent?.gesture ?? null;
 }
 
+// Le mode d'historique d'un commit accepté. `intent.history` vaut `true` par
+// défaut (une étape d'undo) ; `false` installe sans étape ; une fonction décide
+// **au moment du commit**, contre le document dont le geste part (`from`) et
+// celui qu'il rend (`to`) : c'est ainsi qu'un média tardif d'exemple se fond
+// dans l'insertion seulement si l'auteur n'a rien fait entre-temps.
+export function commitWithHistory(intent, context) {
+  const history = intent?.history;
+  if (typeof history === 'function') return history(context) !== false;
+  return history !== false;
+}
+
 export function createAdvancedAuthoringSession({
   readProject,
   // Le **ticket de document** : l'époque du travail courant et la
@@ -123,7 +134,11 @@ export function createAdvancedAuthoringSession({
     emit();
     let outcome;
     try {
-      outcome = await applyGesture(project, resolveGesture(intent, project));
+      // Une opération composée prépare ses étapes hors store. Elle partage
+      // exactement le ticket, le verrou et le commit unique des autres gestes.
+      outcome = typeof intent?.execute === 'function'
+        ? await intent.execute(project, { applyGesture, isCurrent: current })
+        : await applyGesture(project, resolveGesture(intent, project));
     } catch (error) {
       if (!current()) return { status: GESTURE_STALE };
       refusal = { intent, error };

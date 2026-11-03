@@ -1,3 +1,4 @@
+import { translateImport as t } from '../i18n/importPresentation.js';
 const IMPORT_CONTROL_CHARS_REGEX = /[\u0000-\u001f\u007f]/g;
 const IMPORT_FILENAME_UNSAFE_REGEX = /[<>:"/\\|?*]/g;
 const IMPORT_EMOJI_REGEX = /[\p{Extended_Pictographic}\u200d\ufe0f]/gu;
@@ -26,10 +27,10 @@ function importedNameKey(name) {
 
 function importedEntryFallbackName(entry) {
   return entry?.type === 'menu'
-    ? 'Collection importee'
+    ? t('import:names.collection.fallback')
     : entry?.type === 'zip'
-      ? 'ZIP importe'
-      : 'Histoire importee';
+      ? t('import:names.zip.fallback')
+      : t('import:names.story.fallback');
 }
 
 function collectImportedNameCounts(entries = [], counts = new Map()) {

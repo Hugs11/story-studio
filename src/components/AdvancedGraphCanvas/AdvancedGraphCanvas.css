@@ -975,7 +975,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-right: 1px solid var(--border-1, #2a2f35);
+  border-right: 1px solid var(--border);
 }
 
 .advanced-search__scopes {
@@ -986,7 +986,7 @@
 
 .advanced-search__scope {
   padding: 3px 8px;
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   border-radius: 999px;
   background: transparent;
   color: inherit;
@@ -997,13 +997,6 @@
 .advanced-search__scope[aria-pressed="true"] {
   background: var(--accent-1, #22303c);
   border-color: var(--accent-2, #3a4753);
-}
-
-.advanced-search__count {
-  margin: 0;
-  padding: 0 10px 8px;
-  font-size: 12px;
-  opacity: 0.8;
 }
 
 .advanced-search__list {
@@ -1076,7 +1069,7 @@
   min-height: 0;
   overflow-y: auto;
   padding: 10px 12px;
-  border-left: 1px solid var(--border-1, #2a2f35);
+  border-left: 1px solid var(--border);
   font-size: 13px;
 }
 
@@ -1133,7 +1126,7 @@
 .advanced-inspector__controls {
   margin: 10px 0;
   padding: 6px 8px;
-  border: 1px solid var(--border-1, #2a2f35);
+  border: 1px solid var(--border);
   border-radius: 4px;
 }
 
@@ -1223,12 +1216,6 @@
   border-color: var(--warning-border);
   background: var(--warning-bg);
   color: var(--warning-text);
-}
-.advanced-search__count {
-  padding: 0 14px 10px;
-  color: var(--muted);
-  font: 10px/1.4 var(--font-mono);
-  opacity: 1;
 }
 .advanced-search__item {
   min-height: 46px;

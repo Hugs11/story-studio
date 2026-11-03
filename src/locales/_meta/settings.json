@@ -1,0 +1,2106 @@
+{
+  "interface.section.title": {
+    "context": "Préférences > Interface ; source « Interface ».",
+    "en": {
+      "sourceHash": "c26b3ed4ce70",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c26b3ed4ce70",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "interface.theme.label": {
+    "context": "Préférences > Interface ; source « Thème ».",
+    "en": {
+      "sourceHash": "ee2141f73f7e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ee2141f73f7e",
+      "status": "ai-reviewed"
+    }
+  },
+  "interface.theme.description": {
+    "context": "Préférences > Interface ; description : « « Système » suit l’apparence configurée dans Windows, Linux et macOS. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "en": {
+      "sourceHash": "f0ac2f4446d1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f0ac2f4446d1",
+      "status": "ai-reviewed"
+    },
+    "previousEN": {
+      "value": "“System” follows the appearance set in Windows or macOS.",
+      "sourceHash": "0ea9b32dbf3a",
+      "status": "stale"
+    },
+    "previousIT": {
+      "value": "«Sistema» segue l’aspetto impostato in Windows o macOS.",
+      "sourceHash": "0ea9b32dbf3a",
+      "status": "stale"
+    }
+  },
+  "interface.theme.system": {
+    "context": "Préférences > Interface ; source « Système ».",
+    "en": {
+      "sourceHash": "1abaf88d08a5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1abaf88d08a5",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "interface.theme.dark": {
+    "context": "Préférences > Interface ; source « Sombre ».",
+    "en": {
+      "sourceHash": "9a3477edfb6a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9a3477edfb6a",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "interface.theme.light": {
+    "context": "Préférences > Interface ; source « Clair ».",
+    "en": {
+      "sourceHash": "addc12a8f809",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "addc12a8f809",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "interface.selection.label": {
+    "context": "Préférences > Interface ; source « Ouvrir les réglages quand on sélectionne un élément ».",
+    "en": {
+      "sourceHash": "63e23e168a7b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "63e23e168a7b",
+      "status": "ai-reviewed"
+    }
+  },
+  "interface.selection.description": {
+    "context": "Préférences > Interface ; description : « Dans les trois éditeurs (Simplifié, par menus, Graphe) : un clic dans l'arbre, le diagramme, la liste ou le graphe rouvre les Réglages ou l'Inspecteur s'ils sont fermés. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "en": {
+      "sourceHash": "2d495459f6c0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2d495459f6c0",
+      "status": "ai-reviewed"
+    },
+    "previousEN": {
+      "value": "In both editors, clicking in the tree, diagram, list, or graph reopens Settings or the Inspector if they’re closed.",
+      "sourceHash": "00bfe155faa3",
+      "status": "stale"
+    },
+    "previousIT": {
+      "value": "In entrambi gli editor, un clic nell’albero, nel diagramma, nell’elenco o nel grafo riapre le Impostazioni o l’Ispettore, se sono chiusi.",
+      "sourceHash": "00bfe155faa3",
+      "status": "stale"
+    }
+  },
+  "interface.shortcuts.label": {
+    "context": "Préférences > Interface ; source « Raccourcis clavier ».",
+    "en": {
+      "sourceHash": "6d0857349d36",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6d0857349d36",
+      "status": "ai-reviewed"
+    }
+  },
+  "interface.shortcuts.description": {
+    "context": "Préférences > Interface ; source « Voir et modifier les raccourcis de l'application ».",
+    "en": {
+      "sourceHash": "d8999d7f1b71",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d8999d7f1b71",
+      "status": "ai-reviewed"
+    }
+  },
+  "interface.language.label": {
+    "context": "Préférences > Interface ; source « Langue de l’interface ».",
+    "en": {
+      "sourceHash": "3e91b633157d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3e91b633157d",
+      "status": "ai-reviewed"
+    }
+  },
+  "interface.language.french": {
+    "context": "Préférences > Interface ; source « Français ».",
+    "en": {
+      "sourceHash": "e495d53b967a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e495d53b967a",
+      "status": "ai-reviewed"
+    }
+  },
+  "interface.language.english": {
+    "context": "Préférences > Interface ; source « English ».",
+    "en": {
+      "sourceHash": "ba118bf7fc9c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ba118bf7fc9c",
+      "status": "ai-reviewed"
+    }
+  },
+  "interface.language.italian": {
+    "context": "Préférences > Interface ; source « Italiano ».",
+    "en": {
+      "sourceHash": "432a99a172dd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "432a99a172dd",
+      "status": "ai-reviewed"
+    }
+  },
+  "interface.language.pseudo": {
+    "context": "Préférences > Interface ; source « Pseudo-locale ».",
+    "en": {
+      "sourceHash": "31e8ed38602f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "31e8ed38602f",
+      "status": "ai-reviewed"
+    }
+  },
+  "navigation.sections.label": {
+    "context": "Préférences > barre latérale de navigation ; source « Sections des Préférences ».",
+    "en": {
+      "sourceHash": "0c24804ac14b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0c24804ac14b",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "navigation.general.label": {
+    "context": "Préférences > barre latérale de navigation ; source « Général ».",
+    "en": {
+      "sourceHash": "22d51e852503",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "22d51e852503",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "navigation.ai.label": {
+    "context": "Préférences > barre latérale de navigation ; source « Intelligence artificielle ».",
+    "en": {
+      "sourceHash": "9580d1596c09",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9580d1596c09",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "navigation.advanced.label": {
+    "context": "Préférences > barre latérale de navigation ; source « Avancé ».",
+    "en": {
+      "sourceHash": "2c36f81b43d0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2c36f81b43d0",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "navigation.save.label": {
+    "context": "Préférences > barre latérale de navigation ; source « Enregistrement ».",
+    "en": {
+      "sourceHash": "e90a5873e610",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e90a5873e610",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "navigation.projectsMedia.label": {
+    "context": "Préférences > barre latérale de navigation ; source « Projets et médias ».",
+    "en": {
+      "sourceHash": "2a8ebbecd51d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2a8ebbecd51d",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "navigation.xtts.label": {
+    "context": "Préférences > barre latérale de navigation ; source « Voix locale ».",
+    "en": {
+      "sourceHash": "28f8369a4df3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "28f8369a4df3",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "navigation.comfyui.label": {
+    "context": "Préférences > barre latérale de navigation ; source « Images IA ».",
+    "en": {
+      "sourceHash": "9c36d44889a7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9c36d44889a7",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "navigation.silences.label": {
+    "context": "Préférences > barre latérale de navigation ; source « Silences audio ».",
+    "en": {
+      "sourceHash": "b4b5ce185e1e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b4b5ce185e1e",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "navigation.youtube.label": {
+    "context": "Préférences > barre latérale de navigation ; source « YouTube (yt-dlp) ».",
+    "en": {
+      "sourceHash": "47bfdf343522",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "47bfdf343522",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "navigation.diagnostic.label": {
+    "context": "Préférences > barre latérale de navigation ; source « Diagnostic ».",
+    "en": {
+      "sourceHash": "b1fa878a98a1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b1fa878a98a1",
+      "status": "ai-reviewed"
+    },
+    "maxLength": 48
+  },
+  "interface.language.availableCount_one": {
+    "context": "Préférences > Interface ; source « {{count}} langue disponible ».",
+    "en": {
+      "sourceHash": "9b473e5ff73c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9b473e5ff73c",
+      "status": "ai-reviewed"
+    }
+  },
+  "interface.language.availableCount_many": {
+    "context": "Préférences > Interface ; source « {{count}} langues disponibles ».",
+    "it": {
+      "sourceHash": "18cf5677c54f",
+      "status": "ai-reviewed"
+    }
+  },
+  "interface.language.availableCount_other": {
+    "context": "Préférences > Interface ; source « {{count}} langues disponibles ».",
+    "en": {
+      "sourceHash": "18cf5677c54f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "18cf5677c54f",
+      "status": "ai-reviewed"
+    }
+  },
+  "preferences.home.action": {
+    "en": {
+      "sourceHash": "61d8da049493",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "61d8da049493",
+      "status": "ai-reviewed"
+    },
+    "context": "fenêtre Préférences ; action : « Retour à l'accueil ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "preferences.dialog.title": {
+    "en": {
+      "sourceHash": "203260387103",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "203260387103",
+      "status": "ai-reviewed"
+    },
+    "context": "fenêtre Préférences ; title : « Préférences ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "silence.section.title": {
+    "en": {
+      "sourceHash": "b4b5ce185e1e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b4b5ce185e1e",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Silences audio ; title : « Silences audio ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "silence.leading.label": {
+    "en": {
+      "sourceHash": "ea0bc8c71be4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ea0bc8c71be4",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Silences audio ; label : « Silence au début ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "silence.trailing.label": {
+    "en": {
+      "sourceHash": "0fcbd0e66a04",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0fcbd0e66a04",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Silences audio ; label : « Silence à la fin ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.start.progress": {
+    "en": {
+      "sourceHash": "6948ddf080e1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6948ddf080e1",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; progress : « Démarrage de ComfyUI en cours… (peut prendre jusqu'à 3 minutes) ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 120
+  },
+  "images.connect.progress": {
+    "en": {
+      "sourceHash": "8f0949bd43c6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8f0949bd43c6",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; progress : « Connexion à ComfyUI en cours… ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "images.ready.message": {
+    "en": {
+      "sourceHash": "f17d60f771fa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f17d60f771fa",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; message : « ComfyUI accessible et prêt. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.import.error": {
+    "en": {
+      "sourceHash": "a6cb4b48f1c6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a6cb4b48f1c6",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; error : « Import échoué : {{message}} ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.delete.error": {
+    "en": {
+      "sourceHash": "228b2fd6c731",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "228b2fd6c731",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; error : « Suppression échouée : {{message}} ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.section.title": {
+    "en": {
+      "sourceHash": "6e7759905fd8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6e7759905fd8",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; title : « Génération d'images IA — ComfyUI ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.enable.label": {
+    "en": {
+      "sourceHash": "03aac3c913cf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "03aac3c913cf",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; label : « Activer la génération d'images IA ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.enable.description": {
+    "en": {
+      "sourceHash": "58c8f26cbaff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "58c8f26cbaff",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; description : « Ajoute un bouton « Générer avec l’IA (ComfyUI) » sous chaque image dans l’éditeur. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.server.label": {
+    "en": {
+      "sourceHash": "5efc5c80ad2e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5efc5c80ad2e",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; label : « URL du serveur ComfyUI ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.launcher.label": {
+    "en": {
+      "sourceHash": "083f3675ce76",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "083f3675ce76",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; label : « Script de démarrage ComfyUI ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.launcher.placeholder": {
+    "en": {
+      "sourceHash": "99b0a108e147",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "99b0a108e147",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; placeholder : « Chemin vers start_comfyui.bat, start_comfyui.sh ou un launcher ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.autoStart.label": {
+    "en": {
+      "sourceHash": "8f3ffd1e4800",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8f3ffd1e4800",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; label : « Démarrer ComfyUI automatiquement ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.autoStart.description": {
+    "en": {
+      "sourceHash": "45e26f38f280",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "45e26f38f280",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; description : « Lance le script de démarrage si ComfyUI ne répond pas au moment de générer. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.start.action": {
+    "en": {
+      "sourceHash": "e0063a5659a9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e0063a5659a9",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; action : « Démarrage… ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "voice.test.progress": {
+    "en": {
+      "sourceHash": "01b679384589",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "01b679384589",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale ; progress : « Test en cours… ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "images.test.action": {
+    "en": {
+      "sourceHash": "d20a7f4f232b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d20a7f4f232b",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; action : « Tester ComfyUI ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "images.workflows.title": {
+    "en": {
+      "sourceHash": "491707753e69",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "491707753e69",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; title : « Workflows disponibles ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.workflows.empty": {
+    "en": {
+      "sourceHash": "a8e224b5f98f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a8e224b5f98f",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; empty : « Aucun workflow chargé. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.workflow.badge": {
+    "en": {
+      "sourceHash": "5a81aa77a1c5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5a81aa77a1c5",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; badge : « intégré ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "images.import.title": {
+    "en": {
+      "sourceHash": "7a7b430514a8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7a7b430514a8",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; title : « Importer un workflow personnalisé ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "images.api.selected": {
+    "en": {
+      "sourceHash": "b1456299cfcd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b1456299cfcd",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; selected : « ✓ API JSON ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "images.api.action": {
+    "en": {
+      "sourceHash": "5a05983d8bad",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5a05983d8bad",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; action : « Choisir *-api.json… ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "images.config.selected": {
+    "en": {
+      "sourceHash": "ff706377de36",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ff706377de36",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; selected : « ✓ Config JSON ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "images.config.action": {
+    "en": {
+      "sourceHash": "a010191bb91e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a010191bb91e",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; action : « Choisir *.config.json… ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "images.import.progress": {
+    "en": {
+      "sourceHash": "ea94509e38cf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ea94509e38cf",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; progress : « Import… ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "diagnostic.section.title": {
+    "en": {
+      "sourceHash": "b1fa878a98a1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b1fa878a98a1",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Diagnostic ; title : « Diagnostic ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "diagnostic.verbose.label": {
+    "en": {
+      "sourceHash": "ab4b42ce0321",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ab4b42ce0321",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Diagnostic ; label : « Journalisation détaillée ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "diagnostic.verbose.description": {
+    "en": {
+      "sourceHash": "2bd440cb5001",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2bd440cb5001",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Diagnostic ; description : « Enregistre les événements normaux (chargements, enregistrements, générations) dans le fichier de log, en plus des erreurs. Utile pour partager le contexte d'un bug dans une issue GitHub. Désactivé : seuls les avertissements et erreurs sont enregistrés. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "diagnostic.folder.label": {
+    "en": {
+      "sourceHash": "fa2e5f5cd568",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fa2e5f5cd568",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Diagnostic ; label : « Dossier des logs ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "diagnostic.copied.badge": {
+    "en": {
+      "sourceHash": "b92b2fd22674",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b92b2fd22674",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Diagnostic ; badge : « (copié) ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "diagnostic.copy.action": {
+    "en": {
+      "sourceHash": "c5f602409d54",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c5f602409d54",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Diagnostic ; action : « Copier le chemin ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "diagnostic.privacy.description": {
+    "en": {
+      "sourceHash": "efe43901b7cc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "efe43901b7cc",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Diagnostic ; description : « Le fichier peut contenir des chemins locaux (noms de fichiers, dossier utilisateur). Vérifie son contenu avant de le partager publiquement. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "piper.help.description": {
+    "en": {
+      "sourceHash": "e18a97ce26b9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e18a97ce26b9",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > Piper ; description : « Piper ajoute un bouton texte → audio dans tous les champs audio. La voix est téléchargée automatiquement au premier usage. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "voice.language.label": {
+    "en": {
+      "sourceHash": "5f6baab4dbe1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5f6baab4dbe1",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale ; label : « Langue ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "voice.voice.label": {
+    "en": {
+      "sourceHash": "f35326ab620f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f35326ab620f",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale ; label : « Voix ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "piper.download.progress": {
+    "en": {
+      "sourceHash": "ec615205d43d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ec615205d43d",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > Piper ; progress : « Téléchargement… ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "piper.prepare.action": {
+    "en": {
+      "sourceHash": "30b1b0e62e58",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "30b1b0e62e58",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > Piper ; action : « Préparer la voix maintenant ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "piper.prepare.description": {
+    "en": {
+      "sourceHash": "97b1310e7589",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "97b1310e7589",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > Piper ; description : « Optionnel : prépare la voix sélectionnée à l’avance pour éviter l’attente au 1er usage. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.section.title": {
+    "en": {
+      "sourceHash": "b1162a71b3ac",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b1162a71b3ac",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; title : « Gestion des projets et médias ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.workspace.label": {
+    "en": {
+      "sourceHash": "6236c8c2ca5d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6236c8c2ca5d",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; label : « Utiliser l’emplacement de travail pour les nouveaux projets ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.workspace.description": {
+    "en": {
+      "sourceHash": "c6e942dd9256",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c6e942dd9256",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; description : « Désactivé par défaut : les nouveaux projets commencent dans une session temporaire ; au premier enregistrement, leurs médias rejoignent l’emplacement de travail. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.location.label": {
+    "en": {
+      "sourceHash": "9b6728e9e03a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9b6728e9e03a",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; label : « Emplacement de travail ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.location.description": {
+    "en": {
+      "sourceHash": "5a9a86f0fe64",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5a9a86f0fe64",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; description : « Emplacement de référence pour les projets enregistrés et les médias gérés. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.location.progress": {
+    "en": {
+      "sourceHash": "fe8d6afaa547",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fe8d6afaa547",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; progress : « Emplacement de travail en cours de résolution… ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "projects.copy.label": {
+    "en": {
+      "sourceHash": "ef508569cc8a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ef508569cc8a",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; label : « Copier les fichiers importés dans l’emplacement de travail ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.consolidate.label": {
+    "en": {
+      "sourceHash": "cd32f4dd0838",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cd32f4dd0838",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; label : « Consolider le projet ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.consolidate.description": {
+    "en": {
+      "sourceHash": "0381a68fec65",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0381a68fec65",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; description : « Copie le `.mbah` et tous les médias référencés dans un dossier cible, sans supprimer les originaux. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.consolidate.progress": {
+    "en": {
+      "sourceHash": "3e102428afa3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3e102428afa3",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; progress : « Consolidation… ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "projects.consolidate.action": {
+    "en": {
+      "sourceHash": "56e76cecaec1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "56e76cecaec1",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; action : « Consolider ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "save.section.title": {
+    "en": {
+      "sourceHash": "e90a5873e610",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e90a5873e610",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Enregistrement ; title : « Enregistrement ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "save.auto.label": {
+    "en": {
+      "sourceHash": "089fe1a3bd7d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "089fe1a3bd7d",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Enregistrement ; label : « Enregistrement automatique ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "save.auto.description": {
+    "en": {
+      "sourceHash": "52d428ee4022",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "52d428ee4022",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Enregistrement ; description : « Activé par défaut : enregistre le projet toutes les 5 minutes si des modifications sont en attente. Un projet jamais enregistré est copié dans le dossier sauvegardes/ de l'emplacement de travail. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "save.backups.label": {
+    "en": {
+      "sourceHash": "14355f866fba",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "14355f866fba",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Enregistrement ; label : « Versions de sécurité ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "save.backups.description": {
+    "en": {
+      "sourceHash": "8f026f9ae57a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8f026f9ae57a",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Enregistrement ; description : « Nombre de copies `.mbah` conservées avant chaque enregistrement automatique. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "voice.section.title": {
+    "en": {
+      "sourceHash": "5dbaa6527ae6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5dbaa6527ae6",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale ; title : « Génération de voix locale ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "voice.backend.label": {
+    "en": {
+      "sourceHash": "4f52b00db6f8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4f52b00db6f8",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale ; label : « Moteur de voix ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "voice.backend.piper": {
+    "en": {
+      "sourceHash": "b725bc0f1d87",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b725bc0f1d87",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale ; piper : « Piper (défaut) ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "voice.backend.xtts": {
+    "en": {
+      "sourceHash": "036f86f08576",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "036f86f08576",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale ; xtts : « XTTS (avancé) ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.server.label": {
+    "en": {
+      "sourceHash": "53b6818c5116",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "53b6818c5116",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; label : « URL du serveur XTTS ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.folder.label": {
+    "en": {
+      "sourceHash": "3ca5a707c2dd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3ca5a707c2dd",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; label : « Dossier XTTS ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.folder.placeholder": {
+    "en": {
+      "sourceHash": "7acefa543527",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7acefa543527",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; placeholder : « Dossier contenant server.py, venv, models et voices ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.language.label": {
+    "en": {
+      "sourceHash": "6fa83129d45e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6fa83129d45e",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; label : « Langue par défaut ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.autoStart.label": {
+    "en": {
+      "sourceHash": "61cc670936f8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "61cc670936f8",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; label : « Démarrer XTTS automatiquement si le serveur est arrêté ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.autoStart.description": {
+    "en": {
+      "sourceHash": "1be7ea11d641",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1be7ea11d641",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; description : « Story Studio lancera `server.py` depuis ton dossier XTTS si besoin. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.cpu.label": {
+    "en": {
+      "sourceHash": "fc160749e434",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fc160749e434",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; label : « Forcer le CPU (compatible ComfyUI simultané) ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.cpu.description": {
+    "en": {
+      "sourceHash": "858fff2de1b4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "858fff2de1b4",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; description : « XTTS s'exécute sur CPU — plus lent (~3×) mais libère le GPU pour ComfyUI. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.test.action": {
+    "en": {
+      "sourceHash": "c7a2e99b8385",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c7a2e99b8385",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; action : « Tester et actualiser les voix ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "xtts.favorites.empty": {
+    "en": {
+      "sourceHash": "e804f3a70720",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e804f3a70720",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; empty : « Aucune voix favorite : toutes les voix XTTS détectées seront proposées. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.log.label": {
+    "en": {
+      "sourceHash": "fc60e9bac638",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fc60e9bac638",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; label : « Journal XTTS ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.favorites.title": {
+    "en": {
+      "sourceHash": "735c257c4c6f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "735c257c4c6f",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; title : « Voix favorites ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.favorites.description": {
+    "en": {
+      "sourceHash": "2f643c3b86a7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2f643c3b86a7",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; description : « Coche uniquement les voix que tu veux voir dans la modale de génération. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.favorites.showAll": {
+    "en": {
+      "sourceHash": "ff8a99c5c6f6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ff8a99c5c6f6",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; showAll : « Tout afficher ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "xtts.voices.refresh": {
+    "en": {
+      "sourceHash": "2b20e10b6e05",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2b20e10b6e05",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; refresh : « Actualise les voix XTTS pour choisir tes favorites. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.voices.empty": {
+    "en": {
+      "sourceHash": "d7117d7821cc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d7117d7821cc",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; empty : « Aucune voix retournée par XTTS. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "youtube.update.progress": {
+    "en": {
+      "sourceHash": "08a519a5a7c9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "08a519a5a7c9",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > YouTube (yt-dlp) ; progress : « Mise à jour de yt-dlp… ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "youtube.update.success": {
+    "en": {
+      "sourceHash": "ae15ed2c959d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ae15ed2c959d",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > YouTube (yt-dlp) ; success : « yt-dlp est à jour. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "youtube.section.title": {
+    "en": {
+      "sourceHash": "47bfdf343522",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "47bfdf343522",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > YouTube (yt-dlp) ; title : « YouTube (yt-dlp) ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "youtube.help.description": {
+    "en": {
+      "sourceHash": "c3c1b6ba57a5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c3c1b6ba57a5",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > YouTube (yt-dlp) ; description : « Le parcours guidé « Pack depuis YouTube » télécharge automatiquement yt-dlp au premier usage et le garde à jour, ainsi que le moteur JavaScript Deno (environ 40 Mo) dont yt-dlp a besoin pour lire YouTube de façon fiable. Comme YouTube bloque les versions périmées, ces réglages ne servent qu’en cas de problème. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "youtube.update.label": {
+    "en": {
+      "sourceHash": "5722d61f6fa8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5722d61f6fa8",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > YouTube (yt-dlp) ; label : « Mettre à jour yt-dlp maintenant ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "youtube.update.description": {
+    "en": {
+      "sourceHash": "1933858b325a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1933858b325a",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > YouTube (yt-dlp) ; description : « Force le téléchargement de la dernière version de yt-dlp et installe le moteur JavaScript s'il manque. Utile si un import échoue avec un message de version obsolète. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "youtube.update.busy": {
+    "en": {
+      "sourceHash": "fe7eb9c2fcb9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fe7eb9c2fcb9",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > YouTube (yt-dlp) ; busy : « Mise à jour… ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "youtube.update.action": {
+    "en": {
+      "sourceHash": "f475e8cf6bdc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f475e8cf6bdc",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > YouTube (yt-dlp) ; action : « Mettre à jour ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "youtube.path.label": {
+    "en": {
+      "sourceHash": "b5ffb9aecac0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b5ffb9aecac0",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > YouTube (yt-dlp) ; label : « Chemin yt-dlp personnalisé ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "youtube.path.placeholder": {
+    "en": {
+      "sourceHash": "2426685a1eb9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2426685a1eb9",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > YouTube (yt-dlp) ; placeholder : « Chemin complet vers yt-dlp ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "piper.prepare.progress": {
+    "en": {
+      "sourceHash": "f7fa9171af8a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f7fa9171af8a",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > Piper ; progress : « Préparation de la voix… ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "piper.prepare.success": {
+    "en": {
+      "sourceHash": "7699ff2485f5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7699ff2485f5",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > Piper ; success : « Voix prête. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.connect.progress": {
+    "en": {
+      "sourceHash": "368a3ef0a326",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "368a3ef0a326",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; progress : « Connexion à XTTS en cours… ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "xtts.model.fallback": {
+    "en": {
+      "sourceHash": "2e5b5e0a06ea",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2e5b5e0a06ea",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; fallback : « modèle inconnu ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.device.fallback": {
+    "en": {
+      "sourceHash": "f5496d67491d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f5496d67491d",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; fallback : « périphérique inconnu ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "panel.end.fallback": {
+    "en": {
+      "sourceHash": "cb764ce46b97",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cb764ce46b97",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; fallback : « Message de fin ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "panel.multi.badge": {
+    "en": {
+      "sourceHash": "6f14ab7389a4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6f14ab7389a4",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; badge : « Modification groupée ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "panel.title.fallback": {
+    "en": {
+      "sourceHash": "4ed117e09c53",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4ed117e09c53",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; fallback : « Réglages ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "panel.selection.badge": {
+    "en": {
+      "sourceHash": "051e522a6c09",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "051e522a6c09",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; badge : « Sélection ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "panel.story.fallback": {
+    "en": {
+      "sourceHash": "21a6c7ffb6e1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "21a6c7ffb6e1",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; fallback : « Mon histoire ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "panel.root.fallback": {
+    "en": {
+      "sourceHash": "128d80d87740",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "128d80d87740",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; fallback : « Menu racine ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "panel.simple.badge": {
+    "en": {
+      "sourceHash": "368b038a656b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "368b038a656b",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; badge : « Histoire simple ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "panel.pack.badge": {
+    "en": {
+      "sourceHash": "80dc21673e55",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "80dc21673e55",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; badge : « Pack ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "panel.close.action": {
+    "en": {
+      "sourceHash": "5888cb0b1e81",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5888cb0b1e81",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; action : « Fermer les réglages ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "consolidate.start.progress": {
+    "en": {
+      "sourceHash": "953c6f8de683",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "953c6f8de683",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias > consolidation, progression ou dialogue de résultat ; progress : « Consolidation du projet… ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés.",
+    "maxLength": 48
+  },
+  "consolidate.success.title": {
+    "en": {
+      "sourceHash": "9485d7e23036",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9485d7e23036",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias > consolidation, progression ou dialogue de résultat ; title : « Projet consolidé ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "consolidate.error.title": {
+    "en": {
+      "sourceHash": "9741d55e4195",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9741d55e4195",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias > consolidation, progression ou dialogue de résultat ; title : « Consolidation impossible ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "consolidate.error.message": {
+    "en": {
+      "sourceHash": "93024ee9ce48",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "93024ee9ce48",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias > consolidation, progression ou dialogue de résultat ; message : « Consolidation impossible : {{message}} ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "end.remove.title": {
+    "en": {
+      "sourceHash": "b298b59092e4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b298b59092e4",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages > suppression du message de fin commun ; title : « Supprimer le message de fin ? ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.copy.description": {
+    "en": {
+      "sourceHash": "baa67064d9be",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "baa67064d9be",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; description : « Copie chaque fichier importé (ZIP, 7z, audio, image) dans <strong>{{directory}}</strong>. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "save.shortcuts.description": {
+    "en": {
+      "sourceHash": "5921b19acf48",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5921b19acf48",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Enregistrement ; description : « Raccourcis : <save>{{save}}</save> pour enregistrer, <saveAs>{{saveAs}}</saveAs> pour enregistrer sous ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "voice.backend.description": {
+    "en": {
+      "sourceHash": "f28b0b8c06b0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f28b0b8c06b0",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale ; description : « <piper>Piper</piper> fonctionne sans configuration (recommandé). <xtts>XTTS</xtts> est destiné aux utilisateurs avancés (clonage de voix, serveur local). ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "youtube.path.description": {
+    "en": {
+      "sourceHash": "be167cc43d31",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "be167cc43d31",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > YouTube (yt-dlp) ; description : « Laisse vide pour utiliser la version gérée automatiquement. Renseigne le chemin complet d'un exécutable <windows>yt-dlp.exe</windows> sous Windows ou <unix>yt-dlp</unix> sous Linux/macOS pour l'utiliser à la place (le téléchargement auto est alors ignoré). ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "diagnostic.file.resolved": {
+    "en": {
+      "sourceHash": "169ee8bbd43a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "169ee8bbd43a",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Diagnostic ; resolved : « <path>{{path}}</path> — fichier courant : <file>story-studio.log</file> ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "diagnostic.file.fallback": {
+    "en": {
+      "sourceHash": "6da4d7620581",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6da4d7620581",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Diagnostic ; fallback : « Dans le dossier de données de Story Studio. Fichier courant : <file>story-studio.log</file>. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "silence.duration.description": {
+    "en": {
+      "sourceHash": "101e4b7af7b4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "101e4b7af7b4",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Silences audio ; description : « Durée en secondes, de {{min}} à {{max}}. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "piper.speed.label": {
+    "en": {
+      "sourceHash": "be328b24fe7c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "be328b24fe7c",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > Piper ; label : « Vitesse ({{speed}}×) ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "piper.voice.download": {
+    "en": {
+      "sourceHash": "228568c4fe47",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "228568c4fe47",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > Piper ; download : « {{name}} — à télécharger ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "panel.multi.title_one": {
+    "en": {
+      "sourceHash": "d21c15872ff5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d21c15872ff5",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; title_one : « {{count}} élément sélectionné ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "panel.multi.title_many": {
+    "it": {
+      "sourceHash": "1a7e28c7ce0e",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; title_many : « {{count}} éléments sélectionnés ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "panel.multi.title_other": {
+    "en": {
+      "sourceHash": "1a7e28c7ce0e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1a7e28c7ce0e",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; title_other : « {{count}} éléments sélectionnés ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "panel.multi.description_one": {
+    "en": {
+      "sourceHash": "8cfbc440b238",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8cfbc440b238",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; description_one : « {{count}} élément sélectionné — modification groupée ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "panel.multi.description_many": {
+    "it": {
+      "sourceHash": "c5240da2d1b1",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; description_many : « {{count}} éléments sélectionnés — modification groupée ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "panel.multi.description_other": {
+    "en": {
+      "sourceHash": "c5240da2d1b1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c5240da2d1b1",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages de la sélection ; description_other : « {{count}} éléments sélectionnés — modification groupée ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.favorites.count_one": {
+    "en": {
+      "sourceHash": "31b41663bfed",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "31b41663bfed",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; count_one : « {{count}} voix favorite affichée dans la modale. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.favorites.count_many": {
+    "it": {
+      "sourceHash": "4f396092cf78",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; count_many : « {{count}} voix favorites affichées dans la modale. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.favorites.count_other": {
+    "en": {
+      "sourceHash": "4f396092cf78",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4f396092cf78",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; count_other : « {{count}} voix favorites affichées dans la modale. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.consolidate.copied_one": {
+    "en": {
+      "sourceHash": "6b9801da95dc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6b9801da95dc",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; copied_one : « {{count}} média copié ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.consolidate.copied_many": {
+    "it": {
+      "sourceHash": "9ed268044485",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; copied_many : « {{count}} médias copiés ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.consolidate.copied_other": {
+    "en": {
+      "sourceHash": "9ed268044485",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9ed268044485",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; copied_other : « {{count}} médias copiés ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.consolidate.missing_one": {
+    "en": {
+      "sourceHash": "7d5f85201471",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7d5f85201471",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; missing_one : « {{count}} fichier manquant ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.consolidate.missing_many": {
+    "it": {
+      "sourceHash": "dd9d9a06db5c",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; missing_many : « {{count}} fichiers manquants ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.consolidate.missing_other": {
+    "en": {
+      "sourceHash": "dd9d9a06db5c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dd9d9a06db5c",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; missing_other : « {{count}} fichiers manquants ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.consolidate.success": {
+    "en": {
+      "sourceHash": "d07e493713f7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d07e493713f7",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; success : « Projet consolidé : {{copied}}. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.consolidate.warning": {
+    "en": {
+      "sourceHash": "7cf8e5a586a5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7cf8e5a586a5",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; warning : « Projet consolidé : {{copied}}, {{missing}}. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.voices.count_one": {
+    "en": {
+      "sourceHash": "42ea17c2a9c6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "42ea17c2a9c6",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; count_one : « {{count}} voix détectée ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.voices.count_many": {
+    "it": {
+      "sourceHash": "013abf0fa5df",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; count_many : « {{count}} voix détectées ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.voices.count_other": {
+    "en": {
+      "sourceHash": "013abf0fa5df",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "013abf0fa5df",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; count_other : « {{count}} voix détectées ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.test.log": {
+    "en": {
+      "sourceHash": "54593ef832e8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "54593ef832e8",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; log : « Test XTTS depuis {{url}} ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "xtts.ready.message": {
+    "en": {
+      "sourceHash": "0be64af0761a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0be64af0761a",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Voix locale > XTTS ; message : « Serveur prêt • {{model}} • {{device}} • {{voices}}{{names}} ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "consolidate.files.count_one": {
+    "en": {
+      "sourceHash": "2285f2fcb8de",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2285f2fcb8de",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias > consolidation, progression ou dialogue de résultat ; count_one : « {{count}} fichier copié ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "consolidate.files.count_many": {
+    "it": {
+      "sourceHash": "e65b5a4efab9",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias > consolidation, progression ou dialogue de résultat ; count_many : « {{count}} fichiers copiés ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "consolidate.files.count_other": {
+    "en": {
+      "sourceHash": "e65b5a4efab9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e65b5a4efab9",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias > consolidation, progression ou dialogue de résultat ; count_other : « {{count}} fichiers copiés ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "consolidate.errors.count_one": {
+    "en": {
+      "sourceHash": "10f740cdbdcb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "10f740cdbdcb",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias > consolidation, progression ou dialogue de résultat ; count_one : « {{count}} erreur ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "consolidate.errors.count_many": {
+    "it": {
+      "sourceHash": "9ab1ff8854ed",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias > consolidation, progression ou dialogue de résultat ; count_many : « {{count}} erreurs ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "consolidate.errors.count_other": {
+    "en": {
+      "sourceHash": "9ab1ff8854ed",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9ab1ff8854ed",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias > consolidation, progression ou dialogue de résultat ; count_other : « {{count}} erreurs ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "consolidate.summary.warning": {
+    "en": {
+      "sourceHash": "20d2d56261af",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "20d2d56261af",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias > consolidation, progression ou dialogue de résultat ; warning : « {{files}}, {{errors}} ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "consolidate.missing.message": {
+    "en": {
+      "sourceHash": "9188dd5eadcf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9188dd5eadcf",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias > consolidation, progression ou dialogue de résultat ; message : « Projet consolidé avec des fichiers manquants :\n\n{{details}} ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "end.remove.stories_one": {
+    "en": {
+      "sourceHash": "9b77568cad7e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9b77568cad7e",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages > suppression du message de fin commun ; stories_one : « Le message sera retiré de {{count}} histoire. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "end.remove.stories_many": {
+    "it": {
+      "sourceHash": "630d37ee5998",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages > suppression du message de fin commun ; stories_many : « Le message sera retiré de {{count}} histoires. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "end.remove.stories_other": {
+    "en": {
+      "sourceHash": "630d37ee5998",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "630d37ee5998",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages > suppression du message de fin commun ; stories_other : « Le message sera retiré de {{count}} histoires. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "end.remove.local_one": {
+    "en": {
+      "sourceHash": "0968e69ac060",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0968e69ac060",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages > suppression du message de fin commun ; local_one : « {{count}} fin locale sera conservée. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "end.remove.local_many": {
+    "it": {
+      "sourceHash": "91570fe82bb8",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages > suppression du message de fin commun ; local_many : « {{count}} fins locales seront conservées. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "end.remove.local_other": {
+    "en": {
+      "sourceHash": "91570fe82bb8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "91570fe82bb8",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages > suppression du message de fin commun ; local_other : « {{count}} fins locales seront conservées. ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "end.remove.message": {
+    "en": {
+      "sourceHash": "e2ca6db5fc7a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e2ca6db5fc7a",
+      "status": "ai-reviewed"
+    },
+    "context": "Éditeur > Réglages > suppression du message de fin commun ; message : « {{stories}} {{local}} ». Texte de présentation, ne pas traduire les noms auteur ni les identifiants techniques interpolés."
+  },
+  "projects.choose.action": {
+    "en": {
+      "sourceHash": "3f2aaae20144",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3f2aaae20144",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Projets et médias ; action : « Choisir ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "images.import.action": {
+    "en": {
+      "sourceHash": "ed2c9cb3830e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ed2c9cb3830e",
+      "status": "ai-reviewed"
+    },
+    "context": "Préférences > Images IA (ComfyUI) ; action : « Importer ». Action cliquable, conserver un libellé bref pour la largeur du bouton.",
+    "maxLength": 48
+  },
+  "end.remove.noLocalEndings": {
+    "context": "Éditeur > Réglages > confirmation de suppression du message de fin commun ; phrase complète lorsque aucune fin locale ne doit être conservée. Préserve le pluriel français historique à zéro, indépendamment de la famille CLDR end.remove.local.",
+    "en": {
+      "sourceHash": "f9e6474a333f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f9e6474a333f",
+      "status": "ai-reviewed"
+    }
+  },
+  "projects.consolidate.noCopiedMedia": {
+    "context": "Préférences > Projets et médias > résultat de consolidation ; compte de médias lorsque aucun média n’a été copié. Inséré dans la phrase complète de succès ou d’avertissement ; préserve le pluriel français historique à zéro.",
+    "en": {
+      "sourceHash": "247be70b4664",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "247be70b4664",
+      "status": "ai-reviewed"
+    }
+  },
+  "xtts.voices.noneDetected": {
+    "context": "Préférences > Voix locale > XTTS > résultat du test du serveur ; compte lorsque le serveur ne retourne aucune voix. Inséré dans le message complet avec modèle et dispositif ; préserve le pluriel français historique à zéro.",
+    "en": {
+      "sourceHash": "7d011a6c967e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7d011a6c967e",
+      "status": "ai-reviewed"
+    }
+  },
+  "consolidate.files.noneCopied": {
+    "context": "Préférences > Projets et médias > progression de consolidation ; ligne de bilan lorsque aucun fichier n’a été copié. Peut être complétée par le compte d’erreurs ; préserve le pluriel français historique à zéro.",
+    "en": {
+      "sourceHash": "30da7d8425cd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "30da7d8425cd",
+      "status": "ai-reviewed"
+    }
+  }
+}

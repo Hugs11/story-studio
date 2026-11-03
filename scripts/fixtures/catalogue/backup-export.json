@@ -1,0 +1,119 @@
+{
+  "plan": {
+    "planId": "plan",
+    "catalogueRevision": 7,
+    "destinationPath": "/exports/catalogue.zip",
+    "counts": {
+      "cards": 1,
+      "tags": 0,
+      "images": 0
+    },
+    "estimatedBytes": 4096,
+    "conflicts": [],
+    "issues": []
+  },
+  "receipt": {
+    "operationId": "operation",
+    "requestId": "request",
+    "sourcesRevision": 0,
+    "catalogueRevision": 7
+  },
+  "result": {
+    "path": "/exports/catalogue.zip",
+    "formatVersion": 1,
+    "catalogueRevision": 7,
+    "counts": {
+      "cards": 1,
+      "tags": 0,
+      "images": 0
+    },
+    "byteSize": 2048,
+    "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "catalogue": {
+    "cards": [
+      {
+        "id": "card",
+        "createdAt": 1,
+        "favorite": 1,
+        "revision": 7
+      }
+    ],
+    "forgottenCards": [],
+    "associations": [],
+    "identities": [],
+    "exemplarHints": [],
+    "provenances": [
+      {
+        "id": "manual",
+        "kind": "manual",
+        "exemplarId": null,
+        "locator": null,
+        "url": null,
+        "language": null,
+        "retrievedAt": null
+      }
+    ],
+    "references": [],
+    "referenceValues": [],
+    "corrections": [
+      {
+        "ficheId": "card",
+        "field": "author",
+        "language": "en",
+        "state": "source",
+        "value": null,
+        "provenanceId": "manual",
+        "imageSha256": null,
+        "revision": 7
+      },
+      {
+        "ficheId": "card",
+        "field": "description",
+        "language": "it",
+        "state": "cleared",
+        "value": null,
+        "provenanceId": "manual",
+        "imageSha256": null,
+        "revision": 7
+      },
+      {
+        "ficheId": "card",
+        "field": "title",
+        "language": "fr",
+        "state": "defined",
+        "value": "Titre",
+        "provenanceId": "manual",
+        "imageSha256": null,
+        "revision": 7
+      }
+    ],
+    "tags": [],
+    "tagMembers": [],
+    "suggestionDecisions": [],
+    "pendingAssociations": [],
+    "rootHints": [],
+    "originCatalogueId": "origin",
+    "catalogueRevision": 7
+  },
+  "catalogueUtf8": "{\"associations\":[],\"cards\":[{\"createdAt\":1,\"favorite\":1,\"id\":\"card\",\"revision\":7}],\"catalogueRevision\":7,\"corrections\":[{\"ficheId\":\"card\",\"field\":\"author\",\"imageSha256\":null,\"language\":\"en\",\"provenanceId\":\"manual\",\"revision\":7,\"state\":\"source\",\"value\":null},{\"ficheId\":\"card\",\"field\":\"description\",\"imageSha256\":null,\"language\":\"it\",\"provenanceId\":\"manual\",\"revision\":7,\"state\":\"cleared\",\"value\":null},{\"ficheId\":\"card\",\"field\":\"title\",\"imageSha256\":null,\"language\":\"fr\",\"provenanceId\":\"manual\",\"revision\":7,\"state\":\"defined\",\"value\":\"Titre\"}],\"exemplarHints\":[],\"forgottenCards\":[],\"identities\":[],\"originCatalogueId\":\"origin\",\"pendingAssociations\":[],\"provenances\":[{\"exemplarId\":null,\"id\":\"manual\",\"kind\":\"manual\",\"language\":null,\"locator\":null,\"retrievedAt\":null,\"url\":null}],\"referenceValues\":[],\"references\":[],\"rootHints\":[],\"suggestionDecisions\":[],\"tagMembers\":[],\"tags\":[]}",
+  "manifest": {
+    "format": "story-studio-catalogue",
+    "formatVersion": 1,
+    "schema": "catalogue-personal-v1",
+    "backupId": "12345678-1234-1234-1234-123456789012",
+    "originCatalogueId": "origin",
+    "catalogueRevision": 7,
+    "counts": {
+      "cards": 1,
+      "tags": 0,
+      "images": 0
+    },
+    "entries": {
+      "catalogue.json": {
+        "byteSize": 883,
+        "sha256": "ed087099ea296ca5ac6545b632339e0d9b9f8c210ed11f2ca14051f1c063c9e0"
+      }
+    }
+  }
+}

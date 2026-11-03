@@ -201,9 +201,9 @@ export function farLandmarkMarks(nodes = [], { bounds = null, viewport = null } 
     if (mark.kind === LANDMARK_KINDS.ENTRY) {
       // L'étiquette de l'entrée est posée sous son anneau, et ne bouge pas.
       placed.push(markBox(mark));
-      placed.push(nameBox('RACINE', mark.node, ENTRY_TAG_OFFSET_PX));
+      placed.push(nameBox('ENTRÉE', mark.node, ENTRY_TAG_OFFSET_PX));
       text.set(mark.node.path, {
-        label: 'RACINE', title: mark.node.label ?? 'RACINE', tag: true,
+        label: 'ENTRÉE', title: mark.node.label ?? 'ENTRÉE', tag: true,
         placement: 'below', offset: ENTRY_TAG_OFFSET_PX,
       });
       continue;

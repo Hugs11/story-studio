@@ -1,0 +1,4 @@
+[
+  {"code":"FILES_SESSION_FOLDER_CREATE_FAILED","params":{"error":"registry unavailable"},"detail":"registry unavailable"},
+  {"code":"FILES_SESSION_FOLDER_CLEAN_FAILED","params":{"error":"registry unavailable"},"detail":"registry unavailable"}
+]

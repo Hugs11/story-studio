@@ -19,6 +19,7 @@
 //! **crée**, et c'est pourquoi la promotion d'une disposition exige une
 //! politique explicite au lieu d'un arrondi silencieux.
 
+use crate::support::user_message::{codes, UserMessage};
 use serde::{Deserialize, Serialize};
 use serde_json::Number;
 
@@ -99,6 +100,10 @@ impl PositionInput {
                     "POSITION_NOT_FINITE",
                     &format!("{path}/{axis}"),
                     format!("Une coordonnée doit être un nombre fini, reçu {number}."),
+                )
+                .with_user_message(
+                    UserMessage::new(codes::POSITION_NOT_FINITE)
+                        .param("number", (number).to_string()),
                 ));
             }
         }
@@ -204,7 +209,7 @@ pub(crate) fn set_positions(
         return Err(refuse(
             "EMPTY_LAYOUT",
             "/document",
-            "Aucune position n'est fournie : le geste ne déplace rien.".to_string(),
+            UserMessage::new(codes::GRAPH_EDITOR_POSITIONS_MOVE_EMPTY).into_transport(),
         ));
     }
     let mut paths: Vec<String> = Vec::with_capacity(entries.len());
@@ -215,7 +220,7 @@ pub(crate) fn set_positions(
             return Err(refuse(
                 "DUPLICATE_LAYOUT_ENTRY",
                 &path,
-                "Ce nœud reçoit deux positions dans la même demande.".to_string(),
+                UserMessage::new(codes::GRAPH_NODE_POSITION_DUPLICATED).into_transport(),
             ));
         }
         paths.push(path);
@@ -248,7 +253,7 @@ pub(crate) fn place_authored(
             return Err(refuse(
                 "DUPLICATE_LAYOUT_ENTRY",
                 &path,
-                "Ce nœud reçoit deux positions dans la même demande.".to_string(),
+                UserMessage::new(codes::GRAPH_NODE_POSITION_DUPLICATED).into_transport(),
             ));
         }
         resolved.push((path, position));
@@ -280,7 +285,7 @@ pub(crate) fn apply_view_layout(
         return Err(refuse(
             "EMPTY_LAYOUT",
             "/context/editorPositions",
-            "Aucune position n'est fournie : le geste ne conserve rien.".to_string(),
+            UserMessage::new(codes::GRAPH_EDITOR_POSITIONS_KEEP_EMPTY).into_transport(),
         ));
     }
     let mut resolved = Vec::with_capacity(entries.len());
@@ -291,7 +296,7 @@ pub(crate) fn apply_view_layout(
             return Err(refuse(
                 "DUPLICATE_LAYOUT_ENTRY",
                 &path,
-                "Ce nœud reçoit deux positions dans la même demande.".to_string(),
+                UserMessage::new(codes::GRAPH_NODE_POSITION_DUPLICATED).into_transport(),
             ));
         }
         resolved.push((path, position));
@@ -355,7 +360,7 @@ pub(crate) fn apply_layout_to_authoring(
                 return Err(refuse(
                     "NO_EDITOR_POSITION",
                     &path,
-                    "Ce nœud ne porte aucune position d'éditeur à promouvoir.".to_string(),
+                    UserMessage::new(codes::GRAPH_NODE_POSITION_PROMOTION_MISSING).into_transport(),
                 ));
             }
             paths.push(path);
@@ -366,7 +371,7 @@ pub(crate) fn apply_layout_to_authoring(
         return Err(refuse(
             "EMPTY_LAYOUT",
             "/context/editorPositions",
-            "Aucune position d'éditeur à promouvoir.".to_string(),
+            UserMessage::new(codes::GRAPH_EDITOR_POSITIONS_PROMOTION_EMPTY).into_transport(),
         ));
     }
 
@@ -390,10 +395,9 @@ pub(crate) fn apply_layout_to_authoring(
                 return Err(refuse(
                     "POSITION_OUT_OF_SHORT_RANGE",
                     &excess[0],
-                    format!(
-                        "{} position(s) sortiraient de [-32768, 32767] : créer cette valeur demande une décision explicite.",
-                        excess.len()
-                    ),
+                    UserMessage::new(codes::GRAPH_POSITION_SHORT_DECISION_REQUIRED)
+                        .param("excess", (excess.len()).to_string())
+                        .into_transport(),
                 )
                 .with_references(excess));
             }
@@ -448,8 +452,8 @@ pub(crate) fn apply_layout_to_authoring(
                         return Err(refuse(
                             "POSITION_NOT_FINITE",
                             path,
-                            "La mise à l'échelle ne produit pas un nombre représentable."
-                                .to_string(),
+                            UserMessage::new(codes::GRAPH_POSITION_SCALE_UNREPRESENTABLE)
+                                .into_transport(),
                         ));
                     };
                     entry.position = Position { x, y };

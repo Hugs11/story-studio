@@ -1,3 +1,4 @@
+import { withProjectMediaOutput } from '../../store/projectMediaOutput';
 import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { logger } from '../../utils/logger';
@@ -14,6 +15,7 @@ export function useStagedAudioEdit({
   filePath,
   savePath,
   workspaceDir,
+  mediaStorage,
   onConfirm,
   wsRef,
   durationRef,
@@ -63,7 +65,7 @@ export function useStagedAudioEdit({
       },
       onError: (error) => {
         setPreviewStatus('error');
-        setError(String(error));
+        setError(error);
       },
     });
   }
@@ -324,7 +326,7 @@ export function useStagedAudioEdit({
       });
       onConfirm(result);
     } catch (err) {
-      setError(String(err));
+      setError(err);
       setApplyMode(null);
     }
   }
@@ -379,29 +381,32 @@ export function useStagedAudioEdit({
     setError(null);
     try {
       const currentPreviewPath = previewPathRef.current;
-      const result = hasChainedPreview && currentPreviewPath
-        ? await invoke('commit_audio_preview', {
-            inputPath: filePath,
-            previewPath: currentPreviewPath,
-            savePath: savePath ?? null,
-            workspaceDir: workspaceDir ?? null,
-          })
-        : await invoke('apply_audio_edit', {
-            inputPath: filePath,
-            mode: stagedEdit.mode,
-            startSec: stagedEdit.startSec,
-            endSec: stagedEdit.endSec,
-            savePath: savePath ?? null,
-            workspaceDir: workspaceDir ?? null,
-            fadeInSec: stagedEdit.fadeInSec,
-            fadeOutSec: stagedEdit.fadeOutSec,
-            cutFadeSec: stagedEdit.cutFadeSec,
+      const result = await withProjectMediaOutput(mediaStorage ?? { root: workspaceDir, ephemeral: true }, async (output) => {
+        const args = await output.arguments();
+        return hasChainedPreview && currentPreviewPath
+          ? await invoke('commit_audio_preview', {
+              inputPath: filePath,
+              previewPath: currentPreviewPath,
+              savePath: savePath ?? null,
+              ...args,
+            })
+          : await invoke('apply_audio_edit', {
+              inputPath: filePath,
+              mode: stagedEdit.mode,
+              startSec: stagedEdit.startSec,
+              endSec: stagedEdit.endSec,
+              savePath: savePath ?? null,
+              ...args,
+              fadeInSec: stagedEdit.fadeInSec,
+              fadeOutSec: stagedEdit.fadeOutSec,
+              cutFadeSec: stagedEdit.cutFadeSec,
           });
+      });
       releaseAllManagedPreviews();
       setCurrentPreviewPath(null);
       onConfirm(result);
     } catch (err) {
-      setError(String(err));
+      setError(err);
       setApplyMode(null);
     }
   }

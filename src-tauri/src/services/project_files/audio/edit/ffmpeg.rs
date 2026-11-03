@@ -1,4 +1,6 @@
 use super::*;
+use crate::support::user_message;
+use crate::support::user_message::codes;
 
 pub(crate) fn run_ffmpeg_cut(
     ffmpeg: &Path,
@@ -24,14 +26,30 @@ pub(crate) fn run_ffmpeg_cut(
 
     cmd.arg(output);
 
-    let out = cmd
-        .output()
-        .map_err(|e| format!("Impossible de lancer ffmpeg : {}", e))?;
+    let out = cmd.output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_EDIT_FFMPEG_START_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer ffmpeg : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     if !out.status.success() {
         let _ = fs::remove_file(output);
         let stderr = String::from_utf8_lossy(&out.stderr);
-        return Err(format!("Suppression audio échouée :\n{}", stderr.trim()));
+        return Err({
+            let _msg_stderr = (stderr.trim()).to_string();
+            user_message::UserMessage::new(codes::FILES_AUDIO_DELETION_FAILED)
+                .param("stderr", user_message::transport_param(_msg_stderr.clone()))
+                .with_detail(format!(
+                    "Suppression audio échouée :\n{_msg_stderr}",
+                    _msg_stderr = user_message::transport_detail(&_msg_stderr)
+                ))
+                .into_transport()
+        });
     }
 
     Ok(())
@@ -70,7 +88,11 @@ pub(crate) fn audio_edit_filter(
     cut_fade: f64,
 ) -> Result<(String, String), String> {
     if start < 0.0 || !start.is_finite() || !end.is_finite() || end <= start {
-        return Err("La sélection audio est invalide.".to_string());
+        return Err(
+            user_message::UserMessage::new(codes::FILES_INVALID_AUDIO_SELECTION)
+                .with_detail("La sélection audio est invalide.".to_string())
+                .into_transport(),
+        );
     }
 
     let body_duration = (end - start).max(0.001);
@@ -107,7 +129,13 @@ pub(crate) fn audio_edit_filter(
         "cut" => {
             if start < 0.001 {
                 if end >= 999_999.0 {
-                    return Err("La suppression ne peut pas vider tout l'audio.".to_string());
+                    return Err(
+                        user_message::UserMessage::new(codes::AUDIO_DELETE_CONTENT_EMPTY)
+                            .with_detail(
+                                "La suppression ne peut pas vider tout l'audio.".to_string(),
+                            )
+                            .into_transport(),
+                    );
                 }
                 let mut filters = vec![
                     format!("atrim=start={}", filter_number(end)),
@@ -158,7 +186,11 @@ pub(crate) fn audio_edit_filter(
                 "out".to_string(),
             ))
         }
-        _ => Err("Mode d'édition audio inconnu.".to_string()),
+        _ => Err(
+            user_message::UserMessage::new(codes::FILES_UNKNOWN_AUDIO_EDITING_MODE)
+                .with_detail("Mode d'édition audio inconnu.".to_string())
+                .into_transport(),
+        ),
     }
 }
 
@@ -188,14 +220,30 @@ pub(crate) fn run_ffmpeg_audio_edit(request: FfmpegAudioEditRequest<'_>) -> Resu
 
     cmd.arg(request.output);
 
-    let out = cmd
-        .output()
-        .map_err(|e| format!("Impossible de lancer ffmpeg : {}", e))?;
+    let out = cmd.output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_EDIT_FFMPEG_START_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer ffmpeg : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     if !out.status.success() {
         let _ = fs::remove_file(request.output);
         let stderr = String::from_utf8_lossy(&out.stderr);
-        return Err(format!("Édition audio échouée :\n{}", stderr.trim()));
+        return Err({
+            let _msg_stderr = (stderr.trim()).to_string();
+            user_message::UserMessage::new(codes::FILES_AUDIO_EDITING_FAILED)
+                .param("stderr", user_message::transport_param(_msg_stderr.clone()))
+                .with_detail(format!(
+                    "Édition audio échouée :\n{_msg_stderr}",
+                    _msg_stderr = user_message::transport_detail(&_msg_stderr)
+                ))
+                .into_transport()
+        });
     }
 
     Ok(())
@@ -216,14 +264,30 @@ pub(crate) fn run_ffmpeg_transcode(
 
     cmd.arg(output);
 
-    let out = cmd
-        .output()
-        .map_err(|e| format!("Impossible de lancer ffmpeg : {}", e))?;
+    let out = cmd.output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_EDIT_FFMPEG_START_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer ffmpeg : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     if !out.status.success() {
         let _ = fs::remove_file(output);
         let stderr = String::from_utf8_lossy(&out.stderr);
-        return Err(format!("Validation audio échouée :\n{}", stderr.trim()));
+        return Err({
+            let _msg_stderr = (stderr.trim()).to_string();
+            user_message::UserMessage::new(codes::FILES_AUDIO_VALIDATION_FAILED)
+                .param("stderr", user_message::transport_param(_msg_stderr.clone()))
+                .with_detail(format!(
+                    "Validation audio échouée :\n{_msg_stderr}",
+                    _msg_stderr = user_message::transport_detail(&_msg_stderr)
+                ))
+                .into_transport()
+        });
     }
 
     Ok(())
@@ -234,12 +298,20 @@ pub(crate) fn is_in_trim_dir(
     workspace_dir: Option<&str>,
     save_path: Option<&str>,
 ) -> Result<bool, String> {
-    let target =
-        fs::canonicalize(file_path).map_err(|e| format!("Fichier inaccessible : {}", e))?;
+    let target = fs::canonicalize(file_path).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::FILES_FILE_INACCESSIBLE)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Fichier inaccessible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     let mut bases: Vec<PathBuf> = Vec::new();
     if let Some(ws) = workspace_dir.filter(|s| !s.trim().is_empty()) {
-        if let Ok(dir) = absolute_path(ws, "Emplacement de travail") {
+        if let Ok(dir) = absolute_path(ws, codes::FILES_WORKSPACE_LOCATION_TRANSPORT) {
             bases.push(dir);
         }
     }
@@ -295,14 +367,30 @@ pub(crate) fn run_ffmpeg_trim(
 
     cmd.arg(output);
 
-    let out = cmd
-        .output()
-        .map_err(|e| format!("Impossible de lancer ffmpeg : {}", e))?;
+    let out = cmd.output().map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::AUDIO_EDIT_FFMPEG_START_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Impossible de lancer ffmpeg : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
 
     if !out.status.success() {
         let _ = fs::remove_file(output);
         let stderr = String::from_utf8_lossy(&out.stderr);
-        return Err(format!("Découpage audio échoué :\n{}", stderr.trim()));
+        return Err({
+            let _msg_stderr = (stderr.trim()).to_string();
+            user_message::UserMessage::new(codes::FILES_AUDIO_SPLITTING_FAILED)
+                .param("stderr", user_message::transport_param(_msg_stderr.clone()))
+                .with_detail(format!(
+                    "Découpage audio échoué :\n{_msg_stderr}",
+                    _msg_stderr = user_message::transport_detail(&_msg_stderr)
+                ))
+                .into_transport()
+        });
     }
 
     Ok(())
