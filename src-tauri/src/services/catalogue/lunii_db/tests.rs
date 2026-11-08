@@ -353,6 +353,7 @@ fn localized_lunii_values_outrank_pack_and_names() {
 }
 #[test]
 fn cover_cached_locally_and_manual_clear_suppresses_it() {
+    let _network = bounded::test_network();
     let (_temp, mut s) = store();
     let uuid = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
     let index = parse::parse(fixture().to_string().as_bytes()).unwrap();
@@ -706,6 +707,7 @@ fn automatic_download_retries_next_launch_until_database_is_available() {
 }
 #[test]
 fn unknown_uuid_never_downloads_again_with_local_server() {
+    let _network = bounded::test_network();
     use std::net::TcpListener;
     let (temp, s) = store();
     s.publish_lunii(
@@ -756,6 +758,7 @@ fn unknown_uuid_never_downloads_again_with_local_server() {
 
 #[test]
 fn saved_download_attempt_survives_restart_without_starting_a_download() {
+    let _network = bounded::test_network();
     let (temp, s) = store();
     s.publish_lunii(
         &parse::parse(fixture().to_string().as_bytes()).unwrap(),
@@ -988,6 +991,7 @@ fn language_fallback_prefers_sole_then_english_then_french() {
 
 #[test]
 fn cover_failures_retry_only_next_launch_and_stop_after_three() {
+    let _network = bounded::test_network();
     let (temp, s) = store();
     s.write(|tx| { tx.execute_batch("INSERT INTO fiche VALUES ('retry-cover',0,0,0); INSERT INTO pack_identity VALUES ('aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee','retry-cover','{}');").map_err(error)?; Ok(()) }).unwrap();
     s.publish_lunii(
@@ -1075,6 +1079,7 @@ fn multiple_exemplars_fill_from_selected_principal_only_once() {
 
 #[test]
 fn absent_base_attempt_is_session_scoped_and_failed_marker_is_retained() {
+    let _network = bounded::test_network();
     let (_temp, s) = store();
     let open = || {
         s.open_lunii_from(
@@ -1437,6 +1442,7 @@ fn unsafe_image_paths_and_imported_key_mismatch_are_refused() {
 }
 #[test]
 fn lunii_retains_large_cover_but_displays_a_thumbnail_and_retries_only_next_launch() {
+    let _network = bounded::test_network();
     let (_temp, s) = store();
     s.write(|tx| { tx.execute_batch("INSERT INTO fiche VALUES ('large-cover',0,0,0); INSERT INTO pack_identity VALUES ('aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee','large-cover','{}');").map_err(error)?; Ok(()) }).unwrap();
     s.publish_lunii(
@@ -1659,6 +1665,7 @@ fn lunii_startup_scan_consumes_the_session_attempt_but_restart_can_retry() {
 }
 #[test]
 fn lunii_force_marker_waits_for_next_launch_when_an_existing_job_is_running() {
+    let _network = bounded::test_network();
     let (_temp, s) = store();
     s.publish_lunii(
         &parse::parse(fixture().to_string().as_bytes()).unwrap(),
@@ -1731,6 +1738,7 @@ fn device_zip_is_filled_from_lunii_by_directory_uuid() {
 
 #[test]
 fn luh_permission_blocks_all_transports_and_refresh_until_yes_and_no_survives_restart() {
+    let _network = bounded::test_network();
     let temp = Temp::new();
     let s = Arc::new(Store::open(&temp.path().join("data"), &temp.path().join("cache")).unwrap());
     let sink: scan::Sink = Arc::new(|_, _| {});
@@ -1782,6 +1790,7 @@ fn luh_permission_blocks_all_transports_and_refresh_until_yes_and_no_survives_re
 
 #[test]
 fn luh_failed_cover_reopening_same_session_does_not_request_again() {
+    let _network = bounded::test_network();
     let (_temp, s) = store();
     s.write(|tx| { tx.execute_batch("INSERT INTO fiche VALUES ('reopen-cover',0,0,0); INSERT INTO pack_identity VALUES ('aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee','reopen-cover','{}');").map_err(error)?; Ok(()) }).unwrap();
     s.publish_lunii(
@@ -1802,6 +1811,7 @@ fn luh_failed_cover_reopening_same_session_does_not_request_again() {
 
 #[test]
 fn luh_disabling_permission_cancels_a_queued_cover_without_recording_a_failure() {
+    let _network = bounded::test_network();
     let (_temp, s) = store();
     s.write(|tx| { tx.execute_batch("INSERT INTO fiche VALUES ('disabled-cover',0,0,0); INSERT INTO pack_identity VALUES ('aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee','disabled-cover','{}');").map_err(error)?; Ok(()) }).unwrap();
     s.publish_lunii(
@@ -1880,6 +1890,7 @@ fn luh_disabling_preserves_copied_values_and_retained_cover() {
 
 #[test]
 fn revd2_cover_notifications_advance_catalogue_without_changing_cards() {
+    let _network = bounded::test_network();
     let (_temp, s) = store();
     let mut raw = fixture();
     let mut second = raw["arbitrary-key"].clone();

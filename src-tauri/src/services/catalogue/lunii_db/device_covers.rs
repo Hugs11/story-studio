@@ -434,6 +434,7 @@ mod tests {
 
     #[test]
     fn without_agreement_or_for_an_unknown_uuid_nothing_is_requested() {
+        let _network = bounded::test_network();
         let (_temp, s) = store("/public/images/packs/test.png");
         s.set_lunii_permission(false).unwrap();
         let (done, notify) = counter();
@@ -456,6 +457,7 @@ mod tests {
 
     #[test]
     fn invalid_image_path_in_the_database_is_never_requested() {
+        let _network = bounded::test_network();
         let (_temp, s) = store("/public/images/packs/test.png");
         s.write(|tx| {
             tx.execute(
