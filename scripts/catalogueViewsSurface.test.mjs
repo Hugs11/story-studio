@@ -39,7 +39,7 @@ test('two views, menus and read-only fiche render accessible FR/EN/IT surfaces',
           assert.doesNotMatch(html, /catalogue:|\[object Object\]|<img/);
           if (count) {
             assert.match(html, /aria-selected="true"/);
-            // Lot S4 : plus de bouton « Modifier » ni de bouton texte « favoris » ; étoile en coin.
+            // Plus de bouton « Modifier » ni de bouton texte « favoris » ; étoile en coin.
             assert.doesNotMatch(html, /id="catalogue-edit-a"/);
             assert.match(html, /class="catalogue-star"/);
             assert.match(html, /catalogue-format-tag-label/);
@@ -92,7 +92,7 @@ test('browser forwards tab activity to shortcuts while keeping the same rendered
     initializeI18n('fr');
     const { CatalogueBrowser } = await server.ssrLoadModule('/src/components/Catalogue/CatalogueBrowser.jsx');
     const cards = [card({ id: 'a', title: 'Abeille' })];
-    // Lot S4 : le retrait d'un pack hors ligne demande sa confirmation par la boîte de dialogue commune.
+    // Le retrait d'un pack hors ligne demande sa confirmation par la boîte de dialogue commune.
     const { ErrorDialogProvider } = await server.ssrLoadModule('/src/components/common/Dialog.jsx');
     const render = active => renderToStaticMarkup(React.createElement(ErrorDialogProvider, null, React.createElement(CatalogueBrowser, { active, cards, revision: 7, api: {}, onAnnounce: noop, onError: noop, renderEmpty: noop })));
     const catalogue = render(true);

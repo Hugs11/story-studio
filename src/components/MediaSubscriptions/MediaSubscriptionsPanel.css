@@ -1,52 +1,8 @@
-.media-subscriptions {
-  position: fixed;
-  right: 18px;
-  top: 54px;
-  z-index: 60;
-}
-
 .media-subscriptions button {
   font: inherit;
   cursor: pointer;
 }
 
-.media-subscriptions-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  border: 1px solid var(--borderLt);
-  border-radius: var(--border-radius-md);
-  background: var(--bg2);
-  color: var(--text-secondary);
-  font-size: 12px !important;
-}
-
-.media-subscriptions-count {
-  min-width: 18px;
-  padding: 1px 5px;
-  border-radius: 999px;
-  background: var(--accent-dim);
-  color: var(--accent-text);
-  text-align: center;
-}
-
-.media-subscriptions-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  width: min(400px, calc(100vw - 36px));
-  max-height: min(70vh, 600px);
-  overflow: auto;
-  padding: 16px;
-  border: 1px solid var(--borderLt);
-  border-radius: var(--border-radius-lg);
-  background: var(--bg1);
-  color: var(--text);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
-}
-
-.media-subscriptions-heading,
 .media-subscriptions-section-heading {
   display: flex;
   align-items: center;
@@ -95,8 +51,8 @@
 .media-subscriptions-tools .media-subscriptions-error { flex-basis: 100%; color: var(--danger); }
 
 .media-subscriptions-item-text .media-subscriptions-error,
-.media-subscriptions-panel > .media-subscriptions-error { color: var(--danger); }
-.media-subscriptions-panel > .media-subscriptions-error { margin: 10px 0 0; font-size: 12px; }
+.media-subscriptions > .media-subscriptions-error { color: var(--danger); }
+.media-subscriptions > .media-subscriptions-error { margin: 10px 0 0; font-size: 12px; }
 
 .media-subscriptions-actions {
   display: flex;

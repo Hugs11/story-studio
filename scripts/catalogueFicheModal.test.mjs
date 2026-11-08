@@ -59,6 +59,8 @@ test('a removed fiche gives way to its next neighbour, else its previous one', (
 
 test('Ctrl+A selects every filtered result outside text fields and leaves fields alone', () => {
   const previous = globalThis.window; let listener; const calls = []; const noop = () => {};
+  const previousDocument = globalThis.document;
+  globalThis.document = { querySelector: () => ({ dataset: { modalSurface: 'catalogue' } }) };
   globalThis.window = { addEventListener: (_, fn) => { listener = fn; }, removeEventListener: noop };
   const ui = runner(() => useCatalogueShortcuts({ blocked: () => false, undo: noop, search: noop, selectAll: () => calls.push('all'), clear: () => false }));
   const press = target => { let prevented = false; listener({ key: 'a', code: 'KeyA', ctrlKey: true, target, preventDefault() { prevented = true; } }); return prevented; };
@@ -67,7 +69,7 @@ test('Ctrl+A selects every filtered result outside text fields and leaves fields
     assert.equal(press({ tagName: 'DIV' }), true);
     for (const target of [{ tagName: 'INPUT' }, { tagName: 'TEXTAREA' }, { isContentEditable: true }]) assert.equal(press(target), false);
     assert.deepEqual(calls, ['all']);
-  } finally { ui.unmount(); globalThis.window = previous; }
+  } finally { ui.unmount(); globalThis.window = previous; globalThis.document = previousDocument; }
 });
 
 test('selectAll targets the filtered order only', () => {

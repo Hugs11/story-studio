@@ -58,6 +58,11 @@ test('catalogue shell and sources render FR/EN/IT, distinct empties and accessib
         const html=render(SourceRow,{...callbacks,source:{id:'s',path:'/_AUTHOR_FULL_PATH_',origin:'manual',status:'active',availability,lastScanAt:null,exemplarCount:1},busy:true});
         assert.match(html,/_AUTHOR_FULL_PATH_/);assert.match(html, /<button[^>]*disabled=""/);assert.doesNotMatch(html,/catalogue:|\[object Object\]/);
       }
+      const managed = render(SourceRow, { ...callbacks, source: { id: 'r', path: '/packs-rapatries', origin: 'repatriated', status: 'active', exemplarCount: 1 } });
+      assert.match(managed, /opts-catalogue-source-managed/);
+      assert.ok(managed.includes(engine.t('catalogue:sources.repatriated.managed')));
+      assert.match(managed, new RegExp('<button[^>]*disabled=""[^>]*aria-label="' + engine.t('catalogue:sources.remove.label') + '"'));
+      assert.doesNotMatch(managed, /catalogue:|\[object Object\]/);
       const scanningRow = render(SourceRow, { ...callbacks, source: { id: 'scan', path: '/scan', scanning: true } });
       assert.match(scanningRow, /<svg[^>]*class="opts-catalogue-scan-spinner"/, 'scan progress uses its own animated Loader2');
       assert.doesNotMatch(render(SourceRow, { ...callbacks, source: { id: 'idle', path: '/idle', lastScanStatus: 'success' } }), /opts-catalogue-scan-spinner/);
@@ -100,4 +105,31 @@ test('catalogue shell and sources render FR/EN/IT, distinct empties and accessib
       }
     }
   }finally{globalThis.__catalogueSurface=previous;await server.close();}
+});
+
+test('managed source removal tooltip explains management even while busy', async () => {
+  const texts = [];
+  const previous = globalThis.__sourceRowTooltips;
+  globalThis.__sourceRowTooltips = texts;
+  const server = await createServer({ configFile: false, plugins: [{
+    name: 'capture-source-tooltips', enforce: 'pre', transform(code, id) {
+      if (id.endsWith('/common/Tooltip.jsx')) return 'export function Tooltip({ text, children }) { globalThis.__sourceRowTooltips.push(text); return children; }';
+    },
+  }, react()], server: { middlewareMode: true, hmr: false, ws: false, watch: null } });
+  try {
+    const { initializeI18n } = await server.ssrLoadModule('/src/i18n/index.js');
+    const engine = initializeI18n('fr');
+    const { SourceRow } = await server.ssrLoadModule('/src/components/Catalogue/sources/SourceRow.jsx');
+    for (const language of ['fr', 'en', 'it']) {
+      await engine.changeLanguage(language);
+      for (const busy of [false, true]) {
+        texts.length = 0;
+        renderToStaticMarkup(React.createElement(SourceRow, { busy, source: { id: 'r', path: '/packs-rapatries', origin: 'repatriated' } }));
+        assert.equal(texts.at(-1), engine.t('catalogue:sources.repatriated.managed'));
+      }
+    }
+  } finally {
+    globalThis.__sourceRowTooltips = previous;
+    await server.close();
+  }
 });

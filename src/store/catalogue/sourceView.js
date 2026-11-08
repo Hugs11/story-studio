@@ -1,9 +1,10 @@
 // Identity comes from Rust: two differently spelled paths can be one source.
 // `after` is the source list reloaded after the addition, when known: a folder
 // added inside an active source is explained (its packs are not counted twice).
-export function sourceAddResult(items, outcome, declined = false, after = null) {
-  const alreadyActive = !declined && items.some((item) => item.id === outcome.sourceId && item.status === 'active');
-  if (declined) return { alreadyActive, notice: { key: 'catalogue:sources.declined.message', params: {} } };
+export function sourceAddResult(items, outcome, after = null, expectedSourcesRevision = null) {
+  // Rust leaves the revision unchanged for a duplicate, even if its row is hidden.
+  const alreadyActive = (expectedSourcesRevision !== null && outcome.sourcesRevision === expectedSourcesRevision)
+    || items.some((item) => item.id === outcome.sourceId && item.status === 'active');
   if (alreadyActive) return { alreadyActive, notice: { key: 'catalogue:sources.duplicate.message', params: {} } };
   const added = after?.find((item) => item.id === outcome.sourceId);
   const parent = added?.includedIn ? after.find((item) => item.id === added.includedIn) : null;
@@ -15,7 +16,7 @@ const lastSegments = (path) => String(path ?? '').replace(/[\\/]+$/, '').split(/
 
 /**
  * Dossiers proposés par le filtre « Dossier » : les sources actives listées par
- * « Gérer les dossiers » (les sources techniques n'y figurent pas). Libellé = dernier
+ * « Gérer les dossiers », y compris les sources techniques non vides. Libellé = dernier
  * segment du chemin, casse respectée ; deux dossiers de même nom reçoivent le
  * dossier parent (« parent/nom »). Le chemin complet sert d'infobulle.
  */

@@ -1,4 +1,6 @@
-> 🇬🇧 **English** | 🇫🇷 [Français](README.fr.md) | 🇮🇹 [Italiano](README.it.md)
+<p align="center">
+  🇬🇧 <strong>English</strong> | 🇫🇷 <a href="README.fr.md" lang="fr">Français</a> | 🇮🇹 <a href="README.it.md" lang="it">Italiano</a>
+</p>
 
 <p align="center">
   <img src="public/logostory.svg" alt="Story Studio" width="240">
@@ -12,7 +14,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: desktop builds" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platforms: Windows, Linux and macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.10" src="https://img.shields.io/badge/version-0.9.10-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.11" src="https://img.shields.io/badge/version-0.9.11-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -64,9 +66,11 @@ Writing to the device (sending, deleting, reordering and retrieving audiobooks) 
 - Official Lunii audiobooks are never copied back to your computer.
 - Story Studio is provided "as is", without warranty of any kind (see [LICENSE](LICENSE)). **You use it with your device at your own risk**: the authors cannot be held responsible for data loss or a device malfunction.
 
-## Version 0.9.10
+## Version 0.9.11
 
-Story Studio 0.9.10 adds a local audiobook catalogue and direct management of your Lunii: browse, send and retrieve audiobooks, manage the device list and eject it. Optional official titles and covers require your consent.
+This version is mostly about making Story Studio more reliable. When the Lunii is busy, operations wait their turn instead of being refused. A sound that is too quiet is flagged when you add it. If you want, Story Studio can also tell you when a new version is out.
+
+Since 0.9.10, Story Studio has a local audiobook catalogue and manages your Lunii directly. You can browse, send and retrieve audiobooks, manage the device list and eject it. Official titles and covers are optional and require your consent.
 
 The interface is available in French, English and Italian. English and Italian translations were produced and reviewed with AI; corrections are welcome. On an existing installation without a language preference, the interface remains in French; change it in Preferences. New installations use the system language when available, otherwise English.
 
@@ -314,9 +318,9 @@ The security model, third-party notices and changelog are currently available on
 
 ## Roadmap
 
-- Complete and validate the Windows x64, Linux x86_64 and macOS Apple Silicon packages.
-- Exit beta with a polished v1.
-- Adapt the app to support other story-box devices.
+- Fix the remaining bugs.
+- Get out of beta with a finished v1.
+- Make the app work with other story boxes.
 
 ## Contributing
 

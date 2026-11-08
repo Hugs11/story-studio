@@ -4,6 +4,13 @@ import { runner } from './reactHookDriver.mjs';
 const { useCatalogueOperations } = await import('../src/hooks/useCatalogueOperations.js');
 const { useLuniiSend } = await import('../src/hooks/useLuniiSend.js');
 const tick = () => new Promise(resolve => setImmediate(resolve));
+function injectQueueAdapter(lunii) {
+  lunii.store.enqueueSend = (id, _context, run) => ({ id: 'queued', finished: run().then(result => {
+    result.context.queueOwned = false;
+    return result.context;
+  }, async error => { lunii.store.reportError(error); await lunii.store.endSend(id); return null; }) });
+}
+
 
 test('two mounted trackers share actions and closing the second keeps the first subscribed', async () => {
   const snapshot = { operationId: 'send', sequence: 1, status: 'running' };
@@ -142,8 +149,9 @@ test('a buffered send terminal still settles the device when registry reads fail
     getOperation: async () => running,
     send: async () => ({ operationId: 'send' }),
   };
-  const device = { id: 'd', stories: [], mounted: true, generation: 'v2', capacity: { availableBytes: 10000000 } };
+  const device = { id: 'd', state: 'ready', stories: [], mounted: true, generation: 'v2', capacity: { availableBytes: 10000000 } };
   const lunii = { luniiDevices: [device], store: { beginSend: () => null, endSend: async () => ended.push('d'), reportError: error => { throw error; } } };
+  injectQueueAdapter(lunii);
   const cards = [{ id: 'c', title: 'Story', exemplars: [{ id: 'e', available: true, format: 'studio', path: '/pack.zip' }], referenceExemplarId: 'e' }];
   const app = runner(() => {
     const operations = useCatalogueOperations({ api });
@@ -216,8 +224,9 @@ test('send reservation is released once before an evicted context is forgotten',
     release: id => log.push(['release', id]),
     open: async () => {},
   };
-  const device = { id: 'd', stories: [], mounted: true, generation: 'v2', capacity: { availableBytes: 10000000 } };
+  const device = { id: 'd', state: 'ready', stories: [], mounted: true, generation: 'v2', capacity: { availableBytes: 10000000 } };
   const lunii = { luniiDevices: [device], store: { beginSend: () => null, endSend: async () => log.push(['end', 'd']), reportError: error => { throw error; } } };
+  injectQueueAdapter(lunii);
   const cards = [{ id: 'c', title: 'Story', exemplars: [{ id: 'e', available: true, format: 'studio', path: '/pack.zip' }], referenceExemplarId: 'e' }];
   const api = { send: async () => ({ operationId: 'send' }) };
   const app = runner(() => useLuniiSend({ lunii, operations, cards, revision: 1, api }));
@@ -246,8 +255,9 @@ test('a terminal arriving before its send receipt survives eviction and catalogu
     getOperation: async id => { if (!registry.has(id)) throw new Error('expired'); return registry.get(id); },
     send: args => { requestId = args.requestId; return new Promise(resolve => { accept = resolve; }); },
   };
-  const device = { id: 'd', stories: [], mounted: true, generation: 'v2', capacity: { availableBytes: 10000000 } };
+  const device = { id: 'd', state: 'ready', stories: [], mounted: true, generation: 'v2', capacity: { availableBytes: 10000000 } };
   const lunii = { luniiDevices: [device], store: { beginSend: () => null, endSend: async () => ended.push('d'), reportError: error => { throw error; } } };
+  injectQueueAdapter(lunii);
   const cards = [{ id: 'c', title: 'Story', exemplars: [{ id: 'e', available: true, format: 'studio', path: '/pack.zip' }], referenceExemplarId: 'e' }];
   const mount = () => runner(() => {
     const operations = useCatalogueOperations({ api });
@@ -292,8 +302,9 @@ test('a rejected send releases its pending retention after leaving the catalogue
     listOperations: async () => ({ items: [], retainedOperationIds: [] }),
     send: () => new Promise((resolve, fail) => { reject = fail; }),
   };
-  const device = { id: 'd', stories: [], mounted: true, generation: 'v2', capacity: { availableBytes: 10000000 } };
+  const device = { id: 'd', state: 'ready', stories: [], mounted: true, generation: 'v2', capacity: { availableBytes: 10000000 } };
   const lunii = { luniiDevices: [device], store: { beginSend: () => null, endSend: async () => ended.push('d'), reportError: error => errors.push(error) } };
+  injectQueueAdapter(lunii);
   const cards = [{ id: 'c', exemplars: [{ id: 'e', available: true, format: 'studio', path: '/pack.zip' }], referenceExemplarId: 'e' }];
   const mount = () => runner(() => {
     const operations = useCatalogueOperations({ api });

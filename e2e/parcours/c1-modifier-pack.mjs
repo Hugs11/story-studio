@@ -9,7 +9,7 @@ import { copyFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from '../lib/launch.mjs';
 import { createRun } from '../lib/run-context.mjs';
-import { closeFunnel, goHome, importPack, modalWithText, returnHome } from '../lib/actions.mjs';
+import { closeFunnel, goHome, importPack, modalWithText, returnHome, openPackMetadata } from '../lib/actions.mjs';
 import { smallestArchive, smallestArchives, smallestByExt } from '../lib/corpus.mjs';
 import { convertToFsFolder } from '../studio/studio.mjs';
 import { inventory, inventoryDiff } from '../lib/oracles.mjs';
@@ -17,6 +17,15 @@ import { inventory, inventoryDiff } from '../lib/oracles.mjs';
 const EDITABLE_DIR = '01 - Editable';
 const ENVELOPE_DIR = join('04 - Erreur import', 'Triage', '01 - Bundle multi-pack supportable');
 const NON_ENVELOPE_ERROR_DIR = join('04 - Erreur import', 'Triage', '02 - Compression ZIP a adapter');
+
+async function checkImportedTitle(page, ctx, editor) {
+  const recap = (await page.locator('.chrome-titlebar-pack-title').innerText()).trim();
+  const sheet = await openPackMetadata(page);
+  const title = await sheet.locator('.pack-meta-field-row').filter({ hasText: 'Titre du pack' }).locator('input').first().inputValue();
+  ctx.check(`${editor} : titre importé écrit, identique dans la fiche et le bandeau`,
+    !!title && recap === title && !['Pack importé', 'Fiche du pack'].includes(title), { title, recap });
+  await sheet.getByRole('contentinfo').getByRole('button', { name: 'Annuler', exact: true }).click();
+}
 
 export async function run() {
   const ctx = createRun('c1-modifier-pack');
@@ -35,12 +44,14 @@ export async function run() {
     events.setStep('zip-menus');
     await goHome(page);
     await importPack(page, zipMenus, { editor: 'menus' });
+    await checkImportedTitle(page, ctx, 'menus');
     await ctx.shot(page, 'zip-menus');
     ctx.check('zip ordinaire → Éditeur par menus : ouvre sans erreur', events.faults().length === 0, { faults: events.faults() });
     await returnHome(page);
 
     events.setStep('zip-graphe');
     await importPack(page, zipGraphe, { editor: 'graphe' });
+    await checkImportedTitle(page, ctx, 'graphe');
     await ctx.shot(page, 'zip-graphe');
     ctx.check('zip ordinaire → Éditeur graphe : ouvre sans erreur', events.faults().length === 0, { faults: events.faults() });
     await returnHome(page);

@@ -1,4 +1,4 @@
-use crate::support::user_message::{codes, UserMessage};
+use crate::support::user_message::{codes, MessageLabel, UserMessage};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -15,7 +15,9 @@ use super::super::{
     CanonicalEntry, CanonicalProject, NativeAssetPreparationReport, NativeAssetStats,
     NativeGenerationWarning, PreparedAsset,
 };
-use super::audio::{prepare_audio_asset, AudioPreparation};
+use super::audio::{
+    generation_audio_label, prepare_audio_asset, stage_audio_label, AudioPreparation,
+};
 use super::image::{
     ensure_image_320x240, image_request, plan_image_from_bytes, reencode_png_320x240,
     stage_binary_asset, stage_binary_asset_as, stage_binary_asset_bytes, ImagePlan,
@@ -35,6 +37,7 @@ pub(crate) enum AssetSourceKind {
 #[derive(Debug, Clone)]
 pub(crate) struct AssetRequest {
     pub(crate) role: String,
+    pub(crate) audio_label: MessageLabel,
     pub(crate) source_path: String,
     pub(crate) source_kind: AssetSourceKind,
     pub(crate) leading_silence_sec: f64,
@@ -141,7 +144,7 @@ fn preprocess_request(
                 canonical_options,
                 request.leading_silence_sec,
                 request.trailing_silence_sec,
-                &request.role,
+                (&request.role, request.audio_label.clone()),
             )?;
             let asset = match prepared.preparation {
                 AudioPreparation::Encoded { output } => PreprocessedAsset::AudioProcessed {
@@ -512,6 +515,7 @@ pub(crate) fn collect_asset_requests(
             path,
             leading_silence_sec,
             trailing_silence_sec,
+            MessageLabel::literal("Accueil du pack", codes::GENERATION_AUDIO_ROOT_LABEL),
         ));
     }
     if let Some(path) = project.root_image.as_ref() {
@@ -529,6 +533,7 @@ pub(crate) fn collect_asset_requests(
                 path,
                 leading_silence_sec,
                 trailing_silence_sec,
+                MessageLabel::literal("Mode nuit", codes::GENERATION_AUDIO_NIGHT_LABEL),
             ));
         }
     }
@@ -617,6 +622,7 @@ fn collect_native_graph_requests(
                 path,
                 leading_silence_sec,
                 trailing_silence_sec,
+                stage_audio_label(stage.get("name").and_then(|v| v.as_str()).unwrap_or("")),
             ));
         }
         if let Some(path) = stage.get("image").and_then(|value| value.as_str()) {
@@ -659,6 +665,7 @@ fn collect_entry_requests(
                     path,
                     leading_silence_sec,
                     trailing_silence_sec,
+                    generation_audio_label(&menu.name, false, None),
                 ));
             }
             // « Écran transparent » : le constructeur écrit `image: null`.
@@ -686,6 +693,7 @@ fn collect_entry_requests(
                     path,
                     leading_silence_sec,
                     trailing_silence_sec,
+                    generation_audio_label(&story.name, true, None),
                 ));
             }
             if let Some(path) = story.item_audio.as_ref() {
@@ -694,6 +702,7 @@ fn collect_entry_requests(
                     path,
                     leading_silence_sec,
                     trailing_silence_sec,
+                    generation_audio_label(&story.name, true, None),
                 ));
             }
             let sequence_len = story.after_playback_sequence.len();
@@ -704,6 +713,7 @@ fn collect_entry_requests(
                         path,
                         leading_silence_sec,
                         trailing_silence_sec,
+                        generation_audio_label(&story.name, true, None),
                     ));
                 }
             }
@@ -715,6 +725,7 @@ fn collect_entry_requests(
                             path,
                             leading_silence_sec,
                             trailing_silence_sec,
+                            generation_audio_label(&story.name, true, Some(&step.name)),
                         ));
                     }
                     if let Some(path) = step.image.as_ref() {
@@ -733,6 +744,7 @@ fn collect_entry_requests(
                             path,
                             leading_silence_sec,
                             trailing_silence_sec,
+                            generation_audio_label(&story.name, true, Some(&step.name)),
                         ));
                     }
                     if let Some(path) = step.image.as_ref() {
@@ -790,6 +802,7 @@ fn audio_request(
     source_path: &str,
     leading_silence_sec: f64,
     trailing_silence_sec: f64,
+    audio_label: MessageLabel,
 ) -> AssetRequest {
     AssetRequest {
         role: role.to_string(),
@@ -797,6 +810,7 @@ fn audio_request(
         source_kind: AssetSourceKind::Audio,
         leading_silence_sec,
         trailing_silence_sec,
+        audio_label,
         entry_id: None,
     }
 }
@@ -808,6 +822,87 @@ fn zip_request(role: &str, source_path: &str) -> AssetRequest {
         source_kind: AssetSourceKind::Zip,
         leading_silence_sec: 0.0,
         trailing_silence_sec: 0.0,
+        audio_label: MessageLabel::data(""),
         entry_id: None,
+    }
+}
+
+#[cfg(test)]
+mod label_tests {
+    use super::*;
+    use serde_json::{json, Value};
+
+    // Fixture écrite à la main depuis la décision produit, commune au test JS.
+    #[test]
+    fn collected_audio_labels_match_shared_js_fixture() {
+        let cases: Value = serde_json::from_str(include_str!(
+            "../../../../scripts/fixtures/audio-level-labels.json"
+        ))
+        .unwrap();
+        let catalogues: [Value; 3] = [
+            serde_json::from_str(include_str!("../../../../src/locales/fr/rust.json")).unwrap(),
+            serde_json::from_str(include_str!("../../../../src/locales/en/rust.json")).unwrap(),
+            serde_json::from_str(include_str!("../../../../src/locales/it/rust.json")).unwrap(),
+        ];
+        fn render(value: &Value, catalogue: &Value) -> String {
+            if let Some(text) = value.as_str() {
+                return text.to_string();
+            }
+            let mut text = catalogue[value["code"].as_str().unwrap()]
+                .as_str()
+                .unwrap()
+                .to_string();
+            for (key, value) in value["params"].as_object().unwrap() {
+                text = text.replace(&format!("{{{{{key}}}}}"), &render(value, catalogue));
+            }
+            text
+        }
+        for case in cases.as_array().unwrap() {
+            let source = &case["source"];
+            let field = case["field"].as_str().unwrap();
+            let mut entry = json!({"type":"story", "id":"entry", "name": source["entry"].as_str().unwrap_or(""), "audio":"story.mp3", "itemAudio":"title.mp3", "controlSettings":{"home":true}});
+            if source["kind"] == "menu" {
+                entry["type"] = json!("menu");
+            }
+            if field.contains("Sequence") || field.contains("HomeStep") {
+                entry["afterPlaybackSequence"] = json!([
+                    {"id":"step", "name":source["step"], "audio":"step.mp3"},
+                    {"id":"second", "name":"Autre", "audio":"second.mp3"}
+                ]);
+                entry["afterPlaybackHomeStep"] =
+                    json!({"id":"home", "name":source["step"], "audio":"home.mp3"});
+            }
+            if field == "afterPlaybackPromptAudio" {
+                entry["afterPlaybackPromptAudio"] = json!("prompt.mp3");
+            }
+            let project: Project = serde_json::from_value(json!({
+                "name":"Labels", "projectType":"pack", "globalOptions":{"autoNext":false,"nightMode":false},
+                "rootAudio":"root.mp3", "nightModeAudio":"night.mp3", "rootEntries":[entry],
+                "nativeGraph":{"preserveForRoundTrip":true,"document":{"stageNodes":[
+                    {"id":"id", "name":source["stage"].as_str().unwrap_or(""), "audio":"graph.mp3"}
+                ]}}
+            }))
+            .unwrap();
+            let project = canonicalize_project(&project);
+            let requests = collect_asset_requests(&project, 0.0, 0.0);
+            let request = requests
+                .iter()
+                .find(|request| {
+                    request.role == field || request.role.ends_with(&format!("/{field}"))
+                })
+                .unwrap_or_else(|| panic!("requête absente : {case}"));
+            assert_eq!(
+                request.audio_label.to_string(),
+                case["expected"]["fr"].as_str().unwrap(),
+                "{case}"
+            );
+            for (language, catalogue) in ["fr", "en", "it"].into_iter().zip(&catalogues) {
+                assert_eq!(
+                    render(&request.audio_label.value(), catalogue),
+                    case["expected"][language].as_str().unwrap(),
+                    "{language}: {case}"
+                );
+            }
+        }
     }
 }

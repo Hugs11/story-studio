@@ -443,7 +443,6 @@ impl Store {
             let first_workspace: bool = tx
                 .query_row("SELECT count(*)=0 FROM workspace_root", [], |r| r.get(0))
                 .map_err(error)?;
-            let status = if first_workspace { "active" } else { "hint" };
             let stamp = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
@@ -456,13 +455,15 @@ impl Store {
             )
             .map_err(error)?;
             let mut inserted = false;
-            for (path, path_key) in &roles {
+            // Only the very first workspace seeds its role folders as
+            // sources; later workspaces are recorded for exclusions only.
+            for (path, path_key) in roles.iter().filter(|_| first_workspace) {
                 let source_id = uuid::Uuid::new_v4().to_string();
                 inserted |= tx
                     .execute(
                         "INSERT OR IGNORE INTO source(id,path,path_key,origin,status,revision,resolved_path)
-                         VALUES (?1,?2,?3,'workspace',?4,0,?2)",
-                        params![source_id, bytes(path), path_key, status],
+                         VALUES (?1,?2,?3,'workspace','active',0,?2)",
+                        params![source_id, bytes(path), path_key],
                     )
                     .map_err(error)?
                     > 0;
@@ -490,7 +491,7 @@ impl Store {
             let sources_revision =
                 tx.query_row("SELECT sources_revision FROM catalogue", [], |r| r.get(0))?;
             let mut statement = tx.prepare(
-                "SELECT id,path,origin,status,revision,coalesce(resolved_path,path) FROM source WHERE (?1 OR origin<>'repatriated') ORDER BY path_key",
+                "SELECT id,path,origin,status,revision,coalesce(resolved_path,path) FROM source WHERE (?1 OR origin<>'repatriated' OR EXISTS(SELECT 1 FROM cache.coverage v JOIN exemplar e ON e.id=v.exemplar_id JOIN cache.observation o ON o.exemplar_id=e.id WHERE v.source_id=source.id AND e.retired=0 AND o.state<>'missing')) ORDER BY path_key",
             )?;
             let records = statement
                 .query_map([internal], |r| {
@@ -614,9 +615,15 @@ impl Store {
                 return Err(UserMessage::new(codes::CATALOG_REVISION_CONFLICT));
             }
             let source_id = if let Some((path, (resolved, path_key), plan)) = added {
-                let technical: bool = tx.query_row("SELECT EXISTS(SELECT 1 FROM source WHERE path_key=?1 AND origin='repatriated')", [path_key], |r| r.get(0)).map_err(error)?;
-                if technical {
-                    return Err(UserMessage::new(codes::CATALOG_SOURCE_NOT_FOUND));
+                let technical: Option<String> = tx.query_row("SELECT id FROM source WHERE path_key=?1 AND origin='repatriated'", [path_key], |r| r.get(0)).optional().map_err(error)?;
+                if let Some(source_id) = technical {
+                    return Ok(SourceOutcome {
+                        catalogue_revision: revision,
+                        sources_revision,
+                        source_id,
+                        affected_card_ids: Vec::new(),
+                        warnings: self.all_warnings(),
+                    });
                 }
                 apply_reconciliation(tx, plan)?;
                 let existing: Option<String> = tx

@@ -190,6 +190,7 @@ export const StoryEditor = memo(function StoryEditor({
             </div>
             <div className="media-col-stack">
               <AudioField
+                levelLabel={{ entry: node.name }}
                 label={t("tree:story.selection.audio")}
                 labelRef={{ key: "tree:story.selection.audio" }}
                 description={explicitSilentSelection
@@ -206,6 +207,7 @@ export const StoryEditor = memo(function StoryEditor({
                 onClear={() => onUpdate(createStorySelectionAudioUpdate(null))}
               />
               <AudioField
+                levelLabel={{ entry: node.name }}
                 label={t("tree:story.narrative.label")}
                 labelRef={{ key: "tree:story.narrative.label" }}
                 description={t("tree:story.narrative.description")}

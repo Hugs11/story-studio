@@ -52,7 +52,7 @@ function harness(t, acceptedSteps, { sharedPath = false, free = false, windowsAl
       return { status: 'applied', project: store.project };
     },
   };
-  const pathAudit = { [oldA]: false, [oldB]: false, [newA]: true, [newB]: true };
+  let pathAudit = { [oldA]: false, [oldB]: false, [newA]: true, [newB]: true };
   const hook = runner(() => useMissingMediaRelink({
     store, advancedAuthoring, mediaLibraryPathsRef: library,
     setMediaLibraryPaths: (paths) => { library.current = paths; }, pathAudit,
@@ -63,8 +63,12 @@ function harness(t, acceptedSteps, { sharedPath = false, free = false, windowsAl
   t.after(() => { hook.unmount(); app.unmount(); });
   return {
     oldA, oldB, newA, newB, originalTags, originalLibrary, library, saves,
-    async apply() {
-      const replacements = sharedPath ? new Map([[oldA, newA]]) : { [oldA]: newA, [oldB]: newB };
+    audit(status) {
+      pathAudit = { ...pathAudit, ...status };
+      return hook.render();
+    },
+    async apply(onlyA = false) {
+      const replacements = onlyA ? { [oldA]: newA } : sharedPath ? new Map([[oldA, newA]]) : { [oldA]: newA, [oldB]: newB };
       await hook.render().handleApplyMissingMediaRelinks(replacements, { saveAfter: true });
       store = app.render();
       return { store, api: hook.render(), gestureCalls };
@@ -137,3 +141,15 @@ test('relink partiel Windows : les alias gardent toutes les étiquettes sans cl�
     projectOverride: store.project, mediaTagsOverride: store.mediaTags, mediaLibraryPathsOverride: f.library.current,
   });
 });
+
+for (const free of [true, false]) {
+  test(`application partielle sans refus (${free ? 'menus' : 'graphe'}) : pas de réouverture après audit`, async (t) => {
+    const f = harness(t, 2, { free });
+    const { api } = await f.apply(true);
+    assert.deepEqual(api.missingMedia.map((item) => item.path), [f.oldB]);
+    assert.equal(f.propose(api), false);
+    const refreshed = f.audit({ [f.newA]: true, [f.oldB]: false });
+    assert.equal(f.propose(refreshed), false);
+    assert.deepEqual(refreshed.missingMedia.map((item) => item.path), [f.oldB]);
+  });
+}

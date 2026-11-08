@@ -100,14 +100,10 @@ mod tests {
         assert!(begin.elapsed() < Duration::from_secs(2));
         // Once the hung probe returns, the target can be probed again.
         release_probe.send(()).unwrap();
-        let mut answered = None;
-        for _ in 0..50 {
-            answered = bounded(&target, Duration::from_millis(100), || 7);
-            if answered.is_some() {
-                break;
-            }
-        }
-        assert_eq!(answered, Some(7));
+        assert_eq!(
+            bounded(&target, crate::test_support::timeout(), || 7),
+            Some(7)
+        );
     }
 
     #[test]

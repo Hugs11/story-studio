@@ -8,7 +8,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { AppModalPortal } from '../common/AppModalPortal';
 import { Check, Loader2, Rss, Search, X } from '../icons/LucideLocal';
-import { useSubscriptionFollow } from '../MediaSubscriptions/useSubscriptionFollow';
+import { FollowedSourceNotice, FollowedSourceChoices } from '../MediaSubscriptions/FollowedImportSource.jsx';
+import { useFollowedImportSource, useSubscriptionFollow } from '../MediaSubscriptions/useSubscriptionFollow';
 import './PodcastImportModal.css';
 
 function formatBytes(bytes) {
@@ -32,10 +33,10 @@ function episodeMeta(ep) {
     .join(' · ');
 }
 
-export function PodcastImportModal({ onImport, onClose, toLibrary = false, initialSource = null }) {
+export function PodcastImportModal({ onImport, onClose, toLibrary = false, initialSource = null, onManageSubscriptions = null }) {
   useMessageLanguage();
   const [phase, setPhase] = useState('url');
-  const [url, setUrl] = useState('');
+  const { url, setUrl, sources: followedSources, followed } = useFollowedImportSource('podcast');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [feed, setFeed] = useState(null);
@@ -186,10 +187,12 @@ export function PodcastImportModal({ onImport, onClose, toLibrary = false, initi
                   />
                 </label>
               </form>
+              <FollowedSourceChoices id="podcast-followed-sources" sources={followedSources} onChoose={(value) => { resetFollow(); setUrl(value); }} disabled={loading} />
               <p className="podcast-hint">
                 {toLibrary ? t('import:podcast.modal.libraryHint') : t('import:podcast.modal.storyHint')}
               </p>
-              <label className="podcast-follow-toggle">
+              {followed ? <FollowedSourceNotice followed={followed} onManage={onManageSubscriptions} /> : (
+                <label className="podcast-follow-toggle">
                 <input
                   type="checkbox"
                   checked={followEnabled}
@@ -202,6 +205,7 @@ export function PodcastImportModal({ onImport, onClose, toLibrary = false, initi
                 <small>{followStatusText(follow)}</small>
               </span>
               </label>
+              )}
               {error && <div className="podcast-error" role="alert">{presentStoredError(error)}<TechnicalDetail value={presentUserMessage(error).technicalDetail} /></div>}
             </div>
 
@@ -234,7 +238,8 @@ export function PodcastImportModal({ onImport, onClose, toLibrary = false, initi
             </header>
 
             <div className="podcast-subhead">
-              <label className="podcast-follow-toggle">
+              {followed ? <FollowedSourceNotice followed={followed} onManage={null} /> : (
+                <label className="podcast-follow-toggle">
                 <input
                   type="checkbox"
                   checked={followEnabled}
@@ -247,6 +252,7 @@ export function PodcastImportModal({ onImport, onClose, toLibrary = false, initi
                 <small>{followStatusText(follow)}</small>
               </span>
               </label>
+              )}
               <div className="podcast-toolbar">
                 <label className="podcast-search">
                   <Search />

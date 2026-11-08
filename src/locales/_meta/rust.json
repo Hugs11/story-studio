@@ -739,6 +739,17 @@
       "status": "ai-reviewed"
     }
   },
+  "GENERATION_AUDIO_UNNAMED_LABEL": {
+    "context": "Libellé d’un avertissement audio de génération lorsque l’Écran du graphe ne porte aucun nom.",
+    "en": {
+      "sourceHash": "82ca2ed5f805",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "82ca2ed5f805",
+      "status": "ai-reviewed"
+    }
+  },
   "GENERATION_AUDIO_ROOT_LABEL": {
     "context": "Journal de génération et rapport de production ; assets/audio.rs:generation_audio_label ; sens : Accueil du pack",
     "en": {
@@ -3728,14 +3739,14 @@
       "status": "ai-reviewed"
     }
   },
-  "GENERATION_AUDIO_SILENT_REFUSED": {
-    "context": "Production Libre / export avancé : erreur, avertissement ou détail média ; native_pack/assets/audio.rs:459 ; sens : Preparation audio native impossible pour {{role}} : audio silencieux",
+  "AUDIO_SILENT_KEPT": {
+    "context": "Avis non bloquant de silence (volume intégré non établissable) dans les deux éditeurs et leurs rapports de génération ; même texte, nom lisible de l’emplacement (Histoire — Étape), jamais un rôle technique.",
     "en": {
-      "sourceHash": "6c0ae15574eb",
+      "sourceHash": "fd0ad5b9e7a4",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "6c0ae15574eb",
+      "sourceHash": "fd0ad5b9e7a4",
       "status": "ai-reviewed"
     }
   },
@@ -18075,6 +18086,17 @@
       "status": "ai-reviewed"
     }
   },
+  "STORYTELLER_DEVICE_UNRESPONSIVE": {
+    "context": "Connexion Lunii, file d'opérations : écriture restée sans réponse au-delà de sa borne.",
+    "en": {
+      "sourceHash": "69a96c947d0d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "69a96c947d0d",
+      "status": "ai-reviewed"
+    }
+  },
   "STORYTELLER_PROJECT_INCOMPLETE": {
     "context": "Connexion Lunii L9a2 : refus de génération ; cause est un message structuré traduisible.",
     "en": {
@@ -18248,6 +18270,116 @@
     },
     "it": {
       "sourceHash": "0d833ea78022",
+      "status": "ai-reviewed"
+    }
+  },
+  "STORYTELLER_WORKSPACE_UNAVAILABLE": {
+    "context": "Rapatriement refusé avant reconstruction : chemin de travail absent, relatif, non accessible ou enfant redirigé.",
+    "en": {
+      "sourceHash": "1e41cbe04e1c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1e41cbe04e1c",
+      "status": "ai-reviewed"
+    }
+  },
+  "STORYTELLER_REPATRIATE_DISCONNECTED": {
+    "context": "Rapatriement depuis la Lunii : volume débranché pendant la lecture, panne appareil.",
+    "en": {
+      "sourceHash": "1831554e1bcb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1831554e1bcb",
+      "status": "ai-reviewed"
+    }
+  },
+  "GENERATION_AUDIO_STEP_LABEL": {
+    "context": "Libellé du niveau audio commun au rapport de génération et à la pastille de l’éditeur ; noms d’auteur conservés entiers.",
+    "en": {
+      "sourceHash": "ce54b206ddad",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ce54b206ddad",
+      "status": "ai-reviewed"
+    }
+  },
+  "GENERATION_AUDIO_UNTITLED_STORY_LABEL": {
+    "context": "Libellé du niveau audio commun au rapport de génération et à la pastille de l’éditeur ; noms d’auteur conservés entiers.",
+    "en": {
+      "sourceHash": "2777dc45a995",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2777dc45a995",
+      "status": "ai-reviewed"
+    }
+  },
+  "GENERATION_AUDIO_UNTITLED_MENU_LABEL": {
+    "context": "Libellé du niveau audio commun au rapport de génération et à la pastille de l’éditeur ; noms d’auteur conservés entiers.",
+    "en": {
+      "sourceHash": "076129111a17",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "076129111a17",
+      "status": "ai-reviewed"
+    }
+  },
+  "STORYTELLER_PROJECT_SAVE_REQUIRED": {
+    "context": "Refus avant envoi du projet du catalogue vers la Lunii.",
+    "en": {
+      "sourceHash": "c646984efe60",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c646984efe60",
+      "status": "ai-reviewed"
+    }
+  },
+  "STORYTELLER_PROJECT_IDENTITY_SAVE_FAILED": {
+    "context": "Refus avant envoi du projet du catalogue vers la Lunii.",
+    "en": {
+      "sourceHash": "943985808c7a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "943985808c7a",
+      "status": "ai-reviewed"
+    }
+  },
+  "STORYTELLER_PROJECT_OPEN_ID_REQUIRED": {
+    "context": "Refus avant envoi du projet du catalogue vers la Lunii.",
+    "en": {
+      "sourceHash": "945a7c5d1270",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "945a7c5d1270",
+      "status": "ai-reviewed"
+    }
+  },
+  "STORYTELLER_PROJECT_LEGACY_SAVE_REQUIRED": {
+    "context": "Refus avant envoi du projet du catalogue vers la Lunii.",
+    "en": {
+      "sourceHash": "3056b07cc291",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3056b07cc291",
+      "status": "ai-reviewed"
+    }
+  },
+  "STORYTELLER_PROJECT_ID_RECHECK_FAILED": {
+    "context": "Refus avant envoi du projet du catalogue vers la Lunii.",
+    "en": {
+      "sourceHash": "54d6dd8ae18b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "54d6dd8ae18b",
       "status": "ai-reviewed"
     }
   }

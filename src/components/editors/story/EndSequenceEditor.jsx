@@ -158,6 +158,7 @@ export function EndSequenceEditor({
               </div>
 
               <AudioField
+                levelLabel={{ entry: node.name, step: step.name }}
                 label={t("tree:story.sequence.audioLabel", { number: index + 1 })}
                 labelRef={{ key: "tree:story.sequence.audioLabel", params: { number: index + 1 } }}
                 file={step.audio}
@@ -286,6 +287,7 @@ export function EndSequenceEditor({
             />
           </div>
           <AudioField
+            levelLabel={{ entry: node.name, step: homeStep.name }}
             label={t("tree:story.home.audioLabel")}
             labelRef={{ key: "tree:story.home.audioLabel" }}
             file={homeStep.audio}

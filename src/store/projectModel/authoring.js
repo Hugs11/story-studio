@@ -13,7 +13,6 @@ import { createProjectStorage, normalizeProjectStorage } from '../projectStorage
 // projetée en position d'auteur : la seule porte est
 // `apply_editor_position_to_authoring`, en Rust, et le code JavaScript ne l'appelle pas.
 
-import { bumpPackVersion } from '../../utils/packConvention.js';
 import { archiveNamingFields } from '../advancedExport/archiveName.js';
 import { getUnpackedPackDetails } from '../unpackProject.js';
 import { advancedGestures, presence } from './advancedGestures.js';
@@ -121,11 +120,11 @@ export async function acquireCreatedAdvancedProject({
 } = {}) {
   const payload = await invokeCommand('create_advanced_document', { title, initialStageName: nextDefaultNodeName(null, STAGE_KIND) });
   // Un nouveau projet graphe nomme son archive par convention, comme un projet
-  // par menus : l'âge (3+ par défaut) est alors écrit dans `story.json`.
+  // par menus, sans inventer d'âge.
   return createAdvancedProject({
     payload,
     projectName: projectName || title,
-    packMetadata: archiveNamingFields({ namingMode: 'convention', minAge: '3' }),
+    packMetadata: archiveNamingFields({ namingMode: 'convention', minAge: '' }),
   });
 }
 
@@ -137,9 +136,12 @@ export async function acquireCreatedAdvancedProject({
 // fabriquées ni complétées ici : JavaScript n'ouvre pas le payload, il ne saurait
 // pas quelles références il porte. Un asset absent de l'archive revient avec son
 // chemin et le statut `missing` — il reste lié, donc retrouvable.
+const importedCatalogueMetadata = new WeakMap();
+
 export async function acquireImportedAdvancedProject({
   packPath,
   assetsDir,
+  catalogueMetadata = false,
   workspaceDir,
   storage = createProjectStorage(),
   ephemeral = true,
@@ -147,11 +149,11 @@ export async function acquireImportedAdvancedProject({
   invokeCommand = invokeTauri,
 } = {}) {
   const acquired = await withProjectMediaOutput({ root: workspaceDir, storage, ephemeral }, async (output) => invokeCommand('acquire_advanced_pack_document', {
-    zipPath: packPath, destDir: assetsDir, ...await output.arguments(),
+    zipPath: packPath, destDir: assetsDir, catalogueMetadata, ...await output.arguments(),
   }), { invokeCommand });
   // La porte d'enveloppe juge les liaisons reçues comme elle jugerait celles d'un
   // fichier : le producteur n'est pas dispensé de la forme fermée du contrat.
-  return createAdvancedProject({
+  const project = createAdvancedProject({
     payload: acquired.payload,
     officialProvenance: acquired.officialProvenance ?? 'unknown',
     officialOriginUuid: acquired.officialOriginUuid,
@@ -160,6 +162,8 @@ export async function acquireImportedAdvancedProject({
     mediaBindings: acquired.mediaBindings,
     thumbnailImage: acquired.thumbnailImage ?? null,
   });
+  if (acquired.catalogueMetadata) importedCatalogueMetadata.set(project, acquired.catalogueMetadata);
+  return project;
 }
 
 // Ce que l'atterrissage d'un pack repris règle avant l'installation du projet,
@@ -167,16 +171,13 @@ export async function acquireImportedAdvancedProject({
 // fiche et les diagnostics, mais sans entrer dans l'historique d'annulation :
 // l'auteur ne peut pas « annuler » l'atterrissage.
 //
-// - Un pack repris est une nouvelle révision : sa version devient celle
-//   d'origine + 1 (2 sans version), la règle même de la chaîne Libre.
-// - Le titre est lu comme côté Libre (`getUnpackedPackDetails`) : un titre de
-//   convention (« 3+]Titre[by_Auteur_V5 ») rend son titre lisible au document,
-//   et son âge, son auteur… aux champs de nommage de l'enveloppe, en
-//   convention. L'export recompose alors la convention une seule fois.
 export async function prepareImportedAdvancedProject(project, {
   invokeCommand = invokeTauri,
   packPath = '',
+  packLabel = '',
+  catalogue = importedCatalogueMetadata.get(project),
 } = {}) {
+  importedCatalogueMetadata.delete(project);
   const view = await invokeCommand('read_advanced_graph_view', {
     payload: readAuthoringPayload(project),
   });
@@ -185,15 +186,15 @@ export async function prepareImportedAdvancedProject(project, {
   const title = view?.metadata?.title;
   const documentTitle = title?.presence === 'value' ? String(title.value ?? '') : '';
   const { packMetadata: imported } = getUnpackedPackDetails({
-    result: { title: documentTitle, packVersion: current },
+    result: { catalogueMetadata: catalogue, title: documentTitle, packVersion: current, packDescription: view?.metadata?.description?.presence === 'value' ? view.metadata.description.value : '' },
     zipPath: packPath,
+    zipName: packLabel,
   });
-  // Un document sans titre (projection FS) le reste : la production lui en
-  // donne un de secours, sans l'inscrire dans le document d'auteur.
-  const readableTitle = documentTitle.trim() ? imported.title : '';
   const metadata = {
-    version: presence.value(bumpPackVersion(current)),
-    ...(readableTitle && readableTitle !== documentTitle ? { title: presence.value(readableTitle) } : {}),
+    version: presence.value(imported.version),
+    ...(imported.title !== documentTitle ? { title: presence.value(imported.title) } : {}),
+    ...(imported.description !== (view?.metadata?.description?.value ?? '')
+      ? { description: presence.value(imported.description) } : {}),
   };
   const gestures = [advancedGestures.setDocumentMetadata(metadata)];
   let prepared = project;

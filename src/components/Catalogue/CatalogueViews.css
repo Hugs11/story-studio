@@ -419,18 +419,23 @@ button.catalogue-format-tag:focus-visible { outline: 1px solid var(--focus-ring)
 .catalogue-fiche-description-section p { margin: var(--space-2) 0 0; color: var(--text-secondary); }
 .catalogue-fiche-content > section > .catalogue-card-tags { margin-top: var(--space-1); }
 .catalogue-fiche-description--short { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
-/* Empreinte fixe de 28 px (bouton icône au repos) : déroulé, le bouton rouge sort de la ligne
-   par la gauche, ancré à droite, sans déplacer 📂 ni changer la hauteur de la ligne. */
+/* Empreinte fixe de 28 px (bouton icône au repos) : déroulé, le bouton rouge couvre exactement la
+   zone des boutons d'action de la ligne (les autres icônes sont masquées), sans déplacer le titre
+   ni changer la hauteur de la ligne. Le libellé complet reste en aria-label. */
+.catalogue-fiche-copy-actions { position: relative; justify-content: flex-end; }
+.catalogue-fiche-copy-actions:has(> .catalogue-exemplar-trash) { min-width: 9rem; }
+.catalogue-fiche-copy-actions:has(> .catalogue-exemplar-trash.is-expanded) > :not(.catalogue-exemplar-trash) { visibility: hidden; }
 .catalogue-exemplar-trash { position: relative; display: inline-block; flex-shrink: 0; width: 28px; height: 28px; }
-.catalogue-exemplar-trash.is-expanded { z-index: 1; }
+.catalogue-exemplar-trash.is-expanded { position: static; }
 .catalogue-exemplar-trash.is-expanded > button {
-  position: absolute; inset-block: 0; right: 0; width: max-content; max-width: none; white-space: nowrap;
+  position: absolute; inset-block: 0; right: 0; width: 100%; max-width: none; min-width: 0; z-index: 1; overflow: hidden; white-space: nowrap;
   background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger-text);
   animation: catalogue-trash-expand 140ms var(--ease-standard);
 }
+.catalogue-exemplar-trash-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .catalogue-exemplar-trash.is-expanded > button:hover:not(:disabled) { background: var(--danger-bg-hover); border-color: var(--danger-border-hover); }
 .catalogue-exemplar-trash-error {
-  position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: max-content; max-width: min(240px, 60vw);
+  position: absolute; right: 0; left: 0; top: 0; z-index: 1; box-sizing: border-box; max-width: 100%; white-space: normal; overflow-wrap: anywhere; line-height: 1.25;
   padding: var(--space-1) var(--space-2); border: 1px solid var(--danger-border); border-radius: var(--radius-md);
   background: var(--danger-bg); color: var(--danger-text); font-size: var(--text-control);
 }

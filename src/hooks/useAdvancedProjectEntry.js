@@ -1,4 +1,3 @@
-import { translateGraph as t } from '../i18n/graphPresentation.js';
 import { createProjectStorage } from '../store/projectStorage';
 // Les entrées de l'Éditeur avancé, et elles seules.
 //
@@ -69,7 +68,7 @@ export function useAdvancedProjectEntry({
     setMediaLibraryPaths([]);
   }
 
-  async function startAdvancedProject({ title = t('graph:creation.pack.defaultName') } = {}) {
+  async function startAdvancedProject({ title = '' } = {}) {
     await runFunnelLanding('advanced', async () => {
       const acquired = await acquireCreated({ title, projectName: title });
       installAdvancedProject(acquired);
@@ -86,14 +85,15 @@ export function useAdvancedProjectEntry({
     await runFunnelLanding('advanced', async (workspaceDir, session) => {
       const acquired = await acquire({
         packPath: zipPath,
+        catalogueMetadata: true,
         assetsDir: advancedAssetsDir(workspaceDir, zipPath, packLabel),
         workspaceDir,
         storage: createProjectStorage(),
         ephemeral: session?.mode !== 'project',
         projectName: (packLabel || basename(zipPath) || '').replace(/\.(zip|7z)$/i, ''),
       });
-      // Version d'origine + 1, comme au Libre ; bloc Story Studio préservé.
-      installAdvancedProject(await prepareImported(acquired, { packPath: zipPath }));
+      // Métadonnées du pack et replis depuis son nom visible, comme au Libre.
+      installAdvancedProject(await prepareImported(acquired, { packPath: zipPath, packLabel }));
       importedEpochRef.current = store.workEpochRef.current;
       // Comme au Libre : la première production proposera de garder ou de
       // renouveler l'UUID repris du pack.

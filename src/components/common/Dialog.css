@@ -21,6 +21,18 @@
   box-shadow: var(--shadow-overlay);
 }
 
+/* `ContentDialog` (<dialog> en showModal) : centré avec fond, comme `.dialog-overlay`. Le reset
+   global met la marge à zéro, ce qui collait la fenêtre en haut à gauche. */
+dialog.dialog-panel {
+  margin: auto;
+  padding: 0;
+}
+/* Littéral : avant Safari 17.4 (macOS 11–13), ::backdrop n'hérite pas des variables de :root. */
+dialog.dialog-panel::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
 .dialog-header {
   display: flex;
   align-items: center;

@@ -5,6 +5,8 @@ import { useCatalogueTranslation } from '../../../i18n/useCatalogueTranslation.j
 import { LUNII_PANEL_WIDTH, luniiSelection, luniiSelectAll, luniiRows } from '../../../store/catalogue/luniiDevices.js';
 import { mergeSendingRows } from '../../../store/catalogue/luniiSend.js';
 import { LuniiSendingRow } from './LuniiSendingRow.jsx';
+import { LuniiQueuedRow } from './LuniiQueuedRow.jsx';
+import { queuedCount, queuedDeviceMarks, queuedMarks, queuedSendRows, queueReports, removalPending, repairPending } from '../../../store/catalogue/luniiQueueView.js';
 import { PanelResizeHandle } from '../../structure/PanelResizeHandle.jsx';
 import { Button } from '../../common/Button.jsx';
 import { PanelLeftOpen } from '../../icons/LucideLocal.jsx';
@@ -39,11 +41,16 @@ export function LuniiPanel({ lunii, onSelect, onDeviceChange, dnd = null, width 
   if (!device) return null;
   const rows = luniiRows(device);
   const send = lunii.send;
-  const shownRows = mergeSendingRows(rows, send?.virtualFor(device.id) ?? []);
+  // Waiting operations: sends at their drop place, gestures on their rows, the rest in the header.
+  const waiting = lunii.luniiQueue?.[device.id] ?? [];
+  const marks = queuedMarks(waiting);
+  const cancelQueued = entryId => lunii.store.cancel?.(entryId);
+  const shownRows = mergeSendingRows(rows, [...(send?.virtualFor(device.id) ?? []), ...queuedSendRows(device, waiting, !!send?.sending?.has(device.id))]);
   const hovered = send?.over?.deviceId === device.id ? send.over : null;
   // A refused drag (official stories only) neither highlights the list nor inserts anything.
   const overHere = hovered && !hovered.refused ? hovered : null;
   const collapsed = lunii.luniiPanelCollapsed;
+  const collapsedWaiting = collapsed ? devices.reduce((sum, d) => sum + queuedCount(lunii.luniiQueue?.[d.id]), 0) : 0;
   const panelWidth = Math.max(LUNII_PANEL_WIDTH.min, width.value);
   const empty = ['detected', 'opening', 'unsupported', 'ejected', 'disconnected'].includes(device.state);
   const bannerSet = new Set(Array.isArray(device.banner) ? device.banner : device.banner ? [device.banner] : []);
@@ -55,7 +62,7 @@ export function LuniiPanel({ lunii, onSelect, onDeviceChange, dnd = null, width 
   return <aside data-lunii-drop={collapsed ? 'collapsed' : undefined} data-device-id={collapsed ? device.id : undefined} onKeyDown={event => {
     if (textEntry(event.target) || reorder) return;
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') { event.preventDefault(); onSelect(luniiSelectAll(rows)); }
-    else if (event.key === 'Delete') { event.preventDefault(); void lunii.gestures?.remove(device, rows.filter(s => ids.includes(s.key)), true); }
+    else if (event.key === 'Delete') { event.preventDefault(); void lunii.gestures?.remove(device, rows.filter(s => ids.includes(s.key) && !removalPending(marks.get(s.key))), true); }
     else if (event.key === 'Escape') onSelect([]);
     else if (event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key) && ids.length) {
       event.preventDefault(); void lunii.gestures?.move(device, ids, event.key === 'ArrowUp' ? -1 : 1);
@@ -63,7 +70,14 @@ export function LuniiPanel({ lunii, onSelect, onDeviceChange, dnd = null, width 
   }} ref={setPanelRef} className={`lunii-panel ${collapsed ? 'is-collapsed' : ''} ${overHere ? 'is-drop-target' : ''} ${hovered?.refused ? 'is-drop-refused' : ''}`} aria-label={t('catalogue:lunii.panel')} style={{ width: collapsed ? 48 : panelWidth, minWidth: collapsed ? 48 : LUNII_PANEL_WIDTH.min }}>
     <span className="catalogue-visually-hidden" aria-live="polite" aria-atomic="true">{lunii.gestures?.announcement}</span>
     {collapsed ? <><Button id="lunii-panel-expand" variant="icon" aria-label={t('catalogue:lunii.expand')} onClick={() => { lunii.store.collapse(false); requestAnimationFrame(() => document.getElementById('lunii-panel-collapse')?.focus()); }}><PanelLeftOpen width={18} height={18} /></Button>
-      {devices.map(d => <Tooltip key={d.id} text={d.name || t('catalogue:lunii.name')} asChild wrap><Button variant="icon" aria-label={d.name || t('catalogue:lunii.name')} data-lunii-drop="collapsed" data-device-id={d.id} onClick={() => { onDeviceChange(d.id); lunii.store.collapse(false); }}><LuniiIcon width={22} height={22} /><small>{d.stories.length}</small></Button></Tooltip>)}</>
+      {devices.map(d => {
+        // Folded away, the panel still says that operations wait on this Lunii.
+        const count = queuedCount(lunii.luniiQueue?.[d.id]);
+        const name = d.name || t('catalogue:lunii.name');
+        const label = count ? t('catalogue:lunii.queue.collapsed', { name, count }) : name;
+        return <Tooltip key={d.id} text={label} asChild wrap><Button variant="icon" aria-label={label} data-lunii-drop="collapsed" data-device-id={d.id} onClick={() => { onDeviceChange(d.id); lunii.store.collapse(false); }}><LuniiIcon width={22} height={22} /><small>{d.stories.length}</small>{count > 0 && <span className="lunii-collapsed-queue" aria-hidden="true">{count}</span>}</Button></Tooltip>;
+      })}
+      <span className="catalogue-visually-hidden" role="status">{devices.some(d => d.unresponsive) && t('catalogue:lunii.queue.unresponsive')} {collapsedWaiting > 0 && t('catalogue:lunii.queue.count', { count: collapsedWaiting })} {queueReports(lunii.luniiQueue).length > 0 && t('catalogue:lunii.queueReport.announce')}</span></>
       : <>
         {devices.length >= 2 && <div className="lunii-tabs" role="tablist" aria-label={t('catalogue:lunii.panel')}>
           {devices.map((d, index) => <button type="button" role="tab" key={d.id} id={`lunii-tab-${d.id}`} aria-controls="lunii-tabpanel" aria-selected={d.id === device.id} tabIndex={d.id === device.id ? 0 : -1}
@@ -73,14 +87,17 @@ export function LuniiPanel({ lunii, onSelect, onDeviceChange, dnd = null, width 
             }}>{d.name || t('catalogue:lunii.name')}</button>)}
         </div>}
         <div id="lunii-tabpanel" role={devices.length >= 2 ? 'tabpanel' : undefined} aria-labelledby={devices.length >= 2 ? `lunii-tab-${device.id}` : undefined} className="lunii-tabpanel">
-          <LuniiPanelHeader key={device.id} gestures={lunii.gestures} device={device} gauge={overHere} onCollapse={() => { lunii.store.collapse(true); requestAnimationFrame(() => document.getElementById('lunii-panel-expand')?.focus()); }} onEject={() => void lunii.store.eject(device.id)} />
-          <div className="lunii-scroll" data-lunii-drop="scroll" data-device-id={device.id}>{empty ? <LuniiEmptyState state={device.state} busy={device.busy} onOpen={() => void lunii.store.inspect(device.id, true)} /> : <>
-            {banners.map(kind => <LuniiBanner key={kind} kind={kind} device={device} gestures={lunii.gestures} />)}
+          <LuniiPanelHeader key={device.id} gestures={lunii.gestures} device={device} gauge={overHere} onCollapse={() => { lunii.store.collapse(true); requestAnimationFrame(() => document.getElementById('lunii-panel-expand')?.focus()); }} onEject={() => void (lunii.gestures?.eject ? lunii.gestures.eject(device) : lunii.store.eject(device.id))} onCancelEject={() => lunii.store.cancelEjectWait?.(device.id)} queue={{ count: queuedCount(waiting), marks: queuedDeviceMarks(waiting), onCancel: cancelQueued, report: queueReports({ [device.id]: waiting }).length > 0 }} />
+          <div className={reorder?.deviceId === device.id ? 'lunii-scroll is-reordering' : 'lunii-scroll'} data-lunii-drop="scroll" data-device-id={device.id}>{empty ? <LuniiEmptyState state={device.state} busy={device.busy} onOpen={() => void lunii.store.inspect(device.id, true)} /> : <>
+            {banners.map(kind => <LuniiBanner key={kind} kind={kind} device={device} gestures={lunii.gestures} marks={marks} repairWaiting={repairPending(waiting)} />)}
             {shownRows.length ? <div className={`lunii-stories ${device.state === 'damaged' ? 'is-damaged' : ''}`} role="grid" aria-label={t('catalogue:lunii.panel')} aria-multiselectable="true">
-              {shownRows.map(story => story.sending ? <LuniiSendingRow key={story.key} story={story} /> : <LuniiStoryRow key={story.key} story={story} disabledReason={readOnlyReason} selected={lunii.selection.side === 'lunii' && lunii.selection.ids.includes(story.key)} device={device} gestures={lunii.gestures} onSelect={event => select(story.key, event)}
+              {shownRows.map(story => story.queued ? <LuniiQueuedRow key={story.key} story={story} onCancel={cancelQueued} /> : story.sending ? <LuniiSendingRow key={story.key} story={story} /> : <LuniiStoryRow key={story.key} story={story} queued={marks.get(story.key)} onCancelQueued={cancelQueued} disabledReason={readOnlyReason} selected={lunii.selection.side === 'lunii' && lunii.selection.ids.includes(story.key)} device={device} gestures={lunii.gestures} onSelect={event => select(story.key, event)}
                 dragging={reorder?.keys.includes(story.key)} insertion={dnd?.insertion === story.key || (overHere?.rowKey === story.key)} />)}
               {overHere && overHere.rowKey === null && <div className="lunii-insertion-end" aria-hidden="true" />}
             </div> : <LuniiEmptyState />}
+            {reorder?.deviceId === device.id && shownRows.length > 0 && <div className="lunii-reorder-end" data-lunii-drop="end" data-device-id={device.id} aria-hidden="true">
+              {dnd?.insertion === device.stories.length && <div className="lunii-insertion-end" />}
+            </div>}
           </>}</div>
         </div>
         <PanelResizeHandle ariaLabel={t('catalogue:lunii.resize')} panelClass=".lunii-panel" minWidth={LUNII_PANEL_WIDTH.min} maxWidth={Math.max(LUNII_PANEL_WIDTH.min, width.max)} value={panelWidth} defaultValue={LUNII_PANEL_WIDTH.initial} onResize={lunii.store.resize} />

@@ -17,6 +17,7 @@ use std::{
 struct Access {
     path: PathBuf,
     expires: u64,
+    modified: bool,
 }
 /// Live project leases belong to their catalogue instance.
 /// Keeping them process-global makes unrelated catalogues serialize their IO
@@ -27,6 +28,25 @@ fn stamp() -> u64 {
     super::plan::stamp()
 }
 impl Store {
+    /// Serialize send preparation with editor admission and normal saves.
+    pub(crate) fn with_project_send<T>(
+        &self,
+        path: &Path,
+        prepare: impl FnOnce(bool) -> Result<T>,
+    ) -> Result<T> {
+        let mut access = self.accesses().lock().map_err(error)?;
+        access.retain(|_, a| a.expires > stamp());
+        self.require_no_recovery(path)?;
+        let matches = |a: &&Access| {
+            writes::comparison_key(&a.path) == writes::comparison_key(path)
+                || writes::file_id(path)
+                    .is_some_and(|id| writes::file_id(&a.path).as_ref() == Some(&id))
+        };
+        if access.values().filter(matches).any(|a| a.modified) {
+            return Err(fail(codes::STORYTELLER_PROJECT_SAVE_REQUIRED));
+        }
+        prepare(access.values().any(|a| matches(&a)))
+    }
     fn accesses(&self) -> &Mutex<HashMap<String, Access>> {
         &self.project_accesses.0
     }
@@ -89,6 +109,13 @@ impl Store {
         }
         let mut access = self.accesses().lock().map_err(error)?;
         access.retain(|_, a| a.expires > stamp());
+        if matches!(action, "modified" | "saved") {
+            let a = access
+                .get_mut(token.as_deref().unwrap_or(""))
+                .ok_or_else(|| fail(codes::CATALOG_PROJECT_IN_USE))?;
+            a.modified = action == "modified";
+            return Ok(json!({"updated":true}));
+        }
         if action == "bind" {
             let a = access
                 .get_mut(token.as_deref().unwrap_or(""))
@@ -126,6 +153,8 @@ impl Store {
             id.clone(),
             Access {
                 path,
+                // Fail closed until the editor has synchronized its work state.
+                modified: true,
                 expires: if action == "open" {
                     u64::MAX
                 } else {
@@ -165,7 +194,7 @@ mod access_isolation_tests {
             })();
             send.send(result).unwrap();
         });
-        let result = receive.recv_timeout(std::time::Duration::from_millis(500));
+        let result = receive.recv_timeout(crate::test_support::timeout());
         drop(guard);
         worker.join().unwrap();
         assert!(

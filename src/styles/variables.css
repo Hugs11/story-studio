@@ -265,6 +265,10 @@
 
   --bg0: #0a0a0e;
   --bg1: #18181f;
+  /* Sur fond presque noir, les ombres du thème clair (22–28 %) sont invisibles : popovers et menus
+     semblaient faire partie de la surface dessous. */
+  --shadow-lg: 0 14px 42px rgba(0, 0, 0, 0.5);
+  --shadow-overlay: 0 16px 48px rgba(0, 0, 0, 0.58);
   --bg2: #1e1e27;
   --bg3: #26262f;
   --border: #2a2a36;

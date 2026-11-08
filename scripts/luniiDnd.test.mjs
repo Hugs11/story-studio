@@ -17,17 +17,18 @@ const { LuniiDndFrame, snapToPointer } = await import('../src/components/Catalog
 
 const at = (kind, deviceId, rowKey) => ({ closest: () => ({ dataset: { luniiDrop: kind, deviceId, rowKey } }) });
 
-test('drop surfaces are read from the DOM; only rows and the header take a reorder drop', () => {
+test('drop surfaces are read from the DOM; rows, the header and the dedicated end area take a reorder drop', () => {
   assert.equal(dropTargetOf(null), null);
   assert.equal(dropTargetOf({ closest: () => null }), null);
   assert.deepEqual(dropTargetOf(at('row', 'd', 'c')), { kind: 'row', deviceId: 'd', rowKey: 'c' });
   assert.equal(dropTargetOf(at('tab', 'e', 'ignored')).rowKey, null);
   assert.equal(sendRowKey(dropTargetOf(at('row', 'd', 'c'))), 'c');
-  for (const kind of ['orphan', 'header', 'scroll', 'tab', 'collapsed']) assert.equal(sendRowKey(dropTargetOf(at(kind, 'd'))), null, `${kind}: end of the list`);
+  for (const kind of ['orphan', 'header', 'scroll', 'end', 'tab', 'collapsed']) assert.equal(sendRowKey(dropTargetOf(at(kind, 'd'))), null, `${kind}: end of the list`);
   const device = { id: 'd', stories: [{ key: 'a' }, { key: 'b' }, { key: 'c' }] };
   assert.equal(reorderIndex(dropTargetOf(at('row', 'd', 'b')), device), 1);
   assert.equal(reorderIndex(dropTargetOf(at('header', 'd')), device), 3);
-  for (const target of [at('scroll', 'd'), at('orphan', 'd'), at('tab', 'd'), at('row', 'other', 'b'), at('row', 'd', 'gone')]) assert.equal(reorderIndex(dropTargetOf(target), device), null);
+  assert.equal(reorderIndex(dropTargetOf(at('end', 'd')), device), 3, 'only the dedicated end area accepts the final reorder boundary');
+  for (const target of [at('scroll', 'd'), at('end', 'other'), at('scroll', 'other'), at('orphan', 'd'), at('tab', 'd'), at('row', 'other', 'b'), at('row', 'd', 'gone')]) assert.equal(reorderIndex(dropTargetOf(target), device), null);
 });
 
 test('the probe is the pointer, or the centre of the moved handle for a keyboard drag', () => {
@@ -107,4 +108,18 @@ test('a press on an interactive part of a card never starts a drag; elsewhere it
   handler(on('button', true)); handler(on('card', false));
   assert.deepEqual(started, ['card']);
   assert.equal(ignoreInteractive(undefined), undefined);
+});
+
+
+test('the dedicated final boundary moves A after B,C and dropping C there performs no write', async () => {
+  const { createLuniiGestures } = await import('../src/store/catalogue/luniiGestures.js');
+  const device = { id: 'd', stories: [{ key: 'a' }, { key: 'b' }, { key: 'c' }] };
+  const writes = [];
+  const gestures = createLuniiGestures({ store: { mutate: async (...args) => { writes.push(args); } } }, () => '', async () => true, () => {});
+  const index = reorderIndex(dropTargetOf(at('end', 'd')), device);
+  await gestures.reorder(device, ['a'], index);
+  assert.deepEqual(writes, [['d', 'reorder', [{ rowKey: null, index: 3 }], ['a'], { a: '' }]]);
+  writes.length = 0;
+  await gestures.reorder(device, ['c'], index);
+  assert.deepEqual(writes, []);
 });

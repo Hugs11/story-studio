@@ -150,7 +150,7 @@ pub(crate) struct ProjectEntry {
     pub(crate) silent_title_stage: bool,
     #[serde(rename = "zipPath")]
     pub(crate) zip_path: Option<String>,
-    // Import envelope retained for the nested-pack output policy (L3).
+    // Import envelope retained for the nested-pack output policy.
     #[serde(rename = "packUuid", default)]
     pub(crate) pack_uuid: String,
     #[serde(rename = "officialProvenance", default)]

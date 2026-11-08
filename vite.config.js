@@ -2,7 +2,6 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
-import { benchGraphEnginesPlugin } from "./bench/graphEngines/vitePlugin.js";
 
 const host = "127.0.0.1";
 
@@ -35,9 +34,6 @@ export default defineConfig(async ({ command }) => ({
       gzipSize: true,
       brotliSize: true,
     }),
-    // Bancs d'essai avancés. Le greffon ne s'active que
-    // sous `VITE_BENCH=graph|surface|atelier|export|recette` et n'existe dans aucun build.
-    benchGraphEnginesPlugin(),
   ].filter(Boolean),
 
   build: {

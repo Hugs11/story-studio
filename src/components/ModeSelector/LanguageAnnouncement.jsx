@@ -12,7 +12,7 @@ export function LanguageAnnouncement({ onOpenPreferences }) {
     setVisible(false);
   };
   if (!visible) return null;
-  return <ImportNoticeToast inline message={t('home:languageAnnouncement.message')}
+  return <ImportNoticeToast message={t('home:languageAnnouncement.message')}
     actionLabel={t('home:languageAnnouncement.change')} onClose={dismiss}
     onAction={() => { dismiss(); onOpenPreferences?.({ section: 'interface', focus: 'ui-language' }); }} />;
 }

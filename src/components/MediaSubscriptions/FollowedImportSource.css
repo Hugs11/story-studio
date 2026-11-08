@@ -1,0 +1,25 @@
+.followed-source-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px 0;
+}
+
+.followed-source-notice button,
+.followed-source-choices button {
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.followed-source-choices ul {
+  margin: 0;
+  padding-left: 20px;
+}

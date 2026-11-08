@@ -328,7 +328,7 @@ mod tests {
         let server = std::thread::spawn(move || {
             let mut requests = Vec::new();
             for response in responses {
-                let deadline = Instant::now() + Duration::from_secs(10);
+                let deadline = Instant::now() + crate::test_support::timeout();
                 let mut socket = loop {
                     match listener.accept() {
                         Ok((socket, _)) => break socket,

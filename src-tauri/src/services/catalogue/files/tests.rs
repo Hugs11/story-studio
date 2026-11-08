@@ -106,7 +106,7 @@ impl Fixture {
                 assert_eq!(unused, 0, "completed file operations prune unused labels");
                 return p;
             }
-            assert!(start.elapsed() < Duration::from_secs(30));
+            assert!(start.elapsed() < crate::test_support::timeout());
             std::thread::sleep(Duration::from_millis(5));
         }
     }
@@ -179,7 +179,7 @@ fn assembly_request(f: &Fixture) -> crate::services::catalogue::assembly::Reques
     }
 }
 fn assembly_finish(f: &Fixture, receipt: &Value) -> Progress {
-    let until = Instant::now() + Duration::from_secs(20);
+    let until = Instant::now() + crate::test_support::timeout();
     loop {
         let p = f
             .store
@@ -492,9 +492,9 @@ fn official_cover_consumers(http: bool) {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         f.store
             .lunii_cover_test_base(format!("http://{}", listener.local_addr().unwrap()));
-        Some(std::thread::spawn(move || {
+        Some(crate::test_support::spawn(move || {
             listener.set_nonblocking(true).unwrap();
-            let until = Instant::now() + Duration::from_secs(5);
+            let until = Instant::now() + crate::test_support::timeout();
             let mut stream = loop {
                 match listener.accept() {
                     Ok((s, _)) => break s,
@@ -530,7 +530,7 @@ fn official_cover_consumers(http: bool) {
     let cover = fs::read(inputs["entries"][0]["coverPath"].as_str().unwrap()).unwrap();
     image::load_from_memory(&cover).unwrap();
     if let Some(server) = server {
-        server.join().unwrap();
+        crate::test_support::join(server);
     }
     assert_eq!(
         patch::snapshot(&f.source, &AtomicBool::new(false)).unwrap(),
@@ -580,9 +580,9 @@ fn suspended_assembly_cover(http: bool, automatic_first: bool) {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         f.store
             .lunii_cover_test_base(format!("http://{}", listener.local_addr().unwrap()));
-        Some(std::thread::spawn(move || {
+        Some(crate::test_support::spawn(move || {
             listener.set_nonblocking(true).unwrap();
-            let until = Instant::now() + Duration::from_secs(5);
+            let until = Instant::now() + crate::test_support::timeout();
             let mut socket = loop {
                 match listener.accept() {
                     Ok((socket, _)) => break socket,
@@ -603,7 +603,7 @@ fn suspended_assembly_cover(http: bool, automatic_first: bool) {
             )
             .unwrap();
             ready.send(()).unwrap();
-            finish.recv_timeout(Duration::from_secs(5)).unwrap();
+            finish.recv().unwrap();
             socket.write_all(bytes).unwrap();
         }))
     } else {
@@ -624,7 +624,7 @@ fn suspended_assembly_cover(http: bool, automatic_first: bool) {
         let cancel = Arc::clone(&cancel);
         let request = request.clone();
         let done = done.clone();
-        std::thread::spawn(move || {
+        crate::test_support::spawn(move || {
             let _ = done.send(store.assembly_inputs(&request, &cancel, |_, _| {}));
         })
     };
@@ -632,7 +632,9 @@ fn suspended_assembly_cover(http: bool, automatic_first: bool) {
     if automatic_first {
         f.store.download_lunii_covers(Arc::clone(&sink));
     }
-    started.recv_timeout(Duration::from_secs(5)).unwrap();
+    started
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
     if automatic_first {
         worker = Some(start());
     } else {
@@ -642,15 +644,17 @@ fn suspended_assembly_cover(http: bool, automatic_first: bool) {
     cancel.store(true, Ordering::SeqCst);
     let result = outcome.recv_timeout(Duration::from_millis(250));
     release.send(()).unwrap();
-    worker.unwrap().join().unwrap();
+    crate::test_support::join(worker.unwrap());
     if let Some(server) = server {
-        server.join().unwrap();
+        crate::test_support::join(server);
     }
     assert_eq!(
         result.unwrap().unwrap_err().code,
         crate::support::user_message::codes::GENERATION_CANCELLED
     );
-    retained.recv_timeout(Duration::from_secs(5)).unwrap();
+    retained
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
     assert_eq!(f.store.lunii_cover_test_requests(), 1);
     let id = f.card["ficheId"].as_str().unwrap();
     let cover = f
@@ -685,14 +689,20 @@ fn concurrent_official_cover_preparations_share_download_and_preserve_revisions(
     f.store.download_lunii_covers(Arc::new(move |_, _| {
         let _ = notified.send(());
     }));
-    started.recv_timeout(Duration::from_secs(5)).unwrap();
+    started
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
     let result = std::thread::scope(|scope| {
         let preparation = scope.spawn(|| official_cover_preparation(&f));
         f.store.lunii_cover_test_waiters(2);
         release.send(()).unwrap();
-        preparation.join().unwrap()
+        preparation
+            .join()
+            .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
     });
-    retained.recv_timeout(Duration::from_secs(5)).unwrap();
+    retained
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
     result.expect("retaining an official image must preserve preparation revisions");
     let id = f.card["ficheId"].as_str().unwrap();
     f.card = f.store.get_card(id).unwrap();

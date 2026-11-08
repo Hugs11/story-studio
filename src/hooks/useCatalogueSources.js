@@ -41,11 +41,12 @@ export function useCatalogueSources(workspaceDir, { api = catalogueApi() } = {})
     void scheduler.now();
     return () => { alive.current = false; stopped = true; scheduler.dispose(); unsubscribe(); void operations.then((stop) => stop?.()); };
   }, [api, workspaceDir]);
-  const mutate = useCallback(async (kind, target, declined = false) => {
+  const mutate = useCallback(async (kind, target) => {
     if (mutating.current) return null;
     mutating.current = true;
     setState((s) => ({ ...s, busy: true, error: null, mutationError: null }));
     try {
+      const expectedSourcesRevision = revision.current;
       let result;
       if (kind === 'remove') {
         const preview = await api.previewRemoveSource(target);
@@ -63,11 +64,11 @@ export function useCatalogueSources(workspaceDir, { api = catalogueApi() } = {})
         });
         if (confirmed !== true) return null;
         result = await api.removeSource(target, preview.sourcesRevision, preview.catalogueRevision);
-      } else result = await api.addSource(target, revision.current, declined);
+      } else result = await api.addSource(target, revision.current);
       revision.current = result.sourcesRevision;
       const before = stateRef.current.items;
       await reload.current.now();
-      const view = sourceAddResult(before, result, declined, lastList.current?.items);
+      const view = sourceAddResult(before, result, lastList.current?.items, expectedSourcesRevision);
       if (alive.current) setState((s) => ({ ...s, notice: kind === 'remove' ? { key: 'catalogue:sources.removed.message', params: {} } : view.notice }));
       return { ...result, alreadyActive: view.alreadyActive };
     } catch (error) {
@@ -77,5 +78,5 @@ export function useCatalogueSources(workspaceDir, { api = catalogueApi() } = {})
       return null;
     } finally { mutating.current = false; if (alive.current) setState((s) => ({ ...s, busy: false })); }
   }, [api, showChoiceDialog, t]);
-  return { ...state, add: (path, declined) => mutate('add', path, declined), remove: (id) => mutate('remove', id), refresh: () => reload.current?.now() };
+  return { ...state, add: (path) => mutate('add', path), remove: (id) => mutate('remove', id), refresh: () => reload.current?.now() };
 }

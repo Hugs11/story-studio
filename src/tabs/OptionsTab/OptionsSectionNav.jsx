@@ -7,6 +7,7 @@ const OPTION_GROUPS = [
       { id: 'save', labelKey: 'settings:navigation.save.label' },
       { id: 'interface', labelKey: 'settings:interface.section.title' },
       { id: 'catalogue', labelKey: 'catalogue:screen.title.label' },
+      { id: 'media-subscriptions', labelKey: 'media:subscriptions.section.title' },
       { id: 'projects-media', labelKey: 'settings:navigation.projectsMedia.label' },
     ],
   },

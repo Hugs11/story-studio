@@ -9,7 +9,6 @@ import { presentUserMessage } from '../i18n/userMessage.js';
 import { presentImportWarning } from '../i18n/importWarnings.js';
 import { ensureProjectStorage } from '../store/projectStorage';
 import { logger } from '../utils/logger';
-import { bumpPackVersion } from '../utils/packConvention';
 import { DEFAULT_PROJECT } from '../store/projectStore';
 
 // Grappe « cycle de vie du projet » extraite d'AppContent : retour à l'accueil
@@ -126,19 +125,8 @@ export function useProjectLifecycle({
         ephemeral: session?.mode !== 'project',
       });
       if (!transformed) throw { key: 'home:project.landing.noStories', params: {} };
-      // Suggérer une version incrémentée (_V2 si aucune) et forcer la modal de
-      // métadonnées pré-remplie à la première génération du pack importé.
-      const landedProject = transformed.project.packMetadata
-        ? {
-            ...transformed.project,
-            packMetadata: {
-              ...transformed.project.packMetadata,
-              version: bumpPackVersion(transformed.project.packMetadata.version),
-            },
-          }
-        : transformed.project;
       // Comme l'atterrissage graphe : nouvelle époque, rien de l'ancien projet.
-      const depthOutcome = store.loadProject(landedProject);
+      const depthOutcome = store.loadProject(transformed.project);
       if (!depthOutcome.allowed) {
         throw depthOutcome.message || { key: 'home:project.landing.depthLimit', params: {} };
       }

@@ -8,6 +8,114 @@ public version; this file stays as the concise project history.
 
 ---
 
+## [0.9.11] - 2026-11-08
+
+Story Studio 0.9.11 is mostly about reliability. Lunii operations now wait
+their turn instead of being refused, sound level problems are flagged as soon
+as you add a sound, and a lot of small problems in the Lunii panel, the
+catalogue and the editors are fixed.
+
+### Added
+
+- Lunii operations (send, retrieve, remove, reorder) now queue up instead of
+  being refused while the device is busy. Pending sends appear greyed out at
+  their place in the list, pending removals are struck through, pending moves
+  can be cancelled with a cross, and the collapsed panel shows a counter.
+- At the end of a queue, a single summary lists what was done, what failed,
+  what was not started and which removals were cancelled. It is available under
+  "to see", at the top right.
+- When you add a sound that will be heavily boosted, is nearly silent or is
+  completely silent, an amber marker in the sound bar warns you right away, in
+  the same words as the generation report. It can be turned off in
+  Preferences > Projects and media.
+- Optional notice when a new Story Studio version is published on GitHub. You
+  are asked once at first launch and can change your choice in
+  Preferences > Interface. At most one check per day and one notice per
+  version; nothing is downloaded or installed automatically.
+- Closing the app during a Lunii operation now lets you wait for it to finish
+  or stay in the app. Story Studio asks right away whether to save your project, then
+  closes by itself once the operation is finished, and asks again if the
+  project changed in the meantime.
+- Incomplete stories left on the Lunii outside the list (for example after an
+  interrupted send) are shown in an "Incomplete stories" banner with a Delete
+  button and a confirmation.
+- When a pack becomes a project, its empty title, age, author and description
+  are filled in from its catalogue card, as well as its thumbnail if the pack
+  has none.
+- Importing a podcast or playlist that the project already follows fills in
+  its link and shows "Already followed for this project".
+
+### Changed
+
+- A Lunii failure (no space left, write error, device unplugged…) is now told
+  apart from a problem with one audiobook. A grouped send stops at the first
+  device failure and the remaining audiobooks are marked "Not started".
+- A Lunii that stops responding stops the queue (after 10 minutes without any
+  sign of activity during a send), with a "not responding" notice one minute
+  before.
+- Ejecting during a queue asks whether to let it finish or cancel the rest;
+  the operation in progress is never interrupted. When ejecting cannot
+  complete, Story Studio suggests unplugging the device.
+- A story is shown with the name of its catalogue card everywhere in the Lunii
+  panel, the queue and the summaries, official titles included.
+- Retrieved audiobooks are saved with a readable name in a dedicated folder of
+  your workspace. This folder appears greyed out in the catalogue folders and
+  cannot be removed while it contains audiobooks. Earlier retrievals stay where
+  they are.
+- Both editors now use the same rules when a pack becomes a project: the pack
+  title, or else the file name, is used as the title (no more "Imported pack"),
+  the age stays empty when unknown instead of an invented "3+", and the version
+  is kept as is. The age chip can be deselected.
+- A silent sound no longer blocks generation in the Menu Editor; an amber
+  notice explains that the Lunii will play nothing at that point, as in the
+  Graph Editor. A quiet but audible sound is boosted.
+- Catalogue search no longer opens a drop-down list: the grid filters as you
+  type and Esc clears the field.
+- The catalogue no longer suggests folders to add, after generation or
+  otherwise: you choose your sources. Only the first workspace folder is added
+  automatically.
+- New episodes of followed sources are announced on every screen, catalogue
+  included. Subscriptions are managed in Preferences > Media subscriptions,
+  which replaces the "Notifications" button. At startup, a single new episode
+  appears as a regular notification with "Open"; several show a reminder that
+  opens Preferences.
+- Leading and trailing silences of a pack are set with an on/off switch.
+- Import notices from the Graph Editor appear in the shared notification area,
+  stacked with the other notifications.
+- Trash confirmation on a catalogue card stays next to its icons, with short
+  labels.
+- Lunii dialogs use the standard width, and the duplicate "…" menu was removed
+  from the Lunii header.
+- Shadows are stronger in the dark theme, so menus and popovers stand out from
+  the surface below.
+
+### Fixed
+
+- Unplugging the Lunii during several operations now produces one complete
+  summary instead of three separate cards; a single interrupted send keeps its
+  own card.
+- Sending from the catalogue a project that was never exported now works: the
+  project keeps or receives a single identity, saved in the project.
+- Sending an incomplete project from the catalogue shows how many files are
+  missing, with an "Open project" button, instead of a long list of system
+  errors.
+- A pack can now be dropped below the last item of the Lunii list.
+- The Lunii story counter now uses the singular when there is one story.
+- Media relinking no longer undoes files that were already relinked; the
+  result is locked during the search and an incomplete search is reported.
+- An emptied source folder is no longer reported as an unavailable volume; its
+  audiobooks are shown as missing from their last known location.
+- A project's chosen cover now takes precedence over the cover of a ZIP of the
+  same pack, and a cover that cannot be found is ignored.
+- The generation report names after-playback sounds after their story and step
+  instead of internal identifiers, and gives unnamed screens a readable label.
+- `Ctrl+F` now focuses the catalogue search.
+- Dialogs, including the new version question, are centred again.
+- The "Tags" filter shows a message instead of an empty box when there are no
+  tags.
+
+---
+
 ## [0.9.10] - 2026-11-02
 
 Story Studio 0.9.10 introduces a local audiobook catalogue, direct Lunii management,

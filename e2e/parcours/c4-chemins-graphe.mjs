@@ -25,7 +25,7 @@ import { readbackPack } from '../lib/oracles.mjs';
 import {
   setCopyImportedFilesPreference, dropOnMediaExplorer, hasMissingMediaModal, openProjectDialog,
   saveProjectAsExplicit, managedDirsBeside, findManagedCopy, assignMediaToGraphStage,
-  linkStagesThroughNewList,
+  linkStagesThroughNewList, setPackTitle,
 } from '../lib/c2-helpers.mjs';
 import { tauriLogErrors, createGraphStage, repairGraphEndings } from '../lib/c4-helpers.mjs';
 
@@ -67,6 +67,7 @@ export async function run() {
       await page.keyboard.press('Control+Shift+s');
       await page.waitForTimeout(2500);
       check('[état 3] premier enregistrement (avant média/préférence) écrit le .mbah', existsSync(projectPath));
+      await setPackTitle(page, 'Pack État 3');
 
       await setCopyImportedFilesPreference(page, true);
       const media = synthTone(difficult.accents, 'média accentué éàç.wav', 990);
@@ -240,6 +241,7 @@ export async function run() {
       await page.keyboard.press('Control+Shift+s');
       await page.waitForTimeout(2500);
       check('[état 5b] premier enregistrement écrit le .mbah', existsSync(originalPath));
+      await setPackTitle(page, 'Pack État 5b');
 
       await setCopyImportedFilesPreference(page, false);
       // Source laissée en place (hors du dossier projet) : seul le dossier

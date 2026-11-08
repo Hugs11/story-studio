@@ -65,13 +65,6 @@ impl Drop for AdmissionLock {
 }
 
 impl Store {
-    pub(crate) fn repatriated_root(&self) -> Result<PathBuf> {
-        self.durable_path
-            .parent()
-            .and_then(Path::parent)
-            .map(|parent| parent.join("repatriated-stories"))
-            .ok_or_else(|| error("missing application data parent"))
-    }
     pub(crate) fn images_root(&self) -> PathBuf {
         self.durable_path.parent().unwrap().join("images")
     }
@@ -1879,18 +1872,6 @@ mod repatriated_migration_tests {
             10
         );
         drop(reopened);
-        std::fs::remove_dir_all(root).unwrap();
-    }
-    #[test]
-    fn repatriated_root_without_application_parent_returns_typed_error() {
-        let root = std::env::temp_dir().join(format!("catalogue-root-{}", uuid::Uuid::new_v4()));
-        let mut store = Store::open(&root.join("data"), &root.join("cache")).unwrap();
-        store.durable_path = PathBuf::from("/");
-        assert_eq!(
-            store.repatriated_root().unwrap_err().code,
-            codes::CATALOG_STORE_ERROR
-        );
-        drop(store);
         std::fs::remove_dir_all(root).unwrap();
     }
 }

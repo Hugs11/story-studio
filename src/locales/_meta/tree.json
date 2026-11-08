@@ -6953,5 +6953,60 @@
       "sourceHash": "8b3e35234cda",
       "status": "ai-reviewed"
     }
+  },
+  "audio.level.current": {
+    "context": "Champ audio partagé des éditeurs arbre > repère de niveau ; seconde ligne de l’infobulle, sous le message prospectif de l’éditeur ; le verdict porte sur le son actuel ; clé audio.level.current.",
+    "en": {
+      "sourceHash": "dc99d0e429cb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "dc99d0e429cb",
+      "status": "ai-reviewed"
+    }
+  },
+  "audio.level.nearMuteNoHarmonize": {
+    "context": "Champ audio partagé des éditeurs arbre > repère de niveau ; son presque muet quand « Harmoniser le volume » est désactivé ; {{label}} est le nom de l’emplacement, à ne pas traduire ; clé audio.level.nearMuteNoHarmonize.",
+    "en": {
+      "sourceHash": "a7cacc21a14e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a7cacc21a14e",
+      "status": "ai-reviewed"
+    }
+  },
+  "audio.level.nearMuteBoost": {
+    "context": "Champ audio partagé des éditeurs > première ligne de l’infobulle de niveau, avant génération ; AUDIO_NEAR_MUTE_BOOST : son presque muet, forte amplification et risque de bruit de fond ; texte au futur, fichier source inchangé ; {{label}} est le nom de l’emplacement, à ne pas traduire ; clé audio.level.nearMuteBoost.",
+    "en": {
+      "sourceHash": "b23cebb29813",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b23cebb29813",
+      "status": "ai-reviewed"
+    }
+  },
+  "audio.level.strongLimiting": {
+    "context": "Champ audio partagé des éditeurs > première ligne de l’infobulle de niveau, avant génération ; AUDIO_STRONG_LIMITING : harmonisation avec gain et forte limitation des pointes, risque de compression ; texte au futur, fichier source inchangé ; {{label}} est le nom de l’emplacement, à ne pas traduire ; clé audio.level.strongLimiting.",
+    "en": {
+      "sourceHash": "6fa671815fd0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6fa671815fd0",
+      "status": "ai-reviewed"
+    }
+  },
+  "audio.level.silent": {
+    "context": "audio.level.silent : avis non bloquant de silence (volume intégré non établissable) dans les deux éditeurs et leurs rapports de génération ; même texte, nom lisible de l’emplacement (Histoire — Étape), jamais un rôle technique.",
+    "en": {
+      "sourceHash": "fd0ad5b9e7a4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fd0ad5b9e7a4",
+      "status": "ai-reviewed"
+    }
   }
 }

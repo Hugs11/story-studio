@@ -9,9 +9,9 @@ use crate::domain::project::SilenceMode;
 use crate::services::project_files::validate_existing_file_path;
 use crate::support::audio_norm::{
     build_edge_silence_filters_with_targets, build_loudness_filters, harmonization_notice,
-    measure_edge_silence, measure_loudness_ebur128, plan_loudness_fix, EdgeMeasure,
-    EdgeSilenceFilters, HarmonizationNotice, LoudnessAction, EDGE_SILENCE_SEC,
-    NOTICE_NEAR_MUTE_BOOST,
+    measure_edge_silence, measure_loudness_ebur128, measure_loudness_for_generation,
+    plan_loudness_fix, EdgeMeasure, EdgeSilenceFilters, HarmonizationNotice, LoudnessAction,
+    EDGE_SILENCE_SEC, NOTICE_NEAR_MUTE_BOOST,
 };
 use crate::support::ffmpeg::{apply_no_window, now_millis};
 
@@ -44,6 +44,7 @@ pub(crate) struct AudioPreparationResult {
 }
 
 struct GenerationLoudnessPlan {
+    silent: bool,
     action: LoudnessAction,
     pending_warning: Option<HarmonizationNotice>,
 }
@@ -95,8 +96,9 @@ pub(crate) fn prepare_audio_asset(
     options: &CanonicalOptions,
     leading_silence_sec: f64,
     trailing_silence_sec: f64,
-    role: &str,
+    context: (&str, MessageLabel),
 ) -> Result<AudioPreparationResult, String> {
+    let (role, label) = context;
     let source = validate_existing_file_path(source_path, role)?;
     let edge_plan = edge_plan_for_generation(
         ffmpeg,
@@ -121,6 +123,9 @@ pub(crate) fn prepare_audio_asset(
     )?;
     let action = &loudness_plan.action;
 
+    let silent_warning = loudness_plan
+        .silent
+        .then(|| audio_silent_warning(role.to_string(), label.clone()));
     if audio_can_copy_verbatim(
         &source,
         action,
@@ -131,7 +136,7 @@ pub(crate) fn prepare_audio_asset(
     )? {
         return Ok(AudioPreparationResult {
             preparation: AudioPreparation::Verbatim { source },
-            warnings: Vec::new(),
+            warnings: silent_warning.into_iter().collect(),
         });
     }
 
@@ -148,8 +153,9 @@ pub(crate) fn prepare_audio_asset(
     )?;
     let warnings = loudness_plan
         .pending_warning
-        .map(|pending| build_generation_audio_warning(ffmpeg, &output, role, pending))
+        .map(|pending| harmonization_warning(ffmpeg, &output, role.to_string(), label, pending))
         .into_iter()
+        .chain(silent_warning)
         .collect();
     Ok(AudioPreparationResult {
         preparation: AudioPreparation::Encoded { output },
@@ -462,20 +468,17 @@ fn edge_plan_for_generation(
     trailing_silence_sec: f64,
     role: &str,
 ) -> Result<GenerationEdgePlan, String> {
-    let measured_edges = match measure_edge_silence(ffmpeg, source).map_err(|e| {
+    let edges = measure_edge_silence(ffmpeg, source).map_err(|e| {
         UserMessage::new(codes::GENERATION_AUDIO_SILENCE_MEASURE_FAILED)
             .param("role", (role).to_string())
             .param("reason", (e).to_string())
             .with_detail((e).to_string())
             .into_transport()
-    })? {
+    })?;
+    let measured_edges = match edges {
         EdgeMeasure::Measured { leading, trailing } => Some((leading, trailing)),
-        EdgeMeasure::AllSilence => {
-            return Err(UserMessage::new(codes::GENERATION_AUDIO_SILENT_REFUSED)
-                .param("role", (role).to_string())
-                .into_transport())
-        }
-        EdgeMeasure::Unreadable => None,
+        // Aucun bord à rogner : conserver le son et reposer les cibles.
+        EdgeMeasure::AllSilence | EdgeMeasure::Unreadable => None,
     };
 
     let output_filters = if matches!(options.silence_mode, SilenceMode::Normalize) {
@@ -496,6 +499,22 @@ fn edge_plan_for_generation(
     })
 }
 
+pub(crate) fn audio_silent_warning(role: String, label: MessageLabel) -> NativeGenerationWarning {
+    NativeGenerationWarning {
+        code: codes::AUDIO_SILENT_KEPT.to_string(),
+        role,
+        label: label.to_string(),
+        message: UserMessage::new(codes::AUDIO_SILENT_KEPT)
+            .param("label", label.value())
+            .into_transport(),
+        // Aucun niveau inventé pour un silence, ni gain à appliquer.
+        initial_integrated_lufs: None,
+        final_integrated_lufs: None,
+        gain_db: 0.0,
+        expected_limiting_db: 0.0,
+    }
+}
+
 /// Niveau planifié pour la génération.
 ///
 /// - Harmonisation désactivée → aucune mesure ni correction (`None`) : le volume
@@ -513,17 +532,26 @@ fn loudness_action_for_generation(
 ) -> Result<GenerationLoudnessPlan, String> {
     if !harmonize {
         return Ok(GenerationLoudnessPlan {
+            silent: false,
             action: LoudnessAction::None,
             pending_warning: None,
         });
     }
-    let measure = measure_loudness_ebur128(ffmpeg, source, measure_filters).map_err(|e| {
-        UserMessage::new(codes::GENERATION_AUDIO_LEVEL_MEASURE_FAILED)
-            .param("role", (role).to_string())
-            .param("reason", (e).to_string())
-            .with_detail((e).to_string())
-            .into_transport()
-    })?;
+    let measure =
+        measure_loudness_for_generation(ffmpeg, source, measure_filters).map_err(|e| {
+            UserMessage::new(codes::GENERATION_AUDIO_LEVEL_MEASURE_FAILED)
+                .param("role", (role).to_string())
+                .param("reason", (e).to_string())
+                .with_detail((e).to_string())
+                .into_transport()
+        })?;
+    if measure.is_silent() {
+        return Ok(GenerationLoudnessPlan {
+            silent: true,
+            action: LoudnessAction::None,
+            pending_warning: None,
+        });
+    }
     let action = plan_loudness_fix(measure.integrated_lufs, measure.true_peak_db);
     if matches!(action, LoudnessAction::Uncorrectable { .. }) {
         return Err(
@@ -538,24 +566,10 @@ fn loudness_action_for_generation(
     }
     let pending_warning = harmonization_notice(measure.integrated_lufs, &action);
     Ok(GenerationLoudnessPlan {
+        silent: false,
         action,
         pending_warning,
     })
-}
-
-fn build_generation_audio_warning(
-    ffmpeg: &Path,
-    output: &Path,
-    role: &str,
-    pending: HarmonizationNotice,
-) -> NativeGenerationWarning {
-    harmonization_warning(
-        ffmpeg,
-        output,
-        role.to_string(),
-        generation_audio_label(role),
-        pending,
-    )
 }
 
 /// L'avertissement montré à l'auteur, commun aux deux chaînes : seul le
@@ -582,7 +596,7 @@ pub(crate) fn harmonization_warning(
         role,
         label: label.to_string(),
         message,
-        initial_integrated_lufs: pending.initial_integrated_lufs,
+        initial_integrated_lufs: Some(pending.initial_integrated_lufs),
         final_integrated_lufs,
         gain_db: pending.gain_db,
         expected_limiting_db: pending.expected_limiting_db,
@@ -602,31 +616,41 @@ fn measure_prepared_output_loudness(ffmpeg: &Path, output: &Path) -> Option<f64>
         .map(|measure| measure.integrated_lufs)
 }
 
-fn generation_audio_label(role: &str) -> MessageLabel {
-    match role {
-        "rootAudio" => {
-            return MessageLabel::literal("Accueil du pack", codes::GENERATION_AUDIO_ROOT_LABEL)
+/// Noms d'auteur entiers ; seuls les replis et le patron sont traduisibles.
+pub(crate) fn generation_audio_label(name: &str, story: bool, step: Option<&str>) -> MessageLabel {
+    let name = name.trim();
+    let label = if name.is_empty() {
+        if story {
+            MessageLabel::literal(
+                "Histoire sans titre",
+                codes::GENERATION_AUDIO_UNTITLED_STORY_LABEL,
+            )
+        } else {
+            MessageLabel::literal(
+                "Menu sans titre",
+                codes::GENERATION_AUDIO_UNTITLED_MENU_LABEL,
+            )
         }
-        "nightModeAudio" => {
-            return MessageLabel::literal("Mode nuit", codes::GENERATION_AUDIO_NIGHT_LABEL)
-        }
-        _ => {}
+    } else {
+        MessageLabel::data(name)
+    };
+    match step.map(str::trim).filter(|step| !step.is_empty()) {
+        Some(step) => MessageLabel::new(
+            format!("{label} — {step}"),
+            UserMessage::new(codes::GENERATION_AUDIO_STEP_LABEL)
+                .param("story", label.value())
+                .param("step", step),
+        ),
+        None => label,
     }
-    let without_field = role
-        .rsplit_once('/')
-        .map(|(prefix, _)| prefix)
-        .unwrap_or(role);
-    MessageLabel::data(
-        without_field
-            .rsplit('/')
-            .next()
-            .unwrap_or(without_field)
-            .split('#')
-            .next()
-            .filter(|label| !label.trim().is_empty())
-            .unwrap_or(role)
-            .to_string(),
-    )
+}
+
+pub(crate) fn stage_audio_label(name: &str) -> MessageLabel {
+    if name.trim().is_empty() {
+        MessageLabel::literal("Écran sans nom", codes::GENERATION_AUDIO_UNNAMED_LABEL)
+    } else {
+        MessageLabel::data(name.trim())
+    }
 }
 
 fn normalized_silence_duration_sec(value: f64) -> f64 {
@@ -699,7 +723,7 @@ mod tests {
                 Path::new("/missing/ffmpeg"),
                 Path::new("/missing/audio"),
                 role.to_string(),
-                generation_audio_label(role),
+                MessageLabel::literal(raw, code),
                 pending.clone(),
             );
             let serialized = serde_json::to_value(&warning).unwrap();
@@ -843,17 +867,6 @@ mod tests {
     }
 
     #[test]
-    fn generation_warning_label_hides_internal_role_identifiers() {
-        assert_eq!(
-            generation_audio_label(
-                "root/Example story#ae2bedd3-34a0-4618-b1ef-2091f2671ad0/storyAudio"
-            )
-            .to_string(),
-            "Example story"
-        );
-    }
-
-    #[test]
     fn real_strongly_dynamic_audio_is_encoded_with_a_warning() {
         let Ok(ffmpeg) = crate::support::ffmpeg::get_ffmpeg_path() else {
             return;
@@ -890,7 +903,10 @@ mod tests {
             &options,
             EDGE_SILENCE_SEC,
             EDGE_SILENCE_SEC,
-            "root/Histoire dynamique#test/storyAudio",
+            (
+                "root/Histoire dynamique#test/storyAudio",
+                MessageLabel::data("Histoire dynamique"),
+            ),
         )
         .expect("strongly dynamic audio must not block generation");
         let warning = prepared.warnings.first().expect("audio warning expected");
@@ -1032,7 +1048,7 @@ mod tests {
                 &options,
                 EDGE_SILENCE_SEC,
                 EDGE_SILENCE_SEC,
-                &role,
+                (&role, MessageLabel::data(&role)),
             )
             .unwrap_or_else(|e| panic!("prepare {path} failed: {e}"));
             let dest = outdir.join(format!("new_{i}.mp3"));

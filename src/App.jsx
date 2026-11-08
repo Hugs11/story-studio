@@ -1,6 +1,8 @@
+import { ReleaseNotice } from './components/ReleaseNotice.jsx';
 import { AppModals } from './components/AppModals.jsx';
 import { presentStoredError, presentUserMessage } from './i18n/userMessage.js';
 import { useCommonTranslation } from './i18n/commonPresentation.js';
+import { MediaSubscriptionsToast } from './components/MediaSubscriptions/MediaSubscriptionsToast.jsx';
 import { useMediaSubscriptions } from './hooks/useMediaSubscriptions';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useProjectStore } from './store/projectStore';
@@ -79,6 +81,8 @@ import { askSaveBeforeLeave } from './hooks/saveBeforeLeave';
 import { useSessionMediaTriage } from './hooks/useSessionMediaTriage';
 import { useSyncedRef } from './hooks/useSyncedRef';
 import { useWindowCloseGuard } from './hooks/useWindowCloseGuard';
+import { useLuniiCloseGuard } from './hooks/useLuniiCloseGuard';
+import { LuniiCloseNotice } from './components/LuniiCloseNotice.jsx';
 import { useWorkSession } from './hooks/useWorkSession';
 import { useSDJobs } from './hooks/useSDJobs';
 import { useXttsJobs } from './hooks/useXttsJobs';
@@ -401,7 +405,10 @@ function AppContent() {
     return choice === 'quit';
   }, [showChoiceDialog]);
 
+  const luniiGuard = useLuniiCloseGuard(showChoiceDialog);
   useWindowCloseGuard({
+    luniiGuard,
+    readWorkSignature: () => createWorkSnapshot(readLiveProject(), mediaLibraryPathsRef.current, mediaTagsRef.current),
     askSaveBeforeLeave: confirmSaveBeforeLeaveCurrent,
     saveHandlerRef,
     isCloseBlocked: advancedAuthoring.isLocked,
@@ -621,10 +628,14 @@ function AppContent() {
   });
 
   const [subscriptionImportSource, setSubscriptionImportSource] = useState(null);
+  const catalogueLeaveGuard = useRef(null);
   const subscriptions = useMediaSubscriptions({
+    leaveGuard: catalogueLeaveGuard,
     store,
     openProject: handleLoadRecent,
     onShowImport: (source) => {
+      modals.close('catalogue');
+      modals.close('prefs');
       setSubscriptionImportSource(source);
       if (source.source === 'podcast') modals.open('podcastImport');
       else setYoutubeFunnelMode('editor');
@@ -999,7 +1010,8 @@ function AppContent() {
     return result;
   }, [store, advancedExport, renderQueue, pathAudit]);
 
-  // Les deux chaînes commencent donc par **la même étape** : la fiche du pack.
+  // Les deux chaînes proposent la fiche du pack, sauf nom libre confirmé
+  // sans question d’identité d’import encore en attente.
   // Côté Libre elle est ouverte par `handleGenerate`, qui la connaît depuis
   // toujours ; côté graphe elle l'est ici, et son bouton « Appliquer & générer »
   // enchaîne sur les trois étapes suivantes.
@@ -1007,7 +1019,10 @@ function AppContent() {
     readWorkspaceMode: () => authoringMode,
     startFree: handleGenerate,
     startAdvanced: () => packMetadata.openPackMetadata(),
-  }), [authoringMode, handleGenerate, packMetadata]);
+    startAdvancedDirect: handleAdvancedProduce,
+    readProject: store.readProject,
+    readImportedPackPendingMeta: () => importedPackPendingMetaRef.current,
+  }), [authoringMode, handleGenerate, packMetadata, store, handleAdvancedProduce]);
 
   const catalogueEditorHost = useCatalogueEditorHost({
     onGenerate: handleProduce, editorReady: projectOpen, onRecoverSession: handleRecoverSession,
@@ -1127,7 +1142,7 @@ function AppContent() {
   const advancedMetadataForm = useMemo(() => (
     isAdvanced && advancedDocumentInfo
       ? {
-          draft: advancedPackMetadataDraft(advancedDocumentInfo, store.project),
+          draft: advancedPackMetadataDraft(advancedDocumentInfo),
           governance: advancedFieldGovernance(advancedDocumentInfo.documentOrigin, advancedDocumentInfo.identityLocked),
           counters: advancedPackMetadataCounters(
             advancedDocumentInfo,
@@ -1350,7 +1365,7 @@ function AppContent() {
     canGenerateStoryTts,
     modalExportFolder,
     importedPackPendingMetaRef,
-    optionsTabProps,
+    optionsTabProps: { ...optionsTabProps, subscriptions: subscriptions.panelProps },
     sdGenerate,
     onSDGenerate: handleSDGenerate,
     onQueueXttsGenerate: handleQueueXttsGenerate,
@@ -1386,7 +1401,6 @@ function AppContent() {
   // Groupes de props du shell présentational. Aucune logique métier :
   // uniquement du branchement de valeurs/gestionnaires déjà calculés vers le chrome.
   const appShellProps = {
-    subscriptions: { ...subscriptions.panelProps, home: !projectOpen },
     mediaTransfer: {
       dropOnNode,
       prepareMediaForProject: maybeCopyToProject,
@@ -1399,6 +1413,7 @@ function AppContent() {
     projectOpen,
     titleBar: {
       projectName: titleBarName,
+      projectFilePath: store.savePath,
       packRecap,
       // La couverture du pack. En Libre, les médias de la racine de l'arbre ;
       // côté graphe, la même que la fiche du pack, c'est-à-dire celle que
@@ -1616,18 +1631,20 @@ function AppContent() {
     },
   };
 
-  if (modals.isOpen('catalogue')) return <ProjectContext.Provider value={projectContextValue}><CatalogueScreen onLandAggregate={handleLandAggregate} workspaceDir={useWorkspaceForNewProjects ? configuredWorkspaceDir : null} editorHost={catalogueEditorHost}
+  if (modals.isOpen('catalogue')) return <ProjectContext.Provider value={projectContextValue}><MediaSubscriptionsToast {...subscriptions.panelProps} onOpenPreferences={optionsTabProps.openPreferences} /><CatalogueScreen leaveGuard={catalogueLeaveGuard} onLandAggregate={handleLandAggregate} workspaceDir={useWorkspaceForNewProjects ? configuredWorkspaceDir : null} editorHost={catalogueEditorHost}
     sessionRecoveries={sessionRecoveries} onRecoverSession={catalogueEditorHost.recover}
     titleBar={{ onOpenCredits: appShellProps.titleBar.onOpenCredits, preferencesShortcut: shortcutLabels?.tabOptions }} bottomBar={appShellProps.bottomBar}
-    preferencesSurface={modals.isOpen('prefs') || modals.isOpen('credits') ? <AppModals {...appModalsProps} preferencesSection="catalogue" /> : null} onPreferences={() => modals.open('prefs')}
+    preferencesSurface={modals.isOpen('prefs') || modals.isOpen('credits') ? <AppModals {...appModalsProps} /> : null} onPreferences={() => optionsTabProps.openPreferences({ section: 'catalogue' })}
     onIgnoreSessionRecovery={handleIgnoreSessionRecovery} onClose={() => modals.close('catalogue')} /></ProjectContext.Provider>;
-  return <AppShell {...appShellProps} />;
+  return <><MediaSubscriptionsToast {...subscriptions.panelProps} onOpenPreferences={optionsTabProps.openPreferences} /><AppShell {...appShellProps} /></>;
 }
 
 export default function App() {
   return (
     <ErrorDialogProvider>
       <AppContent />
+      <ReleaseNotice />
+      <LuniiCloseNotice />
     </ErrorDialogProvider>
   );
 }

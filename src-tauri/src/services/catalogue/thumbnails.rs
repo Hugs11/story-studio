@@ -364,6 +364,52 @@ pub(crate) fn fiche_cover_keys(c: &rusqlite::Connection, id: &str) -> rusqlite::
 }
 
 impl Store {
+    /// Pack → project enrichment is strictly read-only: never acquire a cover,
+    /// decode a source project, touch cache timestamps, or record read failures.
+    pub(crate) fn import_local_cover(&self, id: &str) -> Result<Option<Vec<u8>>> {
+        let path = self.read_snapshot(|c| {
+            let correction = c.query_row(
+                "SELECT state,image_sha256 FROM correction WHERE fiche_id=?1 AND field='cover' AND language=''",
+                [id], |r| Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?)),
+            ).optional()?;
+            if let Some((state, sha)) = correction {
+                if state == "cleared" { return Ok(None); }
+                if state == "defined" {
+                    if let Some(sha) = sha { return Ok(Some(self.images_root().join(sha))); }
+                }
+            }
+            let resolved = super::data::card::resolution(c, id, &[])?;
+            if let Some(sha) = resolved.values.get("cover")
+                .filter(|v| super::lunii_db::valid_cover(v))
+                .and_then(|v| v["sha256"].as_str()) {
+                return Ok(Some(self.images_root().join(sha)));
+            }
+            let keys = cover_keys(c, id, &resolved)?;
+            let Some(supplier) = keys.supplier else { return Ok(None); };
+            let revision = c.query_row(
+                "SELECT content_revision FROM cache.observation WHERE exemplar_id=?1 AND format='project'",
+                [&supplier], |r| r.get::<_, i64>(0),
+            ).optional()?;
+            Ok(revision.map(|revision| {
+                let key = format!("{:x}", Sha256::digest(format!("thumbnail-v2:{supplier}:{revision}").as_bytes()));
+                self.thumbnail_root().join(format!("{key}.jpg"))
+            }))
+        })?;
+        let Some(path) = path else {
+            return Ok(None);
+        };
+        let Ok(file) = std::fs::File::open(path) else {
+            return Ok(None);
+        };
+        let mut bytes = Vec::new();
+        if file.take(INPUT_BYTES + 1).read_to_end(&mut bytes).is_err()
+            || bytes.len() as u64 > INPUT_BYTES
+        {
+            return Ok(None);
+        }
+        Ok(Some(bytes))
+    }
+
     fn mark_cover_unreadable(&self, exemplar: &str, revision: i64) -> Result<()> {
         self.write(|tx| {
             // The source may have been rescanned while its bytes were read.
@@ -677,9 +723,9 @@ mod tests {
             fixture
         );
         release.send(()).unwrap();
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(1);
+        let deadline = std::time::Instant::now() + crate::test_support::timeout();
         loop {
-            match bounded_source_read(key.clone(), std::time::Duration::from_secs(1), || {
+            match bounded_source_read(key.clone(), crate::test_support::timeout(), || {
                 encode(&png(16, 16))
             }) {
                 Ok(bytes) => {

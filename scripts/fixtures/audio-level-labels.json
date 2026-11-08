@@ -1,0 +1,18 @@
+[
+  {"source":{"role":"root"},"field":"rootAudio","expected":{"fr":"Accueil du pack","en":"Audiobook start","it":"Inizio dell’audiolibro"}},
+  {"source":{"role":"night"},"field":"nightModeAudio","expected":{"fr":"Mode nuit","en":"Night mode","it":"Modalità notte"}},
+  {"source":{"entry":" Conte du soir "},"field":"storyAudio","expected":{"fr":"Conte du soir","en":"Conte du soir","it":"Conte du soir"}},
+  {"source":{"entry":"Le loup et l'agneau","step":"Épilogue"},"field":"afterPlaybackSequence/0/audio","expected":{"fr":"Le loup et l'agneau — Épilogue","en":"Le loup et l'agneau — Épilogue","it":"Le loup et l'agneau — Épilogue"}},
+  {"source":{"entry":"Le loup et l'agneau","step":"Étape 1"},"field":"afterPlaybackSequence/0/audio","expected":{"fr":"Le loup et l'agneau — Étape 1","en":"Le loup et l'agneau — Étape 1","it":"Le loup et l'agneau — Étape 1"}},
+  {"source":{"entry":"Le loup et l'agneau","step":"Retour à l'accueil"},"field":"afterPlaybackHomeStep/audio","expected":{"fr":"Le loup et l'agneau — Retour à l'accueil","en":"Le loup et l'agneau — Retour à l'accueil","it":"Le loup et l'agneau — Retour à l'accueil"}},
+  {"source":{"entry":"Le loup et l'agneau","step":"  "},"field":"afterPlaybackSequence/0/audio","expected":{"fr":"Le loup et l'agneau","en":"Le loup et l'agneau","it":"Le loup et l'agneau"}},
+  {"source":{"entry":"Le loup et l'agneau","step":""},"field":"afterPlaybackPromptAudio","expected":{"fr":"Le loup et l'agneau","en":"Le loup et l'agneau","it":"Le loup et l'agneau"}},
+  {"source":{"entry":"Histoire / #2","step":"Fin / #1"},"field":"afterPlaybackSequence/0/audio","expected":{"fr":"Histoire / #2 — Fin / #1","en":"Histoire / #2 — Fin / #1","it":"Histoire / #2 — Fin / #1"}},
+  {"source":{"entry":"Menu / #1","kind":"menu"},"field":"menuAudio","expected":{"fr":"Menu / #1","en":"Menu / #1","it":"Menu / #1"}},
+  {"source":{"entry":"(sans nom)"},"field":"storyAudio","expected":{"fr":"(sans nom)","en":"(sans nom)","it":"(sans nom)"}},
+  {"source":{"entry":""},"field":"storyAudio","expected":{"fr":"Histoire sans titre","en":"Untitled story","it":"Storia senza titolo"}},
+  {"source":{"entry":"  ","kind":"menu"},"field":"menuAudio","expected":{"fr":"Menu sans titre","en":"Untitled menu","it":"Menu senza titolo"}},
+  {"source":{"entry":"","step":"Étape 1"},"field":"afterPlaybackSequence/0/audio","expected":{"fr":"Histoire sans titre — Étape 1","en":"Untitled story — Étape 1","it":"Storia senza titolo — Étape 1"}},
+  {"source":{"stage":" Écran / #1 "},"field":"nativeGraph/id/audio","expected":{"fr":"Écran / #1","en":"Écran / #1","it":"Écran / #1"}},
+  {"source":{"stage":" "},"field":"nativeGraph/id/audio","expected":{"fr":"Écran sans nom","en":"Unnamed Screen","it":"Schermata senza nome"}}
+]

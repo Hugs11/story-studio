@@ -12,7 +12,6 @@ test('resume banner and D70 choices have translated actions and an explicit proj
     const engine=initializeI18n('fr');
     const {FormatTag}=await server.ssrLoadModule('/src/components/Catalogue/FormatTag.jsx');
     const {ResumeBanner}=await server.ssrLoadModule('/src/components/Catalogue/open/ResumeBanner.jsx');
-    const {GenerationFolderPromptContent}=await server.ssrLoadModule('/src/components/Catalogue/open/GenerationFolderPrompt.jsx');
     const {editWarningDialog}=await server.ssrLoadModule('/src/components/Catalogue/open/EditWarningDialog.jsx');
     for(const language of ['fr','en','it']) {
       await engine.changeLanguage(language);
@@ -23,13 +22,6 @@ test('resume banner and D70 choices have translated actions and an explicit proj
       const tag=renderToStaticMarkup(React.createElement(FormatTag,{id:'project-tag',tag:{format:'project',labelKey:'catalogue:format.project.label',regenerate:true,mentions:[{key:'catalogue:generation.modified.reason',params:{}}]}}));
       assert.match(tag,/catalogue-generation-dot/);
       assert.doesNotMatch(tag,/catalogue:|undefined/);
-      for(const busy of [false,true]) {
-        const prompt=renderToStaticMarkup(React.createElement(GenerationFolderPromptContent,{folder:'/_OUTPUT_',busy,onChoose:()=>{}}));
-        assert.match(prompt,/_OUTPUT_/);
-        assert.doesNotMatch(prompt,/catalogue:|undefined|\[object Object\]/);
-        assert.equal((prompt.match(/<button/g)??[]).length,2);
-        if(busy)assert.match(prompt,/aria-disabled="true" aria-describedby=/);
-      }
       const model=editWarningDialog({project:{path:'_PROJECT_'},message:{params:{date:1700000000000}}});
       assert.match(model.message,/_PROJECT_/);
       assert.match(model.message,/2023/,'catalogue dates are milliseconds, not seconds');

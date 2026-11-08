@@ -3,6 +3,8 @@ import { useProjectMediaDirectory } from '../../hooks/useProjectMediaDirectory';
 import { useState } from 'react';
 import { Button } from '../../components/common/Button';
 import { Toggle } from '../../components/common/Toggle';
+import { useAudioLevelAlerts } from '../../hooks/useAudioLevelAlerts';
+import { writeAudioLevelAlerts } from '../../store/audioLevelAlertSettings';
 
 export function ProjectsMediaSection({
   className,
@@ -18,6 +20,7 @@ export function ProjectsMediaSection({
 }) {
   const { t } = useTranslation('settings');
   const importDirectory = useProjectMediaDirectory('fichiers-importes', { root: displayedWorkspaceDir, storage: project?.storage, ephemeral: false });
+  const audioLevelAlerts = useAudioLevelAlerts();
   const [consolidating, setConsolidating] = useState(false);
   const [consolidationResult, setConsolidationResult] = useState(null);
 
@@ -64,6 +67,13 @@ export function ProjectsMediaSection({
           </div>
         </div>
         <Toggle on={copyFilesEnabled} onChange={(v) => onCopyFilesChange?.(v)} />
+      </div>
+      <div className="opts-row">
+        <div className="opts-row-info">
+          <div className="opts-row-label">{t('settings:projects.levelAlerts.label')}</div>
+          <div className="opts-row-sub">{t('settings:projects.levelAlerts.description')}</div>
+        </div>
+        <Toggle on={audioLevelAlerts} onChange={writeAudioLevelAlerts} ariaLabel={t('settings:projects.levelAlerts.label')} />
       </div>
       <div className="opts-row">
         <div className="opts-row-info">

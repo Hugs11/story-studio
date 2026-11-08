@@ -22,6 +22,7 @@ export class CatalogueError extends Error {
     this.name = 'CatalogueError';
     this.code = envelope?.code ?? null;
     this.userMessage = envelope;
+    if (typeof envelope?.deviceFault === 'boolean') this.deviceFault = envelope.deviceFault;
   }
 }
 
@@ -155,7 +156,7 @@ export function createCatalogueApi(bridge = {}) {
     openCatalogue: () => call('catalogue_lunii_open', { locale: i18n.language ?? 'en' }).catch(() => {}),
     listAllEntries, subscribeChanges, subscribeOperations,
     listSources: (workspaceDir) => call('catalogue_list_sources', { workspaceDir }),
-    addSource: (path, expectedSourcesRevision, declined = false) => call('catalogue_add_source', { path, expectedSourcesRevision, declined }),
+    addSource: (path, expectedSourcesRevision) => call('catalogue_add_source', { path, expectedSourcesRevision }),
     previewRemoveSource: (sourceId) => call('catalogue_preview_remove_source', { sourceId }),
     removeSource: (sourceId, expectedSourcesRevision, expectedCatalogueRevision) => call('catalogue_remove_source', { sourceId, expectedSourcesRevision, expectedCatalogueRevision }),
     getExclusions: () => call('catalogue_get_source_exclusions'),

@@ -4,6 +4,9 @@ mod native_pack;
 mod services;
 mod support;
 
+#[cfg(test)]
+mod test_support;
+
 fn cleanup_old_files_in_dir(dir: &std::path::Path, max_age: std::time::Duration) {
     if !dir.is_dir() {
         return;
@@ -305,6 +308,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::release_check::check_stable_release,
             commands::catalogue::catalogue_start_scan,
             commands::catalogue::catalogue_cancel_operation,
             commands::catalogue::catalogue_get_operation,
@@ -447,6 +451,7 @@ pub fn run() {
             commands::comfyui::comfyui_poll_job,
             commands::comfyui::comfyui_download_output,
             commands::media_probe::probe_media_files,
+            commands::audio_level::measure_audio_level,
             commands::podcast::fetch_podcast_feed,
             commands::podcast::download_podcast_media,
             commands::youtube::fetch_youtube_list,

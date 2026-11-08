@@ -351,7 +351,8 @@ fn operation_is_idempotent_and_carries_verified_result() {
         receipt
     );
     let id = receipt["operationId"].as_str().unwrap();
-    for _ in 0..400 {
+    let started = std::time::Instant::now();
+    loop {
         let operations = f.store.scans.operations.lock().unwrap();
         let p = operations[id].progress.lock().unwrap().clone();
         drop(operations);
@@ -360,9 +361,12 @@ fn operation_is_idempotent_and_carries_verified_result() {
             return;
         }
         assert_ne!(p.status, "failed");
+        assert!(
+            started.elapsed() < crate::test_support::timeout(),
+            "export did not finish"
+        );
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
-    panic!("export did not finish");
 }
 
 #[test]

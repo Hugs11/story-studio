@@ -255,6 +255,25 @@ fn nested_roots_removal_and_declines() {
     );
 }
 #[test]
+fn declined_source_stays_declined_after_reopening_and_remembering_workspace() {
+    let f = Fixture::new();
+    let store = f.open();
+    let workspace = f.0.join("workspace");
+    std::fs::create_dir_all(&workspace).unwrap();
+    let declined = workspace.join("exports");
+    store.add_source(&declined, 0, true).unwrap();
+    drop(store);
+    let store = f.open();
+    store.remember_workspace(workspace.to_str()).unwrap();
+    let list = store.list_sources().unwrap();
+    let source = list
+        .items
+        .iter()
+        .find(|s| s.native_path == declined)
+        .unwrap();
+    assert_eq!(source.status, "declined");
+}
+#[test]
 fn roles_temporaries_and_source_bytes_untouched() {
     let f = Fixture::new();
     let store = f.open();
@@ -333,11 +352,16 @@ fn cache_corruption_and_old_workspace_roles() {
     assert!(rules.reason_for(&old.join("zips-extraits/a.zip")).is_some());
     assert!(rules.reason_for(&new.join("zips-extraits/a.zip")).is_some());
     let sources = store.list_sources().unwrap();
-    assert_eq!(sources.items.len(), 4);
-    assert_eq!(
-        sources.items.iter().filter(|s| s.status == "hint").count(),
-        2
-    );
+    // Only the first workspace seeds sources; the second is never proposed.
+    assert_eq!(sources.items.len(), 2);
+    assert!(sources.items.iter().all(|s| s.status == "active"));
+    // Sources are stored resolved: on Windows, canonicalize adds the `\\?\`
+    // prefix, so compare with the resolved workspace, not its plain form.
+    let old_resolved = std::fs::canonicalize(&old).unwrap();
+    assert!(sources
+        .items
+        .iter()
+        .all(|s| s.native_path.starts_with(&old_resolved)));
 }
 
 #[test]
@@ -391,7 +415,7 @@ fn source_wire_contract() {
 }
 
 // Native test adapter: directory symlinks use distinct OS APIs.
-fn directory_link(target: &std::path::Path, link: &std::path::Path) -> bool {
+pub(super) fn directory_link(target: &std::path::Path, link: &std::path::Path) -> bool {
     #[cfg(unix)]
     let result = std::os::unix::fs::symlink(target, link);
     #[cfg(windows)]

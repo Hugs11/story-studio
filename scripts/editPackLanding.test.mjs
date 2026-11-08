@@ -147,7 +147,7 @@ test('depuis un projet par menus rempli, le pack remplace entièrement l’ancie
     assert.deepEqual(project.rootEntries.map((entry) => entry.name), ['Premiere', 'Seconde']);
     assert.equal(project.projectName, '');
     assert.equal(project.packMetadata.title, 'Pack ouvert');
-    assert.equal(project.packMetadata.version, 4);
+    assert.equal(project.packMetadata.version, 3);
     assert.notEqual(project.packMetadata.uuid, 'uuid-ancien');
     assert.equal(project.rootAudio.replaceAll('\\', '/'), 'C:/ws/zips-extraits/Pack/titre.wav');
     assert.equal(project.rootImage.replaceAll('\\', '/'), 'C:/ws/zips-extraits/Pack/titre.png');
@@ -173,7 +173,7 @@ test('depuis l’accueil, l’atterrissage donne le même projet que depuis un �
 });
 
 // Atterrissage graphe : `useAdvancedProjectEntry` intact, acquisition doublée.
-function mountAdvanced(initialProject) {
+function mountAdvanced(initialProject, overrides = {}) {
   const library = { current: [] };
   const savedSnapshotRef = { current: null };
   let store; let entry;
@@ -190,6 +190,7 @@ function mountAdvanced(initialProject) {
       importedPackPendingMetaRef: { current: false },
       acquire: async () => createAdvancedProject({ payload: PAYLOAD, projectName: 'Pack graphe' }),
       prepareImported: async (project) => project,
+      ...overrides,
     });
   });
   app.render();
@@ -201,6 +202,7 @@ function mountAdvanced(initialProject) {
     get store() { return store; },
     get entry() { return entry; },
     render: () => app.render(),
+    restore: () => app.unmount(),
     library,
     savedSnapshotRef,
   };
@@ -271,4 +273,83 @@ test('l’atterrissage graphe remet à zéro étiquettes et médiathèque de l�
   assert.deepEqual(c.store.mediaTags, {});
   assert.deepEqual(c.library.current, []);
   assert.deepEqual(await leavesWithoutQuestion(c), { canLeave: true, questions: [] });
+});
+
+// Après réouverture, le drapeau d’import est faux : la fiche peut être sautée.
+test('menus : nom libre sauvegardé puis rouvert, générer n’impose plus les métadonnées', async () => {
+  const { encodeProjectFile, decodeProjectFile } = await import('../src/store/projectModel/codec.js');
+  const { usePackGeneration } = await import('../src/hooks/usePackGeneration.js');
+  const c = mount(null);
+  try {
+    await land(c);
+    const source = { ...c.store.project, packMetadata: { ...c.store.project.packMetadata, namingMode: 'legacy', legacyExportName: 'Mon export', minAge: '' } };
+    const { project } = await decodeProjectFile(encodeProjectFile(source));
+    const dialogs = [];
+    let api;
+    const generation = runner(() => {
+      api = usePackGeneration({
+        store: { project }, renderQueue: {}, pathAudit: {}, pathAuditPending: true,
+        workspaceDirRef: { current: '' }, importedPackPendingMetaRef: { current: false },
+        showErrorDialog: dialog => dialogs.push(dialog),
+      });
+    });
+    generation.render();
+    await api.handleGenerate();
+    generation.render();
+    assert.equal(api.packMetadata.open, false);
+    assert.equal(dialogs.length, 1, 'la garde de vérification est atteinte');
+    assert.deepEqual(dialogs[0].title, { key: 'production:generation.checking.title' });
+    assert.equal(project.packMetadata.namingMode, 'legacy');
+    assert.equal(project.packMetadata.legacyExportName, 'Mon export');
+    assert.equal(project.packMetadata.minAge, '');
+  } finally { c.restore(); }
+});
+
+
+test('menus : après import dans la même session, le nom libre garde la question UUID', async () => {
+  const { usePackGeneration } = await import('../src/hooks/usePackGeneration.js');
+  const c = mount(null);
+  try {
+    await land(c);
+    const project = { ...c.store.project, packMetadata: { ...c.store.project.packMetadata, namingMode: 'legacy', legacyExportName: 'Mon export' } };
+    let api;
+    const generation = runner(() => {
+      api = usePackGeneration({
+        store: { project }, renderQueue: {}, pathAudit: {}, pathAuditPending: true,
+        workspaceDirRef: { current: '' }, importedPackPendingMetaRef: { current: true },
+        showErrorDialog: () => assert.fail('la fiche précède les gardes de génération'),
+      });
+    });
+    generation.render();
+    await api.handleGenerate();
+    generation.render();
+    assert.equal(api.packMetadata.open, true);
+  } finally { c.restore(); }
+});
+
+
+test('atterrissage graphe : transmet le nom visible au préparateur, crée sans titre automatique', async () => {
+  const prepared = [];
+  const created = [];
+  const c = mountAdvanced(null, {
+    prepareImported: async (project, options) => { prepared.push(options); return project; },
+    acquireCreated: async options => { created.push(options); return createAdvancedProject({ payload: PAYLOAD }); },
+  });
+  try {
+    await c.entry.landAdvancedPack({ zipPath: '/cache/member-2.zip', packLabel: '6+ Le Renard' });
+    assert.deepEqual(prepared, [{ packPath: '/cache/member-2.zip', packLabel: '6+ Le Renard' }]);
+    await c.entry.startAdvancedProject();
+    assert.deepEqual(created, [{ title: '', projectName: '' }]);
+  } finally { c.restore(); }
+});
+
+test('menus : une histoire seule sans nom reprend le titre du nom visible', async () => {
+  const c = mount(null, { title: '', entries: [{ id: 'seule', type: 'story', name: '', audio: '/assets/histoire.mp3' }] });
+  try {
+    await c.lifecycle.handleLandEditablePack({ zipPath: '/cache/a1b2c3.zip', packLabel: '6+ Le Renard' });
+    c.render();
+    assert.equal(c.store.project.packMetadata.title, 'Le Renard');
+    assert.equal(c.store.project.packMetadata.minAge, '6');
+    assert.equal(c.store.project.rootEntries[0].name, 'Le Renard');
+  } finally { c.restore(); }
 });

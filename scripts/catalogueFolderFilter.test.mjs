@@ -60,3 +60,8 @@ test('le chip actif affiche le libellé court du dossier', async () => {
   assert.match(surface.html, />Dossier</);
   assert.doesNotMatch(surface.html, /\/b\/Zoo/);
 });
+
+test('managed source folder labels remain readable and distinguish workspaces', () => {
+  const sources = ['/ancien/packs-rapatries', '/nouveau/packs-rapatries', '/data/repatriated-stories'].map((path, index) => ({ id: String(index), path, status: 'active', origin: 'repatriated' }));
+  assert.deepEqual(sourceFolderOptions(sources).map(item => item.label), ['ancien/packs-rapatries', 'nouveau/packs-rapatries', 'repatriated-stories']);
+});

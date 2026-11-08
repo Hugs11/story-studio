@@ -55,7 +55,7 @@ const image = { id: 'b', path: '/w/_AUTHOR_b.png', name: '_AUTHOR_b.png', kind: 
 const audio2 = { ...audio, id: 'c', path: '/w/_AUTHOR_c.mp3', name: '_AUTHOR_c.mp3', projectUsedCount: 0, inProject: false };
 const noop = () => {};
 
-async function surfaces(s) {
+async function surfaces(s, original = false) {
   const { initializeI18n } = await s.ssrLoadModule('/src/i18n/index.js');
   const runtime = initializeI18n('fr');
   const load = async (file, name) => (await s.ssrLoadModule(`/src/components/${file}.jsx`))[name];
@@ -78,7 +78,7 @@ async function surfaces(s) {
     imageEditor: await load('ImageEditorModal/ImageEditorModal', 'ImageEditorModal'),
     record: await load('RecordModal/RecordModal', 'RecordModal'),
     packAudio: await load('layout/PackAudioProcessingFields', 'PackAudioProcessingFields'),
-    subscriptions: await load('MediaSubscriptions/MediaSubscriptionsPanel', 'MediaSubscriptionsPanel'),
+    subscriptions: original ? await load('MediaSubscriptions/MediaSubscriptionsPanel', 'MediaSubscriptionsPanel') : await load('MediaSubscriptions/MediaSubscriptionsToast', 'MediaSubscriptionsToast'),
   };
   const cols = new Set(['name', 'usage', 'size', 'dim', 'dur', 'fmt', 'date', 'path', 'tags']);
   const contentProps = { sortedVisible: [audio, image], visible: [audio, image], view: 'list', gridCols: '', visibleCols: cols, sortCol: 'name', sortDir: 'asc', onSortClick: noop, onStartResize: noop, headerRef: null, listScrollRef: null, onBackgroundClick: noop, onBackgroundContextMenu: noop, getMeta: () => null, markForProbe: noop, activePopover: null, onActivate: noop, onNavigate: noop, mediaTags: {}, tagsOf: () => ['_AUTHOR_TAG_'], allTags: ['_AUTHOR_TAG_'], onAddMediaTag: noop, onRemoveMediaTag: noop, onDeleteMedia: noop, onDeleteRequest: noop, selectedAudioItems: [], onOpenAssembly: noop, onOpenSplitter: noop, onEditImage: noop, selectedIds: new Set(), selectedItems: [], onSelectItem: noop, onContextMenuSelect: noop, onSelectNode: noop, onRevealGraphNode: noop, dropOnNode: noop, onImportMedia: noop, onImportStories: noop, onImportMediaFolder: noop };
@@ -137,14 +137,40 @@ test('Médias : FR identique à la source BASE indépendante, puis EN/IT/pseudo 
   assert.equal(fixture.base, BASE);
   const now = await server(false), original = await server(true);
   try {
-    const current = await surfaces(now), before = await surfaces(original);
+    const current = await surfaces(now), before = await surfaces(original, true);
+    // M23 : le toast est conservé à l’identique ; seul le déclencheur permanent
+    // est supprimé. Vérifier exactement les anciens déclencheurs avant retrait.
+    const withoutRemovedTrigger = (html, index) => {
+      if (index < 30) return html;
+      const count = index === 30 ? '' : '<span class="media-subscriptions-count">2</span>';
+      const label = index === 30 ? 'Notifications' : '2 notifications';
+      const trigger = `<div class="media-subscriptions"><button type="button" class="media-subscriptions-trigger" aria-expanded="false" aria-controls="media-subscriptions-panel" aria-label="${label}">Notifications${count}</button></div>`;
+      assert.ok(html.startsWith(trigger), `déclencheur BASE ${index}`);
+      return html.slice(trigger.length);
+    };
     const currentHtml = current.render();
-    const currentFr = currentHtml.map(plain), beforeFr = before.render().map((html) => plain(applyShiftLabels(applyLot413(html))));
+    const currentFr = currentHtml.map(plain), beforeFr = before.render().map((html, index) => plain(withoutRemovedTrigger(applyShiftLabels(applyLot413(html)), index)));
     assert.equal(currentFr.length, beforeFr.length);
-    currentFr.forEach((html, index) => assert.equal(html, beforeFr[index], `scénario ${index}`));
+    // Changement UI volontaire : les deux choix restent, l'arrêt passe par Toggle.
+    const packAudioScenarios = new Set([27, 28, 29]);
+    currentFr.forEach((html, index) => {
+      if (!packAudioScenarios.has(index)) assert.equal(html, beforeFr[index], `scénario ${index}`);
+      else {
+        const expected = beforeFr[index].replace('Ne rien faire', '')
+          .replace('Ne touche pas aux silences de début et de fin.', 'Recommandé : mesure les silences et les ramène à exactement 0,4 s au début et 0,4 s à la fin (coupe si trop long, complète si trop court).');
+        assert.equal(html, expected, `scénario ${index}`);
+      }
+    });
     // Attributs accessibles et infobulles compris : HTML FR complet identique.
-    const beforeHtml = before.render().map((html) => applyShiftLabels(applyLot413(html)));
-    currentHtml.forEach((html, index) => assert.equal(html, beforeHtml[index], `scénario ${index} (HTML)`));
+    const beforeHtml = before.render().map((html, index) => withoutRemovedTrigger(applyShiftLabels(applyLot413(html)), index));
+    currentHtml.forEach((html, index) => {
+      if (!packAudioScenarios.has(index)) assert.equal(html, beforeHtml[index], `scénario ${index} (HTML)`);
+      else {
+        assert.match(html, /aria-label="Activer le traitement des silences de début et de fin"/);
+        assert.doesNotMatch(html, /Ne rien faire/);
+        assert.equal(/<fieldset[^>]*disabled=""[^>]*inert=""/.test(html), index === 29);
+      }
+    });
     for (const lng of ['en', 'it', 'pseudo']) {
       await current.runtime.changeLanguage(lng);
       const htmls = current.render();
@@ -185,12 +211,31 @@ test('chaque texte FR du catalogue provient de la source BASE', () => {
     'relink.group.resolved_many', 'relink.group.resolved_other', 'relink.group.missing_many', 'relink.group.missing_other',
     'subscriptions.newVideos.count_one', 'subscriptions.newVideos.count_many', 'subscriptions.newVideos.count_other',
     'subscriptions.newEpisodes.count_one', 'subscriptions.newEpisodes.count_many', 'subscriptions.newEpisodes.count_other',
-    'subscriptions.notifications.count_one', 'tile.usage.line', 'popover.image.size', 'usage.label.homeStep', 'explorer.tags.bulkHeader',
+    'tile.usage.line', 'popover.image.size', 'usage.label.homeStep', 'explorer.tags.bulkHeader',
     'splitter.segment.defaultName', 'record.preview.playing', 'record.preview.paused', 'record.duration.label', 'relink.progress.label_one', 'relink.progress.label_many', 'relink.progress.label_other', 'relink.ready.label_one', 'relink.ready.label_many', 'relink.ready.label_other',
     'triage.copy.incompleteMessage', 'transfer.incomplete.message',
+    // Nouveau contrôle UI, absent de la source BASE : vérifié en SSR ci-dessus.
+    'packAudio.silence.ariaLabel',
   ]);
+  // Nouveaux avertissements du relink : absents de BASE, ajout visible volontaire.
+  const scanWarnings = {
+    'relink.scan.truncated': 'Recherche incomplète : limite de {{limit}} fichiers atteinte. Choisissez un dossier plus précis ou les fichiers restants individuellement.',
+    'relink.scan.unreadable': 'Recherche incomplète : des dossiers sont illisibles ({{count}}). Vérifiez leur accès ou choisissez les fichiers restants individuellement.',
+  };
+  for (const [key, value] of Object.entries(scanWarnings)) assert.equal(fr[key], value);
+  // Nouveau rappel volontaire au démarrage, absent de BASE : attentes explicites.
+  const startupReminder = {
+    'subscriptions.reminder.title': 'Nouveautés en attente',
+    'subscriptions.reminder.action': 'Voir',
+    'subscriptions.reminder.count_one': '{{count}} suivi a des nouveautés',
+    'subscriptions.reminder.count_many': '{{count}} suivis ont des nouveautés',
+    'subscriptions.reminder.count_other': '{{count}} suivis ont des nouveautés',
+  };
+  for (const [key, value] of Object.entries(startupReminder)) assert.equal(fr[key], value);
+  assert.equal(fr['subscriptions.section.title'], 'Suivis des médias');
   const missing = [];
   for (const [key, value] of Object.entries(fr)) {
+    if (Object.hasOwn(scanWarnings, key) || Object.hasOwn(startupReminder, key) || key === 'subscriptions.section.title') continue;
     if (composed.has(key)) continue;
     const segments = value.split(/{{[^}]+}}|<\/?strong>/).map((part) => part.trim()).filter((part) => /\p{L}/u.test(part));
     if (segments.some((segment) => !sourcesFixed.includes(segment))) missing.push(key);
@@ -323,4 +368,21 @@ test('refus d’outil : mediaRefusal garde le code et la clé, le texte suit la 
     assert.equal(JSON.parse(JSON.stringify(refusal)).reasonRef.key, 'media:tool.refusal.notConsecutive');
   }
   await i18next.changeLanguage('fr');
+});
+
+test('media subscriptions preferences section renders in FR, EN, IT and pseudo', async () => {
+  const s = await server(false);
+  try {
+    const { initializeI18n } = await s.ssrLoadModule('/src/i18n/index.js');
+    const runtime = initializeI18n('fr');
+    const { MediaSubscriptionsSection } = await s.ssrLoadModule('/src/tabs/OptionsTab/MediaSubscriptionsSection.jsx');
+    for (const language of ['fr', 'en', 'it', 'pseudo']) {
+      await runtime.changeLanguage(language);
+      const html = renderToStaticMarkup(React.createElement(MediaSubscriptionsSection, { className: 'opts-card', subscriptions: {} }));
+      assert.match(html, /<section id="media-subscriptions" class="opts-card">/);
+      assert.doesNotMatch(html, /media:|\[object Object\]|media-subscriptions-trigger/);
+      if (language === 'pseudo') assertPseudoSurface(html, 'section suivis');
+      else assert.ok(plain(html).includes(({ fr, en, it })[language]['subscriptions.section.title']));
+    }
+  } finally { await s.close(); }
 });

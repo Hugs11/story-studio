@@ -1,3 +1,4 @@
+use crate::services::catalogue::open::import_metadata::{self, Source};
 use crate::services::{community_pack_checker, pack_reader};
 use crate::support::user_message::{codes, UserMessage};
 use std::path::Path;
@@ -58,6 +59,7 @@ pub async fn unpack_zip_to_entries<R: tauri::Runtime>(
     workspace_dir: String,
     project_destination: Option<crate::services::project_files::ProjectMediaDestination>,
     proposed_pack_name: Option<String>,
+    catalogue_metadata: Option<bool>,
 ) -> Result<serde_json::Value, UserMessage> {
     log::info!(target: "pack", "unpack_zip_to_entries: zip='{}' dest='{}'", zip_path, dest_dir);
     let zip_path_for_log = zip_path.clone();
@@ -80,6 +82,7 @@ pub async fn unpack_zip_to_entries<R: tauri::Runtime>(
             let provenance = crate::domain::official_provenance::imported_provenance(uuid, app.try_state::<crate::services::catalogue::CatalogueState>().as_deref()).map_err(UserMessage::into_transport)?;
             if provenance == crate::domain::official_provenance::OfficialProvenance::Official { value["officialOriginUuid"] = serde_json::json!(uuid); }
             value["officialProvenance"] = serde_json::to_value(provenance).unwrap();
+            if catalogue_metadata.unwrap_or(false) { enrich_import(&app, &zip_path, &safe_dest, &mut value); }
             Ok(value)
         });
         if result.is_err() {
@@ -112,7 +115,8 @@ pub async fn acquire_advanced_pack_document<R: tauri::Runtime>(
     dest_dir: String,
     workspace_dir: String,
     project_destination: Option<crate::services::project_files::ProjectMediaDestination>,
-) -> Result<crate::native_pack::persistence::AdvancedAcquisition, UserMessage> {
+    catalogue_metadata: Option<bool>,
+) -> Result<serde_json::Value, UserMessage> {
     let result: Result<_, String> = async {
     log::info!(target: "pack", "acquire_advanced_pack_document: zip='{}' dest='{}'", zip_path, dest_dir);
     let zip_path_for_log = zip_path.clone();
@@ -130,7 +134,11 @@ pub async fn acquire_advanced_pack_document<R: tauri::Runtime>(
             &zip_path,
             &safe_dest.to_string_lossy(),
             app.try_state::<crate::services::catalogue::CatalogueState>().as_deref(),
-        );
+        ).and_then(|acquired| {
+            let mut value = serde_json::to_value(acquired).map_err(|e| e.to_string())?;
+            if catalogue_metadata.unwrap_or(false) { enrich_import(&app, &zip_path, &safe_dest, &mut value); }
+            Ok(value)
+        });
         if result.is_err() {
             let _ = std::fs::remove_dir_all(&safe_dest);
         }
@@ -164,6 +172,7 @@ pub async fn convert_folder_pack_to_zip(
             .map(|converted| crate::support::paths::path_for_frontend(&converted.zip_path))
             .inspect_err(|err| log::error!(target: "pack", "convert_folder_pack_to_zip failed for '{}': {}", folder_for_log, err));
         write.finish(&result, |zip| vec![zip.into()]);
+        if let Ok(output) = &result { import_metadata::remember(&app, output, Source::direct(&folder_path)); }
         result
     })
     .await
@@ -199,7 +208,9 @@ pub async fn convert_folder_pack_to_named_zip(
                 .param("error", e.to_string())
                 .with_detail(format!("Impossible de creer {} : {}", target.display(), e))
         })?;
-        Ok(crate::support::paths::path_for_frontend(&target))
+        let output = crate::support::paths::path_for_frontend(&target);
+        import_metadata::remember(&app, &output, Source::direct(&folder_path));
+        Ok(output)
     })
     .await
     .map_err(|e| UserMessage::from(e.to_string()))?
@@ -332,12 +343,16 @@ pub async fn extract_pack_bundle_child(
         crate::support::imported_pack::IMPORTED_PACK_CACHE_DIR,
     )?;
     tauri::async_runtime::spawn_blocking(move || {
-        extract_bundle_child_routed(&path, &container_fingerprint, &child_id, &cache_dir, || {
+        let output = extract_bundle_child_routed(&path, &container_fingerprint, &child_id, &cache_dir, || {
             crate::services::catalogue::open_store(&app).map_err(|error| error.into_transport())?;
             let registry = crate::services::catalogue::open::editor_extractions(&app).map_err(|error| error.into_transport())?;
             crate::services::catalogue::open::editor_entry::extract_child(&path, &container_fingerprint, &child_id, &registry, owner_id.as_deref().unwrap_or_default(), app.try_state::<crate::services::catalogue::CatalogueState>().as_deref().map(|state| state as &dyn crate::services::official_packs::OfficialCatalogue<Error = UserMessage>)).map_err(|e| e.into_transport())
         })
-        .inspect_err(|err| log::error!(target: "pack", "extract_pack_bundle_child failed for '{}': {}", path_for_log, err))
+        .inspect_err(|err| log::error!(target: "pack", "extract_pack_bundle_child failed for '{}': {}", path_for_log, err));
+        if let Ok(output) = &output {
+            import_metadata::remember(&app, output, Source { path: path.into(), child_id: Some(child_id), fingerprint: Some(container_fingerprint) });
+        }
+        output
     })
     .await
     .map_err(|e| e.to_string())?
@@ -596,4 +611,17 @@ pub(crate) fn read_pack_identity_lock(
         &uuid,
         Some(catalogue.inner()),
     )
+}
+
+/// Optional enrichment has no user-facing error and never overwrites a pack thumbnail.
+fn enrich_import<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+    path: &str,
+    dest: &Path,
+    value: &mut serde_json::Value,
+) {
+    let needs_cover = value["thumbnailImage"].as_str().is_none_or(str::is_empty);
+    if let Some(metadata) = import_metadata::optional(app, path, needs_cover) {
+        metadata.apply(dest, value);
+    }
 }

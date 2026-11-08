@@ -2803,3 +2803,38 @@
     white-space: normal;
   }
 }
+
+/* Repère de niveau : pastille ambre à côté du nom du son, dans la zone du nom,
+   sans élargir la barre (le nom se comprime d'abord). */
+.audio-label-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.audio-label-wrap .tooltip-wrap {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+.audio-level-mark {
+  flex: 0 0 auto;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 4px; /* le focus n'est pas rogné par l'overflow de la zone du nom */
+  background: var(--warning);
+  border: 1px solid var(--warning-text);
+  cursor: help;
+}
+
+.audio-level-mark:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
+}
+
+.audio-level-line {
+  display: block;
+}

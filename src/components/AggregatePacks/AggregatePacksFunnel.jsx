@@ -1,6 +1,5 @@
 import { AggregateDestinationChoice, AggregateGenerationReview } from './AggregateDestinationChoice.jsx';
 import { aggregateDestinationReducer, INITIAL_AGGREGATE_DESTINATION, createAggregateConfirmation, moveAggregatePack, refreshAggregateMetadata } from './aggregateLanding.js';
-import { GenerationFolderPrompt } from '../Catalogue/open/GenerationFolderPrompt.jsx';
 import { nativeGenerationLock } from '../../store/nativeGenerationLock.js';
 import { catalogueAssemblyApi } from '../../store/catalogue/catalogueAssemblyApi.js';
 import { assemblyPacks } from '../../store/catalogue/assemblySelection.js';
@@ -529,7 +528,6 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
             </div>
           ) : null}
         >
-          <GenerationFolderPrompt outputPath={result?.path} />
           <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={() => outputDir && openPath(outputDir)}>{t('home:aggregate.done.openFolder')}</FunnelToolButton>
           <button type="button" className="funnel-btn funnel-btn-primary" onClick={() => handleClose()}>
             <span>{t('home:aggregate.done.finish')}</span>
@@ -691,7 +689,6 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
             <PackNameModal
               open
               embedded
-              allowUnknownAge
               packMetadata={metadata}
               project={previewProject}
               coverImage={rootImage}

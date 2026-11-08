@@ -154,11 +154,11 @@ fn local_server_download_token_header_and_offline_preserves_cache() {
     let (_temp, s) = store();
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
-    let server = std::thread::spawn(move || {
+    let server = crate::test_support::spawn(move || {
         for i in 0..2 {
             let (mut socket, _) = accept_local(&listener);
             socket
-                .set_read_timeout(Some(Duration::from_secs(2)))
+                .set_read_timeout(Some(crate::test_support::timeout()))
                 .unwrap();
             let headers = bounded::read_request(&mut socket).to_lowercase();
             if i == 1 {
@@ -199,7 +199,7 @@ fn local_server_download_token_header_and_offline_preserves_cache() {
         .unwrap()["operation"]
         .is_null());
     let wait = |receipt: &Value| {
-        let deadline = Instant::now() + Duration::from_secs(5);
+        let deadline = Instant::now() + crate::test_support::timeout();
         loop {
             let p = s
                 .get_operation(receipt["operationId"].as_str().unwrap())
@@ -212,7 +212,7 @@ fn local_server_download_token_header_and_offline_preserves_cache() {
         }
     };
     assert_eq!(wait(&receipt).status, "success");
-    server.join().unwrap();
+    crate::test_support::join(server);
     assert_eq!(s.lunii_status().unwrap()["source"], "network");
     let old = s.lunii_status().unwrap();
     let receipt = s
@@ -258,7 +258,7 @@ fn incremental_scan_recalculates_names_and_card_matches_listing() {
                 Arc::new(|_, _| {}),
             )
             .unwrap();
-        let until = Instant::now() + Duration::from_secs(10);
+        let until = Instant::now() + crate::test_support::timeout();
         loop {
             let p = s.get_operation(&receipt.operation_id).unwrap();
             if !matches!(p.status.as_str(), "queued" | "running" | "cancelling") {
@@ -421,7 +421,7 @@ fn slow_on_demand_cover_download_is_bounded_decoded_and_cached() {
     let png = png.into_inner();
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
-    let server = std::thread::spawn(move || {
+    let server = crate::test_support::spawn(move || {
         let (mut socket, _) = accept_local(&listener);
         assert!(bounded::read_request(&mut socket).starts_with("GET "));
         std::thread::sleep(Duration::from_millis(3200));
@@ -439,7 +439,7 @@ fn slow_on_demand_cover_download_is_bounded_decoded_and_cached() {
             .unwrap(),
     )
     .unwrap();
-    server.join().unwrap();
+    crate::test_support::join(server);
     assert_eq!(first["state"], "ready");
     assert_eq!(first["mime"], "image/jpeg");
     let cached =
@@ -636,7 +636,7 @@ fn legacy_discovery_is_read_only_bounded_and_works_offline_at_home_and_app_data(
     assert_eq!(s.lunii_status().unwrap()["entryCount"], 1);
 }
 fn wait_lunii(s: &Store, receipt: &Value) -> super::super::events::Progress {
-    let until = Instant::now() + Duration::from_secs(10);
+    let until = Instant::now() + crate::test_support::timeout();
     loop {
         let p = s
             .get_operation(receipt["operationId"].as_str().unwrap())
@@ -655,7 +655,7 @@ fn automatic_download_retries_next_launch_until_database_is_available() {
     let (_temp, s) = store();
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
-    let server = std::thread::spawn(move || {
+    let server = crate::test_support::spawn(move || {
         for i in 0..5 {
             let (mut socket, _) = accept_local(&listener);
             bounded::read_request(&mut socket);
@@ -701,7 +701,7 @@ fn automatic_download_retries_next_launch_until_database_is_available() {
     let forced = open();
     assert_eq!(wait_lunii(&s, &forced["operation"]).status, "success");
     assert!(!s.lunii_refresh_path().exists());
-    server.join().unwrap();
+    crate::test_support::join(server);
     assert_eq!(s.lunii_status().unwrap()["entryCount"], 1);
 }
 #[test]
@@ -891,7 +891,7 @@ fn fill_respects_effective_age_maximum() {
 
 fn accept_local(listener: &std::net::TcpListener) -> (std::net::TcpStream, std::net::SocketAddr) {
     listener.set_nonblocking(true).unwrap();
-    let deadline = Instant::now() + Duration::from_secs(10);
+    let deadline = Instant::now() + crate::test_support::timeout();
     loop {
         match listener.accept() {
             Ok(v) => return v,
@@ -1189,7 +1189,7 @@ fn first_cover_notifies_while_the_next_http_response_is_still_pending() {
     let address = listener.local_addr().unwrap();
     let (pending_tx, pending_rx) = mpsc::channel();
     let (release_tx, release_rx) = mpsc::channel();
-    let server = std::thread::spawn(move || {
+    let server = crate::test_support::spawn(move || {
         for path in [
             "/public/images/packs/test.png",
             "/public/images/packs/slow.png",
@@ -1198,7 +1198,7 @@ fn first_cover_notifies_while_the_next_http_response_is_still_pending() {
             assert!(bounded::read_request(&mut socket).starts_with(&format!("GET {path} ")));
             if path.ends_with("slow.png") {
                 pending_tx.send(()).unwrap();
-                release_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+                release_rx.recv().unwrap();
             }
             let body = png();
             write!(
@@ -1219,9 +1219,11 @@ fn first_cover_notifies_while_the_next_http_response_is_still_pending() {
         }),
         format!("http://{address}"),
     );
-    pending_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    pending_rx
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
     let first_revision = changed_rx
-        .recv_timeout(Duration::from_secs(1))
+        .recv_timeout(crate::test_support::timeout())
         .expect("first cover must notify before the second response is released");
     assert_eq!(
         serde_json::to_value(s.lunii_thumbnail("first-cover").unwrap().unwrap()).unwrap()["state"],
@@ -1236,13 +1238,15 @@ fn first_cover_notifies_while_the_next_http_response_is_still_pending() {
         Err(mpsc::TryRecvError::Empty)
     ));
     release_tx.send(()).unwrap();
-    let second_revision = changed_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    let second_revision = changed_rx
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
     assert!(second_revision > first_revision);
     assert_eq!(
         serde_json::to_value(s.lunii_thumbnail("second-cover").unwrap().unwrap()).unwrap()["state"],
         "ready"
     );
-    server.join().unwrap();
+    crate::test_support::join(server);
 }
 
 #[test]
@@ -1303,11 +1307,13 @@ fn automatic_cover_is_shared_with_waiting_preparation_consumers() {
     s.download_lunii_covers(Arc::new(move |_, _| {
         let _ = notified.send(());
     }));
-    started.recv_timeout(Duration::from_secs(5)).unwrap();
+    started
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
     let consumers = [false, true].map(|cancellable| {
         let s = Arc::clone(&s);
         let key = key.clone();
-        std::thread::spawn(move || {
+        crate::test_support::spawn(move || {
             if cancellable {
                 s.lunii_cover_bytes_cancel("shared", &key, &AtomicBool::new(false))
             } else {
@@ -1317,8 +1323,10 @@ fn automatic_cover_is_shared_with_waiting_preparation_consumers() {
     });
     s.lunii_cover_test_waiters(3);
     release.send(()).unwrap();
-    let results = consumers.map(|c| c.join().unwrap());
-    retained.recv_timeout(Duration::from_secs(5)).unwrap();
+    let results = consumers.map(crate::test_support::join);
+    retained
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
     for result in results {
         image::load_from_memory(&result.unwrap()).unwrap();
     }
@@ -1348,7 +1356,7 @@ fn cover_registry_wait_can_be_cancelled_without_stopping_its_owner() {
     let worker = {
         let s = Arc::clone(&s);
         let cancel = Arc::clone(&cancel);
-        std::thread::spawn(move || {
+        crate::test_support::spawn(move || {
             let _ = done.send(s.lunii_cover_bytes_cancel("waiting-lock", &key, &cancel));
         })
     };
@@ -1356,7 +1364,7 @@ fn cover_registry_wait_can_be_cancelled_without_stopping_its_owner() {
     cancel.store(true, Ordering::SeqCst);
     let cancelled = result.recv_timeout(Duration::from_millis(250));
     drop(owner);
-    worker.join().unwrap();
+    crate::test_support::join(worker);
     assert_eq!(
         cancelled.unwrap().unwrap_err().code,
         codes::GENERATION_CANCELLED
@@ -1464,7 +1472,7 @@ fn lunii_download_allows_slow_regular_progress_but_stops_on_inactivity() {
     for regular in [true, false] {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let addr = listener.local_addr().unwrap();
-        let server = std::thread::spawn(move || {
+        let server = crate::test_support::spawn(move || {
             let (mut socket, _) = accept_local(&listener);
             bounded::read_request(&mut socket);
             write!(
@@ -1493,7 +1501,7 @@ fn lunii_download_allows_slow_regular_progress_but_stops_on_inactivity() {
         } else {
             assert_eq!(result, Err(Failure::Timeout));
         }
-        server.join().unwrap();
+        crate::test_support::join(server);
     }
 }
 #[test]
@@ -1529,7 +1537,7 @@ fn lunii_hostile_cover_responses_are_counted_without_retaining_files() {
         .unwrap();
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let addr = listener.local_addr().unwrap();
-        let server = std::thread::spawn(move || {
+        let server = crate::test_support::spawn(move || {
             let (mut socket, _) = accept_local(&listener);
             bounded::read_request(&mut socket);
             write!(
@@ -1544,7 +1552,7 @@ fn lunii_hostile_cover_responses_are_counted_without_retaining_files() {
             .unwrap()
             .unwrap();
         assert_eq!(serde_json::to_value(result).unwrap()["state"], "absent");
-        server.join().unwrap();
+        crate::test_support::join(server);
         assert_eq!(
             s.read(|c| c.query_row(
                 "SELECT failures FROM lunii_image_attempt WHERE fiche_id=?1",
@@ -1575,28 +1583,30 @@ fn lunii_busy_transport_is_not_a_cover_failure() {
         let addr = listener.local_addr().unwrap();
         let (ready, started) = mpsc::channel();
         let (release, finish) = mpsc::channel();
-        let server = std::thread::spawn(move || {
+        let server = crate::test_support::spawn(move || {
             let (mut socket, _) = accept_local(&listener);
             bounded::read_request(&mut socket);
             ready.send(()).unwrap();
-            finish.recv_timeout(Duration::from_secs(5)).unwrap();
+            finish.recv().unwrap();
             write!(
                 socket,
                 "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
             )
             .unwrap();
         });
-        let client = std::thread::spawn(move || {
+        let client = crate::test_support::spawn(move || {
             bounded::get(
                 &format!("http://{addr}"),
                 None,
                 10,
                 &AtomicBool::new(false),
-                Instant::now() + Duration::from_secs(5),
+                Instant::now() + crate::test_support::timeout(),
                 |_| {},
             )
         });
-        started.recv_timeout(Duration::from_secs(5)).unwrap();
+        started
+            .recv_timeout(crate::test_support::timeout())
+            .unwrap();
         jobs.push((release, server, client));
     }
     s.lunii_thumbnail_from("busy-cover", "http://127.0.0.1:9")
@@ -1617,8 +1627,8 @@ fn lunii_busy_transport_is_not_a_cover_failure() {
     );
     for (release, server, client) in jobs {
         release.send(()).unwrap();
-        server.join().unwrap();
-        client.join().unwrap().unwrap();
+        crate::test_support::join(server);
+        crate::test_support::join(client).unwrap();
     }
     s.lunii_cover_test_response(png());
     assert_eq!(
@@ -1805,7 +1815,7 @@ fn luh_disabling_permission_cancels_a_queued_cover_without_recording_a_failure()
     s.lunii_cover_test_response(png());
     s.lunii_cover_test_pause(ready, finish);
     let worker = Arc::clone(&s);
-    let thread = std::thread::spawn(move || {
+    let thread = crate::test_support::spawn(move || {
         worker.fetch_lunii_cover(
             "disabled-cover",
             "/public/images/packs/test.png",
@@ -1813,11 +1823,13 @@ fn luh_disabling_permission_cancels_a_queued_cover_without_recording_a_failure()
             &AtomicBool::new(false),
         )
     });
-    started.recv_timeout(Duration::from_secs(5)).unwrap();
+    started
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
     s.set_lunii_permission(false).unwrap();
     release.send(()).unwrap();
     assert_eq!(
-        thread.join().unwrap().unwrap_err().code,
+        crate::test_support::join(thread).unwrap_err().code,
         codes::GENERATION_CANCELLED
     );
     assert_eq!(
@@ -1899,8 +1911,12 @@ fn revd2_cover_notifications_advance_catalogue_without_changing_cards() {
         store.lunii_cover_test_response(png());
         sent.send(progress.catalogue_revision).unwrap();
     }));
-    let first = received.recv_timeout(Duration::from_secs(5)).unwrap();
-    let second = received.recv_timeout(Duration::from_secs(5)).unwrap();
+    let first = received
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
+    let second = received
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
     assert!(first > before);
     assert!(second > first);
     for (id, revision) in ["first-cover", "second-cover"].iter().zip(cards) {
@@ -2850,4 +2866,48 @@ fn fill_never_overwrites_a_correction_on_any_retouchable_field() {
     assert_eq!(listed["language"], "it");
     assert_eq!(listed["producer"], "Mon producteur");
     assert!(!listed.contains_key("bonus"));
+}
+
+#[test]
+fn catalogue_import_official_cover_is_read_only_without_acquisition() {
+    let (_temp, s) = store();
+    let index = parse::parse(fixture().to_string().as_bytes()).unwrap();
+    s.publish_lunii(&index, "import", &AtomicBool::new(false))
+        .unwrap();
+    s.write(|tx| {
+        tx.execute("INSERT INTO fiche(id,created_at,revision) VALUES ('import-cover',0,0)", []).map_err(error)?;
+        tx.execute("INSERT INTO pack_identity VALUES ('aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee','import-cover','{}')", []).map_err(error)?;
+        fill::missing(tx)?;
+        Ok(())
+    }).unwrap();
+    *s.lunii.cover_response.lock().unwrap() = Some(png());
+    s.lunii
+        .cover_response_configured
+        .store(true, Ordering::SeqCst);
+    let before = s.list_sources().unwrap().catalogue_revision;
+    assert!(s.import_local_cover("import-cover").unwrap().is_none());
+    assert_eq!(s.list_sources().unwrap().catalogue_revision, before);
+    assert_eq!(s.lunii.cover_requests.load(Ordering::SeqCst), 0);
+    assert!(s.lunii.cover_attempted.lock().unwrap().is_empty());
+    assert_eq!(std::fs::read_dir(s.images_root()).unwrap().count(), 0);
+    assert_eq!(
+        std::fs::read_dir(s.thumbnail_root()).map_or(0, |entries| entries.count()),
+        0
+    );
+    assert_eq!(
+        std::fs::read_dir(s.cover_root()).map_or(0, |entries| entries.count()),
+        0
+    );
+    // A previously retained official image is readable without acquisition.
+    let bytes = super::super::thumbnails::encode_bounded(&png()).unwrap();
+    s.retain_lunii_cover(
+        "import-cover",
+        &image_key("/public/images/packs/test.png"),
+        &bytes,
+    )
+    .unwrap();
+    let before = s.list_sources().unwrap().catalogue_revision;
+    assert_eq!(s.import_local_cover("import-cover").unwrap(), Some(bytes));
+    assert_eq!(s.list_sources().unwrap().catalogue_revision, before);
+    assert_eq!(s.lunii.cover_requests.load(Ordering::SeqCst), 0);
 }

@@ -4,7 +4,7 @@ import { useMessageLanguage } from '../../../i18n/useMessageLanguage.js';
 import { presentCatalogueError } from '../../../store/catalogue/catalogueApi.js';
 import { bytesCell } from '../../../store/catalogue/detailsRow.js';
 import { operationView } from '../../../store/catalogue/operationView.js';
-import { reportPositions, sendBilanKind, sendNowKey, sendProgress, sendReport, sendStepKey, sendTerminal } from '../../../store/catalogue/luniiSend.js';
+import { queueCoversSend, reportPositions, sendBilanKind, sendNowKey, sendProgress, sendReport, sendStepKey, sendTerminal } from '../../../store/catalogue/luniiSend.js';
 import { Button } from '../../common/Button.jsx';
 import { Loader2 } from '../../icons/LucideLocal.jsx';
 
@@ -66,12 +66,11 @@ export function LuniiSendRefusals({ report, handlers }) {
     let reason;
     if (!p.key) reason = presentCatalogueError(p.reason ?? item.reason).message;
     else if (p.key === 'catalogue:lunii.sendRefused.noSpace') reason = p.bytes == null ? t('catalogue:lunii.sendRefused.noSpaceUnknown') : t('catalogue:lunii.sendRefused.noSpace', { size: cell(bytesCell(p.bytes)) });
-    else if (p.key === 'catalogue:lunii.sendRefused.incomplete') reason = t('catalogue:lunii.sendRefused.incomplete', { cause: p.cause ? presentCatalogueError(p.cause).message : t('catalogue:lunii.sendRefused.incompleteUnknown') });
     else reason = line({ key: p.key, params: p.params });
     return <li key={`${item.exemplarId ?? item.ficheId}`}>
       <strong>{item.title || untitled}</strong> <span>{reason}</span>
       {p.action === 'see' && item.seeKey && <Button size="sm" onClick={() => handlers?.see(report.deviceId, item.seeKey)}>{t('catalogue:lunii.sendAction.see')}</Button>}
-      {p.action === 'editor' && item.ficheId && <Button size="sm" onClick={() => handlers?.openEditor(item.ficheId)}>{t('catalogue:lunii.sendAction.editor')}</Button>}
+      {p.action === 'editor' && item.ficheId && <Button size="sm" onClick={() => handlers?.openEditor(item.ficheId)}>{item.reason?.code === 'STORYTELLER_PROJECT_INCOMPLETE' ? t('catalogue:lunii.sendAction.openProject') : t('catalogue:lunii.sendAction.editor')}</Button>}
     </li>;
   })}</ul>;
 }
@@ -100,7 +99,9 @@ export function luniiSendEntries(t, line, input) {
     if (snapshot.operationKind !== 'luniiSend' || !sendTerminal(snapshot)) continue;
     const context = sends.contextFor(snapshot.operationId);
     if (!context) continue;
-    bilanEntry(snapshot.operationId, context, sendReport(context, snapshot, sends.devices), () => input.onDismissSummary?.(snapshot.operationId), null);
+    const report = sendReport(context, snapshot, sends.devices);
+    if (queueCoversSend(context, input.luniiQueue?.entries)) continue;
+    bilanEntry(snapshot.operationId, context, report, () => input.onDismissSummary?.(snapshot.operationId), null);
   }
   for (const context of sends.contexts.filter(c => c.local)) {
     const report = sendReport(context, null, sends.devices);

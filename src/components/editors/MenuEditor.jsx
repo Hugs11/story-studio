@@ -85,6 +85,7 @@ export const MenuEditor = memo(function MenuEditor({ node, project, parentMenu, 
         {node.autoBlackImage ? (
           <>
             <AudioField
+              levelLabel={{ entry: node.name, kind: 'menu' }}
               label={t("tree:story.selection.audio")}
               labelRef={{ key: "tree:story.selection.audio" }}
               description={isImportedContinuation ? t("tree:menu.audio.optional") : t("tree:menu.audio.description")}
@@ -125,6 +126,7 @@ export const MenuEditor = memo(function MenuEditor({ node, project, parentMenu, 
                 </span>
               </div>
                 <AudioField
+              levelLabel={{ entry: node.name, kind: 'menu' }}
                   label={t("tree:story.selection.audio")}
                   labelRef={{ key: "tree:story.selection.audio" }}
                 description={isImportedContinuation ? t("tree:menu.audio.optional") : t("tree:menu.audio.description")}

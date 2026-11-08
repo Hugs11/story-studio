@@ -24,9 +24,8 @@
 //! ## Ce que ce module ne fait pas
 //!
 //! Il ne touche ni au document d'auteur, ni à son contexte, ni à ses liaisons :
-//! il les lit. Il n'emprunte pas l'orchestration audio du mode Libre, qui refuse
-//! un média silencieux valide **avant** d'envisager la copie verbatim — un
-//! silence voulu par l'auteur n'est pas un média manquant. Il ne fait tourner
+//! il les lit. Comme le mode Libre, il accepte les médias silencieux valides.
+//! Il ne fait tourner
 //! **aucun contrôle perceptuel** : la garantie 2 est un contrôle de conformance
 //! borné, réservé aux bancs, et aucun média valide ne peut donc être refusé par
 //! un résultat non concluant.
@@ -60,7 +59,7 @@ pub(crate) mod conformance;
 #[cfg(test)]
 mod tests;
 
-use super::audio::harmonization_warning;
+use super::audio::{audio_silent_warning, harmonization_warning};
 use super::parallel::{partition_map_parallel, try_map_parallel};
 use executor::{read_registry, ExecutedConversion, ExecutionFailure, TaskExecutor};
 use inventory::{
@@ -442,6 +441,18 @@ fn harmonization_warnings(
     let mut warnings = Vec::new();
     for item in media {
         let task = &tasks[&item.asset_ref];
+        let executed = &registry[&task.task_key()];
+        let silent = match task.plan() {
+            ConversionPlan::AudioEncode { silent, .. } => *silent,
+            _ => false,
+        };
+        if silent {
+            warnings.push(audio_silent_warning(
+                item.asset_ref.clone(),
+                stage_label_of(document, destinations, &item.asset_ref),
+            ));
+            continue;
+        }
         let ConversionPlan::AudioEncode {
             notice: Some(notice),
             ..
@@ -449,12 +460,11 @@ fn harmonization_warnings(
         else {
             continue;
         };
-        let executed = &registry[&task.task_key()];
         warnings.push(harmonization_warning(
             ffmpeg,
             &executed.output_path,
             item.asset_ref.clone(),
-            MessageLabel::data(stage_label_of(document, destinations, &item.asset_ref)),
+            stage_label_of(document, destinations, &item.asset_ref),
             notice.clone(),
         ));
     }
@@ -462,12 +472,12 @@ fn harmonization_warnings(
 }
 
 /// Le nom du premier Écran qui porte ce son, et combien d'autres le partagent.
-/// Un Écran sans nom retombe sur la référence du média.
+/// Un Écran sans nom utilise le repli traduit commun aux deux éditeurs.
 fn stage_label_of(
     document: &StoryDocument,
     destinations: &[inventory::MediaDestination],
     asset_ref: &str,
-) -> String {
+) -> MessageLabel {
     let mut names: Vec<&str> = Vec::new();
     for destination in destinations
         .iter()
@@ -486,9 +496,9 @@ fn stage_label_of(
         }
     }
     match names.as_slice() {
-        [] => asset_ref.to_string(),
-        [only] => (*only).to_string(),
-        [first, rest @ ..] => format!("{first} (+{})", rest.len()),
+        [] => super::audio::stage_audio_label(""),
+        [only] => MessageLabel::data(*only),
+        [first, rest @ ..] => MessageLabel::data(format!("{first} (+{})", rest.len())),
     }
 }
 

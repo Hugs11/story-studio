@@ -1,10 +1,9 @@
 // La Vue parcours : ranger le graphe comme une histoire se lit.
 //
 // Ce module ne connaît **aucun moteur d'affichage**. Il rend des positions, et
-// c'est tout ce qu'il rend. Cytoscape, G6 et vis-network les reçoivent par le
-// même chemin que celles du DTO — le placement `preset` du montage —, donc un
-// rangement calculé ici vaut pour les trois sans être écrit trois fois, et il
-// s'éprouve sans monter d'interface.
+// c'est tout ce qu'il rend. Le moteur les reçoit par le même chemin que celles
+// du DTO — le placement `preset` du montage —, et le rangement s'éprouve sans
+// monter d'interface.
 //
 // Il ne range pas le graphe du document : il range un **graphe de mise en
 // page**, qui en diffère par trois transformations délibérées. C'est là

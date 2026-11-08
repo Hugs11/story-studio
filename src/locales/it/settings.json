@@ -187,5 +187,14 @@
   "end.remove.noLocalEndings": "0 finali impostati per le singole storie saranno conservati.",
   "projects.consolidate.noCopiedMedia": "0 file multimediali copiati",
   "xtts.voices.noneDetected": "0 voci rilevate",
-  "consolidate.files.noneCopied": "0 file copiati"
+  "consolidate.files.noneCopied": "0 file copiati",
+  "releaseCheck.question.title": "Vuoi ricevere avvisi sulle prossime versioni?",
+  "releaseCheck.description": "All'avvio dell'app, Story Studio controlla su GitHub se è disponibile una versione più recente e ti avvisa. Niente viene scaricato o installato automaticamente.",
+  "releaseCheck.accept": "Sì, avvisami",
+  "releaseCheck.decline": "No, grazie",
+  "releaseCheck.label": "Avvisami delle nuove versioni",
+  "releaseCheck.notice": "Story Studio {{version}} è disponibile",
+  "releaseCheck.open": "Vedi la nuova versione",
+  "projects.levelAlerts.label": "Segnala all’aggiunta i suoni con un problema di livello",
+  "projects.levelAlerts.description": "Misura in background ogni suono aggiunto, e quelli già presenti quando il loro spazio viene mostrato, e mette un indicatore ambra sullo spazio quando il livello è un problema. Il rapporto di generazione non è interessato."
 }

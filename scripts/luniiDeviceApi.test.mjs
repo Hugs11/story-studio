@@ -15,9 +15,9 @@ test('Lunii commands use opaque handles and revision-checked catalogue selection
   await api.nameStory('d', 'a', 'Conte'); await api.rename('d', 'Salon');
   await api.repair('d'); await api.restore('d');
   await api.orphan({ deviceId: 'd', key: 'folder', restore: false });
-  await api.repatriate('d', 'a', 'repatriate-attempt'); await api.eject('d');
+  await api.repatriate('d', 'a', 'repatriate-attempt', '/workspace', '3+]Conte'); await api.eject('d');
   assert.equal(calls.length, 16);
-  assert.deepEqual(calls[14], ['lunii_device_repatriate', { deviceId: 'd', key: 'a', requestId: 'repatriate-attempt' }]);
+  assert.deepEqual(calls[14], ['lunii_device_repatriate', { deviceId: 'd', key: 'a', requestId: 'repatriate-attempt', workspaceDir: '/workspace', archiveName: '3+]Conte' }]);
   assert.deepEqual(calls[3], ['lunii_device_send', {
     deviceId: 'd', selection, position: 1, requestId: 'r', audioEdgeSilence: { leading: 0.4, trailing: 0.4 },
   }]);
@@ -93,3 +93,16 @@ test('every STORYTELLER facade code renders its translated message and typed par
     });
   }
 });
+
+for (const deviceFault of [true, false]) {
+  test(`Lunii IPC retains deviceFault=${deviceFault} on the error and its message envelope`, async () => {
+    const envelope = { code: 'STORYTELLER_WRITE_FAILED', params: {}, deviceFault };
+    const api = createLuniiDeviceApi({ invoke: async () => { throw JSON.stringify(envelope); } });
+    await assert.rejects(api.remove('d', ['a']), error => {
+      assert.equal(error.deviceFault, deviceFault);
+      assert.deepEqual(error.userMessage, envelope);
+      assert.ok(presentCatalogueError(error).message);
+      return true;
+    });
+  });
+}

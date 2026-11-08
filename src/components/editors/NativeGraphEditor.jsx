@@ -205,6 +205,7 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
                 <div className="media-col-header">{t("tree:media.sound.label")}<span className="media-col-subtitle">{t("tree:nativeGraph.audio.label")}</span>
                 </div>
                 <AudioField
+                  levelLabel={{ stage: selectedStage.name }}
                   label={t("tree:nativeGraph.audio.label")}
                   labelRef={{ key: "tree:nativeGraph.audio.label" }}
                   file={selectedStage.audio}

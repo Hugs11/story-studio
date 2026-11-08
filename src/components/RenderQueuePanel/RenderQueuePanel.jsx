@@ -1,4 +1,3 @@
-import { GenerationFolderPrompt } from '../Catalogue/open/GenerationFolderPrompt.jsx';
 import { useTranslation } from 'react-i18next';
 import { presentUserMessage } from '../../i18n/userMessage.js';
 import { getIntlLocale } from '../../i18n/language.js';
@@ -164,7 +163,6 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel, advanced = null 
               </span>
             )}
           </div>
-          {job.status === 'done' && job.resultPath && <GenerationFolderPrompt outputPath={job.resultPath} />}
         </div>
       )}
     </div>

@@ -70,6 +70,7 @@ test('CORB inline gesture resets on timeout, Escape, outside click and blur; err
     let tree = render(); click(tree); tree = render();
     assert.equal(find(tree, e => e.props?.id === 'catalogue-fiche-copy-e-trash').props['aria-disabled'], true);
     await settle(); tree = render();
+    assert.ok(elements(tree).some(e => e.props?.className === 'catalogue-exemplar-trash-text' && e.props.children === 'Corbeille ?'), 'libellé court visible');
     assert.deepEqual(prepared, []);
     assert.equal(find(tree, e => e.props?.id === 'catalogue-fiche-copy-e-trash').props['aria-label'], 'Mettre à la corbeille');
     click(tree); assert.equal(starts, 0, 'double click cannot confirm even a completed plan');

@@ -177,16 +177,18 @@ mod tests {
         store
             .start_recovery_with(move |store, inherited| {
                 entered.send(()).unwrap();
-                // Simulates an IO call that does not answer. The timeout below is
-                // only a test cleanup safeguard, never a successful IO response.
-                let _ = hold.recv_timeout(Duration::from_secs(3));
+                // Keep IO suspended until release; sender drop also releases it
+                // if an assertion fails in the main test.
+                let _ = hold.recv();
                 let warnings = store.recover_inherited(inherited);
                 finished.send(()).unwrap();
                 warnings
             })
             .unwrap();
         let elapsed = begin.elapsed();
-        started.recv_timeout(Duration::from_secs(1)).unwrap();
+        started
+            .recv_timeout(crate::test_support::timeout())
+            .unwrap();
         assert!(
             elapsed < Duration::from_millis(500),
             "admission waited for remote IO: {elapsed:?}"
@@ -236,8 +238,8 @@ mod tests {
             .unwrap();
         assert_eq!(count, 1);
         release.send(()).unwrap();
-        end.recv_timeout(Duration::from_secs(2)).unwrap();
-        let deadline = Instant::now() + Duration::from_secs(2);
+        end.recv_timeout(crate::test_support::timeout()).unwrap();
+        let deadline = Instant::now() + crate::test_support::timeout();
         while store.recovery_running.load(Ordering::Acquire) {
             assert!(Instant::now() < deadline);
             std::thread::yield_now();

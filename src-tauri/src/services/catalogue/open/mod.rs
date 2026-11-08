@@ -5,6 +5,7 @@ pub mod declared_media;
 pub mod editor_entry;
 pub mod editor_extractions;
 pub mod generation;
+pub mod import_metadata;
 pub mod materialize;
 pub mod target;
 

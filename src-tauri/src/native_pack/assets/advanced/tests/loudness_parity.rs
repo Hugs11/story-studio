@@ -65,7 +65,10 @@ fn both_editors(
         },
         EDGE_SILENCE_SEC,
         EDGE_SILENCE_SEC,
-        "titre",
+        (
+            "titre",
+            crate::support::user_message::MessageLabel::data("titre"),
+        ),
     )
     .expect("préparation par menus");
     let menus_path = match prepared.preparation {

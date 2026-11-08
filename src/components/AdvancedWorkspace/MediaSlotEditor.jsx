@@ -57,6 +57,7 @@ export function MediaSlotEditor({
         />
       ) : (
         <AudioField
+          levelLabel={{ stage: stageName }}
           label={t("graph:media.audio.label")}
           labelRef={{ key: "graph:media.audio.label" }}
           description={t("graph:media.audio.description")}

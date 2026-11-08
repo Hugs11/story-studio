@@ -27,3 +27,7 @@ pub mod catalogue_backup;
 pub mod catalogue_lunii;
 
 pub(crate) mod lunii_device;
+
+pub mod release_check;
+
+pub(crate) mod audio_level;

@@ -53,8 +53,6 @@ test('les menus de critères prennent le socle .project-menu : pas de fond, bord
   assert.doesNotMatch(toolbarCss, /project-menu-head/);
   const floating = read('src/components/Catalogue/fiche/SelectionPanel.css');
   assert.doesNotMatch(floating, /project-menu::before \{ display: none/);
-  const palette = toolbarCss.match(/^\.catalogue-palette \{.*$/m)[0];
-  assert.match(palette, /background: var\(--bg1\)/); assert.match(palette, /border: 1px solid var\(--borderLt\)/); assert.match(palette, /var\(--radius-lg\)/);
 });
 
 test('âge identique aux deux bornes : « Âge : 6 ans », jamais « 6 à 6 ans » (FR/EN/IT)', async () => {

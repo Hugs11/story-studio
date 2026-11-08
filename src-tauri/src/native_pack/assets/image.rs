@@ -228,6 +228,7 @@ pub(crate) fn image_request(role: &str, source_path: &str) -> AssetRequest {
         source_kind: AssetSourceKind::Image,
         leading_silence_sec: 0.0,
         trailing_silence_sec: 0.0,
+        audio_label: super::audio::stage_audio_label(""),
         entry_id: None,
     }
 }

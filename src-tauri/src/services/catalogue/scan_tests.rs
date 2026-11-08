@@ -50,7 +50,7 @@ fn wait(store: &store::Store, id: &str) -> events::Progress {
         if !matches!(p.status.as_str(), "queued" | "running" | "cancelling") {
             return p;
         }
-        assert!(start.elapsed() < Duration::from_secs(20));
+        assert!(start.elapsed() < crate::test_support::timeout());
         std::thread::sleep(Duration::from_millis(5));
     }
 }
@@ -956,7 +956,7 @@ fn thumbnail_is_served_while_the_heavy_job_is_held() {
         scope.spawn(move || {
             let _ = sent.send(store.get_thumbnail(None, Some(fiche), None));
         });
-        let result = received.recv_timeout(Duration::from_secs(10));
+        let result = received.recv_timeout(crate::test_support::timeout());
         drop(heavy);
         let thumbnail = result
             .expect("a thumbnail must not wait for the heavy job")
@@ -980,7 +980,7 @@ fn light_reads_admit_two_at_once_and_release_on_drop() {
         assert!(received.recv_timeout(Duration::from_millis(150)).is_err());
         drop(first);
         received
-            .recv_timeout(Duration::from_secs(10))
+            .recv_timeout(crate::test_support::timeout())
             .expect("a released permit admits the waiting read");
     });
 }
@@ -1465,7 +1465,7 @@ fn unknown_workspace_shape_never_creates_exemplars_to_retire_on_next_pass() {
             let (release, held) = std::sync::mpsc::channel();
             let owned = target.clone();
             let probe = std::thread::spawn(move || {
-                super::probe::bounded(&owned, Duration::from_secs(30), move || {
+                super::probe::bounded(&owned, crate::test_support::timeout(), move || {
                     entered.send(()).unwrap();
                     held.recv().unwrap();
                     true
@@ -1537,7 +1537,7 @@ fn unknown_workspace_shape_never_creates_exemplars_to_retire_on_next_pass() {
                     release.send(()).unwrap();
                     // Confirm every held probe was released before the next pass.
                     assert_eq!(
-                        super::probe::bounded(target, Duration::from_secs(1), || true),
+                        super::probe::bounded(target, crate::test_support::timeout(), || true),
                         Some(true)
                     );
                 }

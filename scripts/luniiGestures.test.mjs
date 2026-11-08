@@ -19,10 +19,10 @@ test('eye, hide selection, restore, name, rename, reorder and repatriate dispatc
   await g.orphan(device, { key: 'parked:ABCDEF00', knownUuid: 'full-id' });
   await g.repatriate(device, [a, b, c]); await g.reorder(device, ['c'], 0);
   assert.deepEqual(calls, [
-    ['d', 'hide', ['a', true], ['a']], ['d', 'hide', ['c', false], ['c']],
-    ['d', 'hideMany', [true], ['a']], ['d', 'restore'], ['d', 'nameStory', ['c', 'Conte'], ['c']], ['d', 'rename', ['Salon']],
-    ['d', 'orphan', [{ deviceId: 'd', key: 'parked:ABCDEF00', restore: true, knownUuid: 'full-id' }], ['parked:ABCDEF00']],
-    ['d', 'repatriateMany', [], ['a', 'c']], ['d', 'reorder', [['c', 'a', 'b']], ['c']],
+    ['d', 'hide', ['a', true], ['a'], { a: 'A' }], ['d', 'hide', ['c', false], ['c'], { c: '' }],
+    ['d', 'hideMany', [true], ['a'], { a: 'A' }], ['d', 'restore'], ['d', 'nameStory', ['c', 'Conte'], ['c'], { c: '' }], ['d', 'rename', ['Salon']],
+    ['d', 'orphan', [{ deviceId: 'd', key: 'parked:ABCDEF00', restore: true, knownUuid: 'full-id' }], ['parked:ABCDEF00'], { 'parked:ABCDEF00': '' }],
+    ['d', 'repatriateMany', [], ['a', 'c'], { a: 'A', c: '' }], ['d', 'reorder', [{ rowKey: 'a', index: 0 }], ['c'], { c: '' }],
   ]);
   assert.equal(confirms.length, 0); assert.match(announcements[0], /position 1 sur 2/);
 });
@@ -32,7 +32,7 @@ test('only a single creation can be removed without confirmation; official and m
     const { gestures, calls, confirms } = setup();
     await gestures.remove(device, stories, force);
     assert.equal(confirms.length, expected); assert.equal(calls.length, 1);
-    assert.deepEqual(calls[0], ['d', 'remove', [stories.map(s => s.key)], stories.map(s => s.key)]);
+    assert.deepEqual(calls[0], ['d', 'remove', [stories.map(s => s.key)], stories.map(s => s.key), Object.fromEntries(stories.map(s => [s.key, s.title]))]);
     if (stories.includes(b)) { assert.match(confirms[0][1], /B/); assert.match(confirms[0][1], /seule l’application Lunii/); }
   }
 });
@@ -41,7 +41,7 @@ test('delete orphan asks once with reclaimed size; cancelling performs no write'
   const orphan = { key: 'parked:ABCDEF00', title: 'Perle', orphan: true, sizeBytes: 100 };
   const { gestures, calls, confirms } = setup(); await gestures.remove(device, [orphan]);
   assert.equal(confirms.length, 1); assert.match(confirms[0][0], /Perle/); assert.match(confirms[0][1], /100/);
-  assert.deepEqual(calls[0], ['d', 'orphan', [{ deviceId: 'd', key: orphan.key, restore: false }], [orphan.key]]);
+  assert.deepEqual(calls[0], ['d', 'orphan', [{ deviceId: 'd', key: orphan.key, restore: false }], [orphan.key], { [orphan.key]: 'Perle' }]);
   const cancelled = setup(false); await cancelled.gestures.remove(device, [orphan]); assert.equal(cancelled.calls.length, 0);
 });
 
@@ -65,7 +65,7 @@ test('Lunii confirmation gives initial focus to Cancel and uses a single action 
 test('move announcement counts visible stories only, like the displayed numbers', async () => {
   const { gestures, calls, announcements } = setup();
   await gestures.reorder(device, ['a'], 3);
-  assert.deepEqual(calls[0][2], [['b', 'c', 'a']]);
+  assert.deepEqual(calls[0][2], [{ rowKey: null, index: 3 }]);
   assert.match(announcements[0], /A, position 2 sur 2/);
 });
 
@@ -84,22 +84,25 @@ test('orphan selections delete after one confirmation; mixed selections announce
   assert.match(title, /Retirer et supprimer 3 histoires/);
   assert.match(message, /Retirées de la liste de l’enfant : A, B/); assert.match(message, /Supprimées de la Lunii.*Perle/);
   assert.match(message, /seule l’application Lunii/); assert.match(message, /100/);
-  assert.deepEqual(mixed.calls, [['d', 'remove', [['a', 'b']], ['a', 'b']], ['d', 'orphan', [{ deviceId: 'd', key: perle.key, restore: false }], [perle.key]]]);
+  assert.deepEqual(mixed.calls, [['d', 'remove', [['a', 'b']], ['a', 'b'], { a: 'A', b: 'B' }], ['d', 'orphan', [{ deviceId: 'd', key: perle.key, restore: false }], [perle.key], { [perle.key]: 'Perle' }]]);
   const cancelled = setup(false); await cancelled.gestures.remove(device, [a, perle], true); assert.equal(cancelled.calls.length, 0);
 });
 
-test('a failed removal stops the gesture before deleting orphans', async () => {
+// Expectation changed on purpose (L3b, file d'opérations Lunii): the whole gesture is queued
+// at once so that every story shows its waiting removal; like any queued entry, a failed
+// removal no longer holds back the orphans (only a fault of the Lunii stops the queue).
+test('a mixed removal queues the listed write and every orphan at once, listed first', async () => {
   const calls = [];
-  const gestures = createLuniiGestures({ store: { mutate: async (...args) => { calls.push(args); return null; } } }, t, async () => true, () => {});
+  const gestures = createLuniiGestures({ store: { mutate: (...args) => { calls.push(args); return Promise.resolve(null); } } }, t, async () => true, () => {});
   await gestures.remove(device, [a, { key: 'ABCDEF01', title: 'Coquille', orphan: true, sizeBytes: 1 }], true);
-  assert.deepEqual(calls.map(c => c[1]), ['remove']);
+  assert.deepEqual(calls.map(c => c[1]), ['remove', 'orphan']);
 });
 
 test('repatriate leaves out stories the catalogue already holds, officials and orphans', async () => {
   const { gestures: g, calls } = setup();
   const present = { key: 'p', kind: 'creation', catalogueFicheId: 'fiche' }, orphan = { key: 'parked:x', orphan: true };
   await g.repatriate(device, [a, b, c, present, orphan]);
-  assert.deepEqual(calls, [['d', 'repatriateMany', [], ['a', 'c']]]);
+  assert.deepEqual(calls, [['d', 'repatriateMany', [], ['a', 'c'], { a: 'A', c: '' }]]);
 });
 
 test('restoreOrphans keeps only complete, identified .content orphans, without confirmation', async () => {
@@ -113,7 +116,7 @@ test('restoreOrphans keeps only complete, identified .content orphans, without c
   ];
   await g.restoreOrphans({ ...device, orphans });
   assert.equal(confirms.length, 0);
-  assert.deepEqual(calls, [['d', 'restoreOrphans', [[{ key: '00000005', knownUuid: 'e' }, { key: '00000003', knownUuid: 'c' }]], ['00000005', '00000003']]]);
+  assert.deepEqual(calls, [['d', 'restoreOrphans', [[{ key: '00000005', knownUuid: 'e' }, { key: '00000003', knownUuid: 'c' }]], ['00000005', '00000003'], { '00000005': '', '00000003': '' }]]);
   assert.equal(await g.restoreOrphans({ ...device, orphans: orphans.slice(1, 4) }), null);
   assert.equal(calls.length, 1);
 });

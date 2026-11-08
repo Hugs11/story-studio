@@ -73,7 +73,7 @@ impl Fixture {
                 );
                 return;
             }
-            assert!(start.elapsed() < Duration::from_secs(30));
+            assert!(start.elapsed() < crate::test_support::timeout());
             std::thread::sleep(Duration::from_millis(5));
         }
     }
@@ -1636,7 +1636,7 @@ fn assembly_mixed_archives_children_fs_and_projects_preserves_sources() {
             Arc::new(|_, _| {}),
         )
         .unwrap();
-    let until = std::time::Instant::now() + Duration::from_secs(30);
+    let until = std::time::Instant::now() + crate::test_support::timeout();
     let done = loop {
         let progress = store
             .get_operation(receipt["operationId"].as_str().unwrap())
@@ -1744,7 +1744,7 @@ fn assembly_zip_wins_while_cover_comes_from_reference_folder() {
             Arc::new(|_, _| {}),
         )
         .unwrap();
-    let until = Instant::now() + Duration::from_secs(20);
+    let until = Instant::now() + crate::test_support::timeout();
     let done = loop {
         let p = store
             .get_operation(receipt["operationId"].as_str().unwrap())
@@ -1768,4 +1768,337 @@ fn assembly_zip_wins_while_cover_comes_from_reference_folder() {
     store
         .release_assembly(result["preparationId"].as_str().unwrap())
         .unwrap();
+}
+
+#[test]
+fn catalogue_import_metadata_uses_opened_path_member_and_effective_corrections() {
+    use super::import_metadata::Source;
+    let f = Fixture::new();
+    // Distinct pack identities prevent an accidental UUID-only match.
+    let mut a = pack_entries("", "A");
+    let mut b = pack_entries("", "B");
+    for (entries, uuid) in [
+        (&mut a, "11111111-1111-4111-8111-111111111111"),
+        (&mut b, "22222222-2222-4222-8222-222222222222"),
+    ] {
+        let story = entries
+            .iter_mut()
+            .find(|(name, _)| name == "story.json")
+            .unwrap();
+        let mut raw: Value = serde_json::from_slice(&story.1).unwrap();
+        raw["stageNodes"][0]["uuid"] = json!(uuid);
+        story.1 = serde_json::to_vec(&raw).unwrap();
+    }
+    std::fs::write(f.source().join("a.zip"), zip_bytes(&a)).unwrap();
+    std::fs::write(
+        f.source().join("bundle.zip"),
+        zip_bytes(&[
+            ("A.zip".into(), zip_bytes(&a)),
+            ("B.zip".into(), zip_bytes(&b)),
+        ]),
+    )
+    .unwrap();
+    write_tree(&f.source().join("folder"), &a);
+    let staging = f.0.join("staging");
+    write_tree(&staging, &a);
+    seven_zip(&f.source().join("a.7z"), &staging);
+    std::fs::write(
+        f.source().join("known.mbah"),
+        json!({"projectType":"pack","packMetadata":{"title":"Projet"},"rootEntries":[]})
+            .to_string(),
+    )
+    .unwrap();
+    let store = f.open();
+    f.scan(&store);
+    assert!(store
+        .imported_metadata(
+            &Source::direct(&f.source().join("a.7z").to_string_lossy()),
+            false
+        )
+        .unwrap()
+        .is_some());
+    assert!(store
+        .imported_metadata(
+            &Source::direct(&f.source().join("known.mbah").to_string_lossy()),
+            true
+        )
+        .unwrap()
+        .is_none());
+    let source = Source::direct(&f.source().join("a.zip").to_string_lossy());
+    let metadata = store.imported_metadata(&source, false).unwrap().unwrap();
+    assert_eq!(metadata.values["title"], "A");
+    let (id, _) = exemplar(&store, "a.zip", None);
+    let fiche: String = store
+        .read(|c| {
+            c.query_row("SELECT fiche_id FROM exemplar WHERE id=?1", [&id], |r| {
+                r.get(0)
+            })
+        })
+        .unwrap();
+    // Exercise the mutation and resolver used by the fiche.
+    use crate::services::catalogue::data::mutate::metadata::{self, Change};
+    let mut png = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::new_rgb8(4, 4)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .unwrap();
+    let staged = store.stage_cover_bytes(png.get_ref()).unwrap();
+    let mut changes: Vec<_> = [
+        ("title", json!("Corrigé")),
+        ("ageMin", json!(6)),
+        ("author", json!("Auteur")),
+        ("description", json!("Description")),
+    ]
+    .into_iter()
+    .map(|(field, value)| Change {
+        field: field.into(),
+        language: None,
+        state: "defined".into(),
+        value: Some(value),
+        cover_staging_id: None,
+    })
+    .collect();
+    changes.push(Change {
+        field: "ageMax".into(),
+        language: None,
+        state: "cleared".into(),
+        value: None,
+        cover_staging_id: None,
+    });
+    changes.push(Change {
+        field: "cover".into(),
+        language: None,
+        state: "defined".into(),
+        value: None,
+        cover_staging_id: staged["coverStagingId"].as_str().map(str::to_owned),
+    });
+    store
+        .write(|tx| metadata::apply(&store, tx, &fiche, &changes))
+        .unwrap();
+    let metadata = store.imported_metadata(&source, false).unwrap().unwrap();
+    assert_eq!(
+        metadata.values,
+        json!({"title":"Corrigé","minAge":6,"author":"Auteur","description":"Description"})
+    );
+    let metadata = store.imported_metadata(&source, true).unwrap().unwrap();
+    let cover = metadata.cover.clone().expect("fiche cover");
+    let dest = f.0.join("project-assets");
+    let mut result = json!({"rootImage":"entry.png"});
+    metadata.apply(&dest, &mut result);
+    let copied = result["thumbnailImage"].as_str().unwrap();
+    assert_eq!(std::fs::read(copied).unwrap(), cover);
+    assert!(Path::new(copied).starts_with(&dest));
+    let mut existing = json!({"thumbnailImage":"pack-thumbnail.png"});
+    store
+        .imported_metadata(&source, true)
+        .unwrap()
+        .unwrap()
+        .apply(&f.0.join("must-not-exist"), &mut existing);
+    assert_eq!(existing["thumbnailImage"], "pack-thumbnail.png");
+    assert!(!f.0.join("must-not-exist").exists());
+    let project = f.source().join("reopened.mbah");
+    std::fs::write(&project, b"{}").unwrap();
+    assert!(store
+        .imported_metadata(&Source::direct(&project.to_string_lossy()), true)
+        .unwrap()
+        .is_none());
+    // A byte-identical copy outside scanned sources has no fiche.
+    let unknown = f.0.join("unknown.zip");
+    std::fs::copy(&source.path, &unknown).unwrap();
+    assert!(store
+        .imported_metadata(&Source::direct(&unknown.to_string_lossy()), false)
+        .unwrap()
+        .is_none());
+    assert!(store
+        .imported_metadata(
+            &Source::direct(&f.source().join("folder").to_string_lossy()),
+            false
+        )
+        .unwrap()
+        .is_some());
+    let page = store.list_entries(200, None).unwrap();
+    let mut children = 0;
+    for item in page.items {
+        for e in item["exemplars"].as_array().unwrap() {
+            if e["locator"]["path"]
+                .as_str()
+                .is_some_and(|p| p.ends_with("bundle.zip"))
+            {
+                let child = Source {
+                    path: f.source().join("bundle.zip"),
+                    child_id: Some(format!(
+                        "catalogue:{}",
+                        e["locator"]["memberKey"].as_str().unwrap()
+                    )),
+                    fingerprint: Some(
+                        crate::support::imported_pack::bundle_container_fingerprint(
+                            &f.source().join("bundle.zip").to_string_lossy(),
+                        )
+                        .unwrap(),
+                    ),
+                };
+                children += 1;
+                let selected = store.imported_metadata(&child, false).unwrap().unwrap();
+                let expected_title = if e["locator"]["member"] == "A.zip" {
+                    "Corrigé"
+                } else {
+                    "B"
+                };
+                assert_eq!(selected.values["title"], expected_title);
+                let ordinary = Source {
+                    child_id: Some(crate::support::imported_pack::bundle_child_identity(
+                        e["locator"]["member"].as_str().unwrap(),
+                    )),
+                    ..child.clone()
+                };
+                assert_eq!(
+                    store
+                        .imported_metadata(&ordinary, false)
+                        .unwrap()
+                        .unwrap()
+                        .values,
+                    store
+                        .imported_metadata(&child, false)
+                        .unwrap()
+                        .unwrap()
+                        .values
+                );
+                let mut stale = child.clone();
+                stale.fingerprint = Some("stale".into());
+                assert!(store.imported_metadata(&stale, false).unwrap().is_none());
+            }
+        }
+    }
+    assert_eq!(children, 2);
+    std::fs::write(&source.path, b"changed").unwrap();
+    assert!(store.imported_metadata(&source, false).unwrap().is_none());
+}
+
+#[test]
+fn catalogue_import_ignores_filename_titles_and_missing_cover_without_writes() {
+    use super::import_metadata::Source;
+    let f = Fixture::new();
+    let mut entries = pack_entries("", "");
+    let mut raw: Value = serde_json::from_slice(&entries[0].1).unwrap();
+    raw.as_object_mut().unwrap().remove("title");
+    entries[0].1 = serde_json::to_vec(&raw).unwrap();
+    std::fs::write(f.source().join("visible.zip"), zip_bytes(&entries)).unwrap();
+    let store = f.open();
+    f.scan(&store);
+    let source = Source::direct(&f.source().join("visible.zip").to_string_lossy());
+    let (id, _) = exemplar(&store, "visible.zip", None);
+    let fiche: String = store
+        .read(|c| {
+            c.query_row("SELECT fiche_id FROM exemplar WHERE id=?1", [&id], |r| {
+                r.get(0)
+            })
+        })
+        .unwrap();
+    store
+        .read_snapshot(|c| {
+            let resolved = crate::services::catalogue::data::card::resolution(
+                c,
+                &fiche,
+                &["Autre exemplaire.zip".into()],
+            )?;
+            assert!(resolved
+                .fields
+                .iter()
+                .any(|f| f.field == "title" && f.effective["origin"] == "filename"));
+            Ok(())
+        })
+        .unwrap();
+    let before = store.list_sources().unwrap().catalogue_revision;
+    let cache = snapshot(&f.0.join("cache"));
+    let result = store.imported_metadata(&source, true).unwrap().unwrap();
+    assert!(result.values.get("title").is_none());
+    assert!(result.cover.is_none());
+    assert_eq!(store.list_sources().unwrap().catalogue_revision, before);
+    assert_eq!(snapshot(&f.0.join("cache")), cache);
+}
+
+#[test]
+fn catalogue_import_nested_envelope_with_two_candidates_has_no_card() {
+    use super::import_metadata::Source;
+    let f = Fixture::new();
+    let nested = zip_bytes(&[
+        ("A.zip".into(), zip_bytes(&pack_entries("", "A"))),
+        ("B.zip".into(), zip_bytes(&pack_entries("", "B"))),
+    ]);
+    let path = f.source().join("outer.zip");
+    std::fs::write(&path, zip_bytes(&[("nested.zip".into(), nested)])).unwrap();
+    let store = f.open();
+    f.scan(&store);
+    let count: i64 = store
+        .read(|c| {
+            c.query_row("SELECT count(*) FROM exemplar WHERE retired=0", [], |r| {
+                r.get(0)
+            })
+        })
+        .unwrap();
+    assert_eq!(count, 2, "the nested envelope must expose both candidates");
+    let source = Source {
+        path,
+        child_id: Some(crate::support::imported_pack::bundle_child_identity(
+            "nested.zip",
+        )),
+        fingerprint: None,
+    };
+    assert!(store.imported_metadata(&source, true).unwrap().is_none());
+}
+
+#[test]
+fn catalogue_import_reads_only_already_cached_project_cover() {
+    use super::import_metadata::Source;
+    let f = Fixture::new();
+    let uuid = "11111111-1111-4111-8111-111111111111";
+    let mut entries = pack_entries("", "Pack");
+    let mut raw: Value = serde_json::from_slice(&entries[0].1).unwrap();
+    raw["stageNodes"][0]["uuid"] = json!(uuid);
+    entries[0].1 = serde_json::to_vec(&raw).unwrap();
+    std::fs::write(f.source().join("pack.zip"), zip_bytes(&entries)).unwrap();
+    let mut png = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::new_rgb8(4, 4)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .unwrap();
+    let cover = f.source().join("chosen.png");
+    std::fs::write(&cover, png.get_ref()).unwrap();
+    std::fs::write(f.source().join("project.mbah"), json!({"projectType":"pack","packMetadata":{"uuid":uuid,"title":"Pack"},"rootEntries":[],"thumbnailImage":cover,"sameImage":false}).to_string()).unwrap();
+    let store = f.open();
+    f.scan(&store);
+    let source = Source::direct(&f.source().join("pack.zip").to_string_lossy());
+    assert!(store
+        .imported_metadata(&source, true)
+        .unwrap()
+        .unwrap()
+        .cover
+        .is_none());
+    let (project, _) = exemplar(&store, "project.mbah", None);
+    let expected = store
+        .get_thumbnail(Some(&project), None, None)
+        .unwrap()
+        .bytes
+        .unwrap();
+    let cached = snapshot(&f.0.join("cache/catalogue/thumbnails"));
+    let mtimes: Vec<_> = cached
+        .iter()
+        .map(|(p, _)| std::fs::metadata(p).unwrap().modified().unwrap())
+        .collect();
+    let revision = store.list_sources().unwrap().catalogue_revision;
+    assert_eq!(
+        store
+            .imported_metadata(&source, true)
+            .unwrap()
+            .unwrap()
+            .cover,
+        Some(expected)
+    );
+    assert_eq!(store.list_sources().unwrap().catalogue_revision, revision);
+    assert_eq!(snapshot(&f.0.join("cache/catalogue/thumbnails")), cached);
+    assert_eq!(
+        cached
+            .iter()
+            .map(|(p, _)| std::fs::metadata(p).unwrap().modified().unwrap())
+            .collect::<Vec<_>>(),
+        mtimes
+    );
 }

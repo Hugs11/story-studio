@@ -24,7 +24,7 @@ import {
 } from '../lib/actions.mjs';
 import { answerNext } from '../lib/dialogs.mjs';
 import { synthTone } from '../lib/fixtures.mjs';
-import { openProjectDialog } from '../lib/c2-helpers.mjs';
+import { openProjectDialog, setPackTitle } from '../lib/c2-helpers.mjs';
 import { readbackPack } from '../lib/oracles.mjs';
 import { smallestArchive } from '../lib/corpus.mjs';
 import {
@@ -147,6 +147,9 @@ async function runSuite(ctx, variantId, opener, { archiveName = null } = {}) {
 
     const v0 = await snapshot(ctx, page, projectPath, 'V0 initial');
     check('V0 : lecture IPC du document initial réussie (documentFingerprint présent)', !!v0.view?.documentFingerprint, { error: v0.view?.error });
+
+    // Le titre fait partie des éditions : annuler tout doit retrouver V0 sans titre.
+    if (variantId === 'projet-neuf') await setPackTitle(page, 'Pack C4 invariants');
 
     // ================= Édition =================
     events.setStep(`${variantId}-edition`);

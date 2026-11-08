@@ -553,3 +553,5 @@
 @media (prefers-reduced-motion: reduce) {
   .opts-catalogue-scan-spinner { animation: none; }
 }
+
+.opts-catalogue-source-managed { color: var(--control-text-muted); }

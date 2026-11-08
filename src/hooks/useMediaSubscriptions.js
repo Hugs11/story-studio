@@ -55,13 +55,21 @@ function samePath(left, right) {
 // Le registre ne contient que les suivis explicitement activés sur cette machine.
 // Les écritures projet sont observées après succès ; aucune vérification ne
 // modifie un .mbah ni les médias de l'utilisateur.
-export function useMediaSubscriptions({ store, openProject, onShowImport, showErrorDialog }) {
+export function useMediaSubscriptions({ store, openProject, onShowImport, showErrorDialog, leaveGuard }) {
   useMediaTranslation();
   const [initial] = useState(loadRegistryState);
   const [registry, setRegistry] = useState(initial.registry);
   const [storageError, setStorageError] = useState(initial.error);
   const [checking, setChecking] = useState(false);
-  const [toasts, setToasts] = useState([]);
+  // Capture avant la vérification du démarrage : seules les notifications
+  // déjà au registre contribuent au rappel, jamais les nouveautés du réseau.
+  // Une seule notification en attente reprend le toast ordinaire (même file,
+  // même identifiant : la vérification du démarrage le met à jour sans doublon).
+  const [toasts, setToasts] = useState(() => {
+    const pending = getNotifications(initial.registry);
+    if (pending.length === 1) return [pending[0]];
+    return pending.length ? [{ kind: 'startup-reminder', count: pending.length }] : [];
+  });
   // État des outils YouTube constaté par la dernière vérification de fond. Il
   // n'est pas persisté : chaque lancement le constate à nouveau, sans
   // jamais télécharger, et le panneau propose la mise à jour.
@@ -72,8 +80,8 @@ export function useMediaSubscriptions({ store, openProject, onShowImport, showEr
   const registryRef = useRef(registry);
   // Registre illisible qu'aucune copie n'a pu protéger : il n'est pas écrasé.
   const readOnly = useRef(initial.readOnly === true);
-  const live = useRef({ store, openProject, onShowImport, showErrorDialog });
-  live.current = { store, openProject, onShowImport, showErrorDialog };
+  const live = useRef({ store, openProject, onShowImport, showErrorDialog, leaveGuard });
+  live.current = { store, openProject, onShowImport, showErrorDialog, leaveGuard };
   const authorized = useRef(new Set());
   const running = useRef(false);
   const checkAgain = useRef(false);
@@ -92,6 +100,7 @@ export function useMediaSubscriptions({ store, openProject, onShowImport, showEr
       setRegistry(next);
       const notifications = getNotifications(next);
       setToasts((queue) => queue.flatMap((item) => {
+        if (item.kind === 'startup-reminder') return [item];
         const notification = notifications.find((entry) => entry.id === item.id);
         return notification ? [notification] : [];
       }));
@@ -197,6 +206,14 @@ export function useMediaSubscriptions({ store, openProject, onShowImport, showEr
         ? (entry.paused ? 'paused' : 'active')
         : (authorized.current.has(config.id) && config.enabled ? 'pending' : 'inactive');
       return { subscriptionId: config.id, state };
+    }, (source) => {
+      if (!live.current.store.savePath) return [];
+      return (live.current.store.project?.mediaSubscriptions ?? [])
+        .filter((config) => config.source === source)
+        .flatMap((config) => {
+          const entry = registeredHere(config.id);
+          return entry ? [{ ...config, state: entry.paused ? 'paused' : 'active' }] : [];
+        });
     });
     // Deferred so the StrictMode probe cannot launch a second network batch.
     const timer = setTimeout(() => { void check(); }, 0);
@@ -272,6 +289,7 @@ export function useMediaSubscriptions({ store, openProject, onShowImport, showEr
     if (!item) return;
     opening.current = true;
     try {
+      if (live.current.leaveGuard?.current && !(await live.current.leaveGuard.current())) return;
       const currentStore = live.current.store;
       if (pathKey(currentStore.savePath ?? '') !== pathKey(item.projectPath)) {
         if (!(await exists(item.projectPath))) {

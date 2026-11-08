@@ -40,14 +40,9 @@
   gap: 2px 6px;
 }
 
-.pack-meta-audio-silence-heading .pack-meta-audio-control-title {
-  grid-column: 1 / -1;
-  grid-row: 1;
-}
-
 .pack-meta-audio-duration {
   grid-column: 1;
-  grid-row: 2;
+  grid-row: 1;
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -56,7 +51,7 @@
 
 .pack-meta-audio-duration-scope {
   grid-column: 2;
-  grid-row: 2;
+  grid-row: 1;
   color: color-mix(in srgb, var(--muted) 78%, transparent);
   font-size: 9.5px;
   white-space: nowrap;
@@ -64,7 +59,7 @@
 
 .pack-meta-audio-duration-edit {
   grid-column: 3;
-  grid-row: 2;
+  grid-row: 1;
   justify-self: end;
   width: 24px;
   height: 24px;
@@ -265,4 +260,18 @@
     align-items: flex-start;
     flex-direction: column;
   }
+}
+
+.pack-meta-audio-silence-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.pack-meta-audio-silence-content:disabled {
+  opacity: 0.45;
 }

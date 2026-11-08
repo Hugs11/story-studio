@@ -1,20 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { bumpPackVersion, generateConventionName, getExportPackName, parseConventionName } from '../src/utils/packConvention.js';
+import { generateConventionName, getExportPackName, parseConventionName } from '../src/utils/packConvention.js';
 
-test('bumpPackVersion suggests the next version (and V2 when none)', () => {
-  assert.equal(bumpPackVersion(undefined), 2);
-  assert.equal(bumpPackVersion(null), 2);
-  assert.equal(bumpPackVersion(''), 2);
-  assert.equal(bumpPackVersion(1), 2);
-  assert.equal(bumpPackVersion('v1'), 2);
-  assert.equal(bumpPackVersion(3), 4);
-  // La version bumpée donne bien un suffixe de convention.
-  assert.equal(
-    generateConventionName({ title: 'Mon pack', minAge: '5', version: bumpPackVersion(1) }),
-    '5+]Mon_pack_V2',
-  );
+test('sans âge, la convention ne crée aucun préfixe', () => {
+  assert.equal(generateConventionName({ title: 'Mon pack', version: 4 }), 'Mon_pack_V4');
 });
 
 test('parses a valid community convention name', () => {
@@ -40,7 +30,7 @@ test('parses a convention zip filename without keeping the extension', () => {
 });
 
 test('generates a minimal convention name', () => {
-  assert.equal(generateConventionName({ title: 'Mon pack' }), '3+]Mon_pack');
+  assert.equal(generateConventionName({ title: 'Mon pack' }), 'Mon_pack');
 });
 
 test('generates a producer prefix even without author', () => {
@@ -104,7 +94,7 @@ test('convention naming mode ignores legacy export name', () => {
     title: 'Mon pack perso',
     namingMode: 'convention',
     legacyExportName: 'Mon pack perso',
-  }), '3+]Mon_pack_perso');
+  }), 'Mon_pack_perso');
 });
 
 test('a title that repeats the age prefix does not double it in the convention name', () => {
@@ -128,6 +118,12 @@ test('without an entered age, the convention name takes the age the title carrie
   );
   // Un âge saisi l'emporte sur celui du titre.
   assert.equal(generateConventionName({ title: '5+ Titre', minAge: '7' }), '7+]Titre');
-  // Ni l'un ni l'autre : 3, comme avant.
-  assert.equal(generateConventionName({ title: 'Titre' }), '3+]Titre');
+  // Ni l'un ni l'autre : aucun préfixe.
+  assert.equal(generateConventionName({ title: 'Titre' }), 'Titre');
+});
+
+test('des crochets libres sans marqueur auteur ne sont pas une convention', () => {
+  for (const title of ['Le Renard [édition 2]', 'Le_Renard[bonus_V2', 'Le Renard [by Esope]']) {
+    assert.equal(parseConventionName(title), null);
+  }
 });

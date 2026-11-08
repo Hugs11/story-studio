@@ -9,9 +9,8 @@ import { sourceFolderOptions } from '../../store/catalogue/sourceView.js';
 import { X, ChevronDown } from '../icons/LucideLocal.jsx';
 import { useCatalogueTranslation } from '../../i18n/useCatalogueTranslation.js';
 import { filterValueCounts } from '../../store/catalogue/filterValueCounts.js';
-import { compactTagLabel } from '../../store/catalogue/filterPalette.js';
 import { languageLabel } from '../../store/catalogue/languageOptions.js';
-import { FAMILY_CONTROLS, filterControls } from '../../store/catalogue/filterState.js';
+import { FAMILY_CONTROLS, filterControls, compactTagLabel } from '../../store/catalogue/filterState.js';
 
 export const FILTER_VALUE_KEYS = Object.freeze({
   modifiedSince: 'catalogue:generation.modified.reason',

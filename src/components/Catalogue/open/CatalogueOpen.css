@@ -41,18 +41,6 @@
   overflow-wrap: anywhere;
 }
 
-.catalogue-generation-proposal {
-  color: var(--text-secondary);
-  padding: var(--space-3);
-  border-top: 1px solid var(--border);
-  overflow-wrap: anywhere;
-}
-.catalogue-generation-proposal button { margin: var(--space-1); }
-.catalogue-generation-proposal button:focus-visible {
-  outline: 2px solid var(--accent-2);
-  outline-offset: 2px;
-}
-.catalogue-generation-proposal button[aria-disabled="true"] { cursor: not-allowed; }
 .catalogue-generation-dot { color: var(--accent-2); }
 .catalogue-format-tag-damaged { color: var(--danger-text); font-weight: var(--weight-bold); }
 .catalogue-compact-exemplar-damaged { color: var(--danger-text); font-size: var(--text-caption); }

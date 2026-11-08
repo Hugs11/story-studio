@@ -1006,3 +1006,28 @@ test('le CSS des actions à corriger : mise en page pour tous, couleurs sauf dan
     /\.validation-pill-details-actions \.btn-xs:not\(\.btn-danger-outline\):not\(:disabled\):hover,\s*\.validation-pill-details-actions \.btn-xs:not\(\.btn-danger-outline\):not\(:disabled\):active \{/,
   );
 });
+
+for (const [label, title, projectName, hasSavePath, expected] of [
+  ['titre du pack', 'Mon titre', 'Projet', true, 'Mon titre'],
+  ['titre effacé, projet enregistré', '', 'Fichier projet', true, 'Fichier projet'],
+  ['titre absent, jamais enregistré', '', 'Ancien nom local', false, 'Sans titre'],
+]) {
+  test(`bandeau commun : ${label}`, () => {
+    const { elements } = mountSurface(createElement(TitleBar, {
+      projectName, hasSavePath, projectFilePath: hasSavePath ? '/projets/Fichier projet.mbah' : null, packRecap: { title, line: 'v1' }, onOpenPackMetadata() {},
+    }));
+    assert.equal(elementByClass(elements, 'chrome-titlebar-pack-title').props.children, expected);
+  });
+}
+
+
+for (const [workspaceMode, editor] of [['hierarchical', 'menus'], ['advanced', 'graphe']]) {
+  test(`${editor} : le fichier sert au titre de repli, la puce Projet conserve projectName`, () => {
+    const { elements } = mountShell(workspaceMode, { titleBar: {
+      projectName: 'Nom du projet', projectFilePath: '/projets/Nom du fichier.mbah',
+      hasSavePath: true, packRecap: { title: '', line: 'v1' },
+    } });
+    assert.equal(elementByClass(elements, 'chrome-titlebar-pack-title').props.children, 'Nom du fichier');
+    assert.equal(elementByClass(elements, 'chrome-titlebar-project').props.children, 'Nom du projet');
+  });
+}

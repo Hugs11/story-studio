@@ -14,6 +14,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tauri::Manager;
+mod project;
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct Selection {
@@ -26,6 +27,7 @@ struct Item {
     exemplar_id: String,
     step: String,
     progress: u8,
+    device_fault: bool,
     reason: Option<UserMessage>,
     /// Real step at the failure, as logged; never sent to the interface.
     #[serde(skip)]
@@ -36,7 +38,10 @@ fn publish(op: &Operation, sink: &Sink, items: &[Item], terminal: bool) {
         p.result = Some(serde_json::json!({"stories":items}));
         p.candidates.processed = items
             .iter()
-            .filter(|i| ["done", "refused", "failed", "interrupted"].contains(&i.step.as_str()))
+            .filter(|i| {
+                ["done", "refused", "failed", "interrupted", "notStarted"]
+                    .contains(&i.step.as_str())
+            })
             .count() as u64;
         p.outcomes.updated = items.iter().filter(|i| i.step == "done").count() as u64;
         p.outcomes.refused = items.iter().filter(|i| i.step == "refused").count() as u64;
@@ -48,7 +53,9 @@ fn publish(op: &Operation, sink: &Sink, items: &[Item], terminal: bool) {
             p.scan_complete = true;
             p.status = if op.cancel.load(Ordering::SeqCst) {
                 "cancelled"
-            } else if p.outcomes.refused + p.outcomes.error > 0 {
+            } else if p.outcomes.refused + p.outcomes.error > 0
+                || items.iter().any(|item| item.device_fault)
+            {
                 "partial"
             } else {
                 "success"
@@ -66,6 +73,12 @@ fn publish(op: &Operation, sink: &Sink, items: &[Item], terminal: bool) {
 /// a parameter its code declares: the interface renders a code only with all
 /// of them. A damaged medium whose screen name is private loses only the name.
 pub(crate) fn safe_reason(error: UserMessage) -> UserMessage {
+    let device_fault = error.device_fault;
+    let mut safe = safe_reason_content(error);
+    safe.device_fault = device_fault;
+    safe
+}
+fn safe_reason_content(error: UserMessage) -> UserMessage {
     if error.code == codes::GENERATION_CANCELLED {
         return UserMessage::new(codes::STORYTELLER_SEND_CANCELLED);
     }
@@ -298,7 +311,7 @@ pub(crate) fn run(
         |items| publish(&op, &sink, items, false),
         |selected, stage, enter| {
             let result = (|| {
-                let target =
+                let mut target =
                     store.resolve_target(&selected.exemplar_id, selected.expected_revision)?;
                 target.require_unchanged(std::time::Duration::from_secs(5))?;
                 let uuid = target
@@ -312,9 +325,12 @@ pub(crate) fn run(
                 }) {
                     return Err(UserMessage::new(codes::STORYTELLER_OFFICIAL_REFUSED));
                 }
+                let estimated_bytes = estimate_target(&target)?;
+                enter("device");
                 device
-                    .preflight(uuid, estimate_target(&target)?, &NativeVolumes)
+                    .preflight(uuid, estimated_bytes, &NativeVolumes)
                     .map_err(UserMessage::from)?;
+                enter("preparing");
                 let cache = crate::support::temp::app_cache_subdir(&app, "lunii-send")
                     .map_err(UserMessage::from)?;
                 fs::create_dir_all(&cache).map_err(failure)?;
@@ -334,7 +350,7 @@ pub(crate) fn run(
                     let zip = generate_project(
                         &app,
                         &store,
-                        &target,
+                        &mut target,
                         &scratch.0,
                         &op.cancel,
                         audio_edge_silence,
@@ -364,6 +380,7 @@ pub(crate) fn run(
                     )?
                 };
                 target.require_unchanged(std::time::Duration::from_secs(5))?;
+                enter("device");
                 let cipher = cipher::DeviceCipher::from_metadata(&device.root)?;
                 // Shown only when encryption outlasts the delay: a fast one
                 // keeps the previous label instead of flashing a new one.
@@ -395,7 +412,8 @@ pub(crate) fn run(
                 if finalizing.load(Ordering::SeqCst) {
                     enter("finalizing");
                 }
-                let outcome = applied.map_err(UserMessage::from)?;
+                let outcome =
+                    applied.map_err(|error| device::classify_device_error(error, "finalizing"))?;
                 // Payload is committed: a sidecar error must not invite a duplicate retry.
                 let card_result = (|| -> device::Result<()> {
                     if let Some(card) = store.card(id)? {
@@ -406,13 +424,7 @@ pub(crate) fn run(
                 if let Some(p) = &mut position {
                     *p += 1;
                 }
-                Ok(card_result.err().map(UserMessage::from).or_else(|| {
-                    matches!(
-                        outcome,
-                        device::Outcome::InstalledNotDurable | device::Outcome::StateWarning
-                    )
-                    .then(|| UserMessage::new(codes::STORYTELLER_WRITE_FAILED))
-                }))
+                Ok(completion_warning(outcome, card_result))
             })();
             result.map_err(|e| {
                 if !device.root.join(".md").is_file() {
@@ -424,6 +436,19 @@ pub(crate) fn run(
         },
     );
     publish(&op, &sink, &items, true);
+}
+
+// A committed payload remains successful even if its durability or sidecar warns.
+fn completion_warning(outcome: device::Outcome, card: device::Result<()>) -> Option<UserMessage> {
+    card.err()
+        .map(|error| device::classify_device_error(error, "finalizing"))
+        .or_else(|| {
+            matches!(
+                outcome,
+                device::Outcome::InstalledNotDurable | device::Outcome::StateWarning
+            )
+            .then(|| UserMessage::new(codes::STORYTELLER_WRITE_FAILED))
+        })
 }
 
 /// Encryption gets its own label only if it lasts longer than this.
@@ -464,7 +489,7 @@ fn run_announcing_if_slow<T: Send>(
 }
 
 /// Selection coordinator is independent of IPC and device discovery. A refused
-/// item never aborts following items; cancellation settles all remaining rows.
+/// pack failure permits following items; device faults stop the batch.
 fn run_batch(
     selection: &[Selection],
     cancel: &AtomicBool,
@@ -493,6 +518,7 @@ fn run_batch_tracked(
             exemplar_id: s.exemplar_id.clone(),
             step: "pending".into(),
             progress: 0,
+            device_fault: false,
             reason: None,
             failed_at: None,
         })
@@ -530,12 +556,18 @@ fn run_batch_tracked(
             Ok(warning) => {
                 items[index].step = "done".into();
                 items[index].progress = 100;
-                items[index].reason = warning;
+                items[index].reason = warning.map(|mut reason| {
+                    reason.device_fault = None;
+                    reason
+                });
             }
             Err(error) => {
                 let raw_code = error.code.clone();
                 let error = safe_reason(error);
                 let stage = real.into_inner();
+                items[index].device_fault = error
+                    .device_fault
+                    .unwrap_or_else(|| device::device_fault(&error.code, &stage));
                 items[index].failed_at = Some(stage.clone());
                 items[index].step = if error.code == codes::STORYTELLER_SEND_DISCONNECTED {
                     "interrupted"
@@ -566,8 +598,17 @@ fn run_batch_tracked(
                     &error,
                     Some(&raw_code),
                 );
-                items[index].reason = Some(safe_reason(error));
+                let mut reason = safe_reason(error);
+                reason.device_fault = None;
+                items[index].reason = Some(reason);
             }
+        }
+        if items[index].device_fault {
+            for remaining in &mut items[index + 1..] {
+                remaining.step = "notStarted".into();
+            }
+            notify(&items);
+            break;
         }
         notify(&items);
     }
@@ -770,15 +811,13 @@ fn stored_edge_silence(value: &serde_json::Value) -> Option<f64> {
 fn generate_project(
     app: &tauri::AppHandle,
     store: &Store,
-    target: &Target,
+    target: &mut Target,
     scratch: &Path,
     cancel: &AtomicBool,
     audio_edge_silence: AudioEdgeSilenceDefaults,
 ) -> Result<PathBuf> {
     let incomplete = || project_incomplete(UserMessage::new(codes::STORYTELLER_PROJECT_INVALID));
-    let mut raw = catalogue::analyze::project(&target.path)
-        .map_err(|e| project_incomplete(UserMessage::from(e)))?
-        .raw;
+    let mut raw = project::prepare(store, target)?;
     let roots = materialize::MediaRoots::for_project(&target.path, &store.workspace_roots()?, &raw);
     let folder = target.path.parent().ok_or_else(incomplete)?;
     // Resolve the saved bindings with the same confinement used by consultation.
@@ -867,7 +906,7 @@ fn generate_project(
         Ok(PathBuf::from(result.zip_path))
     } else {
         raw["name"] = raw["projectName"].clone();
-        raw["packUuid"] = raw["packMetadata"]["uuid"].clone();
+        raw["packUuid"] = project::saved_uuid(&raw).unwrap_or_default().into();
         raw["packVersion"] = raw["packMetadata"]["version"].clone();
         raw["packDescription"] = raw["packMetadata"]["description"].clone();
         let project = crate::commands::generation::parse_project_json(&raw.to_string())
@@ -1688,6 +1727,175 @@ mod tests {
             assert_eq!(items[0].step, "failed");
             assert_eq!(items[0].progress, 70, "the displayed step is untouched");
             assert_eq!(items[0].failed_at.as_deref(), Some(expected));
+        }
+    }
+    #[test]
+    fn device_fault_stops_before_any_preparation_or_write_of_remaining_stories() {
+        for (code, failure_index, expected) in [
+            (
+                codes::STORYTELLER_NO_SPACE,
+                1,
+                vec!["done", "refused", "notStarted"],
+            ),
+            (
+                codes::STORYTELLER_SEND_DISCONNECTED,
+                0,
+                vec!["interrupted", "notStarted", "notStarted"],
+            ),
+            (
+                codes::STORYTELLER_IMAGE_UNREADABLE_UNNAMED,
+                1,
+                vec!["done", "refused", "done"],
+            ),
+            (
+                codes::STORYTELLER_WRITE_FAILED,
+                1,
+                vec!["done", "failed", "notStarted"],
+            ),
+        ] {
+            let root = std::env::temp_dir().join(format!("lunii-batch-{}", uuid::Uuid::new_v4()));
+            fs::create_dir(&root).unwrap();
+            let mut attempted = 0;
+            let items = run_batch(
+                &selection(),
+                &AtomicBool::new(false),
+                |_| {},
+                |selected, stage| {
+                    let index = attempted;
+                    attempted += 1;
+                    if index == failure_index {
+                        stage("copying", 70);
+                        return Err(UserMessage::new(code));
+                    }
+                    fs::write(root.join(&selected.exemplar_id), b"installed").unwrap();
+                    Ok(None)
+                },
+            );
+            assert_eq!(
+                items.iter().map(|i| i.step.as_str()).collect::<Vec<_>>(),
+                expected,
+                "{code}"
+            );
+            let fault = code != codes::STORYTELLER_IMAGE_UNREADABLE_UNNAMED;
+            assert_eq!(items[failure_index].device_fault, fault);
+            assert_eq!(attempted, if fault { failure_index + 1 } else { 3 });
+            assert_eq!(root.join("last").exists(), !fault, "{code}");
+            let serialized = serde_json::to_value(&items).unwrap();
+            assert_eq!(serialized[failure_index]["deviceFault"], fault);
+            assert!(serialized[failure_index].get("failedAt").is_none());
+            if fault {
+                assert_eq!(serialized[2]["deviceFault"], false);
+                assert_eq!(serialized[2]["progress"], 0);
+                assert!(serialized[2]["reason"].is_null());
+            }
+            fs::remove_dir_all(root).unwrap();
+        }
+    }
+
+    #[test]
+    fn fallback_pack_failure_and_committed_device_warning_continue_batch() {
+        for (stage, warning, expected) in [
+            ("convertingImages", false, vec!["failed", "done", "done"]),
+            ("finalizing", true, vec!["done", "done", "done"]),
+        ] {
+            let mut attempted = 0;
+            let items = run_batch(
+                &selection(),
+                &AtomicBool::new(false),
+                |_| {},
+                |_, show| {
+                    attempted += 1;
+                    if attempted == 1 {
+                        show(stage, 20);
+                        let error = UserMessage::new(codes::STORYTELLER_WRITE_FAILED);
+                        return if warning { Ok(Some(error)) } else { Err(error) };
+                    }
+                    Ok(None)
+                },
+            );
+            assert_eq!(
+                items.iter().map(|i| i.step.as_str()).collect::<Vec<_>>(),
+                expected
+            );
+            assert_eq!(attempted, 3);
+            assert!(!items[0].device_fault);
+            assert_eq!(
+                items[0].reason.as_ref().unwrap().code,
+                codes::STORYTELLER_WRITE_FAILED
+            );
+        }
+    }
+    #[test]
+    fn invalid_or_future_card_failure_continues_but_device_errors_stop() {
+        for (error, fault) in [
+            (device::Error::InvalidCard, false),
+            (device::Error::FutureCard, false),
+            (device::Error::Io, true),
+            (device::Error::Verification, true),
+            (device::Error::BackupFailed, true),
+            (device::Error::NoSpace { missing_bytes: 42 }, true),
+            (device::Error::ReadOnly, true),
+        ] {
+            let mut attempts = 0;
+            let items = run_batch(
+                &selection(),
+                &AtomicBool::new(false),
+                |_| {},
+                |_, show| {
+                    attempts += 1;
+                    show("finalizing", 90);
+                    if attempts == 1 {
+                        Err(device::classify_device_error(error, "finalizing"))
+                    } else {
+                        Ok(None)
+                    }
+                },
+            );
+            assert_eq!(items[0].device_fault, fault, "{error:?}");
+            assert_eq!(attempts, if fault { 1 } else { 3 }, "{error:?}");
+            assert_eq!(items[1].step, if fault { "notStarted" } else { "done" });
+            assert_eq!(items[0].reason.as_ref().unwrap().device_fault, None);
+            let serialized = serde_json::to_value(&items[0]).unwrap();
+            assert_eq!(serialized["deviceFault"], fault);
+            assert!(serialized["reason"].get("deviceFault").is_none());
+        }
+    }
+
+    #[test]
+    fn committed_outcomes_and_card_warnings_report_warning_and_continue() {
+        for outcome in [
+            device::Outcome::StateWarning,
+            device::Outcome::InstalledNotDurable,
+        ] {
+            for card in [
+                Ok(()),
+                Err(device::Error::InvalidCard),
+                Err(device::Error::FutureCard),
+                Err(device::Error::Io),
+            ] {
+                let mut attempts = 0;
+                let items = run_batch(
+                    &selection(),
+                    &AtomicBool::new(false),
+                    |_| {},
+                    |_, show| {
+                        attempts += 1;
+                        show("finalizing", 90);
+                        Ok(completion_warning(outcome.clone(), card))
+                    },
+                );
+                assert_eq!(attempts, 3);
+                assert!(items
+                    .iter()
+                    .all(|item| item.step == "done" && !item.device_fault));
+                assert!(items.iter().all(|item| item.reason.is_some()));
+                assert!(items.iter().all(|item| item
+                    .reason
+                    .as_ref()
+                    .unwrap()
+                    .device_fault
+                    .is_none()));
+            }
         }
     }
 }

@@ -26,7 +26,8 @@ import {
 } from '../icons/LucideLocal';
 import { KEYS, read as readSetting, write as writeSetting } from '../../store/persistentSettings';
 import { collectPendingEntries, youtubeSubscriptionKind } from '../../store/mediaSubscriptionSource.js';
-import { useSubscriptionFollow } from '../MediaSubscriptions/useSubscriptionFollow';
+import { FollowedSourceNotice, FollowedSourceChoices } from '../MediaSubscriptions/FollowedImportSource.jsx';
+import { useFollowedImportSource, useSubscriptionFollow } from '../MediaSubscriptions/useSubscriptionFollow';
 import { isYoutubeBlocked } from '../../utils/youtubeErrors.js';
 import { releaseTauriListener } from '../../utils/tauriListener';
 import './YoutubeImportFunnel.css';
@@ -87,12 +88,12 @@ function hasMultipleLanguages(languages) {
  * Premier usage : avertissement CGU (accepté une fois) puis téléchargement
  * automatique de yt-dlp, reflété par l'écran « Préparation… ».
  */
-export function YoutubeImportFunnel({ onClose, onImport, mode = 'home', toLibrary = false, initialSource = null }) {
+export function YoutubeImportFunnel({ onClose, onImport, mode = 'home', toLibrary = false, initialSource = null, onManageSubscriptions = null }) {
   const ytDlpPath = useMemo(() => readSetting(KEYS.YTDLP_CUSTOM_PATH, { defaultValue: '' }), []);
   const cguAccepted = useMemo(() => readSetting(KEYS.YOUTUBE_CGU_ACCEPTED) === 'true', []);
 
   const [step, setStep] = useState(0);
-  const [url, setUrl] = useState('');
+  const { url, setUrl, sources: followedSources, followed } = useFollowedImportSource('youtube', mode === 'editor');
   const [loadedUrl, setLoadedUrl] = useState('');
   const subscriptionFollow = useSubscriptionFollow('youtube', initialSource);
   const { follow, sourceLoaded: followSourceLoaded, reset: resetFollow, toggle: toggleFollow } = subscriptionFollow;
@@ -596,10 +597,12 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home', toLibrar
               />
             </label>
           </form>
+          <FollowedSourceChoices id="youtube-followed-sources" sources={followedSources} onChoose={(value) => { resetFollow(); setUrl(value); }} disabled={busy} />
           <p className="youtube-funnel-hint">
             {toLibrary ? t('import:youtube.selection.libraryHint') : t('import:youtube.selection.treeHint')}
           </p>
-          <label className={`youtube-follow-toggle${canFollowSource ? '' : ' is-disabled'}`}>
+          {followed ? <FollowedSourceNotice followed={followed} onManage={onManageSubscriptions} /> : (
+            <label className={`youtube-follow-toggle${canFollowSource ? '' : ' is-disabled'}`}>
             <input
               type="checkbox"
               checked={followEnabled}
@@ -615,6 +618,7 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home', toLibrar
               {canFollowSource && <small>{followStatusText(follow)}</small>}
             </span>
           </label>
+          )}
           {error && <div className="funnel-error" role="alert">{presentStoredError(error)}<TechnicalDetail value={presentUserMessage(error).technicalDetail} /></div>}
         </div>
       ) : step === 1 ? (
@@ -633,7 +637,8 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home', toLibrar
               </span>
             )}
           />
-          <label className={`youtube-follow-toggle${canFollowSource ? '' : ' is-disabled'}`}>
+          {followed ? <FollowedSourceNotice followed={followed} onManage={null} /> : (
+            <label className={`youtube-follow-toggle${canFollowSource ? '' : ' is-disabled'}`}>
             <input
               type="checkbox"
               checked={followEnabled}
@@ -649,6 +654,7 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home', toLibrar
               {canFollowSource && <small>{followStatusText(follow)}</small>}
             </span>
           </label>
+          )}
           <div className="youtube-funnel-toolbar">
             <label className="youtube-funnel-field youtube-funnel-field--filter">
               <Search />

@@ -36,3 +36,15 @@ test('no question when the UUID is not the original one, or has no origin', asyn
   assert.equal(await askImportedUuidRevision(unknown, show), unknown);
   assert.equal(calls.length, 0);
 });
+
+test('le nom libre conserve la question garder ou renouveler à la génération après import', async () => {
+  for (const answer of ['keep', 'renew']) {
+    const { show, calls } = dialog(answer);
+    const draft = { namingMode: 'legacy', legacyExportName: 'Mon export', uuid: ORIGINAL, originalUuid: ORIGINAL };
+    const next = await askImportedUuidRevision(draft, show);
+    assert.equal(calls.length, 1);
+    assert.equal(next.namingMode, 'legacy');
+    assert.equal(next.legacyExportName, 'Mon export');
+    assert.equal(next.uuid === ORIGINAL, answer === 'keep');
+  }
+});

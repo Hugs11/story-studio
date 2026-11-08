@@ -166,7 +166,7 @@ pub(crate) fn portable_key(value: &str) -> String {
     value.nfc().flat_map(char::to_lowercase).collect()
 }
 
-fn child_identity(relative: &str) -> String {
+pub(crate) fn child_identity(relative: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(CHILD_IDENTITY_VERSION.as_bytes());
     hasher.update([0_u8]);

@@ -178,7 +178,6 @@
   "project.recent.title": "Progetto recente",
   "media.copy.progress": "Copia nel progetto…",
   "media.cover.progress": "Estrazione della copertina…",
-  "names.pack.fallback": "Audiolibro importato",
   "pack.invalid.message": "Il file importato non è valido o non è accessibile: {{path}}\n\n{{reason}}",
   "folder.read.prefix": "Impossibile leggere la cartella: ",
   "project.recent.prefix": "Impossibile aprire questo progetto recente:\n",
@@ -264,5 +263,10 @@
   "folder.pack.copy.failed": "Non è stato possibile copiare il pack della cartella nel progetto. Controlla lo spazio su disco e che il progetto non sia bloccato.",
   "format.legacyLink.unsupported": "Questo progetto contiene un vecchio nodo Collegamento, che non è più supportato.",
   "format.legacyLink.found": "vecchio nodo Collegamento",
-  "format.legacyLink.expected": "cartella, storia o pack importato"
+  "format.legacyLink.expected": "cartella, storia o pack importato",
+  "media.follow.already": "Già seguito per questo progetto",
+  "media.follow.alreadyPaused": "Già seguito (in pausa) per questo progetto",
+  "media.follow.manage": "Preferenze → Fonti multimediali seguite",
+  "media.follow.manageButton": "Gestisci le fonti multimediali seguite nelle preferenze",
+  "media.follow.sources": "Fonti seguite per questo progetto"
 }

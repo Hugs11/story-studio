@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { writeFileSync, renameSync } from 'node:fs';
 import { launchApp } from '../lib/launch.mjs';
 import { createRun } from '../lib/run-context.mjs';
-import { newProject, returnHome, generatePack, clickButton } from '../lib/actions.mjs';
+import { newProject, returnHome, generatePack, clickButton, openPackMetadata } from '../lib/actions.mjs';
 import {
   dropOnTree, dropOnMediaExplorer, assignMediaToGraphStage,
   pickAudioField, pickImageField, editorCard, treeRoot, setPackTitle,
@@ -23,17 +23,22 @@ const CASES = [
 ];
 
 async function options(page, testCase) {
-  await page.locator('.chrome-titlebar-pack-recap').click();
+  await openPackMetadata(page);
   const metadata = page.locator('.pack-meta-modal');
   await metadata.waitFor({ state: 'visible' });
   const audio = metadata.locator('.pack-meta-audio');
   const toggle = audio.getByRole('button', { name: 'Harmoniser le volume des audios vers -14 LUFS à la génération.', exact: true });
   if ((await toggle.getAttribute('aria-pressed') === 'true') !== testCase.harmonize) await toggle.click();
+  const silenceToggle = audio.getByRole('button', { name: 'Activer le traitement des silences de début et de fin', exact: true });
+  const enabled = testCase.silence !== 'Ne rien faire';
+  if ((await silenceToggle.getAttribute('aria-pressed') === 'true') !== enabled) await silenceToggle.click();
   const mode = audio.locator('button.pack-meta-audio-segment').filter({ hasText: new RegExp(`^${testCase.silence}$`) });
-  await mode.click();
+  if (enabled) await mode.click();
   const state = {
     harmonize: await toggle.getAttribute('aria-pressed') === 'true',
-    silenceSelected: await mode.getAttribute('aria-pressed') === 'true',
+    silenceSelected: enabled
+      ? await mode.getAttribute('aria-pressed') === 'true'
+      : await silenceToggle.getAttribute('aria-pressed') === 'false',
     durations: await audio.locator('.pack-meta-audio-duration').innerText(),
   };
   await metadata.getByRole('button', { name: 'Appliquer', exact: true }).click();
@@ -93,6 +98,36 @@ async function buildGraph(page, events, sources, image) {
   if (!await setPackTitle(page, 'Sons synthétiques')) throw new Error('Titre pack absent');
 }
 
+// Son très bas hors du tableau `sources` : bruit rose ramené à -50 LUFS.
+function createNearMuteSound(dir) {
+  const raw = join(dir, 'presque-muet-contenu.wav');
+  ffmpeg(['-f', 'lavfi', '-i', 'anoisesrc=color=pink:seed=99:sample_rate=44100:duration=4', '-af', 'highpass=f=150,lowpass=f=2500', '-c:a', 'pcm_f32le', raw]);
+  const initial = measureAudio(raw, join(dir, 'presque-muet-initial'));
+  const path = join(dir, 'presque-muet.wav');
+  ffmpeg(['-i', raw, '-af', `volume=${-50 - initial.contentLufs}dB`, '-c:a', 'pcm_f32le', path]);
+  return path;
+}
+
+// Pose le son sur un emplacement neuf, sans toucher à ceux qui ont servi à la génération.
+async function addNearMuteSound(page, events, editor, file, { stageName = 'Presque muet', fileStem = 'presque-muet', fill = null } = {}) {
+  if (editor === 'menus') {
+    await dropOnTree(page, file);
+    // L'histoire déposée n'a ni audio de sélection ni image : sans eux, la génération
+    // est refusée « à corriger » (sans rapport avec le niveau du son testé).
+    if (fill) {
+      const card = editorCard(page, "L'histoire");
+      if (!await pickAudioField(page, card, 'Audio de sélection', fill.audio)) throw new Error('Audio de sélection absent');
+      if (!await pickImageField(page, card, fill.image)) throw new Error('Image refusée');
+    }
+    return;
+  }
+  if (!await createGraphStage(page)) throw new Error('Création Écran impossible');
+  await renameSelectedNode(page, stageName);
+  await dropOnMediaExplorer(page, file);
+  const assigned = await assignMediaToGraphStage(page, events, { fileStem, stageName });
+  if (!assigned.via) throw new Error(`Audio non posé : ${JSON.stringify(assigned)}`);
+}
+
 export async function run() {
   const ctx = createRun('c7-son');
   const records = [];
@@ -108,6 +143,9 @@ export async function run() {
     ffmpeg(['-i', sources[3].path, '-af', 'alimiter=limit=0.794328:level=disabled', '-c:a', 'pcm_f32le', limiterPath]);
     limiterReference = measureAudio(limiterPath, join(ctx.dir('sources'), 'limiteur-reference'));
     ctx.check('plafond échantillon du limiteur mesuré à -2 dBFS', Math.abs(limiterReference.samplePeak + 2) < 0.05, { limiterReference });
+    const nearMute = createNearMuteSound(ctx.dir('sources'));
+    const silent = join(ctx.dir('sources'), 'silencieux.wav');
+    ffmpeg(['-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono', '-t', '2', '-c:a', 'pcm_s16le', silent]);
     const jpeg = join(ctx.dir('sources'), 'jpeg-renomme.jpg');
     const image = join(ctx.dir('sources'), 'jpeg-renomme.png');
     ffmpeg(['-f', 'lavfi', '-i', 'color=c=orange:s=320x240:d=1', '-frames:v', '1', jpeg]);
@@ -155,6 +193,50 @@ export async function run() {
           ffmpeg(['-v', 'error', '-i', join(dir, 'assets', name), '-f', 'null', '-'], join(dir, `image-${index}.log`));
         }
         ctx.check(`${editor} ${testCase.name} JPEG renommé décodé dans l'archive`, images.length > 0);
+      }
+      // Repère de niveau, une fois la génération terminée : aucune des
+      // quatre sources ne franchit un seuil de signalement, on pose donc un
+      // cinquième son, hors du tableau `sources` et de ses oracles (≈ -50 LUFS,
+      // en dessous du seuil « presque muet »), sur un emplacement neuf.
+      events.setStep(`${editor}-repere-niveau`);
+      // Le dernier cas (D) laisse l'harmonisation désactivée : la pastille dirait alors
+      // « presque inaudible » (texte voulu). On la réactive pour tester le texte « futur ».
+      await options(page, CASES[0]);
+      await addNearMuteSound(page, events, editor, nearMute, { fill: { audio: sources[0].path, image } });
+      const mark = page.locator('.audio-bar .audio-label-wrap .audio-level-mark[data-level-notice="AUDIO_NEAR_MUTE_BOOST"]').first();
+      const marked = await mark.waitFor({ timeout: 30_000 }).then(() => true, () => false);
+      ctx.check(`${editor} son presque muet : repère ambre sur l'emplacement`, marked, { count: await page.locator('.audio-level-mark').count() });
+      if (marked) {
+        const notice = await mark.getAttribute('aria-label');
+        ctx.check(`${editor} repère : amplification annoncée au futur`, notice.includes("à la génération, Story Studio l'amplifiera fortement")
+          && notice.includes('Ce verdict porte sur le son actuel'), { notice });
+        await ctx.shot(page, `${editor}-repere-niveau`);
+      }
+      await addNearMuteSound(page, events, editor, silent, { stageName: 'Silencieux', fileStem: 'silencieux', fill: { audio: sources[0].path, image } });
+      const silentMark = page.locator('.audio-bar .audio-label-wrap .audio-level-mark[data-level-notice="silent"]').first();
+      const silentMarked = await silentMark.waitFor({ timeout: 30_000 }).then(() => true, () => false);
+      ctx.check(`${editor} son silencieux : avis ambre sur la pastille`, silentMarked);
+      if (silentMarked) {
+        const notice = await silentMark.getAttribute('aria-label');
+        ctx.check(`${editor} silence : la Lunii ne jouera rien à cet endroit`,
+          notice.includes('la Lunii ne jouera rien à cet endroit.')
+          && !notice.includes('amplifiera'), { notice });
+        // Le son silencieux ne bloque plus la génération et le rapport reprend les mêmes mots.
+        events.setStep(`${editor}-generation-silencieux`);
+        // Une file vidée ne montre que le rapport de cette génération.
+        const clearDone = page.getByRole('button', { name: 'Vider les tâches terminées' });
+        if (await clearDone.count()) await clearDone.first().click().catch(() => {});
+        const silentGeneration = await generatePack(page, ctx.dir(editor, 'silencieux', 'export'), { events, timeout: 120_000 });
+        ctx.check(`${editor} son silencieux : la génération réussit`, !!silentGeneration.zip, silentGeneration);
+        await page.waitForTimeout(1500);
+        // Le rapport de la tâche est replié : on le déplie comme un auteur.
+        await page.locator('.rq-job-header').first().click().catch(() => {});
+        await page.waitForTimeout(500);
+        const reportText = await page.evaluate(() => document.body.textContent);
+        await ctx.shot(page, `${editor}-rapport-silencieux`);
+        ctx.check(`${editor} son silencieux : le rapport reprend l'avis de la pastille`,
+          /L'audio « silencieux » est silencieux : la Lunii ne jouera rien à cet endroit\./i.test(reportText), { extract: reportText.slice(Math.max(0, reportText.indexOf('ne jouera rien') - 300), reportText.indexOf('ne jouera rien') + 200) });
+        await page.keyboard.press('Escape');
       }
       await returnHome(page);
     }

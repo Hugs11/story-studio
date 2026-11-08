@@ -1,3 +1,4 @@
+import { suggestedPackTitle } from '../../store/packMetadataModel.js';
 import { readPackIdentityLock } from '../../store/officialProvenance.js';
 import { presentStoredError, presentUserMessage } from '../../i18n/userMessage.js';
 import { TechnicalDetail } from '../common/UserMessage.jsx';
@@ -62,7 +63,7 @@ function defaultDraft(packMetadata = {}) {
     title: '',
     author: '',
     version: 1,
-    minAge: '3',
+    minAge: '',
     producer: '',
     bonus: '',
     description: '',
@@ -75,7 +76,7 @@ function defaultDraft(packMetadata = {}) {
   };
 }
 
-function normalizeDraft(draft, allowUnknownAge = false) {
+function normalizeDraft(draft) {
   const namingMode = draft.namingMode === 'legacy' ? 'legacy' : 'convention';
   return {
     ...draft,
@@ -86,7 +87,7 @@ function normalizeDraft(draft, allowUnknownAge = false) {
     description: String(draft.description || '').trim(),
     uuid: String(draft.uuid || '').trim(),
     originalUuid: String(draft.originalUuid || '').trim(),
-    minAge: allowUnknownAge ? String(draft.minAge ?? '').replace(/\D/g, '') : String(draft.minAge || '3').replace(/\D/g, '') || '3',
+    minAge: String(draft.minAge ?? '').replace(/\D/g, ''),
     version: normalizeVersion(draft.version),
     namingMode,
   };
@@ -155,7 +156,6 @@ export function PackNameModal({
   exportFolder = null,
   generateDisabled = false,
   embedded = false,
-  allowUnknownAge = packMetadata?.minAge === '',
   promptRegenerateUuid = false,
   // Présent seulement pour un projet graphe : le brouillon lu dans le document,
   // la gouvernance de chaque champ et les compteurs de la structure.
@@ -188,8 +188,8 @@ export function PackNameModal({
   // compte — le document est l'autorité sur le titre et la version, et une
   // valeur d'enveloppe ne doit jamais le recouvrir.
   const source = useMemo(
-    () => (advanced ? { ...(packMetadata ?? {}), ...advanced.draft } : packMetadata),
-    [advanced, packMetadata],
+    () => (advanced ? { ...(packMetadata ?? {}), ...advanced.draft } : { ...packMetadata, title: suggestedPackTitle({ rootName: project?.rootName, packMetadata }) }),
+    [advanced, packMetadata, project?.rootName],
   );
   // Le traitement demandé appartient au projet, pas aux métadonnées affichées
   // ici. La fiche ne fait que le brouillonner avec les autres changements :
@@ -250,7 +250,7 @@ export function PackNameModal({
     // effacerait le choix en cours, comme pour le reste du brouillon.
   }, [open, sourceSignature, onDraftChange]);
 
-  const normalizedDraft = useMemo(() => normalizeDraft(draft, allowUnknownAge), [draft, allowUnknownAge]);
+  const normalizedDraft = useMemo(() => normalizeDraft(draft), [draft]);
   const namingMode = normalizedDraft.namingMode;
   const showImportedUuidHint = !uuidLocked && promptRegenerateUuid
     && shouldPromptRegenerateImportedUuid(normalizedDraft);
@@ -274,7 +274,7 @@ export function PackNameModal({
   const hasExportName = namingMode === ARCHIVE_NAMING_FREE
     ? !!(normalizedDraft.legacyExportName || normalizedDraft.title)
     : !!normalizedDraft.title;
-  const currentAge = allowUnknownAge ? String(draft.minAge ?? '').replace(/\D/g, '') : String(draft.minAge || '3').replace(/\D/g, '') || '3';
+  const currentAge = String(draft.minAge ?? '').replace(/\D/g, '');
   const customAgeValue = AGE_CHIPS.includes(currentAge) ? '' : currentAge;
 
   useEffect(() => {
@@ -366,9 +366,9 @@ export function PackNameModal({
           // Ce qui ne compose que le nom du fichier, et vit dans l'enveloppe du
           // projet. Séparé du reste parce que l'appelant l'écrit autrement :
           // aucun geste, aucune entrée dans le pack.
-          naming: archiveNamingFields(normalizeDraft(draft, allowUnknownAge)),
+          naming: archiveNamingFields(normalizeDraft(draft)),
         }
-      : normalizeDraft(draft, allowUnknownAge);
+      : normalizeDraft(draft);
     // L'agrégateur réutilise cette fiche pour les champs de nommage, mais son
     // projet provisoire n'a pas encore de source ni de destination persistante
     // pour les réglages audio. Ils ne sont donc ni montrés ni envoyés ici.
@@ -536,7 +536,8 @@ export function PackNameModal({
                     key={age}
                     type="button"
                     className={`pack-meta-age-chip ${currentAge === age ? 'is-active' : ''}`}
-                    onClick={() => updateAge(age)}
+                    aria-pressed={currentAge === age}
+                    onClick={() => updateAge(currentAge === age ? '' : age)}
                   >
                     {age}+
                   </button>

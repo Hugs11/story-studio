@@ -1,3 +1,4 @@
+import { queuedMarks } from '../../store/catalogue/luniiQueueView.js';
 import { useLuniiPanelWidth } from '../../hooks/useLuniiPanelWidth.js';
 import { useCatalogueSendUi } from '../../hooks/useCatalogueSendUi.js';
 import { useLuniiDnd } from '../../hooks/useLuniiDnd.js';
@@ -411,7 +412,7 @@ export function CatalogueBrowser({ abandonGuard, lunii, sendBridge, renderLunii,
   }), [data.busy, data.error]);
   const View = VIEWS[view.view];
   return <LuniiDndFrame dnd={dnd} send={lunii?.send} cardsById={cardsById}><SelectionControlsContext.Provider value={selectionControls}><section className="catalogue-browser" aria-labelledby="catalogue-title">
-    <CatalogueToolbar tags={tags.items} onOpenFiche={id => { void beforeFicheAbandon(ficheAbandon, () => { selection.apply({ type: 'click', id }); openFiche(id); }); }} view={{ ...view, toggleFichePanel: () => { void beforeFicheAbandon(ficheAbandon, view.toggleFichePanel); } }} cards={cards} sources={sources} searchRef={searchRef} renderChrome={renderHeader ? controls => renderHeader({ view, onDuplicates: () => setDuplicateScope(null), ...controls }) : undefined} />
+    <CatalogueToolbar tags={tags.items} view={{ ...view, toggleFichePanel: () => { void beforeFicheAbandon(ficheAbandon, view.toggleFichePanel); } }} cards={cards} sources={sources} searchRef={searchRef} renderChrome={renderHeader ? controls => renderHeader({ view, onDuplicates: () => setDuplicateScope(null), ...controls }) : undefined} />
     <UndoNotice noticeToken={undo.noticeToken} state={undo.state} busy={data.busy} onUndo={undoLast} />
     {duplicateScope !== undefined && <DuplicateDialog ficheId={duplicateScope} cards={cards} onClose={() => { setDuplicateScope(undefined); restoreActionFocus(); }} />}
     {checkerTarget && <CheckerEntry {...checkerTarget} onClose={() => { setCheckerTarget(null); restoreActionFocus(); void onRefresh?.(); }} />}
@@ -441,7 +442,7 @@ export function CatalogueBrowser({ abandonGuard, lunii, sendBridge, renderLunii,
       setTagPopover(tagPopoverAt(event.currentTarget, data.targets.map(card => card.id), 'above'));
     }} />}
     </div>
-    {luniiStory && <FicheDialog reservedWidth={luniiWidth} onWidthChange={lunii?.store.resizeFiche} card={{ id: luniiStory.key }} lunii={{ device, story: luniiStory, rows: deviceRows, selected: deviceRows.filter(s => lunii.selection.ids.includes(s.key)), gestures: lunii.gestures }} onClose={() => { lunii.store.select('lunii', []); requestAnimationFrame(() => document.getElementById(`lunii-story-${luniiStory.key}`)?.focus()); }}
+    {luniiStory && <FicheDialog reservedWidth={luniiWidth} onWidthChange={lunii?.store.resizeFiche} card={{ id: luniiStory.key }} lunii={{ device, story: luniiStory, rows: deviceRows, selected: deviceRows.filter(s => lunii.selection.ids.includes(s.key)), gestures: lunii.gestures, queued: queuedMarks(lunii.luniiQueue?.[device.id]), onCancelQueued: id => lunii.store.cancel(id) }} onClose={() => { lunii.store.select('lunii', []); requestAnimationFrame(() => document.getElementById(`lunii-story-${luniiStory.key}`)?.focus()); }}
       onNavigate={delta => { const index = deviceRows.findIndex(s => s.key === luniiStory.key); const next = deviceRows[index + delta]; if (next) lunii.store.select('lunii', [next.key]); }} />}
     {lunii?.selection.side !== 'lunii' && view.fichePanelVisible && ficheCard && <FicheDialog luniiSend={sendUi.available ? { state: sendUi.stateOf(ficheCard), onSend: deviceId => sendUi.onSend(ficheCard.id, deviceId), onSee: sendUi.onSee } : null} reservedWidth={luniiWidth} onWidthChange={lunii?.store.resizeFiche} actions={panelActions} onSelectionAction={runSelectionAction} key={ficheCard.id} abandonGuard={ficheAbandon} card={ficheCard} selectedCards={data.targets} tags={tags.items}
       position={ficheModalPosition(order, ficheCard.id)} navigationBusy={Boolean(trashCard) || data.busy}

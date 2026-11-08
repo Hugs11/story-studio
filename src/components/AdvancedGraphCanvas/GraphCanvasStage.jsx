@@ -117,15 +117,6 @@ export default function GraphCanvasStage({
   // `{ zoomBy(factor), fit(), pointerPoint() }`. Le parent n'a pas à posséder
   // le moteur pour agrandir, cadrer ou créer sous le pointeur.
   cameraRef = null,
-  // Poignée de recette, **facultative** et jamais posée par l'application.
-  //
-  // `captureGraphSurface` compose le PNG du moteur et le relevé de
-  // surimpressions que la surface publie, mais les deux vivent ici : sans
-  // cette porte, la recette ne pouvait capturer que les calques du canvas, et
-  // reperdait les noms, les pastilles et les repères — exactement le défaut que
-  // l'audit reproche à `exportImage()` seul. Elle ne donne aucun pouvoir
-  // nouveau : le moteur et le relevé sont rendus **en lecture**.
-  surfaceRef = null,
   restoreToken = 0,
   children = null,
 }) {
@@ -518,25 +509,6 @@ export default function GraphCanvasStage({
     cameraRef.current = commands;
     return () => { if (cameraRef.current === commands) cameraRef.current = null; };
   }, [cameraRef, engineRef]);
-
-  // Le dernier relevé publié, tenu dans une ref pour que la poignée de recette
-  // le lise **à l'instant de la capture** et non à l'instant où elle a été
-  // posée. Même raison que `projectRef` dans `useAdvancedAuthoring` : un rappel
-  // d'image peut tomber avant le rendu suivant.
-  const overlayRef = useRef(nodeOverlays);
-  overlayRef.current = nodeOverlays;
-  useEffect(() => {
-    if (!surfaceRef) return undefined;
-    surfaceRef.current = {
-      engine: () => engineRef.current,
-      overlay: () => overlayRef.current,
-      size: () => ({
-        width: hostRef.current?.clientWidth ?? 0,
-        height: hostRef.current?.clientHeight ?? 0,
-      }),
-    };
-    return () => { surfaceRef.current = null; };
-  }, [engineRef, surfaceRef]);
 
   // Dépôt d'un média. Le canvas n'expose rien au DOM : la médiathèque ne
   // peut donc pas viser un nœud par `elementsFromPoint`, comme elle le fait sur

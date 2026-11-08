@@ -1,3 +1,5 @@
+import { useReleaseConsent } from '../../hooks/useReleaseConsent.js';
+import { writeReleaseConsent } from '../../store/releaseNotice.js';
 import { Select } from '../../components/common/Select.jsx';
 import { useTranslation } from 'react-i18next';
 import { AVAILABLE_LANGUAGES, changeUiLanguage } from '../../i18n/language';
@@ -22,6 +24,7 @@ export function InterfaceSection({
   onOpenShortcuts,
 }) {
   const { t, i18n } = useTranslation('settings');
+  const releaseConsent = useReleaseConsent();
   const selectionOpensSettings = useSelectionOpensSettings();
   const languageCount = AVAILABLE_LANGUAGES.filter((language) => language !== 'pseudo').length;
   return (
@@ -72,6 +75,14 @@ export function InterfaceSection({
         <Button onClick={onOpenShortcuts}>
           {t('common:action.edit.label')}
         </Button>
+      </div>
+      <div className="opts-row">
+        <div className="opts-row-info">
+          <div className="opts-row-label">{t('settings:releaseCheck.label')}</div>
+          <div className="opts-row-sub">{t('settings:releaseCheck.description')}</div>
+        </div>
+        <Toggle on={releaseConsent === true} onChange={writeReleaseConsent}
+          ariaLabel={t('settings:releaseCheck.label')} />
       </div>
     </section>
   );

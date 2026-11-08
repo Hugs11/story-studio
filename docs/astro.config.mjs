@@ -30,6 +30,9 @@ export default defineConfig({
         alt: 'Story Studio',
       },
       favicon: '/favicon.svg',
+      components: {
+        PageTitle: './src/components/PageTitle.astro',
+      },
       social: [
         {
           icon: 'github',

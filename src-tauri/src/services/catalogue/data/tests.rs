@@ -1927,8 +1927,6 @@ fn m1_incomplete_scan_missing_and_unavailable_never_erase_and_move_rejoins_uuid(
         f.store.get_card(&id).unwrap()["offlineReason"],
         "unavailable"
     );
-    // A nonempty mounted root distinguishes an absent file from an empty mount point.
-    std::fs::write(f.root.join("source/mounted.txt"), b"mounted").unwrap();
     f.store
         .finalize_scan("complete", 1, &[(f.source.clone(), true)])
         .unwrap();
@@ -2167,17 +2165,12 @@ fn m1b_removed_source_is_not_found() {
 }
 
 #[test]
-fn m1b_empty_mount_is_unavailable_for_full_scan_and_reconciliation() {
+fn m1b_empty_source_is_missing_for_full_scan_and_reconciliation() {
     let f = Fixture::new();
     let item = f.item("one.mbah", Some("One"), None, 1);
     let id = f.publish(std::slice::from_ref(&item));
     std::fs::remove_file(&item.path).unwrap();
-    let check = || {
-        assert_eq!(
-            f.store.get_card(&id).unwrap()["offlineReason"],
-            "unavailable"
-        )
-    };
+    let check = || assert_eq!(f.store.get_card(&id).unwrap()["offlineReason"], "missing");
     f.store
         .finalize_scan("empty", 1, &[(f.source.clone(), true)])
         .unwrap();
@@ -3461,4 +3454,146 @@ fn storyteller_card_adapter_resolves_uuid_and_journals_device_rename() {
             .as_deref(),
         Some("Ufficiale IT")
     );
+}
+
+#[test]
+fn chosen_project_cover_precedes_archive_and_keeps_supplier_for_assembly() {
+    // These are real .mbah envelopes, analyzed through the production reader.
+    for (fields, chosen) in [
+        (json!({}), false),
+        (json!({"thumbnailImage":"cover.png"}), true),
+        (json!({"rootImage":"cover.png"}), false),
+        (
+            json!({"thumbnailImage":"cover.png","rootImage":"cover.png","sameImage":true}),
+            false,
+        ),
+        (
+            json!({"thumbnailImage":"cover.png","rootImage":"cover.png","sameImage":false}),
+            true,
+        ),
+        (
+            json!({"thumbnailImage":"missing.png","sameImage":false}),
+            false,
+        ),
+    ] {
+        let f = Fixture::new();
+        let mut zip = f.item("reference.zip", Some("Archive"), None, 100);
+        zip.observation.format = "zip".into();
+        let archive_cover = json!({"path":f.root.join("archive.png"),"available":true});
+        image::RgbImage::new(16, 16)
+            .save(f.root.join("archive.png"))
+            .unwrap();
+        zip.observation.cover = Some(archive_cover.clone());
+        let id = f.publish(std::slice::from_ref(&zip));
+        assert_eq!(field_value(&f.store, &id, "cover"), archive_cover);
+        let reference = f.store.get_card(&id).unwrap()["reference"].clone();
+        let mut project = f.item("project.mbah", Some("Project"), None, 1);
+        image::RgbImage::new(16, 16)
+            .save(f.root.join("source/cover.png"))
+            .unwrap();
+        let mut raw = fields;
+        raw["packMetadata"] = json!({"uuid":"12345678-1234-4234-8234-123456789abc"});
+        std::fs::write(&project.path, raw.to_string()).unwrap();
+        project.observation = analyze::project(std::path::Path::new(&project.path)).unwrap();
+        if raw["thumbnailImage"] == "missing.png" {
+            assert_eq!(
+                project.observation.cover.as_ref().unwrap()["available"],
+                false
+            );
+        }
+        let project_cover = project.observation.cover.clone();
+        f.publish(&[zip, project]);
+        let expected = if chosen {
+            project_cover.unwrap()
+        } else {
+            archive_cover
+        };
+        assert_eq!(field_value(&f.store, &id, "cover"), expected);
+        assert_eq!(
+            f.store.get_thumbnail(None, Some(&id), None).unwrap().state,
+            "ready"
+        );
+        assert_eq!(field_value(&f.store, &id, "cover"), expected);
+        assert_eq!(f.store.get_card(&id).unwrap()["reference"], reference);
+        f.store
+            .read_snapshot(|c| {
+                let ids = card::cover_exemplars(c, &id)?;
+                assert_eq!(Some(&ids[0]), card::cover_exemplar(c, &id)?.as_ref());
+                let raw: String = c.query_row(
+                    "SELECT raw_observation_json FROM cache.observation WHERE exemplar_id=?1",
+                    [&ids[0]],
+                    |r| r.get(0),
+                )?;
+                assert_eq!(
+                    serde_json::from_str::<Value>(&raw).unwrap()["cover"],
+                    expected,
+                    "assembly compares the effective value with the supplying observation"
+                );
+                Ok(())
+            })
+            .unwrap();
+    }
+}
+
+#[test]
+fn chosen_project_covers_sort_by_recency_then_id_below_official_and_correction() {
+    let f = Fixture::new();
+    let mut zip = f.item("reference.zip", Some("Archive"), None, 100);
+    zip.observation.format = "zip".into();
+    zip.observation.cover = Some(json!("archive-cover"));
+    let id = f.publish(std::slice::from_ref(&zip));
+    let mut older = f.item("older.mbah", Some("Older"), None, 1);
+    older.observation.raw = json!({"thumbnailImage":"older.png"});
+    older.observation.cover = Some(json!("older-cover"));
+    let mut newer = f.item("newer.mbah", Some("Newer"), None, 2);
+    newer.observation.raw = json!({"thumbnailImage":"newer.png"});
+    newer.observation.cover = Some(json!("newer-cover"));
+    f.publish(&[zip.clone(), older.clone(), newer.clone()]);
+    assert_eq!(field_value(&f.store, &id, "cover"), "newer-cover");
+    f.store
+        .read_snapshot(|c| {
+            let ids = card::cover_exemplars(c, &id)?;
+            let covers: Vec<_> = ids
+                .iter()
+                .map(|id| {
+                    card::cached_candidates(c, id).unwrap().unwrap()
+                        [&("cover".into(), String::new())]["value"]
+                        .clone()
+                })
+                .collect();
+            assert_eq!(
+                covers,
+                vec![
+                    json!("newer-cover"),
+                    json!("older-cover"),
+                    json!("archive-cover")
+                ]
+            );
+            Ok(())
+        })
+        .unwrap();
+    older.modified = 2;
+    older.token = "tie".into();
+    f.publish(&[zip, older, newer]);
+    f.store
+        .read_snapshot(|c| {
+            let ids = card::cover_exemplars(c, &id)?;
+            assert!(ids[0] < ids[1], "equal dates use ascending stable ids");
+            Ok(())
+        })
+        .unwrap();
+    official_lunii(&f);
+    assert_eq!(field_value(&f.store, &id, "cover")["kind"], "lunii");
+    let image = f.root.join("personal.png");
+    image::RgbImage::new(16, 16).save(&image).unwrap();
+    let staged = f.store.stage_cover(&image).unwrap();
+    f.mutate(
+        &id,
+        json!([{"field":"cover","state":"defined","coverStagingId":staged["coverStagingId"]}]),
+    );
+    assert_eq!(
+        field(&f.store.get_card(&id).unwrap(), "cover")["effective"]["origin"],
+        "correction"
+    );
+    assert_ne!(field_value(&f.store, &id, "cover")["kind"], "lunii");
 }

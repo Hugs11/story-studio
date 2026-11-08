@@ -38,7 +38,7 @@ fn trashed_last_copy_allows_device_repatriation_after_restart() {
     let mut f = Fixture::new(false);
     let uuid = uuid::Uuid::parse_str(f.card["uuid"].as_str().unwrap()).unwrap();
     let fiche = f.card["ficheId"].as_str().unwrap().to_owned();
-    f.store.save_name(uuid, "Toudou pack").unwrap();
+    f.store.save_name(uuid, "Le Petit Nuage pack").unwrap();
     assert_eq!(f.store.device_card_link(uuid).unwrap().unwrap().0, fiche);
     // Models the archive recovered from the device, outside the removed copy.
     let recovered = f.root.join("recovered.zip");
@@ -47,19 +47,22 @@ fn trashed_last_copy_allows_device_repatriation_after_restart() {
     assert!(f.store.device_card_link(uuid).unwrap().is_none());
     assert_eq!(
         f.store.card(uuid).unwrap().unwrap().card.title,
-        "Toudou pack"
+        "Le Petit Nuage pack"
     );
     let replacement =
         Arc::new(Store::open(&f.root.join("unused-data"), &f.root.join("unused-cache")).unwrap());
     drop(std::mem::replace(&mut f.store, replacement));
     f.store = Arc::new(Store::open(&f.root.join("data"), &f.root.join("cache")).unwrap());
     assert!(f.store.device_card_link(uuid).unwrap().is_none());
-    let (published, _) = f.store.publish_repatriated_story(&recovered, uuid).unwrap();
+    let (published, _) = f
+        .store
+        .publish_repatriated_story(&recovered, uuid, &f.root, "Le Petit Nuage pack")
+        .unwrap();
     assert_eq!(published, fiche);
     assert_eq!(f.store.device_card_link(uuid).unwrap().unwrap().0, fiche);
     assert_eq!(
         f.store.card(uuid).unwrap().unwrap().card.title,
-        "Toudou pack"
+        "Le Petit Nuage pack"
     );
     assert!(
         payload.exists(),
@@ -373,6 +376,7 @@ fn absent_pack(found_later: bool) {
 fn trash_retention_disconnected_source_never_purges_personal_data() {
     for emptied in [false, true] {
         let f = Fixture::new(false);
+        full_scan(&f);
         personal_data(&f);
         let payload = recycle(&f, "disconnected-source");
         if emptied {
@@ -384,9 +388,29 @@ fn trash_retention_disconnected_source_never_purges_personal_data() {
             f.store.retry_removal_purges();
             assert_personal_data(&f);
         }
-        fs::create_dir(f.root.join("packs")).unwrap();
-        full_scan(&f);
+        // Keep the root genuinely inaccessible (NotFound), even when the
+        // native trash payload is empty: no complete inventory proves absence.
+        f.store
+            .reconcile_source(
+                &crate::services::catalogue::refresh::Root {
+                    source_id: f.store.list_sources().unwrap().items[0].id.clone(),
+                    path: f.root.join("packs"),
+                },
+                &f.store
+                    .exclusions(&f.root.join("cache"), &f.root.join("data"))
+                    .unwrap(),
+                std::time::Duration::ZERO,
+                &std::sync::atomic::AtomicBool::new(false),
+                &|_| false,
+                &crate::services::catalogue::writes::Registry::default(),
+            )
+            .unwrap();
+        assert_eq!(
+            f.store.list_sources().unwrap().items[0].availability,
+            "unavailable"
+        );
         assert!(f.store.reconcile_trash_retention().unwrap().is_none());
+        f.store.retry_removal_purges();
         assert_personal_data(&f);
     }
 }
@@ -783,7 +807,7 @@ fn trash_retention_watcher_publishes_unavailable_fiche_and_emits_the_new_revisio
             break;
         }
         assert!(
-            start.elapsed() < Duration::from_secs(5),
+            start.elapsed() < crate::test_support::timeout(),
             "the offline fiche must be published without reopening the catalogue"
         );
     }

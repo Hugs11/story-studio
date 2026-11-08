@@ -172,7 +172,6 @@
   "project.recent.title": "Recent project",
   "media.copy.progress": "Copying into the project…",
   "media.cover.progress": "Extracting the cover…",
-  "names.pack.fallback": "Imported audiobook",
   "pack.invalid.message": "The imported file is invalid or can’t be accessed: {{path}}\n\n{{reason}}",
   "folder.read.prefix": "Couldn’t read the folder: ",
   "project.recent.prefix": "Couldn’t open this recent project:\n",
@@ -254,5 +253,10 @@
   "folder.pack.copy.failed": "The folder’s pack couldn’t be copied into the project. Check the free disk space and that the project isn’t locked.",
   "format.legacyLink.unsupported": "This project contains an old Link node, which is no longer supported.",
   "format.legacyLink.found": "old Link node",
-  "format.legacyLink.expected": "folder, story or imported pack"
+  "format.legacyLink.expected": "folder, story or imported pack",
+  "media.follow.already": "Already followed for this project",
+  "media.follow.alreadyPaused": "Already followed (paused) for this project",
+  "media.follow.manage": "Preferences → Media subscriptions",
+  "media.follow.manageButton": "Manage media subscriptions in Preferences",
+  "media.follow.sources": "Sources followed for this project"
 }

@@ -182,7 +182,9 @@ export async function run(args = []) {
       ctx.check('[B] « Choisir le dossier » relie les deux médias (retour de focus compris)', afterFolder.found === 2, afterFolder);
 
       if (afterFolder.found === 2) {
-        await missingMediaModal(page).getByRole('button', { name: /Appliquer et enregistrer/ }).click();
+        const applyButton = missingMediaModal(page).getByRole('button', { name: /Appliquer et enregistrer/ });
+        await page.waitForFunction(() => document.querySelector('.relink-btn-primary')?.disabled === false);
+        await applyButton.click();
         await page.waitForTimeout(6000);
         const after = readBindings(projectPath).bindings.slice(0, 2);
         ctx.check('[B] le fichier enregistré désigne les médias reliés', after.every((binding) => existsSync(bindingFile(projectDir, binding.path))), { after });

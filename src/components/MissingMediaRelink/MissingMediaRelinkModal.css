@@ -564,3 +564,8 @@
   .relink-row-actions { width: 100%; padding-left: 37px; }
   .relink-row-select { max-width: 100%; flex: 1; }
 }
+
+.relink-scan-warning {
+  padding: 0 20px;
+  flex-shrink: 0;
+}

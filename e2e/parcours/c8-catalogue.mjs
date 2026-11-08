@@ -23,6 +23,10 @@ async function until(page, read, label, timeout = 60_000) {
 
 // Le pilote Linux n'expose pas fill/selectOption ; gestes natifs W3C locaux.
 async function fill(page, selector, value) {
+  if (selector === '#catalogue-search') {
+    await page.keyboard.press('Control+f');
+    await until(page, () => page.evaluate(() => document.activeElement?.id === 'catalogue-search'), 'focus recherche catalogue');
+  }
   const element = await page.locator(selector).find();
   const path = `/element/${element[ELEMENT]}`;
   await page.client.command('POST', `${path}/click`, {});

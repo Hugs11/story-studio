@@ -527,12 +527,23 @@ impl Store {
         self.restore_trashed_items(items)?;
         self.write(|tx| {
             let stored = super::sources::bytes(directory);
-            let inserted = tx.execute("INSERT INTO source(id,path,path_key,origin,status,revision,resolved_path) VALUES (?1,?2,?3,'repatriated','active',(SELECT sources_revision+1 FROM catalogue),?2) ON CONFLICT(id) DO NOTHING", params![source, stored, super::path_identity::key(directory)]).map_err(error)?;
+            let path_key = super::path_identity::key(directory);
+            // Reuse only active sources, preserving their identity and origin.
+            let existing: Option<String> = tx.query_row("SELECT id FROM source WHERE path_key=?1 AND status='active'", [&path_key], |r| r.get(0)).optional().map_err(error)?;
+            // Removal clears coverage, file state and health; discard its path
+            // refusal before creating the technical source with this unique key.
+            tx.execute("DELETE FROM source WHERE path_key=?1 AND status<>'active'", [&path_key]).map_err(error)?;
+            let source = existing.as_deref().unwrap_or(source);
+            let items: Vec<_> = items.iter().cloned().map(|mut item| {
+                item.source_id = source.to_owned();
+                item
+            }).collect();
+            let inserted = tx.execute("INSERT INTO source(id,path,path_key,origin,status,revision,resolved_path) VALUES (?1,?2,?3,'repatriated','active',(SELECT sources_revision+1 FROM catalogue),?2) ON CONFLICT(id) DO NOTHING", params![source, stored, path_key]).map_err(error)?;
             if inserted > 0 {
                 tx.execute("UPDATE catalogue SET sources_revision=sources_revision+1", []).map_err(error)?;
             }
             let current = tx.query_row("SELECT sources_revision FROM catalogue", [], |r| r.get(0)).map_err(error)?;
-            publish_targeted_tx(tx, &uuid::Uuid::new_v4().to_string(), current, source, items, &[])
+            publish_targeted_tx(tx, &uuid::Uuid::new_v4().to_string(), current, source, &items, &[])
         })
     }
 
@@ -544,13 +555,6 @@ impl Store {
         expected_sources: i64,
         scopes: &[(String, bool)],
     ) -> Result<i64> {
-        // An empty mount point cannot prove that known packs were deleted.
-        let mut empty_roots = std::collections::BTreeSet::new();
-        for (source, complete) in scopes {
-            if *complete && self.empty_known_source(source)? {
-                empty_roots.insert(source.clone());
-            }
-        }
         self.write(|tx| {
             let current = check_sources_revision(tx, expected_sources)?;
             let mut changed = false;
@@ -570,10 +574,10 @@ impl Store {
                         tx.execute("UPDATE cache.observation SET scan_id=?1 WHERE exemplar_id IN (SELECT id FROM exemplar WHERE anchor_json=?2)", params![scan_id,anchor]).map_err(error)?;
                     }
                 }
-                let state = if *complete && !empty_roots.contains(source) { "missing" } else { "unavailable" };
+                let state = if *complete { "missing" } else { "unavailable" };
                 changed |= tx.execute(MARK_UNSEEN, params![source, id, state])
                     .map_err(error)? > 0;
-                if *complete && !empty_roots.contains(source) {
+                if *complete {
                     tx.execute(PRUNE_FILE_STATES, params![source, id])
                         .map_err(error)?;
                 }

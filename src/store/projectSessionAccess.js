@@ -2,6 +2,16 @@
 import { isTauri } from '@tauri-apps/api/core';
 import { catalogueFilesApi } from './catalogue/catalogueFilesApi.js';
 let active = null;
+let modified = true;
+let pendingState = Promise.resolve();
+export function setActiveProjectModified(value) { modified = value; }
+export async function syncActiveProjectAccess() {
+  const token = active;
+  const action = modified ? 'modified' : 'saved';
+  if (!token) return;
+  pendingState = pendingState.catch(() => {}).then(() => catalogueFilesApi.projectAccess(action, null, token));
+  await pendingState;
+}
 export async function releaseActiveProjectAccess() {
   const token = active; active = null;
   if (token) await catalogueFilesApi.projectAccess('release', null, token);
@@ -16,6 +26,10 @@ export async function installProjectAccess(token, project = null, accept = () =>
   if (!accept()) { await releaseProjectAccess(token); return; }
   const previous = active; active = token ?? null;
   if (previous && previous !== token) await catalogueFilesApi.projectAccess('release', null, previous);
+  // Native claims start modified, so only a clean editor needs an update here.
+  // Its work-state effect may have run before this claim was installed; publish
+  // the saved state now so an already queued send can use it.
+  if (!modified) await syncActiveProjectAccess();
 }
 export async function claimProjectAccess(kind, path) {
   if (!isTauri()) return null;

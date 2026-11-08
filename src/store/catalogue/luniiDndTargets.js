@@ -5,8 +5,8 @@
  * panel components free of drag hooks and gives pointer and keyboard drags the
  * same single source of truth.
  *
- * Kinds: `row` (insert before that story), `orphan` / `header` / `scroll` /
- * `tab` / `collapsed` (end of the device's list). Only `row` and `header`
+ * Kinds: `end` (dedicated area below the last row), `row` (insert before that story), `orphan` / `header` / `scroll` /
+ * `tab` / `collapsed` (end of the device's list). `row`, `header` and `end`
  * take a reorder drop. `catalogue` is the catalogue's own results area: dropping
  * Lunii stories there repatriates them.
  */
@@ -23,7 +23,7 @@ export const sendRowKey = target => (target?.kind === 'row' ? target.rowKey : nu
 /** Index a reorder drop lands on, or null when this spot does not accept it. */
 export function reorderIndex(target, device) {
   if (!target || !device || target.deviceId !== device.id) return null;
-  if (target.kind === 'header') return device.stories.length;
+  if (target.kind === 'header' || target.kind === 'end') return device.stories.length;
   if (target.kind !== 'row') return null;
   const index = device.stories.findIndex(story => story.key === target.rowKey);
   return index < 0 ? null : index;

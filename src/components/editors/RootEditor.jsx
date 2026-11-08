@@ -109,6 +109,7 @@ export const RootEditor = memo(function RootEditor({
         <div className="media-col-header">{t("tree:media.sound.label")}<span className="media-col-subtitle">{t("tree:root.titleAudio.subtitle")}</span>
         </div>
         <AudioField
+          levelLabel={{ role: 'root' }}
           label={t("tree:root.titleAudio.label")}
           labelRef={{ key: "tree:root.titleAudio.label" }}
           description={t("tree:root.titleAudio.description")}
@@ -289,6 +290,7 @@ export const RootEditor = memo(function RootEditor({
             <div className="card-copy card-copy--inline">{t("tree:root.narrative.description")}</div>
           </div>
           <AudioField
+            levelLabel={{ entry: node.rootEntries?.find((entry) => entry.type === 'story')?.name }}
             label={t("tree:root.narrative.audio")}
             labelRef={{ key: "tree:root.narrative.audio" }}
             description={t("tree:root.narrative.audioDescription")}

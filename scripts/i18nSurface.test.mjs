@@ -129,7 +129,7 @@ for (const development of [true, false]) {
       for (const text of ['« Système » suit l’apparence configurée dans Windows, Linux et macOS.', 'Ouvrir les réglages quand on sélectionne un élément', 'Voir et modifier les raccourcis de l’application', 'Intelligence artificielle', 'YouTube (yt-dlp)']) assert.ok(frenchHtml.includes(text));
       await instance.changeLanguage('pseudo');
       assert.ok(render().includes('[Môdïfïër'));
-      assert.deepEqual(OPTION_SECTION_IDS, ['save', 'interface', 'catalogue', 'projects-media', 'xtts', 'comfyui', 'advanced', 'youtube', 'diagnostic']);
+      assert.deepEqual(OPTION_SECTION_IDS, ['save', 'interface', 'catalogue', 'media-subscriptions', 'projects-media', 'xtts', 'comfyui', 'advanced', 'youtube', 'diagnostic']);
     } finally {
       await server.close();
     }

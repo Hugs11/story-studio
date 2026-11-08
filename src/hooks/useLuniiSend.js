@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { cardTitle } from '../store/catalogue/entryModel.js';
 import { luniiDeviceApi } from '../store/catalogue/luniiDeviceApi.js';
-import { buildSelection, resolveSendChoices, dropGauge, dropIndex, dropRefusal, estimateBytes, sendableCards, sendContext, sendPositions, sendRefusal, sendTerminal, virtualRows } from '../store/catalogue/luniiSend.js';
+import { buildSelection, resolveSendChoices, sendEntryItems, dropGauge, dropIndex, dropRefusal, estimateBytes, sendableCards, sendContext, sendPositions, sendRefusal, sendTerminal, virtualRows } from '../store/catalogue/luniiSend.js';
 
 // Like operation trackers, send metadata belongs to the API session, not the screen.
 // Completed contexts are kept only for their bilan, until it is dismissed.
@@ -57,7 +58,7 @@ export function useLuniiSend({ lunii, operations, cards, revision, chooseExempla
 
   useEffect(() => {
     for (const context of contexts) {
-      if (session.finished.has(context.operationId) || !sendTerminal(items[context.operationId])) continue;
+      if (context.queueOwned || session.finished.has(context.operationId) || !sendTerminal(items[context.operationId])) continue;
       void release(context.operationId, context.deviceId);
     }
   }, [contexts, items, release, session]);
@@ -101,37 +102,40 @@ export function useLuniiSend({ lunii, operations, cards, revision, chooseExempla
     const device = state.luniiDevices.find(d => d.id === deviceId);
     if (!device) return null;
     const index = typeof indexOf === 'function' ? indexOf(device) : indexOf;
-    const refusal = state.store.beginSend(deviceId);
+    const refusal = sendRefusal(device);
     if (refusal) { state.store.reportError({ code: refusal, params: {} }); return null; }
     const { entries, skipped, official, damaged } = buildSelection(picked, expected, state.luniiDevices, chosen);
     const at = index == null ? device.stories.length : index;
-    let started = false;
-    let requestId;
-    try {
-      if (!entries.length) {
-        const context = { ...sendContext({ operationId: `local:${crypto.randomUUID()}`, device, startIndex: at, cards: picked, entries, skipped, official, damaged }), local: true };
+    const rowKey = index == null ? null : device.stories[at]?.key ?? null;
+    const requestId = crypto.randomUUID();
+    let context;
+    const queued = state.store.enqueueSend(deviceId, { keys: entries.map(e => e.selection.exemplarId), items: sendEntryItems(entries), title: picked.map(c => cardTitle(c) ?? '').join(', '), dropIndex: at, rowKey }, async (currentDevice = device, queueEntryId) => {
+      const startIndex = rowKey == null ? currentDevice.stories.length
+        : currentDevice.stories.some(story => story.key === rowKey) ? dropIndex(currentDevice, rowKey)
+          : Math.min(at, currentDevice.stories.length);
+      try {
+        if (!entries.length) {
+          context = { ...sendContext({ operationId: `local:${requestId}`, device: currentDevice, startIndex, cards: picked, entries, skipped, official, damaged }), local: true, queueOwned: true };
+          setContexts(list => [...list, context]);
+          return { context };
+        }
+        latest.current.operations.retain?.(requestId);
+        const receipt = await api.send({ deviceId, selection: entries.map(e => e.selection), position: index == null ? null : startIndex, requestId });
+        context = { ...sendContext({ operationId: receipt.operationId, device: currentDevice, startIndex, cards: picked, entries, skipped, official, damaged }), requestId, queueOwned: true, queueEntryId };
         setContexts(list => [...list, context]);
-        await release(context.operationId, deviceId);
-        return context;
+        try { await latest.current.operations.open(receipt.operationId); }
+        catch (error) { state.store.reportError(error); }
+        return { receipt, context };
+      } catch (error) {
+        latest.current.operations.release?.(requestId);
+        throw error;
       }
-      requestId = crypto.randomUUID();
-      latest.current.operations.retain?.(requestId);
-      const receipt = await api.send({ deviceId, selection: entries.map(e => e.selection), position: index == null ? null : index, requestId });
-      started = true;
-      const context = { ...sendContext({ operationId: receipt.operationId, device, startIndex: at, cards: picked, entries, skipped, official, damaged }), requestId };
-      setContexts(list => [...list, context]);
-      await latest.current.operations.open(receipt.operationId);
-      return context;
-    } catch (error) {
-      state.store.reportError(error);
-      // Once the engine accepted the send, the settling effect owns the release.
-      if (!started) {
-        if (requestId) latest.current.operations.release?.(requestId);
-        await state.store.endSend(deviceId);
-      }
-      return null;
-    }
-  }, [api, release, setContexts]);
+    }, () => {
+      if (context) finish(context.operationId);
+      latest.current.operations.release?.(requestId);
+    }, operationId => latest.current.operations.state.items[operationId]);
+    return queued ? queued.finished : null;
+  }, [api, finish, setContexts]);
 
   /** Clears the bilan entry of a send that never reached the engine. */
   const dismissLocal = useCallback(operationId => {
@@ -176,5 +180,5 @@ export function useLuniiSend({ lunii, operations, cards, revision, chooseExempla
     return sendCards(device.id, ids, current => dropIndex(current, rowKey));
   }, [drag, sendCards]);
 
-  return { contexts, contextFor, sending, virtualFor, sendCards, dismissLocal, drag, over, startDrag, endDrag, hover, leave, drop, cancel: operations.cancel };
+  return { contexts, contextFor, sending, virtualFor, sendCards, dismissLocal, drag, over, startDrag, endDrag, hover, leave, drop, cancel: operationId => operations.cancel(operationId) };
 }

@@ -1,4 +1,4 @@
-import { installProjectAccess, releaseActiveProjectAccess, releaseProjectAccess } from '../store/projectSessionAccess.js';
+import { installProjectAccess, releaseActiveProjectAccess, releaseProjectAccess, setActiveProjectModified, syncActiveProjectAccess } from '../store/projectSessionAccess.js';
 import { presentStoredError, presentUserMessage } from '../i18n/userMessage.js';
 import { useCommonTranslation } from '../i18n/commonPresentation.js';
 import { useEffect, useRef, useState } from 'react';
@@ -86,6 +86,10 @@ export function useWorkSession({
     savedSnapshot: savedSnapshotRef.current,
     pristine: store.isPristine(),
   });
+  setActiveProjectModified(recoveryNeeded);
+  useEffect(() => {
+    void syncActiveProjectAccess().catch(error => logger.warn('project:access-sync-failed', error));
+  }, [recoveryNeeded, store.savePath]);
   // La tick périodique relit aussi ce critère avant toute écriture en file.
   ephemeralSnapshotSeedStateRef.current.recoveryNeeded = recoveryNeeded;
 

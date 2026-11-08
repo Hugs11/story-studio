@@ -1398,3 +1398,34 @@ fn fixed_zip_of_a_folder_keeps_its_whole_name_even_with_a_dot() {
 
     fs::remove_dir_all(dir).expect("cleanup");
 }
+
+#[test]
+fn community_pack_checker_digital_silence_has_no_contradictory_near_mute_issue() {
+    let ffmpeg = get_ffmpeg_path().expect("FFmpeg required");
+    let dir = temp_dir("digital_silence_regression");
+    fs::create_dir_all(&dir).unwrap();
+    let input = dir.join("silent.wav");
+    let mut command = Command::new(&ffmpeg);
+    command
+        .args([
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=44100:cl=mono:d=2",
+            "-y",
+        ])
+        .arg(&input);
+    apply_no_window(&mut command);
+    assert!(command.status().unwrap().success());
+    let (_, issues) = audio::analyze_audio_file(&ffmpeg, &input, "silent.wav", "Audio", "story");
+    assert!(issues
+        .iter()
+        .any(|issue| issue.code.as_deref() == Some(codes::CHECKER_AUDIO_SILENT)));
+    assert!(!issues
+        .iter()
+        .any(|issue| issue.code.as_deref() == Some(codes::CHECKER_AUDIO_NEAR_MUTE)));
+    fs::remove_dir_all(dir).unwrap();
+}

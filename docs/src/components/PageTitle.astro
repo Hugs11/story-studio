@@ -1,0 +1,23 @@
+---
+import Default from '@astrojs/starlight/components/PageTitle.astro';
+
+// Version de l'application décrite par ces guides. À changer quand la documentation est relue.
+const documentedVersion = '0.9.9';
+---
+
+<Default {...Astro.props}><slot /></Default>
+<p class="docs-version-note">Dernière mise à jour de la documentation : version {documentedVersion}</p>
+
+<style>
+  .docs-version-note {
+    display: inline-block;
+    margin: 0.5rem 0 0;
+    padding: 0.15rem 0.65rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 999px;
+    background: var(--sl-color-gray-6);
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-xs);
+    line-height: 1.5;
+  }
+</style>

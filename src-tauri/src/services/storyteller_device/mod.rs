@@ -406,3 +406,59 @@ fn install_temporary(name: &str) -> bool {
     name.strip_prefix(".story-studio-install-")
         .is_some_and(|s| Uuid::parse_str(s).is_ok())
 }
+
+/// One classification for send items and IPC/operation errors. `device` means
+/// an operation writing the volume without any pack preparation (remove, etc.).
+pub(crate) fn device_fault(code: &str, stage: &str) -> bool {
+    use crate::support::user_message::codes;
+    match code {
+        codes::STORYTELLER_NO_SPACE
+        | codes::STORYTELLER_NO_SPACE_UNKNOWN
+        | codes::STORYTELLER_SEND_DISCONNECTED
+        | codes::STORYTELLER_DEVICE_GONE
+        | codes::STORYTELLER_DEVICE_UNRESPONSIVE
+        | codes::STORYTELLER_REPATRIATE_DISCONNECTED
+        | codes::STORYTELLER_CIPHER_METADATA_IO
+        | codes::STORYTELLER_CIPHER_METADATA_REFUSED
+        | codes::STORYTELLER_STORY_PARKING_FAILED
+        | codes::STORYTELLER_VOLUME_READ_ONLY
+        | codes::STORYTELLER_BACKUP_FAILED
+        | codes::STORYTELLER_PLAYLIST_RECOVERY_REQUIRED
+        | codes::STORYTELLER_PLAYLIST_DAMAGED
+        | codes::STORYTELLER_DEVICE_CHANGED
+        | codes::STORYTELLER_PLAYLIST_TOO_LARGE
+        | codes::STORYTELLER_READ_ONLY => true,
+        codes::STORYTELLER_WRITE_FAILED => matches!(stage, "copying" | "finalizing" | "device"),
+        _ => false,
+    }
+}
+
+pub(crate) fn classify_error(
+    mut error: crate::support::user_message::UserMessage,
+    stage: &str,
+) -> crate::support::user_message::UserMessage {
+    error.device_fault = Some(
+        error
+            .device_fault
+            .unwrap_or_else(|| device_fault(&error.code, stage)),
+    );
+    error
+}
+
+/// Preserve card refusals before their public message becomes WRITE_FAILED.
+pub(crate) fn classify_device_error(
+    error: Error,
+    stage: &str,
+) -> crate::support::user_message::UserMessage {
+    let mut message = crate::support::user_message::UserMessage::from(error);
+    message.device_fault = Some(match error {
+        Error::InvalidCard | Error::FutureCard => false,
+        Error::Io
+        | Error::Verification
+        | Error::BackupFailed
+        | Error::NoSpace { .. }
+        | Error::ReadOnly => true,
+        _ => device_fault(&message.code, stage),
+    });
+    message
+}

@@ -340,6 +340,7 @@ fn every_plan_parameter_enters_the_task_key() {
             ConversionTask::new(
                 sha.clone(),
                 ConversionPlan::AudioEncode {
+                    silent: false,
                     filters: filters.to_string(),
                     applied: vec![PlanStep::MonoDownmix, PlanStep::Mp3Encode],
                     notice: None,

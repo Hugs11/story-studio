@@ -79,6 +79,15 @@ export async function waitForPermissionOutcome(page, { timeout = 20_000 } = {}) 
   return { outcome: 'timeout', elapsedMs };
 }
 
+// L'URL peut déjà être préremplie ; le chargement reste un geste explicite.
+export async function setMediaImportUrl(modal, selector, url, followedSourceTitle) {
+  if (followedSourceTitle) {
+    await modal.locator('.followed-source-choices').getByRole('button', { name: followedSourceTitle, exact: true }).click();
+  } else {
+    await modal.locator(selector).fill(url);
+  }
+}
+
 /**
  * Cycle complet depuis l'outil de la barre : clic → décompte → autorisation
  * → quelques secondes d'enregistrement → arrêt → nom du fichier →
@@ -153,7 +162,7 @@ export function youtubeFunnelModal(page) {
  * `{ ok, phase, error?, videoTitle?, elapsedMs }` ; `phase` dit où un échec
  * s'est produit ('liste' | 'import' | null si `ok`).
  */
-export async function runYoutubeImport(page, { videoUrl, timeout = 15 * 60_000 } = {}) {
+export async function runYoutubeImport(page, { videoUrl, followedSourceTitle, timeout = 15 * 60_000 } = {}) {
   await clickMediaTool(page, 'import-youtube');
   const modal = youtubeFunnelModal(page);
   await modal.waitFor({ timeout: 15_000 });
@@ -161,7 +170,7 @@ export async function runYoutubeImport(page, { videoUrl, timeout = 15 * 60_000 }
   if (await cguButton.count()) await cguButton.click();
 
   const startedAt = Date.now();
-  await modal.locator('#youtube-funnel-url').fill(videoUrl);
+  await setMediaImportUrl(modal, '#youtube-funnel-url', videoUrl, followedSourceTitle);
   await clickButton(modal, 'Charger les vidéos');
   const row = modal.locator('.youtube-funnel-row').first();
   const listError = modal.locator('.funnel-error').first();
@@ -205,14 +214,14 @@ export function podcastModal(page) {
  * Renvoie `{ ok, phase, error?, episodeTitle?, elapsedMs }`.
  */
 export async function runPodcastImport(page, {
-  feedUrl, episodeQuery, timeout = 5 * 60_000,
+  feedUrl, followedSourceTitle, episodeQuery, timeout = 5 * 60_000,
 } = {}) {
   await clickMediaTool(page, 'import-podcast');
   const modal = podcastModal(page);
   await modal.waitFor({ timeout: 15_000 });
 
   const startedAt = Date.now();
-  await modal.locator('#podcast-url-input').fill(feedUrl);
+  await setMediaImportUrl(modal, '#podcast-url-input', feedUrl, followedSourceTitle);
   await clickButton(modal, 'Charger les épisodes');
   const filterInput = modal.locator('.podcast-toolbar input[type="text"]').first();
   const feedError = modal.locator('.podcast-error').first();

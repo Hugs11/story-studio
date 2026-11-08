@@ -176,5 +176,14 @@
   "end.remove.noLocalEndings": "0 endings set for individual stories will be kept.",
   "projects.consolidate.noCopiedMedia": "0 media files copied",
   "xtts.voices.noneDetected": "0 voices detected",
-  "consolidate.files.noneCopied": "0 files copied"
+  "consolidate.files.noneCopied": "0 files copied",
+  "releaseCheck.question.title": "Notify you about future versions?",
+  "releaseCheck.description": "When the app starts, Story Studio checks GitHub for a newer version and lets you know. Nothing is downloaded or installed automatically.",
+  "releaseCheck.accept": "Yes, notify me",
+  "releaseCheck.decline": "No thanks",
+  "releaseCheck.label": "Notify me about new versions",
+  "releaseCheck.notice": "Story Studio {{version}} is available",
+  "releaseCheck.open": "View the new release",
+  "projects.levelAlerts.label": "Flag sounds with a level problem when added",
+  "projects.levelAlerts.description": "Measures each added sound in the background, and those already present when their slot is shown, and puts an amber mark on the slot when the level is a problem. The generation report is not affected."
 }

@@ -1,75 +1,39 @@
 import { containsOfficialContent, officialIdentityFields } from './officialProvenance.js';
-import { translateImport as t } from '../i18n/importPresentation.js';
 import { replaceEntryWithEntries } from './projectModel/operations.js';
 import {
   ProjectMenuDepthError,
   validateMenuDepthPlacement,
 } from './projectModel/menuDepth.js';
 import { basenameNoExt } from '../utils/fileUtils.js';
-import { parseConventionName, splitLeadingAge } from '../utils/packConvention.js';
-import { sanitizeImportedName } from './importedNames.js';
+import { parseConventionName } from '../utils/packConvention.js';
+import { resolveImportedPackMetadata } from './importedPackMetadata.js';
 import { generateUuid } from '../utils/uuid.js';
 
-// Remonte un préfixe d'âge « libre » (« 3+ Example… », « 6+_Titre ») vers minAge et le
-// retire du titre. Contrairement à la convention stricte « N+] » (gérée par
-// parseConventionName), certains packs notent l'âge sans crochet ; sans ce traitement,
-// le « 3+ » restait dans le titre et se dédoublait dans le nom exporté (« 3+]3+_… »).
-function liftLeadingAge(name, fallbackAge = '3') {
-  return splitLeadingAge(name) ?? { minAge: fallbackAge, title: String(name || '').trim() };
-}
-
 export function getUnpackedPackDetails({ result = {}, zipPath = '', zipName = '' } = {}) {
-  const zipFilename = basenameNoExt(zipPath);
+  const zipFilename = basenameNoExt(zipName || zipPath);
   const rawTitle = String(result?.title || '').trim();
-  const parsedZipFilename = parseConventionName(zipFilename);
-  const parsedPackName = parseConventionName(rawTitle) ?? parsedZipFilename;
-  const isZipConvention = /^\d+\+\]/.test(zipFilename);
-  const isTitleConvention = /^\d+\+\]/.test(rawTitle);
-  const packName = (rawTitle && (isTitleConvention || !isZipConvention))
-    ? sanitizeImportedName(rawTitle, zipName || t('import:names.pack.fallback'))
-    : sanitizeImportedName(zipFilename || zipName, t('import:names.pack.fallback'));
-  const fallbackAge = (zipFilename || zipName || '').match(/^\s*(\d+)\s*\+/)?.[1] || '3';
-  const lifted = liftLeadingAge(packName, fallbackAge);
-  // Un titre de convention réduit à l'âge (« 6+] ») n'a rien de lisible : le
-  // nom de l'archive, s'il en porte un, sert de titre.
-  const archiveTitle = parsedZipFilename?.title
-    || liftLeadingAge(sanitizeImportedName(zipFilename, ''), fallbackAge).title;
-  const packMetadata = parsedPackName
-    ? {
-        ...parsedPackName,
-        title: String(parsedPackName.title || '').trim() ? parsedPackName.title : archiveTitle,
-        version: result?.packVersion ?? parsedPackName.version,
-        description: result?.packDescription ?? '',
-        uuid: result?.uuid ?? result?.packUuid ?? '',
-        originalUuid: result?.uuid ?? result?.packUuid ?? '',
-        namingMode: 'convention',
-      }
-    : {
-        title: lifted.title,
-        author: '',
-        version: result?.packVersion ?? 1,
-        minAge: lifted.minAge,
-        producer: '',
-        bonus: '',
-        description: result?.packDescription ?? '',
-        uuid: result?.uuid ?? result?.packUuid ?? '',
-        originalUuid: result?.uuid ?? result?.packUuid ?? '',
-        namingMode: 'convention',
-        legacyExportName: '',
-        legacyName: '',
-      };
-
+  const packMetadata = {
+    ...resolveImportedPackMetadata({
+      pack: {
+        title: result.title, version: result.packVersion,
+        minAge: result.minAge, maxAge: result.maxAge, author: result.author, description: result.packDescription,
+      },
+      catalogue: result.catalogueMetadata,
+      fileName: zipName || zipPath,
+    }),
+    uuid: result.uuid ?? result.packUuid ?? '',
+    originalUuid: result.uuid ?? result.packUuid ?? '',
+  };
   return {
-    zipFilename,
-    rawTitle,
-    parsedZipFilename,
-    parsedPackName,
-    packName,
+    zipFilename, rawTitle,
+    parsedZipFilename: parseConventionName(zipFilename),
+    parsedPackName: parseConventionName(rawTitle) ?? parseConventionName(zipFilename),
+    packName: packMetadata.title,
     packMetadata,
   };
 }
 
-function isBlankProjectForZipPromotion(project, menuId, { savedDuringUnpack = false } = {}) {
+export function isBlankProjectForZipPromotion(project, menuId, { savedDuringUnpack = false } = {}) {
   const localProjectName = String(project?.projectName || '').trim();
   return menuId == null
     && (project?.rootEntries ?? []).length <= 1
@@ -89,8 +53,8 @@ export function buildProjectAfterZipUnpack({
   result = {},
   savedDuringUnpack = false,
 }) {
-  const details = getUnpackedPackDetails({ result, zipPath, zipName });
   const shouldPromote = isBlankProjectForZipPromotion(project, menuId, { savedDuringUnpack });
+  const details = getUnpackedPackDetails({ result: shouldPromote ? result : { ...result, catalogueMetadata: null }, zipPath, zipName });
   const depthDiagnostic = validateMenuDepthPlacement(
     project,
     shouldPromote ? null : menuId,

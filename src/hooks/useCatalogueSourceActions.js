@@ -5,10 +5,10 @@ export function useCatalogueSourceActions(sources, operations, setActionError) {
     try { await operations.start(sources.sourcesRevision, { sourceIds: sourceId ? [sourceId] : undefined, paths }); }
     catch (error) { setActionError(error); await sources.refresh(); }
   }
-  async function add(path, declined = false) {
+  async function add(path) {
     setActionError(null);
-    const result = await sources.add(path, declined);
-    if (result && !declined && !result.alreadyActive) {
+    const result = await sources.add(path);
+    if (result && !result.alreadyActive) {
       try { await operations.start(result.sourcesRevision, { sourceIds: [result.sourceId] }); }
       catch (error) { setActionError(error); }
     }

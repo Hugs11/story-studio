@@ -81,7 +81,7 @@ fn walk_story_doc_to_entries_inner(
         .get("title")
         .and_then(|v| v.as_str())
         .filter(|s| !s.trim().is_empty())
-        .unwrap_or(proposed_pack_name.unwrap_or("Pack importé"))
+        .unwrap_or(proposed_pack_name.unwrap_or(""))
         .to_string();
 
     let stages: HashMap<&str, &serde_json::Value> = doc
@@ -1444,6 +1444,21 @@ mod tests {
 
     use super::super::graph_import::{promote_autonomous_root_target_values, OutOfTreeEdge};
     use super::remove_projected_night_bridge;
+
+    #[test]
+    fn untitled_pack_projection_does_not_invent_a_title() {
+        let doc = json!({
+            "stageNodes": [
+                {"uuid": "entry", "squareOne": true,
+                 "okTransition": {"actionNode": "root", "optionIndex": 0}},
+                {"uuid": "story"}
+            ],
+            "actionNodes": [{"id": "root", "options": ["story"]}]
+        });
+        let projected = super::walk_story_doc_to_entries(&doc, &Default::default())
+            .expect("projection without title");
+        assert_eq!(projected["title"], "");
+    }
 
     #[test]
     fn night_bridge_returns_are_cleaned_before_root_target_promotion() {

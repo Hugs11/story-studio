@@ -1,9 +1,11 @@
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
+import { beforeFicheAbandon, protectDraft } from '../src/store/catalogue/metadataDraft.js';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 
 import { runner } from './reactHookDriver.mjs';
-import { announceSavedSubscriptions, findProjectSubscription } from '../src/store/mediaSubscriptionSource.js';
+import { announceSavedSubscriptions, findProjectSubscription, getProjectFollowedSources } from '../src/store/mediaSubscriptionSource.js';
 import { KEYS } from '../src/store/persistentSettings.js';
 
 const mockModuleSources = new Map([
@@ -197,8 +199,10 @@ function createHarness({ values = new Map() } = {}) {
       this.project = typeof next === 'function' ? next(this.project) : next;
     },
   };
+  const leaveGuard = { current: null };
   const hookRunner = runner(() => useMediaSubscriptions({
     store,
+    leaveGuard,
     openProject: (path) => {
       calls.openProject.push(path);
       return openProjectHandler(path);
@@ -211,10 +215,20 @@ function createHarness({ values = new Map() } = {}) {
 
   return {
     values,
+    leaveGuard,
     storage,
     store,
     calls,
     render: () => hookRunner.render(),
+    replayEffects: () => hookRunner.replayEffects(),
+    async runStartup() {
+      for (const [id, timer] of [...timers]) {
+        timers.delete(id);
+        timer.callback(...timer.args);
+      }
+      await flushAsyncWork();
+      return hookRunner.render().panelProps;
+    },
     setInvoke(handler) { invokeHandler = handler; },
     setExists(handler) { existsHandler = handler; },
     setOpen(handler) { openHandler = handler; },
@@ -244,6 +258,25 @@ function activate(harness, request = PODCAST_REQUEST, path = PROJECT_PATH) {
   harness.saveProject(path);
   return config.id;
 }
+
+test('import source list belongs to the saved project path, includes pauses, excludes foreign and unsaved follows', () => {
+  const harness = createHarness();
+  try {
+    harness.render().applyRequest(PODCAST_REQUEST);
+    assert.deepEqual(getProjectFollowedSources('podcast'), []);
+    harness.saveProject(PROJECT_PATH);
+    const id = harness.store.project.mediaSubscriptions[0].id;
+    assert.deepEqual(getProjectFollowedSources('podcast').map((s) => [s.id, s.url, s.state]), [[id, PODCAST_REQUEST.url, 'active']]);
+    assert.deepEqual(getProjectFollowedSources('youtube'), []);
+    harness.render().panelProps.onToggleSubscription(id);
+    assert.equal(getProjectFollowedSources('podcast')[0].state, 'paused');
+    harness.store.savePath = COPY_PATH;
+    assert.deepEqual(getProjectFollowedSources('podcast'), []);
+    harness.store.savePath = null;
+    assert.deepEqual(getProjectFollowedSources('podcast'), []);
+  } finally { harness.dispose(); }
+  assert.deepEqual(getProjectFollowedSources('podcast'), []);
+});
 
 async function checkOnce(harness) {
   await harness.render().panelProps.onCheck();
@@ -879,3 +912,235 @@ test('relocating a paused follow whose project went missing keeps it paused unti
     harness.dispose();
   }
 });
+
+// La fiche réelle fournit protectDraft via beforeFicheAbandon ; la question et
+// ses réponses sont pilotées ici, sans remplacer le chemin de chargement du hook.
+for (const alreadyOpen of [false, true]) test(`Catalogue dirty draft gates notification opening (already open=${alreadyOpen})`, async () => {
+  const harness = createHarness();
+  try {
+    const id = activate(harness);
+    await checkOnce(harness);
+    if (!alreadyOpen) harness.store.savePath = '/projects/other.mbah';
+    const draft = { original: { title: { state: 'source', value: '' } }, entries: { title: { state: 'defined', value: 'Modifié' } } };
+    let choice = 'stay';
+    let questions = 0;
+    const ficheAbandon = { current: () => protectDraft(draft, { ask: async () => { questions++; return choice; }, save: async () => true }) };
+    harness.leaveGuard.current = () => beforeFicheAbandon(ficheAbandon, () => true);
+    await harness.render().panelProps.onOpenNotification(id);
+    assert.equal(questions, 1, 'Annuler répond à la question d’abandon');
+    assert.deepEqual(harness.calls.openProject, []);
+    assert.deepEqual(harness.calls.showImport, [], 'le Catalogue reste ouvert');
+    assert.equal(harness.render().panelProps.toast.id, id);
+    choice = 'discard';
+    await harness.render().panelProps.onOpenNotification(id);
+    assert.equal(questions, 2);
+    assert.deepEqual(harness.calls.openProject, alreadyOpen ? [] : [PROJECT_PATH]);
+    assert.equal(harness.calls.showImport.length, 1, 'le chemin de sortie du Catalogue et d’import est atteint');
+    assert.equal(harness.calls.showImport[0].subscriptionId, id);
+    assert.equal(harness.render().panelProps.toast, null);
+    assert.equal(harness.render().panelProps.notifications.length, 1, 'ouvrir ne supprime pas les nouveautés non importées');
+  } finally { harness.dispose(); }
+});
+
+test('Catalogue exposes its existing fiche guard and opening an import leaves Catalogue and preferences', () => {
+  const catalogue = readFileSync(new URL('../src/components/Catalogue/CatalogueScreen.jsx', import.meta.url), 'utf8');
+  assert.match(catalogue, /leaveGuard.current = \(\) => beforeFicheAbandon\(ficheAbandon, \(\) => true\)/);
+  assert.match(catalogue, /return \(\) => \{ leaveGuard.current = null; \}/);
+  const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
+  const callback = app.match(/onShowImport: (\(source\) => \{[\s\S]*?\n    \}),/)[1];
+  for (const source of [{ source: 'podcast' }, { source: 'youtube' }]) {
+    const calls = [];
+    const onShowImport = new Function('modals', 'setSubscriptionImportSource', 'setYoutubeFunnelMode', `return (${callback});`)(
+      { close: name => calls.push(['close', name]), open: name => calls.push(['open', name]) },
+      item => calls.push(['source', item]), mode => calls.push(['youtube', mode]),
+    );
+    onShowImport(source);
+    assert.deepEqual(calls, [['close', 'catalogue'], ['close', 'prefs'], ['source', source], source.source === 'podcast' ? ['open', 'podcastImport'] : ['youtube', 'editor']]);
+  }
+  assert.match(app, /openProject: handleLoadRecent/);
+  assert.match(app, /optionsTabProps: \{ \.\.\.optionsTabProps, subscriptions: subscriptions.panelProps \}/);
+});
+
+
+test('startup without unread notifications has no reminder, even after new checks', async () => {
+  const harness = createHarness();
+  try {
+    assert.equal(harness.render().panelProps.toast, null);
+    const id = activate(harness);
+    const panel = await harness.runStartup();
+    assert.equal(panel.toast.id, id);
+    assert.equal(panel.toast.kind, undefined);
+    panel.onCloseToast();
+    await harness.render().panelProps.onCheck();
+    assert.equal(harness.render().panelProps.toast, null);
+  } finally { harness.dispose(); }
+});
+
+test('startup with a single pending notification shows its ordinary toast once, even when the check brings it again', async () => {
+  const values = new Map();
+  const seed = createHarness({ values });
+  let id;
+  try {
+    id = activate(seed);
+    await checkOnce(seed);
+    seed.saveProject(PROJECT_PATH);
+  } finally { seed.dispose(); }
+  const harness = createHarness({ values });
+  try {
+    const first = harness.render().panelProps;
+    assert.equal(first.notifications.length, 1);
+    assert.deepEqual(first.toast, first.notifications[0], 'exactement le toast ordinaire de la notification');
+    assert.equal(first.toast.id, id);
+    harness.setInvoke(async () => ({ title: 'Podcast à jour', episodes: [
+      { id: 'episode-old' }, { id: 'episode-new' }, { id: 'episode-newer' },
+    ] }));
+    harness.replayEffects();
+    let panel = await harness.runStartup();
+    assert.equal(panel.toast.id, id);
+    assert.equal(panel.toast.count, 2);
+    panel.onCloseToast();
+    panel = harness.render().panelProps;
+    assert.equal(panel.toast, null, 'un seul toast, pas de doublon');
+    assert.equal(panel.notifications[0].count, 2, 'la croix ne marque rien comme lu');
+    await harness.render().panelProps.onCheck();
+    assert.equal(harness.render().panelProps.toast, null);
+  } finally { harness.dispose(); }
+});
+
+const SECOND_REQUEST = { ...PODCAST_REQUEST, url: 'https://example.com/second.xml', title: 'Second suivi' };
+
+test('startup with a single pending notification keeps its toast first when the check brings another follow', async () => {
+  const values = new Map();
+  const seed = createHarness({ values });
+  let id;
+  try {
+    id = activate(seed);
+    await checkOnce(seed);
+    seed.render().applyRequest(SECOND_REQUEST);
+    seed.saveProject(PROJECT_PATH);
+  } finally { seed.dispose(); }
+  const harness = createHarness({ values });
+  try {
+    assert.equal(harness.render().panelProps.toast.id, id);
+    harness.replayEffects();
+    let panel = await harness.runStartup();
+    assert.equal(panel.notifications.length, 2);
+    assert.equal(panel.toast.id, id, 'le toast du snapshot reste le premier');
+    assert.equal(panel.toast.count, 1);
+    panel.onCloseToast();
+    panel = harness.render().panelProps;
+    assert.notEqual(panel.toast.id, id, 'le toast de l’autre suivi suit, sans perte');
+    assert.deepEqual(panel.toast, panel.notifications.find((entry) => entry.id === panel.toast.id));
+    panel.onCloseToast();
+    assert.equal(harness.render().panelProps.toast, null);
+    assert.equal(harness.render().panelProps.notifications.length, 2, 'la croix ne marque rien comme lu');
+  } finally { harness.dispose(); }
+});
+
+test('startup with a single pending notification: the same notification with the same count stays in place, not moved to the end', async () => {
+  const values = new Map();
+  const seed = createHarness({ values });
+  let secondId;
+  try {
+    // Le premier suivi n'a rien de nouveau ; seul le second a une notification.
+    seed.setInvoke(async (command, args) => ({ title: 'Podcast', episodes: args.url === SECOND_REQUEST.url
+      ? [{ id: 'episode-old' }, { id: 'episode-new' }] : [{ id: 'episode-old' }] }));
+    activate(seed);
+    seed.render().applyRequest(SECOND_REQUEST);
+    seed.saveProject(PROJECT_PATH);
+    secondId = seed.store.project.mediaSubscriptions.find((item) => item.url === SECOND_REQUEST.url).id;
+    await checkOnce(seed);
+    assert.deepEqual(seed.render().panelProps.notifications.map((entry) => entry.id), [secondId]);
+  } finally { seed.dispose(); }
+  const harness = createHarness({ values });
+  try {
+    assert.equal(harness.render().panelProps.toast.id, secondId);
+    harness.replayEffects();
+    // Premier suivi vérifié avant le second : il ramène une nouveauté, le second le même compte.
+    let panel = await harness.runStartup();
+    assert.equal(panel.notifications.length, 2);
+    assert.equal(panel.toast.id, secondId, 'le toast déjà affiché n’est pas remis en fin de file');
+    panel.onCloseToast();
+    panel = harness.render().panelProps;
+    assert.notEqual(panel.toast.id, secondId);
+    panel.onCloseToast();
+    assert.equal(harness.render().panelProps.toast, null, 'aucun doublon');
+  } finally { harness.dispose(); }
+});
+
+test('startup with a single pending notification: Open uses the ordinary notification path', async () => {
+  const values = new Map();
+  const seed = createHarness({ values });
+  let id;
+  try {
+    id = activate(seed);
+    await checkOnce(seed);
+    seed.saveProject(PROJECT_PATH);
+  } finally { seed.dispose(); }
+  const harness = createHarness({ values });
+  try {
+    const panel = harness.render().panelProps;
+    assert.equal(panel.toast.id, id);
+    await panel.onOpenNotification(panel.toast.id);
+    assert.equal(harness.calls.showImport.length, 1);
+    assert.equal(harness.calls.showImport[0].subscriptionId, id);
+  } finally { harness.dispose(); }
+});
+
+test('startup reminder snapshots unread follows once, before new individual toasts, and closing preserves unread state', async () => {
+  const values = new Map();
+  const seed = createHarness({ values });
+  let ids;
+  try {
+    activate(seed);
+    seed.render().applyRequest(SECOND_REQUEST);
+    seed.saveProject(PROJECT_PATH);
+    await checkOnce(seed);
+    seed.render().applyRequest({ ...PODCAST_REQUEST, url: 'https://example.com/third.xml', title: 'Troisième suivi' });
+    seed.saveProject(PROJECT_PATH);
+    ids = seed.store.project.mediaSubscriptions.map((item) => item.id);
+    assert.equal(seed.render().panelProps.notifications.length, 2);
+  } finally { seed.dispose(); }
+  const harness = createHarness({ values });
+  try {
+    assert.deepEqual(harness.render().panelProps.toast, { kind: 'startup-reminder', count: 2 });
+    harness.setInvoke(async () => ({ title: 'Podcast à jour', episodes: [
+      { id: 'episode-old' }, { id: 'episode-new' }, { id: 'episode-newer' },
+    ] }));
+    harness.replayEffects(); // La sonde StrictMode ne recrée pas le rappel.
+    let panel = await harness.runStartup();
+    assert.deepEqual(panel.toast, { kind: 'startup-reminder', count: 2 });
+    assert.equal(panel.notifications.length, 3, 'le nouveau suivi découvert au démarrage ne rejoint pas le rappel');
+    assert.equal(panel.notifications[0].count, 2);
+    panel.onCloseToast();
+    panel = harness.render().panelProps;
+    assert.equal(panel.toast.id, ids[0], 'le toast individuel de la vérification suit le rappel');
+    assert.equal(panel.toast.count, 2);
+    panel.onCloseToast();
+    panel = harness.render().panelProps;
+    assert.equal(panel.toast.id, ids[1]);
+    panel.onCloseToast();
+    panel = harness.render().panelProps;
+    assert.equal(panel.toast.id, ids[2], 'le nouveau suivi garde aussi son toast individuel');
+    panel.onCloseToast();
+    assert.equal(harness.render().panelProps.notifications[0].count, 2, 'la croix ne marque rien comme lu');
+    harness.replayEffects();
+    await harness.runStartup();
+    await harness.render().panelProps.onCheck();
+    assert.equal(harness.render().panelProps.toast, null, 'ni rerendu, ni retour écran, ni vérification ne répète le rappel');
+  } finally { harness.dispose(); }
+});
+
+for (const source of ['podcast', 'youtube']) {
+  test(source + ': reimporting an existing follow keeps one project and registry entry', () => {
+    const harness = createHarness();
+    try {
+      const request = { ...PODCAST_REQUEST, source, url: source === 'podcast' ? PODCAST_REQUEST.url : 'https://youtube.com/playlist?list=PL123' };
+      const id = activate(harness, request);
+      harness.render().applyRequest({ ...request, subscriptionId: id, enabledTouched: false }, ['new-entry']);
+      harness.saveProject(PROJECT_PATH);
+      assert.deepEqual(harness.store.project.mediaSubscriptions.map((item) => item.id), [id]);
+      assert.deepEqual(harness.registry().subscriptions.map((item) => item.id), [id]);
+    } finally { harness.dispose(); }
+  });
+}

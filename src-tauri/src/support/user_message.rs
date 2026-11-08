@@ -11,6 +11,13 @@ pub(crate) struct UserMessage {
     pub(crate) params: Map<String, Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) detail: Option<String>,
+    /// Present only on Lunii operation errors; classified by the device service.
+    #[serde(
+        default,
+        rename = "deviceFault",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub(crate) device_fault: Option<bool>,
 }
 
 impl UserMessage {
@@ -19,6 +26,7 @@ impl UserMessage {
             code: code.into(),
             params: Map::new(),
             detail: None,
+            device_fault: None,
         }
     }
 
@@ -64,7 +72,7 @@ impl UserMessage {
 }
 
 /// An application label and its translatable value; author data remains literal.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct MessageLabel {
     raw: String,
     value: Value,
@@ -164,6 +172,7 @@ adapter!(
                     code: diagnostic.code.clone(),
                     params: diagnostic.params.clone(),
                     detail: Some(diagnostic.message.clone()),
+                    device_fault: None,
                 }
                 .into_transport();
                 compose_messages(
@@ -186,6 +195,7 @@ adapter!(
             code: error.code.to_string(),
             params: error.params.clone(),
             detail: Some(error.message.clone()),
+            device_fault: None,
         }
     }
 );

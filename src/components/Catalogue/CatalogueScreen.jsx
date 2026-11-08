@@ -1,5 +1,6 @@
 import { beforeFicheAbandon } from '../../store/catalogue/metadataDraft.js';
-import { withKnownOrphans } from '../../store/catalogue/luniiDevices.js';
+import { withCardTitles, withKnownOrphans } from '../../store/catalogue/luniiDevices.js';
+import { queueReports, withQueuedOrder } from '../../store/catalogue/luniiQueueView.js';
 import { useLuniiGestures } from '../../hooks/useLuniiGestures.js';
 import { useLuniiDevices } from '../../hooks/useLuniiDevices.js';
 import { useLuniiSend } from '../../hooks/useLuniiSend.js';
@@ -28,7 +29,7 @@ import { CatalogueEmptyState } from './CatalogueEmptyState.jsx';
 import './CatalogueScreen.css';
 
 export const CataloguePlaceholder = CatalogueEmptyState;
-export function CatalogueScreen({ onLandAggregate, workspaceDir, onClose, onPreferences, titleBar = null, bottomBar = null, preferencesSurface, editorHost, sessionRecoveries, onRecoverSession, onIgnoreSessionRecovery, api = catalogueApi() }) {
+export function CatalogueScreen({ leaveGuard, onLandAggregate, workspaceDir, onClose, onPreferences, titleBar = null, bottomBar = null, preferencesSurface, editorHost, sessionRecoveries, onRecoverSession, onIgnoreSessionRecovery, api = catalogueApi() }) {
   const { t, line } = useCatalogueTranslation();
   const luniiState = useLuniiDevices();
   const gestures = useLuniiGestures(luniiState);
@@ -36,7 +37,8 @@ export function CatalogueScreen({ onLandAggregate, workspaceDir, onClose, onPref
   const sources = useCatalogueSources(workspaceDir, { api });
   const entries = useCatalogueEntries({ api });
   const operations = useCatalogueOperations({ api, cards: entries.cards });
-  const luniiBase = { ...luniiState, luniiDevices: withKnownOrphans(luniiState.luniiDevices, entries.cards), gestures };
+  // Waiting moves are shown at once; gestures and drops then read the order the user sees.
+  const luniiBase = { ...luniiState, luniiDevices: withQueuedOrder(withCardTitles(withKnownOrphans(luniiState.luniiDevices, entries.cards), entries.cards), luniiState.luniiQueue), gestures };
   const sendChoice = useSendExemplarChoice();
   const send = useLuniiSend({ lunii: luniiBase, operations, cards: entries.cards, revision: entries.revision, chooseExemplar: sendChoice.ask });
   const lunii = { ...luniiBase, send };
@@ -73,6 +75,11 @@ export function CatalogueScreen({ onLandAggregate, workspaceDir, onClose, onPref
   }, [sources.loading, sources.sourcesRevision, sources.items, operations.ready, operations.state.items, operations.start]);
   useEffect(() => { document.getElementById('catalogue-title')?.focus(); }, []);
   const ficheAbandon = useRef(null);
+  useEffect(() => {
+    if (!leaveGuard) return undefined;
+    leaveGuard.current = () => beforeFicheAbandon(ficheAbandon, () => true);
+    return () => { leaveGuard.current = null; };
+  }, [leaveGuard]);
   const home = () => beforeFicheAbandon(ficheAbandon, () => { onClose(); requestAnimationFrame(() => document.getElementById('mode-open-catalogue')?.focus()); });
   function showMissing() {
     additionsRequest.current += 1;
@@ -89,7 +96,7 @@ export function CatalogueScreen({ onLandAggregate, workspaceDir, onClose, onPref
   // Source failures are fixed in Preferences > Catalogue; a scan failure stays
   // in its summary.
   const errors = [
-    { error: lunii.error, onDismiss: lunii.store.dismissError, ...(lunii.conflictKey ? { orphanConflict: true, onSelect: () => { lunii.store.selectDevice(lunii.conflictDeviceId); lunii.store.collapse(false); lunii.store.select('lunii', [lunii.conflictKey]); } } : {}) },
+    { error: lunii.error, queueEntryId: lunii.errorQueueEntryId, onDismiss: lunii.store.dismissError, ...(lunii.conflictKey ? { orphanConflict: true, onSelect: () => { lunii.store.selectDevice(lunii.conflictDeviceId); lunii.store.collapse(false); lunii.store.select('lunii', [lunii.conflictKey]); } } : {}) },
     { error: actionError, onDismiss: () => setActionError(null) },
     { error: sources.mutationError, onSelect: onPreferences }, { error: sources.error, onSelect: onPreferences },
     { error: operations.state.error }, { error: entries.error },
@@ -114,6 +121,7 @@ export function CatalogueScreen({ onLandAggregate, workspaceDir, onClose, onPref
     <CatalogueBrowser abandonGuard={ficheAbandon} lunii={lunii} sendBridge={sendBridge} renderLunii={props => <LuniiPanel lunii={lunii} {...props} />} onLandAggregate={onLandAggregate} onAssemblyLanded={onClose} ready={entries.status === 'ready'} onRefresh={entries.refresh} onFavoritePatch={entries.patchFavorite} onOpenEditor={editorHost?.open} onWarning={editorHost?.warning} sources={sources.items} cards={entries.cards} revision={entries.revision} api={api} onAnnounce={announce} onError={reportError} appVersion={bottomBar?.appVersion}
       renderHeader={({ searchControls, viewControls, activeFilters, onDuplicates }) => <CatalogueChrome searchControls={searchControls} viewControls={viewControls} activeFilters={activeFilters} lunii={lunii} onHome={home} onPreferences={onPreferences} onDuplicates={onDuplicates} activity={{
         fallbackFocusId: CATALOGUE_MENU_ID, errors, onPreferences, sends,
+        luniiQueue: { entries: luniiState.luniiQueue, reports: queueReports(luniiState.luniiQueue), onDismiss: lunii.store.dismissQueueReport },
         missing, removing, onRemoveMissing: removeMissing, onShowMissing: showMissing,
         running: recent.filter(s => !operationView(s).terminal), onCancel: operations.cancel,
         summaries, api, onDismissSummary: operations.dismiss, onDismissLocal: send.dismissLocal, onShowAdditions: showAdditions,

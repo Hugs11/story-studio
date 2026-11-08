@@ -33,8 +33,7 @@ pub async fn catalogue_list_sources(
         // resolving the sources probe the disk, in the background.
         catalogue::maintain_sources(app, workspace_dir);
         let mut list = store.list_sources()?;
-        list.items
-            .retain(|source| matches!(source.status.as_str(), "active" | "hint"));
+        list.items.retain(|source| source.status == "active");
         list.total_matching = list.items.len();
         catalogue::sources_changed(app);
         Ok(list)
@@ -46,14 +45,9 @@ pub async fn catalogue_add_source(
     app: tauri::AppHandle,
     path: String,
     expected_sources_revision: i64,
-    declined: Option<bool>,
 ) -> Result<SourceOutcome, UserMessage> {
     run(app, move |app, store| {
-        let outcome = store.add_source(
-            Path::new(&path),
-            expected_sources_revision,
-            declined.unwrap_or(false),
-        )?;
+        let outcome = store.add_source(Path::new(&path), expected_sources_revision, false)?;
         catalogue::sources_changed(app);
         Ok(outcome)
     })

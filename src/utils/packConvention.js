@@ -25,10 +25,10 @@ export function parseConventionName(raw) {
   if (!raw) return null;
   const value = String(raw).trim().replace(/\.(zip|7z)$/i, '');
   const ageMatch = value.match(/^(?:(\d+)(?:-(\d+))?|-(\d+))\+\]/);
-  if (!ageMatch) return null;
-  const minAge = ageMatch[1] ?? '';
-  const maxAge = ageMatch[2] ?? ageMatch[3];
-  let rest = value.slice(ageMatch[0].length);
+  if (!ageMatch && !value.includes('[by_')) return null;
+  const minAge = ageMatch?.[1] ?? '';
+  const maxAge = ageMatch?.[2] ?? ageMatch?.[3];
+  let rest = value.slice(ageMatch?.[0].length ?? 0);
 
   let author = '';
   let version = 1;
@@ -140,8 +140,7 @@ export function generateConventionName(metadata = {}) {
   const rawAuthor = String(metadata.author || '').trim();
   // Sans âge saisi, celui que le titre porte en tête (« 5+ Le prince… ») :
   // retomber sur 3 renommait « 3+] » un pack importé de 5 ans.
-  const explicitUnknownAge = metadata.minAge === '' && !leading?.minAge;
-  const minAge = explicitUnknownAge ? '' : String(metadata.minAge === 0 ? 0 : metadata.minAge || metadata.age || leading?.minAge || '3').replace(/\D/g, '') || '3';
+  const minAge = String(metadata.minAge === 0 ? 0 : metadata.minAge || metadata.age || leading?.minAge || '').replace(/\D/g, '');
   const version = toIntVersion(metadata.version);
   const bonusPart = bonus ? `_(${bonus})` : '';
   const maxAge = String(metadata.maxAge ?? '').replace(/\D/g, '');
@@ -154,15 +153,6 @@ export function generateConventionName(metadata = {}) {
 
   if (!author) return `${prefix}${titlePart}${versionSuffix}`;
   return `${prefix}${titlePart}[by_${author}${versionSuffix}`;
-}
-
-/**
- * Version suivante suggérée pour un pack : incrémente
- * la version courante d'une unité. Sans version (ou version invalide), suggère 2
- * → suffixe `_V2`. L'utilisateur reste libre de la changer.
- */
-export function bumpPackVersion(version) {
-  return toIntVersion(version) + 1;
 }
 
 export function getExportPackName(metadata = {}) {

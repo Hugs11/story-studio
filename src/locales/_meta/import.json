@@ -1984,17 +1984,6 @@
       "status": "ai-reviewed"
     }
   },
-  "names.pack.fallback": {
-    "context": "Import > names.pack.fallback ; message public du traitement, les chemins et détails techniques restent séparés ; le nom fallback est proposé à la création seulement. Surface : src/store/unpackProject.js.",
-    "en": {
-      "sourceHash": "991992cec92c",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "991992cec92c",
-      "status": "ai-reviewed"
-    }
-  },
   "pack.invalid.message": {
     "context": "Import > pack.invalid.message ; message composé du hook, path est un chemin utilisateur, reason une cause présentée par code, count le nombre en échec et total la taille du lot ; conserver exactement la source FR historique, même ses accords résiduels. Surface : src/hooks/useImportSession.js.",
     "en": {
@@ -2924,6 +2913,61 @@
     },
     "it": {
       "sourceHash": "c348a1555086",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.already": {
+    "context": "Imports podcast et YouTube : sources suivies du projet et gestion dans les préférences.",
+    "en": {
+      "sourceHash": "6a34b91ad028",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6a34b91ad028",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.alreadyPaused": {
+    "context": "Imports podcast et YouTube : sources suivies du projet et gestion dans les préférences.",
+    "en": {
+      "sourceHash": "4b043e56a55a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4b043e56a55a",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.manage": {
+    "context": "Imports podcast et YouTube : sources suivies du projet et gestion dans les préférences.",
+    "en": {
+      "sourceHash": "ef9a47aed02d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ef9a47aed02d",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.manageButton": {
+    "context": "Imports podcast et YouTube : bouton ouvrant les suivis des médias dans les préférences ; libellé complet servant aussi de nom accessible.",
+    "en": {
+      "sourceHash": "0ad91ba7e79b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0ad91ba7e79b",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.follow.sources": {
+    "context": "Imports podcast et YouTube : sources suivies du projet et gestion dans les préférences.",
+    "en": {
+      "sourceHash": "27cbb14c80a9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "27cbb14c80a9",
       "status": "ai-reviewed"
     }
   }

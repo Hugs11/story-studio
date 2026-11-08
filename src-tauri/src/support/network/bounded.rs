@@ -27,7 +27,7 @@ pub(crate) fn test_network() -> std::sync::MutexGuard<'static, ()> {
     let guard = TEST_NETWORK.lock().unwrap_or_else(|e| e.into_inner());
     // Cancellation intentionally returns before a blocked HTTP worker. Wait
     // for that previous test's bounded worker before reserving a new fixture.
-    let deadline = Instant::now() + Duration::from_secs(30);
+    let deadline = Instant::now() + crate::test_support::timeout();
     while WORKERS.load(Ordering::SeqCst) != 0 {
         assert!(
             Instant::now() < deadline,
@@ -174,7 +174,7 @@ pub(crate) fn read_request(socket: &mut std::net::TcpStream) -> String {
     // The test protocol reads a complete request with a bounded blocking read.
     socket.set_nonblocking(false).unwrap();
     socket
-        .set_read_timeout(Some(Duration::from_secs(2)))
+        .set_read_timeout(Some(crate::test_support::timeout()))
         .unwrap();
     let mut bytes = Vec::new();
     while !bytes.ends_with(b"\r\n\r\n") {
@@ -199,7 +199,7 @@ mod tests {
             ("HTTP/1.1 302 Found\r\nLocation: https://server-data-prod.lunii.com/v2/packs\r\nContent-Length: 0\r\n\r\n",100,Failure::Offline),
         ] {
             let server=TcpListener::bind("127.0.0.1:0").unwrap();let addr=server.local_addr().unwrap();let server=std::thread::spawn(move ||{let(mut socket,_)=server.accept().unwrap();assert!(read_request(&mut socket).starts_with("GET "));socket.write_all(response.as_bytes()).unwrap();});
-            assert_eq!(get(&format!("http://{addr}"),None,limit,&cancel,Instant::now()+Duration::from_secs(2),|_|{}),Err(expected));server.join().unwrap();
+            assert_eq!(get(&format!("http://{addr}"),None,limit,&cancel,Instant::now()+crate::test_support::timeout(),|_|{}),Err(expected));server.join().unwrap();
         }
         assert_eq!(
             get(

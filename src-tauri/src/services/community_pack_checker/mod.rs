@@ -125,7 +125,7 @@ pub fn create_fixed_pack_with_log(
     )
 }
 
-// A requested official UUID also establishes origin (L2); only an already
+// A requested official UUID also establishes origin; only an already
 // official source constrains the requested UUID to its previous value.
 fn correction_identity<
     C: crate::services::official_packs::OfficialCatalogue<Error = user_message::UserMessage>,

@@ -3,6 +3,7 @@ mod delete;
 mod media_copy;
 mod paths;
 mod project_storage;
+pub(crate) use project_storage::atomic_write_to;
 mod recording;
 
 pub use audio::*;

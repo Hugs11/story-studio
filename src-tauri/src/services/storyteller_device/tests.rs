@@ -1891,3 +1891,119 @@ fn factory_zero_is_complete_and_does_not_decide_provenance() {
 
 #[path = "orphan_tests.rs"]
 mod orphan_tests;
+
+#[test]
+fn lunii_device_fault_classifies_every_diagnostic_code_and_write_stage() {
+    use crate::support::user_message::{codes, UserMessage};
+    let fault_codes = [
+        codes::STORYTELLER_NO_SPACE,
+        codes::STORYTELLER_NO_SPACE_UNKNOWN,
+        codes::STORYTELLER_SEND_DISCONNECTED,
+        codes::STORYTELLER_DEVICE_GONE,
+        codes::STORYTELLER_DEVICE_UNRESPONSIVE,
+        codes::STORYTELLER_CIPHER_METADATA_IO,
+        codes::STORYTELLER_CIPHER_METADATA_REFUSED,
+        codes::STORYTELLER_STORY_PARKING_FAILED,
+        codes::STORYTELLER_REPATRIATE_DISCONNECTED,
+        codes::STORYTELLER_VOLUME_READ_ONLY,
+        codes::STORYTELLER_BACKUP_FAILED,
+        codes::STORYTELLER_PLAYLIST_RECOVERY_REQUIRED,
+        codes::STORYTELLER_PLAYLIST_DAMAGED,
+        codes::STORYTELLER_DEVICE_CHANGED,
+        codes::STORYTELLER_PLAYLIST_TOO_LARGE,
+        codes::STORYTELLER_READ_ONLY,
+    ];
+    for code in fault_codes {
+        for stage in ["preparing", "copying", "device"] {
+            assert!(device_fault(code, stage), "{code} at {stage}");
+            let error = classify_error(UserMessage::new(code), stage);
+            assert_eq!(serde_json::to_value(error).unwrap()["deviceFault"], true);
+        }
+    }
+    let no_fault_codes = [
+        codes::STORYTELLER_WORKSPACE_UNAVAILABLE,
+        codes::STORYTELLER_STORY_HIDDEN,
+        codes::STORYTELLER_INVALID_ORDER,
+        codes::STORYTELLER_PROJECT_INVALID,
+        codes::STORYTELLER_PROJECT_SAVE_REQUIRED,
+        codes::STORYTELLER_PROJECT_IDENTITY_SAVE_FAILED,
+        codes::STORYTELLER_PROJECT_OPEN_ID_REQUIRED,
+        codes::STORYTELLER_PROJECT_LEGACY_SAVE_REQUIRED,
+        codes::STORYTELLER_PROJECT_ID_RECHECK_FAILED,
+        codes::STORYTELLER_DEVICE_BUSY,
+        codes::STORYTELLER_INVALID_NAME,
+        codes::STORYTELLER_PLAYLIST_HEALTHY,
+        codes::STORYTELLER_PLAYLIST_COLLISION,
+        codes::STORYTELLER_OFFICIAL_REFUSED,
+        codes::STORYTELLER_STORY_DUPLICATE,
+        codes::STORYTELLER_STORY_DUPLICATE_UNLISTED,
+        codes::STORYTELLER_PROJECT_INCOMPLETE,
+        codes::STORYTELLER_NAVIGATION_REFUSED,
+        codes::STORYTELLER_IMAGE_UNREADABLE,
+        codes::STORYTELLER_IMAGE_UNREADABLE_UNNAMED,
+        codes::STORYTELLER_SOUND_UNREADABLE,
+        codes::STORYTELLER_SOUND_UNREADABLE_UNNAMED,
+        codes::STORYTELLER_ENTRY_IMAGE_REQUIRED,
+        codes::STORYTELLER_STORY_INCOMPLETE,
+        codes::STORYTELLER_STORY_UNREADABLE,
+        codes::STORYTELLER_STORY_MISSING,
+        codes::STORYTELLER_ALREADY_IN_CATALOGUE,
+        codes::STORYTELLER_REPATRIATE_REFUSED,
+        codes::STORYTELLER_REPATRIATE_UNAVAILABLE,
+        codes::STORYTELLER_CONTENT_UNAVAILABLE,
+        codes::STORYTELLER_SEND_CANCELLED,
+        codes::GENERATION_CANCELLED,
+    ];
+    for code in no_fault_codes {
+        for stage in ["preparing", "copying", "device"] {
+            assert!(!device_fault(code, stage), "{code} at {stage}");
+            let error = classify_error(UserMessage::new(code), stage);
+            assert_eq!(serde_json::to_value(error).unwrap()["deviceFault"], false);
+        }
+    }
+    for stage in [
+        "pending",
+        "preparing",
+        "generating",
+        "convertingSounds",
+        "convertingImages",
+        "encrypting",
+    ] {
+        assert!(
+            !device_fault(codes::STORYTELLER_WRITE_FAILED, stage),
+            "{stage}"
+        );
+    }
+    for stage in ["copying", "finalizing", "device"] {
+        assert!(
+            device_fault(codes::STORYTELLER_WRITE_FAILED, stage),
+            "{stage}"
+        );
+    }
+    let registry: serde_json::Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../src/locales/_generated/rust-messages.json"
+    )))
+    .unwrap();
+    let registered: std::collections::BTreeSet<_> = registry
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|entry| entry["code"].as_str())
+        .filter(|code| code.starts_with("STORYTELLER_"))
+        .collect();
+    let classified: std::collections::BTreeSet<_> = fault_codes
+        .into_iter()
+        .chain(no_fault_codes)
+        .chain([codes::STORYTELLER_WRITE_FAILED])
+        .filter(|code| code.starts_with("STORYTELLER_"))
+        .collect();
+    assert_eq!(
+        registered, classified,
+        "Every STORYTELLER code needs an explicit fault/non-fault classification"
+    );
+    assert!(fault_codes
+        .iter()
+        .all(|code| !no_fault_codes.contains(code)));
+    assert!(!device_fault("UNKNOWN", "device"));
+}

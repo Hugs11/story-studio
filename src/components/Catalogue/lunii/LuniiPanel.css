@@ -16,6 +16,10 @@
 .lunii-header progress::-webkit-progress-value { background: var(--text-secondary); border-radius: 999px; }
 .lunii-counters { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; font-size: 11.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .lunii-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+/* Keep the final reorder target below every row, filling unused list space. */
+.lunii-scroll.is-reordering { display: flex; flex-direction: column; }
+.lunii-scroll.is-reordering > * { flex-shrink: 0; }
+.lunii-scroll.is-reordering > .lunii-reorder-end { flex: 1 0 32px; min-height: 32px; padding: 0 6px; }
 .lunii-stories { padding: 4px 6px; }
 .lunii-story { display: grid; grid-template-columns: 16px 26px minmax(0, 1fr) auto; align-items: center; min-height: 50px; border-radius: 6px; padding: 0 4px; }
 .lunii-story.is-selected { background: var(--accent-2-dim); }
@@ -90,7 +94,7 @@
 .lunii-header input, .lunii-fiche input { min-width: 0; max-width: 100%; background: var(--bg2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px; }
 .lunii-fiche .catalogue-selection-preview img { width: 45%; object-fit: cover; }
 
-.dialog-panel--lunii { width: min(280px, 100%); border-radius: 10px; box-shadow: var(--shadow-modal); }
+.dialog-panel--lunii { border-radius: 10px; box-shadow: var(--shadow-modal); }
 .dialog-panel--lunii .dialog-actions { flex-wrap: wrap; }
 .dialog-panel--lunii .dialog-actions button { white-space: normal; }
 
@@ -111,6 +115,17 @@
 .lunii-sending-step, .lunii-send-current { display: flex; align-items: center; gap: 6px; }
 .lunii-step-spinner { flex: none; }
 .lunii-sending-step > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Waiting operations: a send greyed at its drop place, a gesture noted on its row, a removal struck through. */
+.lunii-story.is-queued .lunii-cover, .lunii-story.is-queued .lunii-story-text { opacity: .55; }
+.lunii-story.is-queued .lunii-story-select { cursor: default; }
+.lunii-story .lunii-story-text .lunii-queued-note { color: var(--accent-2-text); }
+.lunii-story-actions .lunii-queued-cancel { opacity: 1; }
+.lunii-story.is-removing .lunii-story-text > span:first-child { text-decoration: line-through; }
+.lunii-story.is-removing .lunii-cover { opacity: .45; filter: grayscale(.7); }
+.lunii-queue-summary { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 11.5px; color: var(--accent-2-text); }
+.lunii-queue-summary .lunii-unresponsive { color: var(--warning-text); }
+.lunii-queued-device { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--accent-2-text); }
+.lunii-panel.is-collapsed .lunii-collapsed-queue { position: absolute; top: 0; right: 0; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--accent-2-dim); color: var(--accent-2-text); font-size: 10px; line-height: 15px; font-variant-numeric: tabular-nums; }
 .lunii-drag-ghost { pointer-events: none; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 6px; border: 1px solid var(--accent-2); border-radius: 8px; background: var(--bg2); color: var(--text); box-shadow: var(--shadow-menu); font-size: 12.5px; white-space: nowrap; }
 .lunii-drag-ghost img { width: 28px; height: 22px; border-radius: 3px; object-fit: cover; }
 .lunii-drag-ghost-position { color: var(--accent-2-text); }
@@ -132,3 +147,7 @@
 /* Lunii stories dragged out to the catalogue: ready to repatriate, or refused (reason in the ghost). */
 .catalogue-scroll[data-repatriate='ready'] { box-shadow: inset 0 0 0 1.5px var(--accent-2); }
 .catalogue-scroll[data-repatriate='refused'], .catalogue-scroll[data-repatriate='refused'] * { cursor: not-allowed; }
+/* Waiting gestures seen from the inspector (fiche, selection). */
+.lunii-fiche-queued { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--accent-2-text); }
+.lunii-fiche-queued li { display: flex; align-items: center; gap: 4px; }
+.lunii-selection-queued { font-size: 12px; color: var(--text-secondary); }

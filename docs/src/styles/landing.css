@@ -440,13 +440,43 @@
       .journey {
         display: flex;
         flex-direction: column;
-        gap: 72px;
+        gap: 56px;
       }
 
       .journey-step {
-        display: flex;
-        flex-direction: column;
-        gap: 22px;
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        grid-auto-flow: row dense;
+        gap: 28px 44px;
+        align-items: center;
+      }
+
+      .journey-step--flip {
+        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      }
+
+      .journey-step .journey-copy {
+        grid-column: 2;
+      }
+
+      .journey-step .journey-media {
+        grid-column: 1;
+      }
+
+      .journey-step:not(.journey-step--flip) .journey-copy {
+        grid-column: 1;
+      }
+
+      .journey-step:not(.journey-step--flip) .journey-media {
+        grid-column: 2;
+      }
+
+      .journey-step .media-pair {
+        grid-column: 1 / -1;
+      }
+
+      .journey-step .journey-media--span2 {
+        grid-row: span 2;
       }
 
       .journey-copy {
@@ -487,7 +517,8 @@
 
       .journey-media img,
       .media-pair img {
-        width: 100%;
+        width: auto;
+        max-width: 100%;
         height: auto;
         display: block;
         border-radius: 12px;
@@ -495,9 +526,80 @@
         box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
       }
 
-      .journey-media--compact {
-        max-width: 680px;
+      .journey-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+      }
+
+      .journey-row {
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        gap: 28px 44px;
+        align-items: center;
+      }
+
+      .journey-row--flip {
+        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      }
+
+      .journey-row--flip .journey-copy {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      .journey-row--flip .journey-media {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      .journey-row .journey-media {
+        display: flex;
+        justify-content: center;
+      }
+
+      .journey-row .journey-media img {
+        max-height: 420px;
+      }
+
+      .journey-row--text {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+      }
+
+      .journey-row--text > .journey-number {
+        grid-column: 1 / -1;
+        margin-bottom: -16px;
+      }
+
+      .media-trio {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 24px;
+      }
+
+      .media-trio figure {
+        margin: 0;
+      }
+
+      .media-trio img {
+        width: auto;
+        max-width: 100%;
+        height: auto;
+        max-height: 360px;
+        display: block;
         margin-inline: auto;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+      }
+
+      .media-trio figcaption {
+        margin-top: 9px;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
       }
 
       .media-pair {
@@ -505,6 +607,9 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 18px;
         align-items: start;
+        justify-items: center;
+        max-width: 900px;
+        margin-inline: auto;
       }
 
       .media-pair figcaption {
@@ -514,15 +619,48 @@
         text-align: center;
       }
 
+      @media (max-width: 900px) {
+        .journey-step,
+        .journey-step--flip {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 22px;
+        }
+        .journey-step .journey-copy,
+        .journey-step .journey-media,
+        .journey-step:not(.journey-step--flip) .journey-copy,
+        .journey-step:not(.journey-step--flip) .journey-media {
+          grid-column: 1;
+        }
+        .journey-step .journey-media--span2 {
+          grid-row: auto;
+        }
+        .journey-row,
+        .journey-row--flip,
+        .journey-row--text {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 22px;
+        }
+        .journey-row--flip .journey-copy,
+        .journey-row--flip .journey-media {
+          grid-column: 1;
+          grid-row: auto;
+        }
+        .media-trio {
+          flex-direction: column;
+          align-items: center;
+        }
+        .media-trio img,
+        .journey-row .journey-media img {
+          max-height: none;
+        }
+      }
+
       @media (max-width: 760px) {
         .journey {
           gap: 52px;
         }
         .media-pair {
           grid-template-columns: 1fr;
-        }
-        .journey-media--compact {
-          max-width: 100%;
         }
       }
 

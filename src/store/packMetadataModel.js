@@ -14,32 +14,44 @@ import { translateTree as t } from "../i18n/treePresentation.js";
 // faute que le plan du mouvement 1 interdit : un auteur modifiant un titre dans
 // une copie que la production ne lit jamais.
 //
-// **Il ne devine rien.** Un champ que le document de graphe ne porte pas n'est
-// pas affiché avec un repli : `minAge` vaut `'3'` par défaut côté Libre parce
-// que la convention de nom l'exige, et afficher ce `3` sur un projet graphe en
-// ferait une valeur d'auteur qui n'existe pas. De même pour les compteurs : un
-// projet graphe n'a pas d'arbre, et compter ses histoires rendrait le zéro
-// calculé que le plan nomme explicitement.
-//
 // Tout est pur : aucun React, aucun Tauri, aucun accès au payload.
 
+import { isDefaultNodeName } from './advancedAuthoring/defaultNodeNames.js';
+import frHome from '../locales/fr/home.json' with { type: 'json' };
+import frTree from '../locales/fr/tree.json' with { type: 'json' };
+import enHome from '../locales/en/home.json' with { type: 'json' };
+import enTree from '../locales/en/tree.json' with { type: 'json' };
+import itHome from '../locales/it/home.json' with { type: 'json' };
+import itTree from '../locales/it/tree.json' with { type: 'json' };
 import { advancedGestures, presence } from './projectModel/advancedGestures.js';
 import { MEDIA_BINDING_RESOLVED, mediaBindingsByAssetRef } from './projectModel/mediaBindings.js';
-import { isFallbackProjectName } from './projectSaveName.js';
 
 // Les origines du document, telles que le DTO de lecture les sérialise.
 const DOCUMENT_ORIGIN_CREATED = 'created';
 
-// Un titre renseigné reste prioritaire ; les noms de création ne sont pas
-// des titres d'auteur. Le repli reste une proposition jusqu'à validation.
+// Noms utilisés par projectStore (création racine/dossier) et createMenuEntry.
+// Les ressources des trois langues permettent aussi de rouvrir un projet créé
+// dans une autre langue.
+const automaticMenuNames = new Set([
+  ...[frHome, enHome, itHome].flatMap(catalogue => [
+    catalogue['project.creation.rootName'], catalogue['project.creation.folderName'],
+  ]),
+  ...[frTree, enTree, itTree].map(catalogue => catalogue['menu.creation.name']),
+]);
+
+// Proposition de formulaire uniquement, jamais une écriture dans le document.
 export function suggestedPackTitle(project, view = null) {
   const advanced = project?.authoringMode === 'advanced';
   const title = advanced ? presenceValue(view?.metadata?.title) : project?.packMetadata?.title;
-  if (String(title ?? '').trim() && String(title).trim().toLowerCase() !== 'nouveau pack') return title;
-  const root = advanced ? view?.entryTitle : project?.projectType === 'pack' ? project?.rootName : '';
-  const rootText = String(root ?? '').trim();
-  if (rootText && !/^(menu racine|écran 1|nouveau pack)$/i.test(rootText)) return rootText;
-  return isFallbackProjectName(project?.projectName) ? '' : String(project.projectName).trim();
+  if (String(title ?? '').trim()) return title;
+  const root = String(advanced ? view?.entryTitle ?? '' : project?.rootName ?? '').trim();
+  if (!root || isDefaultNodeName(root) || automaticMenuNames.has(root)) return '';
+  return root;
+}
+
+// Repli de présentation uniquement : aucune écriture dans un projet rouvert.
+export function packTitleBarName(title, projectFileName = '') {
+  return String(title ?? '').trim() || String(projectFileName ?? '').trim();
 }
 
 // Les quatre métadonnées que **les deux** structures portent réellement.
@@ -87,11 +99,11 @@ export function advancedProducedIdentity(view) {
  * La lecture de la fiche pour un projet graphe : ce que le formulaire commun
  * affiche, sans repli inventé.
  */
-export function advancedPackMetadataDraft(view, project = null) {
+export function advancedPackMetadataDraft(view) {
   const metadata = view?.metadata ?? null;
   const version = presenceValue(metadata?.version);
   return {
-    title: project ? suggestedPackTitle(project, view) : presenceValue(metadata?.title) ?? '',
+    title: suggestedPackTitle({ authoringMode: 'advanced' }, view),
     description: presenceValue(metadata?.description) ?? '',
     // La version reste vide quand le document n'en porte pas : un document
     // importé sans version explicite est refusé à l'export, et afficher « 1 »
@@ -256,7 +268,7 @@ export function freePackRecap(project, projectType) {
     || '';
   return {
     title,
-    line: `${metadata.minAge || '3'}+ · v${metadata.version || 1}`,
+    line: `${metadata.minAge ? `${metadata.minAge}+ · ` : ''}v${metadata.version || 1}`,
   };
 }
 

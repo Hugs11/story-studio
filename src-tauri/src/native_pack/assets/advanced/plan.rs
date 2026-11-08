@@ -21,8 +21,8 @@ use sha2::{Digest, Sha256};
 use crate::domain::project::SilenceMode;
 use crate::support::audio_norm::{
     build_edge_silence_filters_with_targets, ebur128_args, edge_envelope_args, edges_from_envelope,
-    harmonization_notice, parse_ebur128_summary, parse_rms_envelope, plan_loudness_fix,
-    EdgeMeasure, EdgeSilenceFilters, HarmonizationNotice, LoudnessAction, EDGE_SILENCE_SEC,
+    harmonization_notice, parse_rms_envelope, parse_summary, plan_loudness_fix, EdgeMeasure,
+    EdgeSilenceFilters, HarmonizationNotice, LoudnessAction, EDGE_SILENCE_SEC,
 };
 
 use super::super::audio::{audio_filter_chain_for, loudness_measure_filters};
@@ -105,6 +105,7 @@ pub(crate) enum ConversionPlan {
     /// Octets conservés : le média est déjà conforme et rien n'est demandé.
     AudioVerbatim,
     AudioEncode {
+        silent: bool,
         filters: String,
         applied: Vec<PlanStep>,
         /// Ce que l'harmonisation a coûté, à dire à l'auteur. Il n'entre pas
@@ -240,12 +241,16 @@ pub(crate) fn plan_audio(
     // volume dès que l'harmonisation est demandée, quel que soit le mode : la
     // décision de gain ne doit pas dépendre des silences de bord (même règle
     // que l'éditeur par menus, par la même fonction).
-    let measured_edges =
+    let edges =
         if matches!(options.silence_mode, SilenceMode::Normalize) || options.harmonize_loudness {
             measure_edges(ffmpeg, snapshot, deadline)?
         } else {
-            None
+            EdgeMeasure::Unreadable
         };
+    let measured_edges = match edges {
+        EdgeMeasure::Measured { leading, trailing } => Some((leading, trailing)),
+        EdgeMeasure::AllSilence | EdgeMeasure::Unreadable => None,
+    };
 
     let output_filters: Option<EdgeSilenceFilters> =
         if matches!(options.silence_mode, SilenceMode::Normalize) {
@@ -260,7 +265,7 @@ pub(crate) fn plan_audio(
             None
         };
 
-    let (action, notice) = if options.harmonize_loudness {
+    let (action, notice, silent) = if options.harmonize_loudness {
         let measure_filters = loudness_measure_filters(
             measured_edges,
             options.leading_silence_sec,
@@ -268,7 +273,7 @@ pub(crate) fn plan_audio(
         );
         measure_loudness(ffmpeg, snapshot, &measure_filters, deadline)?
     } else {
-        (LoudnessAction::None, None)
+        (LoudnessAction::None, None, false)
     };
 
     let filters = audio_filter_chain_for(
@@ -282,6 +287,7 @@ pub(crate) fn plan_audio(
         applied_audio_transformations(options, &action, output_filters.as_ref(), &filters);
 
     Ok(ConversionPlan::AudioEncode {
+        silent,
         filters,
         applied,
         notice,
@@ -311,7 +317,7 @@ fn measure_edges(
     ffmpeg: &Path,
     snapshot: &Path,
     deadline: Duration,
-) -> Result<Option<(f64, f64)>, PlanFailure> {
+) -> Result<EdgeMeasure, PlanFailure> {
     let run = run_tool(
         ffmpeg,
         &edge_envelope_args(snapshot),
@@ -324,14 +330,7 @@ fn measure_edges(
             detail: run.detail(),
         });
     }
-    match edges_from_envelope(&parse_rms_envelope(&run.stderr)) {
-        EdgeMeasure::Measured { leading, trailing } => Ok(Some((leading, trailing))),
-        // Un média entièrement silencieux n'est jamais un refus : il n'y a
-        // rien à rogner, et les bords seront simplement reposés à leur cible.
-        // C'est exactement ce que le mode Libre refuse, et pourquoi son
-        // orchestration n'est pas réutilisable ici.
-        EdgeMeasure::AllSilence | EdgeMeasure::Unreadable => Ok(None),
-    }
+    Ok(edges_from_envelope(&parse_rms_envelope(&run.stderr)))
 }
 
 fn measure_loudness(
@@ -339,7 +338,7 @@ fn measure_loudness(
     snapshot: &Path,
     pre_filters: &[String],
     deadline: Duration,
-) -> Result<(LoudnessAction, Option<HarmonizationNotice>), PlanFailure> {
+) -> Result<(LoudnessAction, Option<HarmonizationNotice>, bool), PlanFailure> {
     let run = run_tool(
         ffmpeg,
         &ebur128_args(snapshot, pre_filters),
@@ -354,15 +353,18 @@ fn measure_loudness(
     }
     // Niveau inétablissable — silence intégral, résumé incomplet : on ne corrige
     // pas. Inventer un gain changerait le son livré sur une mesure qu'on n'a pas.
-    let Some(measure) = parse_ebur128_summary(&run.stderr) else {
-        return Ok((LoudnessAction::None, None));
+    let Some(measure) = parse_summary(&run.stderr, true) else {
+        return Ok((LoudnessAction::None, None, false));
     };
+    if measure.is_silent() {
+        return Ok((LoudnessAction::None, None, true));
+    }
     let action = plan_loudness_fix(measure.integrated_lufs, measure.true_peak_db);
     if action.is_correctable() {
         let notice = harmonization_notice(measure.integrated_lufs, &action);
-        Ok((action, notice))
+        Ok((action, notice, false))
     } else {
-        Ok((LoudnessAction::None, None))
+        Ok((LoudnessAction::None, None, false))
     }
 }
 

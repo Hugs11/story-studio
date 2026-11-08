@@ -169,6 +169,15 @@ export async function importPack(page, archivePath, { editor = 'menus', timeout 
   await modalWithText(page, 'Modifier un pack').first().waitFor({ state: 'hidden', timeout: 180_000 }).catch(() => {});
 }
 
+// La fiche lit le titre écrit dans le projet, y compris après import graphe.
+// Le bouton garde son sélecteur quelle que soit sa nouvelle légende de repli.
+export async function openPackMetadata(page, { timeout = 15_000 } = {}) {
+  await page.locator('.chrome-titlebar-pack-recap').click();
+  const sheet = page.locator('.pack-meta-modal');
+  await sheet.waitFor({ state: 'visible', timeout });
+  return sheet;
+}
+
 /**
  * « Générer le pack » (Ctrl+G) → fiche du pack → « Appliquer & générer » →
  * révision d'UUID éventuelle → dossier de sortie scripté. Attend l'archive.
@@ -284,8 +293,8 @@ async function generatePackWithDialog(page, outDir, { uuid, timeout, events }) {
   return { zip: null, timeout: true, prompts, outDirListing: readdirSync(outDir) };
 }
 
-// bedf99e82 conserve la voie simple déjà nommée : elle ouvre directement
-// le dossier. Exiger ce dialogue réellement répondu, ou le CTA de la fiche ;
+// Les projets simples déjà nommés et les deux éditeurs en nom libre confirmé
+// ouvrent directement le dossier. Exiger ce dialogue réellement répondu, ou le CTA de la fiche ;
 // l'absence des deux reste un échec technique, jamais un succès implicite.
 export async function enterGeneration(page, { dialogCount, outDir, onApply = () => {}, timeout = 30_000 }) {
   const deadline = Date.now() + timeout;

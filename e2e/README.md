@@ -376,11 +376,6 @@ sont résolus depuis la racine du dépôt.
 | `c3bReportDir` | `SS_E2E_C3B_REPORT_DIR` | `e2e/artifacts/parity` |
 | `entrySourceReportDir` | `SS_E2E_ENTRY_SOURCE_REPORT_DIR` | `e2e/artifacts/entry-source` |
 
-Les bancs Vite utilisent `SS_BENCH_<MODE>_OUTPUT_DIR` (modes `GRAPH`, `SURFACE`,
-`ATELIER`, `EXPORT`, `RECETTE`) ou le défaut ignoré `bench/artifacts/<mode>`.
-Ces variables peuvent être enregistrées dans `.env.local`, ignoré par git.
-`SS_BENCH_EXPORT_SANDBOX` permet aussi de choisir le bac à sable temporaire de génération.
-
 ## Linux : pilote WebKitGTK et recette Catalogue
 
 Sur Linux, `lib/launch.mjs` sélectionne `lib/webdriver/` : compilation debug avec la config

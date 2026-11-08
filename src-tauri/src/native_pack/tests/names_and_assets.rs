@@ -475,7 +475,7 @@ fn generation_result_serializes_the_frontend_warning_contract() {
             role: "root/Histoire#id/storyAudio".to_string(),
             label: "Histoire".to_string(),
             message: "Traitement audio fort.".to_string(),
-            initial_integrated_lufs: -32.0,
+            initial_integrated_lufs: Some(-32.0),
             final_integrated_lufs: Some(-14.2),
             gain_db: 18.0,
             expected_limiting_db: 20.0,

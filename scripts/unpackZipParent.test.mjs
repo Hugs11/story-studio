@@ -14,6 +14,7 @@ import { presentStoredError } from '../src/i18n/userMessage.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runner } from './reactHookDriver.mjs';
+import { buildAggregateProject } from '../src/components/AggregatePacks/aggregateProject.js';
 import './tauriDiskHarness.mjs';
 
 const { useProjectStore } = await import('../src/store/projectStore.js');
@@ -49,11 +50,13 @@ function unpackResult() {
 
 function mount(initialProject, result = unpackResult()) {
   const previousInvoke = window.__TAURI_INTERNALS__.invoke;
-  window.__TAURI_INTERNALS__.invoke = async (command) => {
+  window.__TAURI_INTERNALS__.invoke = async (command, args) => {
+    requests.push({ command, args });
     if (command === 'unpack_zip_to_entries') return result;
     throw new Error(`commande non doublée : ${command}`);
   };
   const errors = [];
+  const requests = [];
   const notices = [];
   let store; let session;
   const app = runner(() => {
@@ -79,6 +82,7 @@ function mount(initialProject, result = unpackResult()) {
     get session() { return session; },
     render: () => app.render(),
     errors,
+    requests,
     notices,
     restore: () => { window.__TAURI_INTERNALS__.invoke = previousInvoke; },
   };
@@ -239,4 +243,38 @@ test('deux extractions du même pack, identifiants uniques et cibles internes co
   } finally {
     c.restore();
   }
+});
+
+for (const promoting of [false, true]) {
+  test(`fiche opt-in seulement lors de la promotion : ${promoting}`, async () => {
+    const initial = promoting ? normalizeProjectData({ rootEntries: [{ id: 'zip-1', type: 'zip', zipPath: 'source.zip' }] }) : parentWithZips(['zip-1']);
+    const c = mount(initial, { entries: [{ id: 'story', type: 'story', name: '' }], catalogueMetadata: { title: 'Titre fiche' } });
+    try {
+      await c.session.handleUnpackZip('zip-1');
+      c.render();
+      assert.deepEqual(c.errors, []);
+      assert.equal(c.requests.find(r => r.command === 'unpack_zip_to_entries').args.catalogueMetadata, promoting);
+      const story = c.store.project.rootEntries.find(e => e.type === 'story' && e.name !== 'C');
+      assert.ok(story);
+      // Hors promotion : repli (nom visible du ZIP inclus), jamais « Histoire sans titre » ni la fiche.
+      assert.equal(story.name, promoting ? 'Titre fiche' : 'Inclus');
+      if (!promoting) assert.notEqual(c.store.project.packMetadata.title, 'Titre fiche');
+    } finally { c.restore(); }
+  });
+}
+
+test('agrégateur : extraire son ZIP unique ne demande aucune fiche et garde sa vignette', async () => {
+  const parent = buildAggregateProject({
+    packs: [{ name: 'Inclus', path: 'source.zip' }], rootImage: 'aggregate.png', rootAudio: 'aggregate.mp3',
+    metadata: { title: 'Agrégat', uuid: 'aggregate' },
+  });
+  const c = mount(parent, { entries: [{ id: 'story', type: 'story', name: '' }] });
+  try {
+    await c.session.handleUnpackZip(parent.rootEntries[0].id);
+    c.render();
+    assert.deepEqual(c.errors, []);
+    assert.equal(c.requests.find(r => r.command === 'unpack_zip_to_entries').args.catalogueMetadata, false);
+    assert.equal(c.store.project.packMetadata.title, 'Agrégat');
+    assert.equal(c.store.project.thumbnailImage, 'aggregate.png');
+  } finally { c.restore(); }
 });

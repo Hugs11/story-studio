@@ -219,6 +219,7 @@ fn load_pack_zip_with_policy(zip_path: &str, for_simulation: bool) -> Result<Str
                     code: diagnostic.code.clone(),
                     params: diagnostic.params.clone(),
                     detail: Some(diagnostic.message.clone()),
+                    device_fault: None,
                 }
                 .into_transport();
                 crate::support::user_message::compose_messages(
@@ -595,7 +596,7 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
         .get("title")
         .and_then(|value| value.as_str())
         .filter(|value| !value.trim().is_empty())
-        .unwrap_or("Pack importé");
+        .unwrap_or("");
     let mut project = project_from_imported_entries(&imported, title)?;
     // L'extraction doit pouvoir ouvrir un pack existant incomplet pour que
     // l'éditeur le signale et propose l'exception silencieuse. Cette tolérance
@@ -762,7 +763,7 @@ pub(crate) fn imported_native_graph_document_for_test(
         .get("title")
         .and_then(|value| value.as_str())
         .filter(|value| !value.trim().is_empty())
-        .unwrap_or("Pack importé");
+        .unwrap_or("");
     let mut project = project_from_imported_entries(&imported, title)?;
     project.native_graph = Some(serde_json::json!({
         "preserveForRoundTrip": true,
@@ -1260,7 +1261,7 @@ pub(crate) fn import_pack_as_free_project(
         .get("title")
         .and_then(|value| value.as_str())
         .filter(|value| !value.trim().is_empty())
-        .unwrap_or("Pack importé")
+        .unwrap_or("")
         .to_string();
     project_from_imported_entries(&imported, &title)
 }
@@ -1595,47 +1596,56 @@ fn extract_zip_thumbnail(zip_path: &Path, dest: &Path) -> Result<Option<PathBuf>
     for name in &["thumbnail.png", "thumbnail.jpg", "thumbnail.jpeg"] {
         if let Ok(mut entry) = archive.by_name(name) {
             ensure_zip_entry_size("Thumbnail", name, entry.size(), ARCHIVE_MAX_FILE_BYTES)?;
-            let file_name = Path::new(name).file_name().unwrap_or_default();
-            let thumbnail_dir = dest.join(".story-studio-thumbnail");
-            fs::create_dir_all(&thumbnail_dir).map_err(|e| {
-                let _msg_error = (e).to_string();
-                user_message::UserMessage::new(codes::IMPORT_THUMBNAIL_FOLDER_CREATE_FAILED)
-                    .param("error", user_message::transport_param(_msg_error.clone()))
-                    .with_detail(format!(
-                        "Création dossier thumbnail impossible : {_msg_error}",
-                        _msg_error = user_message::transport_detail(&_msg_error),
-                    ))
-                    .into_transport()
-            })?;
-            let out_path = thumbnail_dir.join(file_name);
-            let mut output = fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&out_path)
-                .map_err(|e| {
-                    let _msg_error = (e).to_string();
-                    user_message::UserMessage::new(codes::IMPORT_THUMBNAIL_CREATE_FAILED)
-                        .param("error", user_message::transport_param(_msg_error.clone()))
-                        .with_detail(format!(
-                            "Création thumbnail impossible : {_msg_error}",
-                            _msg_error = user_message::transport_detail(&_msg_error)
-                        ))
-                        .into_transport()
-                })?;
-            std::io::copy(&mut entry, &mut output).map_err(|e| {
-                let _msg_error = (e).to_string();
-                user_message::UserMessage::new(codes::IMPORT_THUMBNAIL_WRITE_FAILED)
-                    .param("error", user_message::transport_param(_msg_error.clone()))
-                    .with_detail(format!(
-                        "Écriture thumbnail impossible : {_msg_error}",
-                        _msg_error = user_message::transport_detail(&_msg_error)
-                    ))
-                    .into_transport()
-            })?;
-            return Ok(Some(out_path));
+            return write_project_thumbnail(dest, name, &mut entry).map(Some);
         }
     }
     Ok(None)
+}
+
+/// Pack thumbnails and catalogue covers share the same isolated project asset path.
+pub(crate) fn write_project_thumbnail(
+    dest: &Path,
+    name: &str,
+    input: &mut impl std::io::Read,
+) -> Result<PathBuf, String> {
+    let file_name = Path::new(name).file_name().unwrap_or_default();
+    let thumbnail_dir = dest.join(".story-studio-thumbnail");
+    fs::create_dir_all(&thumbnail_dir).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_THUMBNAIL_FOLDER_CREATE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Création dossier thumbnail impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error),
+            ))
+            .into_transport()
+    })?;
+    let out_path = thumbnail_dir.join(file_name);
+    let mut output = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&out_path)
+        .map_err(|e| {
+            let _msg_error = (e).to_string();
+            user_message::UserMessage::new(codes::IMPORT_THUMBNAIL_CREATE_FAILED)
+                .param("error", user_message::transport_param(_msg_error.clone()))
+                .with_detail(format!(
+                    "Création thumbnail impossible : {_msg_error}",
+                    _msg_error = user_message::transport_detail(&_msg_error)
+                ))
+                .into_transport()
+        })?;
+    std::io::copy(input, &mut output).map_err(|e| {
+        let _msg_error = (e).to_string();
+        user_message::UserMessage::new(codes::IMPORT_THUMBNAIL_WRITE_FAILED)
+            .param("error", user_message::transport_param(_msg_error.clone()))
+            .with_detail(format!(
+                "Écriture thumbnail impossible : {_msg_error}",
+                _msg_error = user_message::transport_detail(&_msg_error)
+            ))
+            .into_transport()
+    })?;
+    Ok(out_path)
 }
 
 #[cfg(test)]
@@ -2203,7 +2213,7 @@ mod tests {
         let legacy =
             unpack_zip_to_entries_unchecked(path, dir.join("legacy").to_str().expect("utf8"))
                 .expect("legacy import");
-        assert_eq!(legacy["title"], "Pack importé");
+        assert_eq!(legacy["title"], "");
         for name in ["Imported audiobook", "Audiolibro importato"] {
             let result = super::unpack_zip_to_entries_unchecked_named(
                 path,

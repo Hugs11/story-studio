@@ -182,7 +182,7 @@ test('a simulated unplugging is an interruption: nothing is shown as sent for th
   const report = sendReport(ctx, snap);
   assert.equal(report.done.length, 0); assert.equal(report.interrupted.title, 'X'); assert.equal(report.cancelled, 1);
   assert.deepEqual(report.notStarted.map(story => story.title), ['Y']);
-  assert.match(text(render(LuniiSendBilan, { report })), /« Y » n’a pas été envoyée/, 'the pending story is named separately from the interrupted copy');
+  assert.match(text(render(LuniiSendBilan, { report })), /Non lancée : « Y »/, 'the pending story is named separately from the interrupted copy');
   assert.deepEqual(sendBilanKind(report), { kind: 'interrupted', tone: 'issue', titleKey: 'catalogue:lunii.sendBilan.interrupted' });
   assert.deepEqual(virtualRows(ctx, snap), [], 'no row for an interrupted story or one that never started');
 });
@@ -303,10 +303,12 @@ test('store: a read-only or damaged Lunii refuses any send, writes included', as
   assert.equal(store.getSnapshot().error.code, 'X');
 });
 
-test('eject is disabled during a send with its own tooltip', () => {
+// Expectation changed on purpose: during a send the eject button
+// is no longer a silent refusal; it stays active, says it will eject afterwards, and asks.
+test('eject stays available during a send, with its own tooltip', () => {
   const tree = render(LuniiPanelHeader, { device: device({ busy: true, sending: true }) });
   const eject = elements(tree).find(e => e.type === Button && e.props['aria-label'] === 'Éjecter');
-  assert.equal(eject.props.disabled, true); assert.match(tipOf(tree, eject), /Un envoi est en cours/);
+  assert.equal(eject.props.disabled, false); assert.match(tipOf(tree, eject), /Éjecter après les opérations en cours/);
 });
 
 test('header gauge during a drag shows the added size, what remains and the count', () => {
@@ -478,6 +480,17 @@ function sendHarness(overrides = {}) {
   const log = { send: [], begin: [], end: [], errors: [], opened: [] };
   const operations = { state: { items: {} }, open: async id => log.opened.push(id), cancel() {} };
   const lunii = { luniiDevices: [device()], store: { beginSend: id => { log.begin.push(id); return overrides.refusal ?? null; }, endSend: async id => { log.end.push(id); }, reportError: error => log.errors.push(error) } };
+  lunii.store.enqueueSend = (id, _context, run, settled) => {
+    const refusal = lunii.store.beginSend(id);
+    if (refusal) { lunii.store.reportError({ code: refusal, params: {} }); return null; }
+    // These hook tests inject the historical effect-driven settling adapter.
+    // The real independent runner is exercised by luniiQueue.test.mjs.
+    return { id: 'queued', finished: run().then(async result => {
+      if (result.context.local) { await lunii.store.endSend(id); settled(result); return result.context; }
+      result.context.queueOwned = false;
+      return result.context;
+    }, async error => { lunii.store.reportError(error); await lunii.store.endSend(id); return null; }) };
+  };
   const api = { send: async args => { log.send.push(args); if (overrides.reject) throw overrides.reject; return { operationId: 'op' }; } };
   const cards = overrides.cards ?? [card('x'), card('y'), card('n', { exemplars: [], referenceExemplarId: null })];
   const mount = () => runner(() => useLuniiSend({ lunii, operations, cards, revision: 3, chooseExemplar: overrides.choose, api }));
@@ -1053,4 +1066,154 @@ test('damaged: the selection action and the menu refuse only when nothing may le
   const entry = only.menuEntries([], { kind: 'card', step: null }, hurt('h'))[0];
   assert.equal(entry.action.enabled, false); assert.match(entry.detail, /La girafe/);
   assert.equal(mk([hurt('h'), card('x')]).action.enabled, true);
+});
+
+test('explicit notStarted rows retain titles, settle progress and expose the Rust deviceFault', () => {
+  const ctx = context(['x', 'y', 'z']);
+  const snap = snapshot([
+    item('x', 'done', { deviceFault: false }),
+    item('y', 'refused', { deviceFault: true, reason: { code: 'STORYTELLER_NO_SPACE', params: { missingBytes: 42 } } }),
+    item('z', 'notStarted', { deviceFault: false }),
+  ], 'partial');
+  const report = sendReport(ctx, snap);
+  assert.equal(report.deviceFault, true);
+  assert.deepEqual(report.notStarted.map(story => story.title), ['Z']);
+  assert.equal(report.refused[0].deviceFault, true);
+  assert.match(text(render(LuniiSendBilan, { report })), /Non lancée : « Z »/);
+  assert.equal(sendProgress(ctx, snap).percent, 100);
+  assert.equal(sendProgress(ctx, snap).settled, 3);
+  assert.deepEqual(virtualRows(ctx, snap).map(row => row.title), ['X']);
+  assert.ok(virtualRows(ctx, snapshot([item('z', 'notStarted')], 'partial')).length === 0);
+  const packFailure = snapshot([item('x', 'failed', { deviceFault: false, reason: { code: 'STORYTELLER_WRITE_FAILED', params: {} } })], 'partial');
+  assert.equal(sendReport(ctx, packFailure).deviceFault, false, 'no JS heuristic on WRITE_FAILED');
+});
+
+
+test('not-started translations agree across plurals and omit the unused step label', () => {
+  for (const language of ['fr', 'en', 'it']) {
+    const messages = JSON.parse(readFileSync(new URL(`../src/locales/${language}/catalogue.json`, import.meta.url), 'utf8'));
+    assert.equal(messages['lunii.sendBilan.notStarted_many'], messages['lunii.sendBilan.notStarted_other']);
+    assert.equal(messages['lunii.sendStep.notStarted'], undefined);
+    if (language === 'it') assert.equal(messages['lunii.sendBilan.notStarted_one'], 'Non avviata: «{{titles}}».');
+  }
+});
+
+test('real queue: sends and a second gesture finish after catalogue unmount, keeping each send report', async () => {
+  const calls = [], gates = new Map();
+  const api = {
+    list: async () => [{ id: 'd', state: 'ready', busy: false }],
+    inspect: async () => device(),
+    send: async args => { calls.push(['send', args.position]); return { operationId: args.requestId }; },
+    getOperation: id => new Promise(resolve => gates.set(id, resolve)),
+    rename: async (_id, name) => { calls.push(['rename', name]); return { device: device() }; },
+  };
+  const store = createLuniiDevices(api, { read() {}, write() {} });
+  store.reconcile([{ id: 'd', state: 'detected' }]); await store.inspect('d');
+  const operations = { state: { items: {} }, open: async id => { operations.state.items[id] = { operationId: id, status: 'running' }; }, cancel: id => { calls.push(['cancel', id]); return true; }, release() {}, retain() {} };
+  const mount = () => runner(() => useLuniiSend({ lunii: { ...store.getSnapshot(), store }, operations, cards: [card('x'), card('y')], revision: 1, api }));
+  const app = mount(); app.render(); app.flush();
+  const first = app.render().sendCards('d', ['x'], 2); await tick();
+  const second = app.render().sendCards('d', ['y'], 1); await tick();
+  const third = store.mutate('d', 'rename', ['Bedroom']);
+  assert.deepEqual(store.getQueueReport().d.map(e => e.state), ['running', 'queued', 'queued']);
+  assert.equal(store.queued(), 2);
+  assert.deepEqual(calls, [['send', 2]]);
+  const current = app.render();
+  const currentId = current.contexts[0].operationId;
+  assert.equal(current.contexts[0].queueEntryId, store.getQueueReport().d[0].id, 'the operation context names its own queue entry');
+  const [entry] = luniiSendEntries(key => key, ({ key }) => key, { sends: current, running: [{ operationId: currentId, operationKind: 'luniiSend', status: 'running' }], onCancel: id => current.cancel(id) });
+  const tracker = render(entry.detail.type, entry.detail.props);
+  const cancel = elements(tracker).find(e => e.type === Button && e.props.onClick);
+  assert.ok(cancel, 'explicit cancellation stays available for the running queued send');
+  cancel.props.onClick();
+  assert.deepEqual(calls.pop(), ['cancel', currentId]);
+  app.unmount();
+  gates.values().next().value({ status: 'cancelled', result: { stories: [{ step: 'interrupted', deviceFault: false }] } });
+  await first; await tick();
+  assert.deepEqual(calls, [['send', 2], ['send', 1]]);
+  [...gates.values()].at(-1)({ status: 'success', result: { stories: [{ step: 'done', deviceFault: false }] } });
+  await Promise.all([second, third]);
+  const reopened = mount(); reopened.render(); reopened.flush();
+  const send = reopened.render();
+  assert.equal(send.contexts.length, 2);
+  assert.equal(send.sending.size, 0);
+  assert.deepEqual(store.getQueueReport().d.map(e => e.state), ['failed', 'done', 'done']);
+  assert.equal(store.getSnapshot().error, null);
+  assert.deepEqual(calls, [['send', 2], ['send', 1], ['rename', 'Bedroom']]);
+  reopened.unmount();
+});
+
+for (const removeNeighbour of [false, true]) test(`queued sends resolve neighbour on reread (removed=${removeNeighbour})`, async () => {
+  let stories = [{ key: 'a' }, { key: 'x' }, { key: 'z' }];
+  const calls = [], gates = [];
+  const api = {
+    list: async () => [{ id: 'd', busy: false }],
+    inspect: async () => ({ ...device(), stories: structuredClone(stories) }),
+    send: async args => {
+      calls.push(args.position);
+      stories.splice(args.position, 0, { key: `sent-${calls.length}` });
+      return { operationId: `op-${calls.length}` };
+    },
+    getOperation: () => new Promise(resolve => gates.push(resolve)),
+  };
+  const store = createLuniiDevices(api, { read() {}, write() {} });
+  store.reconcile([{ id: 'd', state: 'detected' }]); await store.inspect('d');
+  const operations = { state: { items: {} }, open: async () => {} };
+  const app = runner(() => useLuniiSend({ lunii: { ...store.getSnapshot(), store }, operations, cards: [card('a'), card('b')], revision: 1, api }));
+  app.render(); app.flush();
+  const first = app.render().drop(store.getSnapshot().luniiDevices[0], 'x', ['a']); await tick();
+  const second = app.render().drop(store.getSnapshot().luniiDevices[0], 'x', ['b']); await tick();
+  if (removeNeighbour) stories = stories.filter(story => story.key !== 'x');
+  gates.shift()({ status: 'success' }); await first; await tick();
+  assert.deepEqual(calls, [1, removeNeighbour ? 1 : 2]);
+  const ctx = app.render().contexts[1];
+  assert.equal(ctx.startIndex, removeNeighbour ? 1 : 2);
+  assert.equal(ctx.startPosition, removeNeighbour ? 2 : 3);
+  gates.shift()({ status: 'success' }); await second;
+  assert.deepEqual(stories.map(story => story.key), removeNeighbour ? ['a', 'sent-2', 'sent-1', 'z'] : ['a', 'sent-1', 'sent-2', 'x', 'z']);
+  app.unmount();
+});
+
+test('incomplete project: structured missing files give a short localized summary and open the right editor', async () => {
+  const { default: i18next } = await import('i18next');
+  const resources = Object.fromEntries(['fr', 'en', 'it'].map(language => [language, {
+    catalogue: JSON.parse(readFileSync(new URL(`../src/locales/${language}/catalogue.json`, import.meta.url), 'utf8')),
+  }]));
+  await i18next.init({ lng: 'fr', keySeparator: false, resources, interpolation: { escapeValue: false } });
+  const missing = { code: 'FILES_NOT_FOUND_OR_INACCESSIBLE', params: { label: 'secret.mp3', error: "Le chemin d'accès spécifié est introuvable. (os error 3)" } };
+  const reasonFor = cause => ({ code: 'STORYTELLER_PROJECT_INCOMPLETE', params: { cause } });
+  const cause = { code: 'VALIDATION_PROJECT_ERRORS', params: { errors: { messages: [missing, missing, missing, { code: 'VALIDATION_PROJECT_TARGET_MISSING', params: {} }], separator: '\n' } } };
+  const expected = {
+    fr: ['Projet pas prêt pour la Lunii : 3 fichiers manquants. Ouvre-le pour le terminer.', 'Ouvrir le projet'],
+    en: ['Project not ready for the Lunii: 3 missing files. Open it to finish it.', 'Open project'],
+    it: ['Progetto non pronto per la Lunii: 3 file mancanti. Aprilo per completarlo.', 'Apri il progetto'],
+  };
+  try {
+    for (const language of ['fr', 'en', 'it']) {
+      await i18next.changeLanguage(language);
+      const reason = reasonFor(cause);
+      const presentation = refusalPresentation(reason);
+      assert.deepEqual(presentation.params, { count: 3 }, 'only file failures count, not navigation errors');
+      assert.equal('cause' in presentation, false, 'raw cause never reaches the card presentation');
+      const opened = [];
+      const tree = render(LuniiSendRefusals, { report: { refused: [], failed: [{ ficheId: 'project-42', title: 'My project', reason, presentation }] }, handlers: { openEditor: id => opened.push(id) } });
+      assert.ok(text(tree).includes(expected[language][0]));
+      assert.doesNotMatch(text(tree), /os error|introuvable|secret\.mp3|FILES_NOT_FOUND/);
+      const button = elements(tree).find(element => element.type === Button);
+      assert.equal(text(button), expected[language][1]);
+      button.props.onClick();
+      assert.deepEqual(opened, ['project-42']);
+      for (const unknown of [null, 'raw os error 3', { code: 'STORYTELLER_PROJECT_INVALID' }, { code: 'VALIDATION_PROJECT_ERRORS', params: { errors: { messages: [] } } }]) {
+        const fallback = refusalPresentation(reasonFor(unknown));
+        assert.deepEqual(fallback.params, {});
+        assert.equal(fallback.key, 'catalogue:lunii.sendRefused.incomplete');
+        const fallbackTree = render(LuniiSendRefusals, { report: { refused: [{ ficheId: 'project-42', reason: reasonFor(unknown), presentation: fallback }], failed: [] } });
+        assert.ok(text(fallbackTree).includes(i18next.t('catalogue:lunii.sendRefused.incomplete')));
+        assert.doesNotMatch(text(fallbackTree), /os error|undefined|null/);
+      }
+      const single = refusalPresentation(reasonFor(missing));
+      assert.deepEqual(single.params, { count: 1 });
+      assert.ok(i18next.t(single.key, single.params).includes('1'));
+    }
+  } finally { await i18next.changeLanguage('fr'); }
 });

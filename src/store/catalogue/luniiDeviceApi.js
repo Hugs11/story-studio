@@ -4,6 +4,7 @@ import { coverAddress } from './coverAddress.js';
 import { toCatalogueError } from './catalogueApi.js';
 import { releaseTauriListener } from '../../utils/tauriListener.js';
 import { getPackAudioEdgeSilenceSettings } from '../../config/audioProcessing.js';
+import { syncActiveProjectAccess } from '../projectSessionAccess.js';
 
 export function luniiCoverAddress(path, convert = convertFileSrc) {
   return typeof path === 'string' && /^\/[a-f0-9-]+\/[a-f0-9-]+$/i.test(path)
@@ -21,13 +22,17 @@ export function createLuniiDeviceApi(bridge = {}) {
   }
   return {
     list: () => call('lunii_device_list'),
+    getOperation: operationId => call('catalogue_get_operation', { operationId, limit: 100, cursor: null }),
     open: deviceId => call('lunii_device_open', { deviceId }),
     inspect: (deviceId, { readOnly } = {}) => call('lunii_device_inspect', { deviceId, ...(readOnly === undefined ? {} : { readOnly }) }),
     // A requestId identifies one attempt, including reservation failures. After
     // rejection, retry with a new requestId; reusing it only retrieves its receipt.
-    send: ({ deviceId, selection, position = null, requestId }) => call('lunii_device_send', {
-      deviceId, selection, position, requestId, audioEdgeSilence: getPackAudioEdgeSilenceSettings(),
-    }),
+    send: async ({ deviceId, selection, position = null, requestId }) => {
+      await syncActiveProjectAccess();
+      return call('lunii_device_send', {
+        deviceId, selection, position, requestId, audioEdgeSilence: getPackAudioEdgeSilenceSettings(),
+      });
+    },
     cancel: operationId => call('lunii_device_cancel', { operationId }),
     remove: (deviceId, keys) => call('lunii_device_remove', { deviceId, keys }),
     reorder: (deviceId, keys) => call('lunii_device_reorder', { deviceId, keys }),
@@ -38,7 +43,7 @@ export function createLuniiDeviceApi(bridge = {}) {
     restore: deviceId => call('lunii_device_restore', { deviceId }),
     orphan: ({ deviceId, key, restore, knownUuid = null }) => call('lunii_device_orphan', { deviceId, key, restore, knownUuid }),
     restoreOrphans: (deviceId, items) => call('lunii_device_orphans_restore', { deviceId, items }),
-    repatriate: (deviceId, key, requestId) => call('lunii_device_repatriate', { deviceId, key, requestId }),
+    repatriate: (deviceId, key, requestId, workspaceDir, archiveName) => call('lunii_device_repatriate', { deviceId, key, requestId, workspaceDir, archiveName }),
     eject: deviceId => call('lunii_device_eject', { deviceId }),
     async onDevicesChanged(callback) {
       const listen = bridge.listen ?? (await import('@tauri-apps/api/event')).listen;

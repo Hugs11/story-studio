@@ -275,9 +275,11 @@ mod tests {
             },
         );
         let elapsed = begin.elapsed();
-        started.recv_timeout(Duration::from_secs(1)).unwrap();
+        started
+            .recv_timeout(crate::test_support::timeout())
+            .unwrap();
         release.send(()).unwrap();
-        done.recv_timeout(Duration::from_secs(1)).unwrap();
+        done.recv_timeout(crate::test_support::timeout()).unwrap();
         assert!(
             !covered,
             "an inconclusive comparison must never authorize the path"

@@ -17,6 +17,8 @@ const { ContentDialog } = await import('../src/components/common/ContentDialog.j
 
 test('catalogue Ctrl+Z preserves text undo and is suspended in menus/dialogues; F/A/Escape remain wired', () => {
   const previous = globalThis.window; let listener; let blocked = false;
+  const previousDocument = globalThis.document;
+  globalThis.document = { querySelector: () => ({ dataset: { modalSurface: 'catalogue' } }) };
   const calls = []; const noop = () => {};
   globalThis.window = { addEventListener: (_, fn) => { listener = fn; }, removeEventListener: noop };
   const ui = runner(() => useCatalogueShortcuts({ blocked: () => blocked, undo: () => calls.push('undo'), search: () => calls.push('search'), selectAll: () => calls.push('all'), clear: () => { calls.push('clear'); return true; } }));
@@ -32,7 +34,7 @@ test('catalogue Ctrl+Z preserves text undo and is suspended in menus/dialogues; 
     blocked = true; assert.equal(key('z'), false); blocked = false;
     assert.equal(key('f'), true); assert.equal(key('k'), true); assert.equal(key('a'), true); assert.equal(key('Escape', undefined, false), true);
     assert.deepEqual(calls, ['undo', 'search', 'search', 'all', 'clear']);
-  } finally { ui.unmount(); globalThis.window = previous; }
+  } finally { ui.unmount(); globalThis.window = previous; globalThis.document = previousDocument; }
 });
 
 test('undo notice lasts ten seconds for a new outcome, not for restored history', () => {
@@ -72,32 +74,23 @@ function descendants(node) {
   return [node, ...[node.props?.children].flat(Infinity).flatMap(descendants)];
 }
 
-test('palette focus, text, keyboard, outside dismissal and criterion menus stay wired', () => {
+test('search text, Escape and criterion menus stay wired', () => {
   const previousDocument = globalThis.document;
   const listeners = new Map();
   globalThis.document = { addEventListener: (key, fn) => listeners.set(key, fn), removeEventListener: key => listeners.delete(key) };
-  let state = initialFilterState(); const opened = [];
-  const props = { searchRef: { current: null }, cards: [{ id: 'pack', title: 'Lune', exemplars: [], tags: [] }], onOpenFiche: id => opened.push(id) };
+  let state = initialFilterState();
+  const props = { searchRef: { current: null }, cards: [{ id: 'pack', title: 'Lune', exemplars: [], tags: [] }] };
   const ui = runner(() => CatalogueToolbar({ ...props, view: { ...catalogueViewFixture(), ...state, summary: filterSummary(state), sort: { key: 'title', direction: 'asc' }, view: 'cards', setQuery: value => { state = { ...state, query: value }; }, dispatch: action => { state = filterStateReducer(state, action); } } }));
   const render = () => {
-    const tree = ui.render(); tree.props.ref.current = { contains: target => target === 'inside' }; ui.flush();
+    const tree = ui.render(); ui.flush();
     const nodes = descendants(tree);
-    return { nodes, search: nodes.find(node => node.props?.id === 'catalogue-search'), palette: nodes.find(node => node.props?.id === 'catalogue-palette'), menu: nodes.find(node => node.type?.name === 'MenuPopover' && node.props.trigger().props.className?.includes('catalogue-filter-trigger')) };
+    return { nodes, search: nodes.find(node => node.props?.id === 'catalogue-search'), menu: nodes.find(node => node.type?.name === 'MenuPopover' && node.props.trigger().props.className?.includes('catalogue-filter-trigger')) };
   };
   const key = value => { const event = { key: value, preventDefault() {}, stopPropagation() {} }; render().search.props.onKeyDown(event); };
   try {
-    let surface = render(); assert.equal(surface.palette, undefined);
-    surface.search.props.onFocus(); surface.search.props.onChange({ target: { value: 'Lune' } });
-    surface = render(); assert.equal(surface.search.props['aria-expanded'], true);
-    key('ArrowDown'); assert.equal(render().search.props['aria-activedescendant'], 'catalogue-palette-0');
-    key('Enter'); assert.deepEqual(opened, ['pack']); assert.equal(render().palette, undefined);
-    render().search.props.onFocus(); key('Escape'); assert.equal(render().palette, undefined); assert.equal(state.query, 'Lune');
+    let surface = render(); assert.equal(surface.search.props.role, undefined);
+    surface.search.props.onChange({ target: { value: 'Lune' } }); assert.equal(state.query, 'Lune');
     key('Escape'); assert.equal(state.query, '');
-    render().search.props.onChange({ target: { value: '5' } }); key('ArrowUp'); key('Enter');
-    assert.equal(state.filters.age.max, 5); assert.equal(state.query, ''); assert.equal(render().palette, undefined);
-    render().search.props.onChange({ target: { value: 'Lune' } });
-    listeners.get('pointerdown')({ target: 'inside' }); assert.ok(render().palette);
-    listeners.get('pointerdown')({ target: 'outside' }); assert.equal(render().palette, undefined);
     surface = render(); surface.menu.props.trigger().props.onClick(); surface = render(); assert.equal(surface.menu.props.open, true);
     const criterion = descendants(surface.menu.props.children).find(node => node.key === 'favoritesOnly');
     criterion.props.onClick({ currentTarget: {} }); surface = render();

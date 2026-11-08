@@ -10,7 +10,7 @@ async function setup(overrides = {}) {
   const calls = [];
   const actual = detail();
   const api = { inspect: async () => actual, ...overrides };
-  const store = createLuniiDevices(api, settings);
+  const store = createLuniiDevices(api, settings, globalThis, async () => '/workspace');
   store.reconcile([{ id: 'd', state: 'detected' }]);
   await store.inspect('d');
   return { store, api, actual, calls };
@@ -18,7 +18,7 @@ async function setup(overrides = {}) {
 
 test('all gestures use the facade argument contract; reorder receives the complete zero-based order', async () => {
   const calls = [];
-  const api = createLuniiDeviceApi({ invoke: async (name, args) => { calls.push([name, args]); return name === 'lunii_device_inspect' ? detail() : { device: detail(), outcomes: [{ status: 'complete' }] }; } });
+  const api = createLuniiDeviceApi({ invoke: async (name, args) => { calls.push([name, args]); return name === 'lunii_device_list' ? [detail()] : name === 'lunii_device_inspect' ? detail() : { device: detail(), outcomes: [{ status: 'complete' }] }; } });
   const { store } = await setup(api); calls.length = 0;
   for (const [method, args, expected] of [
     ['hide', ['a', true], { deviceId: 'd', key: 'a', hidden: true }],
@@ -33,24 +33,26 @@ test('all gestures use the facade argument contract; reorder receives the comple
   ]) {
     await store.mutate('d', method, args);
     const names = { nameStory: 'name_story' };
-    assert.deepEqual(calls.at(-1), [`lunii_device_${names[method] ?? method}`, expected]);
+    assert.deepEqual(calls.filter(([name]) => !['lunii_device_list', 'lunii_device_inspect'].includes(name)).at(-1), [`lunii_device_${names[method] ?? method}`, expected]);
   }
   assert.deepEqual(reorderedKeys(stories, ['c'], 0), ['c', 'a', 'b']);
   assert.deepEqual(reorderedKeys(stories, ['a', 'c'], 3), ['b', 'a', 'c']);
   assert.deepEqual(luniiRows(detail()).map(s => s.position), [1, 2, null]);
 });
 
-test('concurrent gestures are refused with a code; inventory polls cannot release the local reservation', async () => {
+test('concurrent gestures are queued; inventory polls cannot release the local reservation', async () => {
   let finish; let hides = 0; let removes = 0;
   const { store } = await setup({ hide: () => { hides++; return new Promise(resolve => finish = resolve); }, remove: () => { removes++; } });
   const first = store.mutate('d', 'hide', ['a', true], ['a']);
   assert.deepEqual(store.getSnapshot().luniiDevices[0].pendingKeys, ['a']);
   store.reconcile([{ id: 'd', state: 'ready', busy: false }]);
   assert.equal(store.getSnapshot().luniiDevices[0].busy, true);
-  assert.equal(await store.mutate('d', 'remove', [['b']]), null);
-  assert.equal(store.getSnapshot().error.code, 'STORYTELLER_DEVICE_BUSY');
+  const second = store.mutate('d', 'remove', [['b']]);
+  assert.equal(store.queued(), 1);
+  assert.equal(store.getSnapshot().error, null);
   assert.equal(hides, 1); assert.equal(removes, 0);
-  finish({ device: detail() }); await first;
+  finish({ device: detail() }); await first; await second;
+  assert.equal(removes, 1);
   assert.equal(store.getSnapshot().luniiDevices[0].busy, false);
 });
 
@@ -59,7 +61,7 @@ test('partial batch failure reloads actual state, including a previously complet
   const error = { code: 'STORYTELLER_NO_SPACE', params: { missingBytes: 42 } };
   const { store } = await setup({ inspect: async () => { reads++; return structuredClone(actual); }, hide: async (_id, key) => { if (key === 'c') throw error; actual.stories[0].hidden = true; return { device: structuredClone(actual) }; } });
   await store.mutate('d', 'hideMany', [true], ['a', 'c']);
-  assert.equal(reads, 2); assert.equal(store.getSnapshot().luniiDevices[0].stories[0].hidden, true);
+  assert.equal(reads, 3); assert.equal(store.getSnapshot().luniiDevices[0].stories[0].hidden, true);
   assert.deepEqual(store.getSnapshot().error, error);
   assert.equal(store.getSnapshot().luniiDevices[0].busy, false);
 });
@@ -106,18 +108,21 @@ test('parking warning in any item of a hide batch is displayed at the gesture', 
   const { store } = await setup({ hide: async (_id, key) => ({ device: detail(), outcomes: [{ status: key === 'a' ? 'stateWarning' : 'complete' }] }) });
   await store.mutate('d', 'hideMany', [true], ['a', 'c']);
   assert.equal(store.getSnapshot().error.code, 'STORYTELLER_STORY_PARKING_FAILED');
+  assert.equal(store.getQueueReport().d[0].state, 'failed');
+  assert.equal(store.getQueueReport().d[0].reason.code, 'STORYTELLER_STORY_PARKING_FAILED');
 });
 
 test('repatriation holds the device reservation until every receipt releases it', async () => {
   const calls = [], callbacks = [];
   let inventories = 0;
-  const store = createLuniiDevices({ inspect: async () => detail(), repatriate: async (...args) => { calls.push(args); return { operationId: 'op' }; }, list: async () => [{ id: 'd', busy: ++inventories === 1 }] }, settings, { setTimeout: callback => callbacks.push(callback) });
+  const store = createLuniiDevices({ inspect: async () => detail(), repatriate: async (...args) => { calls.push(args); return { operationId: 'op' }; }, list: async () => [{ id: 'd', busy: ++inventories === 1 }] }, settings, { setTimeout: callback => callbacks.push(callback) }, async () => '/workspace');
   store.reconcile([{ id: 'd', state: 'detected' }]); await store.inspect('d');
   const pending = store.mutate('d', 'repatriateMany', [], ['a', 'c']);
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(store.getSnapshot().luniiDevices[0].busy, true); assert.equal(calls.length, 1);
   callbacks[0](); await pending;
   assert.deepEqual(calls.map(args => args.slice(0, 2)), [['d', 'a'], ['d', 'c']]);
+  assert.deepEqual(calls.map(args => args.slice(3)), [['/workspace', 'A'], ['/workspace', 'C']]);
   assert.notEqual(calls[0][2], calls[1][2]); assert.equal(store.getSnapshot().luniiDevices[0].busy, false);
   const error = { code: 'STORYTELLER_STORY_UNREADABLE', detail: 'repatriation: decrypt-index-li' };
   for (const [index, title] of ['A', 'C'].entries()) {
@@ -138,7 +143,7 @@ test('repatriation keeps technical keys for IPC and remembers missing titles wit
       inspect: async () => ({ ...detail(), stories: [{ key, title, kind: 'creation' }] }),
       repatriate: async (...args) => { calls.push(args); return { operationId: 'op' }; },
       list: async () => [{ id: 'd', busy: false }],
-    }, settings);
+    }, settings, globalThis, async () => '/workspace');
     store.reconcile([{ id: 'd', state: 'detected' }]); await store.inspect('d');
     await store.mutate('d', 'repatriateMany', [], [key]);
     assert.deepEqual(calls[0].slice(0, 2), ['d', key]);
@@ -172,11 +177,11 @@ test('orphans take the title and cover of the catalogue card holding their full 
 
 test('« Tout remettre dans la liste » sends complete identified orphans in display order, in one command', async () => {
   const calls = [];
-  const api = createLuniiDeviceApi({ invoke: async (name, args) => { calls.push([name, args]); return name === 'lunii_device_inspect' ? detail() : { device: detail(), outcomes: [{ status: 'complete' }] }; } });
+  const api = createLuniiDeviceApi({ invoke: async (name, args) => { calls.push([name, args]); return name === 'lunii_device_list' ? [detail()] : name === 'lunii_device_inspect' ? detail() : { device: detail(), outcomes: [{ status: 'complete' }] }; } });
   const { store } = await setup(api); calls.length = 0;
   const items = [{ key: '00000005', knownUuid: 'e' }, { key: '00000003', knownUuid: 'c' }];
   await store.mutate('d', 'restoreOrphans', [items], items.map(i => i.key));
-  assert.deepEqual(calls, [['lunii_device_orphans_restore', { deviceId: 'd', items }]]);
+  assert.deepEqual(calls.filter(([name]) => !['lunii_device_list', 'lunii_device_inspect'].includes(name)), [['lunii_device_orphans_restore', { deviceId: 'd', items }]]);
 });
 
 test('a contradicted orphan identity is never completed from the catalogue', () => {
@@ -184,4 +189,37 @@ test('a contradicted orphan identity is never completed from the catalogue', () 
   const card = { id: 'fiche', title: 'Le loup', uuids: [id] };
   const story = withKnownOrphans([{ ...detail(), orphans: [{ key: 'ABCDEF00', knownUuid: null, identityConflict: true, title: null }] }], [card])[0].orphans[0];
   assert.equal(story.knownUuid, null); assert.equal(story.title, null); assert.equal(story.catalogueFicheId, undefined);
+});
+
+
+test('repatriation resolves the configured workspace at each request and uses the listed title with the export convention', async () => {
+  let workspace = '/first-workspace';
+  const calls = [];
+  const device = detail();
+  device.stories[0] = { ...device.stories[0], title: 'Le conte', ageMin: 5, ageMax: 8 };
+  const store = createLuniiDevices({
+    inspect: async () => device,
+    repatriate: async (...args) => calls.push(args),
+    list: async () => [{ id: 'd', busy: false }],
+  }, { read: key => key === 'storyStudioWorkspaceDir' ? workspace : undefined, write() {} });
+  store.reconcile([{ id: 'd', state: 'detected' }]);
+  await store.inspect('d');
+  await store.mutate('d', 'repatriateMany', [], ['a']);
+  workspace = '/second-workspace';
+  device.stories[0].title = null;
+  await store.mutate('d', 'repatriateMany', [], ['a']);
+  assert.deepEqual(calls.map(args => args.slice(3)), [
+    ['/first-workspace', '5-8+]Le_conte'], ['/second-workspace', ''],
+  ]);
+});
+
+ test('repatriation without a minimum age keeps the title alone', async () => {
+  const calls = [];
+  const device = detail();
+  device.stories[0] = { ...device.stories[0], title: 'Le conte', ageMin: null, ageMax: 8 };
+  const store = createLuniiDevices({ inspect: async () => device, repatriate: async (...args) => calls.push(args), list: async () => [] }, settings, undefined, async () => '/workspace');
+  store.reconcile([{ id: 'd', state: 'detected' }]);
+  await store.inspect('d');
+  await store.mutate('d', 'repatriateMany', [], ['a']);
+  assert.equal(calls[0][4], 'Le conte');
 });

@@ -49,7 +49,7 @@ impl Fixture {
                 );
                 return;
             }
-            assert!(start.elapsed() < Duration::from_secs(20));
+            assert!(start.elapsed() < crate::test_support::timeout());
             std::thread::sleep(Duration::from_millis(5));
         }
     }

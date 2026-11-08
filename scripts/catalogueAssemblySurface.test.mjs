@@ -21,9 +21,9 @@ test('preparation and exclusions render translated accessible surfaces',async()=
 test('assembly metadata leaves unknown age empty and keeps zero', async () => {
  const { PackNameModal } = await import('../src/components/layout/PackNameModal.jsx');
  for (const minAge of ['', '0', '9']) {
-  const html = mountSurface(React.createElement(PackNameModal, { open:true, embedded:true, allowUnknownAge:true, packMetadata:{title:'Aggregate',minAge}, onClose(){} })).html;
+  const html = mountSurface(React.createElement(PackNameModal, { open:true, embedded:true,  packMetadata:{title:'Aggregate',minAge}, onClose(){} })).html;
   assert.doesNotMatch(html,/pack-meta-age-chip is-active[^>]*>3</);
-  if (minAge === '9') assert.match(html,/class="pack-meta-age-chip is-active">9\+</);
+  if (minAge === '9') assert.match(html,/class="pack-meta-age-chip is-active" aria-pressed="true">9\+</);
   else {
    const input = html.match(/<input[^>]*class="pack-meta-input pack-meta-age-other"[^>]*>/)?.[0];
    assert.ok(input);

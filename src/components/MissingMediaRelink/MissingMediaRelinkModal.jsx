@@ -71,6 +71,7 @@ async function scanFolderByName(rootDir, wantedNames) {
   const wanted = new Set([...wantedNames].map((name) => String(name).toLowerCase()));
   const matches = new Map([...wanted].map((name) => [name, []]));
   let scanned = 0;
+  const unreadableFolders = [];
 
   async function walk(dir) {
     if (scanned >= MAX_SCAN_FILES) return;
@@ -78,6 +79,7 @@ async function scanFolderByName(rootDir, wantedNames) {
     try {
       entries = await readDir(dir);
     } catch {
+      unreadableFolders.push(dir);
       return;
     }
     for (const entry of entries) {
@@ -96,11 +98,13 @@ async function scanFolderByName(rootDir, wantedNames) {
   }
 
   await walk(rootDir);
-  return { matches, scanned, truncated: scanned >= MAX_SCAN_FILES };
+  return { matches, scanned, truncated: scanned >= MAX_SCAN_FILES, unreadableFolders };
 }
 
 function mergeResolvedRows(rows, resolvedByPath) {
   return rows.map((row) => {
+    // Un choix fait pendant le scan reste prioritaire sur ses résultats tardifs.
+    if (isResolved(row)) return row;
     const resolved = resolvedByPath.get(pathKey(row.path));
     if (!resolved) return row;
     return { ...row, ...resolved };
@@ -158,6 +162,7 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
   const [collapsed, setCollapsed] = useState(() => new Set());
   const [scanningKey, setScanningKey] = useState('');
   const [applying, setApplying] = useState(false);
+  const [scanWarning, setScanWarning] = useState(null);
 
   // Un nouvel audit (retour de focus, fichier remis en place) renouvelle la
   // liste : les fichiers déjà reliés gardent leur choix.
@@ -188,9 +193,11 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
   ), [groups, normalizedQuery, filter]);
 
   async function runFolderScan(folder, targetRows) {
+    setScanWarning(null);
     const directResolved = new Map();
     const unresolved = [];
     for (const row of targetRows) {
+      if (isResolved(row)) continue;
       const direct = await findFirstExisting(candidatePathsForRelinkRoot(row.path, folder));
       if (direct) {
         directResolved.set(pathKey(row.path), {
@@ -207,6 +214,9 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
     if (unresolved.length > 0) {
       const names = new Set(unresolved.map((row) => row.fileName));
       const scanResult = await scanFolderByName(folder, names);
+      if (scanResult.truncated || scanResult.unreadableFolders.length > 0) {
+        setScanWarning(scanResult);
+      }
       for (const row of unresolved) {
         const rowMatches = scanResult.matches.get(row.fileName.toLowerCase()) ?? [];
         if (rowMatches.length === 1) {
@@ -281,7 +291,7 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
   }
 
   async function handleApply() {
-    if (resolvedCount === 0 || applying) return;
+    if (resolvedCount === 0 || applying || scanningKey) return;
     setApplying(true);
     try {
       await onApply(replacements, { saveAfter: true });
@@ -337,6 +347,13 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
             </div>
           </div>
         </div>
+
+        {scanWarning && (
+          <div className="relink-scan-warning" role="status">
+            {scanWarning.truncated && <p>{t('media:relink.scan.truncated', { limit: MAX_SCAN_FILES })}</p>}
+            {scanWarning.unreadableFolders.length > 0 && <p>{t('media:relink.scan.unreadable', { count: scanWarning.unreadableFolders.length })}</p>}
+          </div>
+        )}
 
         <div className="relink-scroll">
           {visibleGroups.length === 0 && (
@@ -463,7 +480,7 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
             type="button"
             className="relink-btn relink-btn-primary"
             onClick={handleApply}
-            disabled={resolvedCount === 0 || applying}
+            disabled={resolvedCount === 0 || applying || Boolean(scanningKey)}
           >
             {applying && <Loader2 className="relink-spin" />}
             {applying ? t('media:audioEditor.apply.progress') : t('media:relink.apply.action')}

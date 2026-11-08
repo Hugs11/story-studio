@@ -17,6 +17,14 @@ pub(crate) struct LoudnessMeasure {
     pub loudness_range_lu: f64,
 }
 
+impl LoudnessMeasure {
+    /// Digital silence is reported by FFmpeg as I=-70 with Peak=-inf.
+    /// An RMS floor alone never implies silence: finite levels permit gain.
+    pub(crate) fn is_silent(&self) -> bool {
+        self.integrated_lufs == f64::NEG_INFINITY || self.true_peak_db == f64::NEG_INFINITY
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum LoudnessAction {
     None,

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { StatusPill, StatusPillEntry } from '../../layout/StatusPill.jsx';
 import { Button } from '../../common/Button.jsx';
 import { Tooltip } from '../../common/Tooltip.jsx';
-import { Broom } from '../../icons/LucideLocal';
+import { Broom } from '../../icons/LucideLocal.jsx';
 import { useCatalogueTranslation } from '../../../i18n/useCatalogueTranslation.js';
 import { presentCatalogueError } from '../../../store/catalogue/catalogueApi.js';
 import { operationView } from '../../../store/catalogue/operationView.js';
@@ -11,21 +11,30 @@ import { ScanSummary } from '../operations/ScanSummary.jsx';
 import { ScanTracker } from '../operations/ScanTracker.jsx';
 import { latestRecovery, recoveryMessage } from '../open/ResumeBanner.jsx';
 import { luniiSendEntries } from './LuniiSendItems.jsx';
-import { sendOpenKeys } from '../../../store/catalogue/luniiSend.js';
+import { luniiQueueEntries } from './LuniiQueueReport.jsx';
+import { heldByEngine } from '../../../store/catalogue/luniiQueueView.js';
+import { queueCoversSend, sendOpenKeys } from '../../../store/catalogue/luniiSend.js';
 
 const GROUP_LABELS = { issue: 'catalogue:activity.group.issue', progress: 'catalogue:activity.group.progress', info: 'catalogue:activity.group.info' };
+
+export function sendKeepsActivityOpen(sendSignature, input, endedIds) {
+  return sendSignature.some(key => key.startsWith('attention:')) || endedIds.some(id => queueCoversSend(input.sends?.contextFor(id), input.luniiQueue?.entries));
+}
 
 /**
  * Les éléments de l'activité, au gabarit des corrections de l'éditeur. Un
  * souci mène, quand c'est possible, là où il se règle et disparaît une fois
  * réglé ; une information s'efface par sa croix.
  */
-function activityItems(t, line, input) {
+export function activityItems(t, line, input) {
   const items = [];
   for (const entry of input.errors ?? []) {
+    if (entry.queueEntryId) continue; // Its interrupted send is told by the queue report.
     const message = presentCatalogueError(entry.error);
+    // A Lunii that stopped and is still held by the engine cannot be ejected: the advice is to unplug it.
+    const held = heldByEngine(entry.error);
     items.push({
-      key: `error:${message.message}`, kind: 'error', tone: 'issue', label: entry.orphanConflict ? t('catalogue:lunii.conflict') : message.message,
+      key: `error:${message.message}`, kind: 'error', tone: 'issue', label: entry.orphanConflict ? t('catalogue:lunii.conflict') : held ? t('catalogue:lunii.unresponsiveHeld') : message.message,
       signature: entry.onDismiss ? null : `error:${message.message}`,
       onSelect: entry.onSelect ?? null, onDismiss: entry.onDismiss ?? (entry.onSelect ? null : undefined),
       detail: entry.orphanConflict ? <Button size="sm" onClick={entry.onSelect}>{t('catalogue:lunii.seeOrphan')}</Button> : message.technicalDetail ? <p className="validation-pill-details-text">{message.technicalDetail}</p> : null,
@@ -48,6 +57,7 @@ function activityItems(t, line, input) {
     detail: <ScanSummary embedded snapshot={snapshot} api={input.api} onClose={input.onDismissSummary} onShowAdditions={input.onShowAdditions} />,
   });
   items.push(...luniiSendEntries(t, line, input));
+  items.push(...luniiQueueEntries(t, input));
   if (input.sourceNotice) items.push({
     key: 'sources', kind: 'sources', tone: 'info', signature: `sources:${JSON.stringify(input.sourceNotice)}`,
     label: line(input.sourceNotice), onSelect: input.onPreferences,
@@ -77,8 +87,8 @@ export function CatalogueActivity({ fallbackFocusId = null, ...input }) {
   const autoOpened = useRef(new Set());
   const transfers = [...(input.running ?? []), ...(input.summaries ?? [])].filter(s => s.operationKind === 'luniiRepatriate');
   // A transfer opens the pill at its start and again if something did not leave; it never takes the focus.
-  const sendSignature = sendOpenKeys([...(input.running ?? []), ...(input.summaries ?? [])], id => input.sends?.contextFor(id) ?? null, input.sends?.contexts ?? []);
-  const autoSignature = [...transfers.map(s => s.operationId), ...sendSignature, ...(input.errors ?? []).filter(e => e.error?.code?.startsWith('STORYTELLER_')).map(e => `error:${e.error.code}`), ...(input.browserNotice?.key === 'catalogue:lunii.repairResult' ? [JSON.stringify(input.browserNotice)] : [])].join('|');
+  const sendSignature = sendOpenKeys([...(input.running ?? []), ...(input.summaries ?? [])].filter(snapshot => !queueCoversSend(input.sends?.contextFor(snapshot.operationId), input.luniiQueue?.entries)), id => input.sends?.contextFor(id) ?? null, input.sends?.contexts ?? []);
+  const autoSignature = [...transfers.map(s => s.operationId), ...sendSignature, ...(input.errors ?? []).filter(e => !e.queueEntryId && e.error?.code?.startsWith('STORYTELLER_')).map(e => `error:${e.error.code}`), ...(input.browserNotice?.key === 'catalogue:lunii.repairResult' ? [JSON.stringify(input.browserNotice)] : []), ...(input.luniiQueue?.reports ?? []).map(report => `queue-report:${report.run}`)].join('|');
   const runningSends = (input.running ?? []).filter(s => s.operationKind === 'luniiSend').map(s => s.operationId).join('|');
   const previousSends = useRef('');
   useEffect(() => {
@@ -89,9 +99,9 @@ export function CatalogueActivity({ fallbackFocusId = null, ...input }) {
   }, [autoSignature]);
   // The end of a smooth transfer closes the pill; the entries stay as its bilan.
   useEffect(() => {
-    const ended = previousSends.current.split('|').filter(Boolean).some(id => !runningSends.split('|').includes(id));
+    const endedIds = previousSends.current.split('|').filter(Boolean).filter(id => !runningSends.split('|').includes(id));
     previousSends.current = runningSends;
-    if (ended && !sendSignature.some(key => key.startsWith('attention:'))) setOpen(false);
+    if (endedIds.length && !sendKeepsActivityOpen(sendSignature, input, endedIds)) setOpen(false);
   // reason: only the set of running sends decides.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runningSends]);

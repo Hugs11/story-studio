@@ -586,5 +586,10 @@
   "node.folder.depthBadge": "L{{level}}",
   "diagram.stories.unit_one": "<number>{{count}}</number><unit>story</unit>",
   "diagram.stories.unit_other": "<number>{{count}}</number><unit>stories</unit>",
-  "zip.folder.choose": "Choose a folder"
+  "zip.folder.choose": "Choose a folder",
+  "audio.level.current": "This verdict applies to the current sound; it will be refreshed if you edit it.",
+  "audio.level.nearMuteNoHarmonize": "The audio “{{label}}” is almost inaudible: volume harmonization is turned off for this pack.",
+  "audio.level.nearMuteBoost": "The audio “{{label}}” is almost silent: when generating the pack, Story Studio will amplify it greatly; background noise may become more noticeable.",
+  "audio.level.strongLimiting": "When generating the pack, Story Studio will greatly reduce the peaks of “{{label}}” to harmonize its volume; some peaks may sound compressed.",
+  "audio.level.silent": "The audio “{{label}}” is silent: the Lunii will play nothing here."
 }

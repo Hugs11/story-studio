@@ -1,5 +1,4 @@
 import { translateCommon as t } from '../i18n/commonPresentation.js';
-import { MediaSubscriptionsPanel } from './MediaSubscriptions/MediaSubscriptionsPanel';
 import { lazy } from 'react';
 import { MediaTransferProvider } from '../store/MediaTransferContext';
 import { ProjectContext } from '../store/ProjectContext';
@@ -25,7 +24,6 @@ const BottomWorkspacePanel = lazy(() => import('./BottomWorkspacePanel/BottomWor
 // `WorkspaceView` reste `lazy` + `renderDeferred` : le code-split est préservé.
 export function AppShell({
   mediaTransfer,
-  subscriptions,
   projectContextValue,
   projectActions,
   // Le panneau du bas et la bottombar suivent « un projet est-il ouvert ? »,
@@ -53,6 +51,7 @@ export function AppShell({
     <div className="app">
       <TitleBar
         projectName={titleBar.projectName}
+        projectFilePath={titleBar.projectFilePath}
         packRecap={titleBar.packRecap}
         packCoverImage={titleBar.packCoverImage}
         isDirty={titleBar.isDirty}
@@ -181,7 +180,6 @@ export function AppShell({
       </div>
 
       <AppModals {...appModalsProps} />
-      <MediaSubscriptionsPanel {...subscriptions} />
 
       {/* Bottom bar */}
       <div className="bottombar">

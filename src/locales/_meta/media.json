@@ -4520,37 +4520,8 @@
       "status": "ai-reviewed"
     }
   },
-  "subscriptions.notifications.count_one": {
-    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > libellé accessible du bouton d’ouverture du panneau quand des nouveautés attendent. Forme plurielle « one » (count transmis).",
-    "en": {
-      "sourceHash": "8f66ff268b16",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "8f66ff268b16",
-      "status": "ai-reviewed"
-    }
-  },
-  "subscriptions.notifications.count_many": {
-    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > libellé accessible du bouton d’ouverture du panneau quand des nouveautés attendent. Forme plurielle « many » (FR/IT : grands nombres, 1 000 000).",
-    "it": {
-      "sourceHash": "5c4f2732b21e",
-      "status": "ai-reviewed"
-    }
-  },
-  "subscriptions.notifications.count_other": {
-    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > libellé accessible du bouton d’ouverture du panneau quand des nouveautés attendent. Forme plurielle « other » (count transmis).",
-    "en": {
-      "sourceHash": "5c4f2732b21e",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "5c4f2732b21e",
-      "status": "ai-reviewed"
-    }
-  },
   "subscriptions.notifications.title": {
-    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > bouton d’ouverture du panneau et titre de section.",
+    "context": "Préférences > Suivis des médias > titre de la liste des nouveautés en attente.",
     "maxLength": 20,
     "en": {
       "sourceHash": "788011833a5a",
@@ -4558,40 +4529,6 @@
     },
     "it": {
       "sourceHash": "788011833a5a",
-      "status": "ai-reviewed"
-    }
-  },
-  "subscriptions.panel.ariaLabel": {
-    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > libellé accessible du panneau.",
-    "en": {
-      "sourceHash": "99a6702764f0",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "99a6702764f0",
-      "status": "ai-reviewed"
-    }
-  },
-  "subscriptions.panel.title": {
-    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > titre du panneau.",
-    "maxLength": 32,
-    "en": {
-      "sourceHash": "5daa02eaa0e3",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "5daa02eaa0e3",
-      "status": "ai-reviewed"
-    }
-  },
-  "subscriptions.panel.close": {
-    "context": "Accueil > panneau « Suivi des médias » (abonnements podcast/YouTube et notifications de nouveautés) > libellé accessible du bouton ×.",
-    "en": {
-      "sourceHash": "0b696f264076",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "0b696f264076",
       "status": "ai-reviewed"
     }
   },
@@ -5000,40 +4937,6 @@
       "status": "ai-reviewed"
     }
   },
-  "packAudio.off.label": {
-    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > segment du mode de silence : ne modifie pas les silences.",
-    "maxLength": 16,
-    "en": {
-      "sourceHash": "e9681b23e9bc",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "e9681b23e9bc",
-      "status": "ai-reviewed"
-    }
-  },
-  "packAudio.off.ariaLabel": {
-    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > libellé accessible du segment « Ne rien faire ».",
-    "en": {
-      "sourceHash": "fcf060d16337",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "fcf060d16337",
-      "status": "ai-reviewed"
-    }
-  },
-  "packAudio.off.help": {
-    "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > aide du mode « Ne rien faire ».",
-    "en": {
-      "sourceHash": "69d3923919a0",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "69d3923919a0",
-      "status": "ai-reviewed"
-    }
-  },
   "packAudio.duration.error": {
     "context": "Fiche du pack (et réglages du pack de l’Éditeur graphe) > section « Traitement audio » appliquée à la génération > erreur sous un champ de durée ; {{max}} = plafond en secondes.",
     "en": {
@@ -5248,6 +5151,101 @@
     },
     "it": {
       "sourceHash": "3d71c40d7db7",
+      "status": "ai-reviewed"
+    }
+  },
+  "packAudio.silence.ariaLabel": {
+    "context": "Fiche du pack, deux éditeurs : accessibilité de l’interrupteur de traitement des silences.",
+    "en": {
+      "sourceHash": "e937c032fd28",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e937c032fd28",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.scan.truncated": {
+    "context": "Médias introuvables > avertissement de recherche incomplète ; limite inchangée ou dossiers illisibles.",
+    "en": {
+      "sourceHash": "3137e07f081b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3137e07f081b",
+      "status": "ai-reviewed"
+    }
+  },
+  "relink.scan.unreadable": {
+    "context": "Médias introuvables > avertissement de recherche incomplète ; limite inchangée ou dossiers illisibles.",
+    "en": {
+      "sourceHash": "f2405bda21aa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f2405bda21aa",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.section.title": {
+    "context": "Préférences > navigation et titre de la section des suivis podcast/YouTube, accessible depuis tous les écrans.",
+    "en": {
+      "sourceHash": "f6ba3b1c8f37",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f6ba3b1c8f37",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.reminder.title": {
+    "context": "Toast au démarrage > rappel des notifications non lues déjà au registre ; titre",
+    "en": {
+      "sourceHash": "32d5cf2869cb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "32d5cf2869cb",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.reminder.action": {
+    "context": "Toast au démarrage > rappel des notifications non lues déjà au registre ; ouvre les Préférences sur Suivis des médias",
+    "en": {
+      "sourceHash": "4a1e847ec470",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4a1e847ec470",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.reminder.count_one": {
+    "context": "Toast au démarrage > rappel des notifications non lues déjà au registre ; nombre de suivis concernés, pluriel one",
+    "en": {
+      "sourceHash": "f9abb2eb9faa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f9abb2eb9faa",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.reminder.count_many": {
+    "context": "Toast au démarrage > rappel des notifications non lues déjà au registre ; nombre de suivis concernés, pluriel many",
+    "it": {
+      "sourceHash": "607280e93f7d",
+      "status": "ai-reviewed"
+    }
+  },
+  "subscriptions.reminder.count_other": {
+    "context": "Toast au démarrage > rappel des notifications non lues déjà au registre ; nombre de suivis concernés, pluriel other",
+    "en": {
+      "sourceHash": "607280e93f7d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "607280e93f7d",
       "status": "ai-reviewed"
     }
   }

@@ -11,34 +11,8 @@ async function start() {
 if (!await admitEditorStartup()) return;
 const { default: App } = await import('./App');
 
-// La détection précède toute migration, y compris dans les bancs de développement.
+// La détection précède toute migration.
 initializeI18n(loadLanguage());
-
-// Banc d'essai des moteurs de graphe, monté à la place de
-// l'application sous `VITE_BENCH=graph npm run tauri:dev`.
-//
-// `import.meta.env.DEV` et une variable d'environnement absente du build font
-// disparaître entièrement cette branche de l'application livrée : aucun moteur
-// d'affichage n'entre dans le bundle tant que le verdict du banc n'est pas
-// rendu et l'éditeur avancé intégré.
-if (import.meta.env.DEV && import.meta.env.VITE_BENCH === "graph") {
-  import("../bench/graphEngines/mount.js").then(({ mount }) => mount());
-} else if (import.meta.env.DEV && (import.meta.env.VITE_BENCH === "surface"
-  || import.meta.env.VITE_BENCH === "recette")) {
-  // La **vraie** surface avancée, montée sur une fixture, pour la voir et la
-  // capturer. Elle passe par les commandes Tauri de production. En mode
-  // `recette`, la même surface est mesurée par un parcours de
-  // recette — mêmes composants, mêmes commandes, relevé en plus.
-  import("../bench/graphEngines/surfaceMount.jsx").then(({ mountSurface }) => mountSurface());
-} else if (import.meta.env.DEV && import.meta.env.VITE_BENCH === "atelier") {
-  // Le **vrai** espace de travail avancé, monté sur une fixture,
-  // avec son store, sa session d'édition et ses commandes de production.
-  import("../bench/graphEngines/workspaceMount.jsx").then(({ mountWorkspace }) => mountWorkspace());
-} else if (import.meta.env.DEV && import.meta.env.VITE_BENCH === "export") {
-  // Le banc d'export : pack importé, édité, enregistré, rouvert,
-  // exporté et relu — sur de vrais fichiers, par les commandes de production.
-  import("../bench/graphEngines/exportMount.jsx").then(({ mountExportBench }) => mountExportBench());
-} else {
 
 runSettingsMigrations();
 
@@ -75,8 +49,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </I18nextProvider>
   </React.StrictMode>,
 );
-
-}
 
 }
 

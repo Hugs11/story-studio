@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { reorderedKeys } from '../store/catalogue/luniiDevices.js';
 import { repatriatePlan } from '../store/catalogue/luniiRepatriate.js';
 import { dropTargetOf, edgeScrollSpeed, pinScrollAncestors, probePoint, reorderIndex, sendRowKey } from '../store/catalogue/luniiDndTargets.js';
 
@@ -44,7 +45,12 @@ export function useLuniiDnd({ lunii, sendUi, onDeviceChange, elementAt = element
       const device = hit ? deviceOf(hit.deviceId) : null;
       if (!device || !send?.hover(device, sendRowKey(hit), src.ids)) send?.leave();
     } else {
-      setInsertion(hit?.kind === 'row' && hit.deviceId === src.deviceId ? hit.rowKey : null);
+      const device = deviceOf(src.deviceId);
+      // Row keys mark insert-before; the numeric final boundary marks insert-at-end.
+      const endIndex = hit?.kind === 'end' ? reorderIndex(hit, device) : null;
+      const changesOrder = endIndex != null && reorderedKeys(device.stories, src.keys, endIndex).some((key, i) => key !== device.stories[i].key);
+      setInsertion(changesOrder ? device.stories.length
+        : hit?.kind === 'row' && hit.deviceId === src.deviceId ? hit.rowKey : null);
       setRepatriation(hit?.kind === 'catalogue' ? planFor(src) : null);
     }
   }, []);

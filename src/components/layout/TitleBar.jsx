@@ -1,3 +1,5 @@
+import { basenameNoExt } from '../../utils/fileUtils.js';
+import { packTitleBarName } from '../../store/packMetadataModel.js';
 import { useCommonTranslation } from '../../i18n/commonPresentation.js';
 import { useMemo, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -54,19 +56,18 @@ function ChevronIcon() {
 
 // `packRecap` remplace la lecture directe de `packMetadata` : le
 // bandeau est commun aux deux éditeurs, et ceux-ci ne portent pas les mêmes
-// champs. Composer la ligne ici obligerait à replier l'âge minimum sur « 3+ »
-// pour un projet graphe, qui n'en a pas — une valeur d'auteur inventée. La
-// ligne est donc calculée par l'appelant, qui sait ce que sa structure porte.
+// champs. L'appelant compose la ligne avec les seules valeurs présentes
+// dans sa structure ; aucun âge n'est inventé.
 // `section` remplace la méta projet par le nom d'un écran hors projet (le
 // Catalogue) : « Story Studio › Catalogue ».
-export function TitleBar({ section = null, projectName, packRecap = null, packCoverImage = null, isDirty, hasSavePath = false, saveState = null, showProjectMeta = true, onOpenPackMetadata = null, onOpenCredits = null, onOpenPreferences = null, preferencesShortcut = DEFAULT_SHORTCUT_LABELS.tabOptions }) {
+export function TitleBar({ section = null, projectName, projectFilePath = null, packRecap = null, packCoverImage = null, isDirty, hasSavePath = false, saveState = null, showProjectMeta = true, onOpenPackMetadata = null, onOpenCredits = null, onOpenPreferences = null, preferencesShortcut = DEFAULT_SHORTCUT_LABELS.tabOptions }) {
   const { t } = useCommonTranslation();
   const currentWindow = useMemo(() => (isTauriRuntime() ? getCurrentWindow() : null), []);
   const [isMaximizing, setIsMaximizing] = useState(false);
   const packCoverUrl = useLocalFile(packCoverImage);
   const displayProjectName = hasSavePath ? (projectName || t('common:project.new.fallback')) : t('common:project.unsaved.label');
   const packStoryName = packRecap?.title || '';
-  const packDisplayName = packStoryName || t('common:titleBar.pack.fallback');
+  const packDisplayName = packTitleBarName(packStoryName, projectFilePath ? basenameNoExt(projectFilePath) : '') || t('common:titleBar.pack.fallback');
   const packMetaLine = packRecap?.line ?? '';
   const projectTooltip = t('common:titleBar.project.tooltip', { name: displayProjectName });
   const packTooltip = packStoryName

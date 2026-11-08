@@ -18,6 +18,7 @@ test('le collecteur précède le premier IPC, conserve réponse, erreur et works
   window.ipc = Object.freeze({ postMessage: data => native.postMessage(data) });
   runInNewContext(`(${installCollector})('/tmp/isolé')`, { window, localStorage: { setItem: (k,v) => values.set(k,v) }, console: { log() {}, info() {}, debug() {}, warn() {}, error() {} }, URL, TextDecoder, btoa });
   assert.equal(values.get('storyStudioWorkspaceDir'), '/tmp/isolé');
+  assert.equal(values.get('storyStudio.releaseCheckEnabled'), 'false');
   const response = await window.fetch('ipc://localhost/commande', { body: '{"a":1}' });
   assert.deepEqual(await response.json(), { ok: true });
   await window.fetch('ipc://localhost/refus', { body: '{}' });

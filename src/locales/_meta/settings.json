@@ -2102,5 +2102,104 @@
       "sourceHash": "30da7d8425cd",
       "status": "ai-reviewed"
     }
+  },
+  "releaseCheck.question.title": {
+    "context": "Avis facultatif des prochaines versions sur GitHub ; question initiale proposant les notifications futures.",
+    "en": {
+      "sourceHash": "95518264457d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "95518264457d",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseCheck.description": {
+    "context": "Avis facultatif des prochaines versions sur GitHub ; description partagée entre la question initiale et les Préférences : vérification quotidienne, sans téléchargement ni installation automatiques.",
+    "en": {
+      "sourceHash": "11c003f425b9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "11c003f425b9",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseCheck.accept": {
+    "context": "Avis facultatif des prochaines versions sur GitHub ; acceptation des notifications futures.",
+    "en": {
+      "sourceHash": "3cb4de0d4ba1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3cb4de0d4ba1",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseCheck.decline": {
+    "context": "Avis facultatif de version stable GitHub, sans installation automatique ; question initiale, Préférences > Interface ou toast selon la clé.",
+    "en": {
+      "sourceHash": "5d466b5bae2a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5d466b5bae2a",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseCheck.label": {
+    "context": "Avis facultatif des prochaines versions sur GitHub ; interrupteur dans Préférences > Interface.",
+    "en": {
+      "sourceHash": "44ed20f62dbd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "44ed20f62dbd",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseCheck.notice": {
+    "context": "Avis facultatif de version stable GitHub, sans installation automatique ; question initiale, Préférences > Interface ou toast selon la clé.",
+    "en": {
+      "sourceHash": "b2ad20a22692",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b2ad20a22692",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseCheck.open": {
+    "context": "Avis facultatif de version stable GitHub, sans installation automatique ; question initiale, Préférences > Interface ou toast selon la clé.",
+    "en": {
+      "sourceHash": "c5417c27e753",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c5417c27e753",
+      "status": "ai-reviewed"
+    }
+  },
+  "projects.levelAlerts.label": {
+    "context": "Préférences > Projets et médias ; interrupteur du repère de niveau sur les emplacements audio ; clé projects.levelAlerts.label.",
+    "en": {
+      "sourceHash": "914c9fe45ad1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "914c9fe45ad1",
+      "status": "ai-reviewed"
+    }
+  },
+  "projects.levelAlerts.description": {
+    "context": "Préférences > Projets et médias ; description de l’interrupteur. Texte de présentation ; clé projects.levelAlerts.description.",
+    "en": {
+      "sourceHash": "34d105a58219",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "34d105a58219",
+      "status": "ai-reviewed"
+    }
   }
 }

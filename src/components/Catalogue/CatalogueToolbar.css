@@ -200,15 +200,6 @@
 .catalogue-sort-field > span:first-child { align-self: center; padding-inline-start: 8px; font-size: var(--text-caption); white-space: nowrap; }
 .catalogue-age-error { color: var(--danger-text); font-size: var(--text-caption); }
 .catalogue-age-explanation { font-size: var(--text-caption); line-height: 1.6; color: var(--text-secondary); }
-.catalogue-palette { position: absolute; inset-inline: 0; top: calc(100% + 8px); z-index: 270; max-height: min(60vh, 410px); overflow-y: auto; background: var(--bg1); border: 1px solid var(--borderLt); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 0 6px 8px; }
-.catalogue-palette-heading { padding: 13px 9px 7px; --section-title-size: 10px; --section-title-color: var(--text-secondary); --section-title-tracking: 1.1px; font-weight: var(--weight-bold); }
-.catalogue-palette > [role="group"] + [role="group"] { border-top: 1px solid var(--borderLt); margin-top: 8px; }
-.catalogue-palette-option { display: flex; align-items: center; gap: 11px; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; cursor: pointer; color: var(--text); }
-.catalogue-palette-option:is(:hover, [aria-selected='true']) { background: var(--control-bg-hover); }
-.catalogue-palette-option > span { min-width: 0; }
-.catalogue-palette-option strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.catalogue-palette-option small { display: block; color: var(--text-secondary); font-size: var(--text-caption); }
-.catalogue-palette-option .catalogue-cover { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 6px; }
 :is(.catalogue-toolbar, .catalogue-filter-summary, .project-submenu) .project-menu-item[role='menuitemcheckbox']:not(:has(.catalogue-tag-check))::before { content: ''; flex: none; width: 14px; text-align: center; }
 /* Choix exclusif d'un sous-menu (« Au moins une / Toutes ») : emplacement de coche réservé. */
 .project-submenu .project-menu-item[role='menuitemradio']::before { content: ''; flex: none; width: 14px; text-align: center; }
@@ -232,7 +223,6 @@
 /* Popover Âge : même socle, contenu de formulaire un peu aéré. */
 .catalogue-toolbar .project-menu:has(.catalogue-age-editor) { width: 320px; }
 .catalogue-age-editor { padding: 6px; }
-.catalogue-palette-suggestion { flex: 0 0 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--accent-2-border); border-radius: 6px; background: var(--accent-2-dim); color: var(--accent-2-text); }
 .catalogue-chrome .chrome-toolbar-left { padding-inline-end: 12px; border-inline-end: 1px solid var(--border); }
 .catalogue-chrome .chrome-toolbar-center { justify-content: flex-start; min-width: 0; }
 .catalogue-search-shortcut { flex-shrink: 0; font-family: var(--font-mono); font-size: var(--text-caption); color: var(--muted); padding: 1px 6px; border: 1px solid var(--control-border); border-radius: 4px; }
@@ -296,6 +286,7 @@
 .catalogue-sort-option[aria-checked='true']::before { content: '✓'; color: var(--accent-2-text); }
 
 /* Saisie courte « Nouvelle étiquette… » dans un sous-menu : même ligne qu'une entrée. */
+.project-submenu .catalogue-menu-empty { max-width: 240px; margin: 0; padding: 7px; color: var(--muted); font-size: 13px; line-height: 1.4; }
 .project-submenu .catalogue-menu-input { display: flex; align-items: center; gap: 10px; padding: 4px 7px; }
 .project-submenu .catalogue-menu-input > svg { flex-shrink: 0; color: var(--accent-2-text); }
 .project-submenu .catalogue-menu-input input { flex: 1; min-width: 0; height: 28px; }

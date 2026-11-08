@@ -17,7 +17,7 @@ import {
   findEntryById,
   validateMenuHeightPlacement,
 } from '../store/projectModel';
-import { buildProjectAfterZipUnpack } from '../store/unpackProject';
+import { buildProjectAfterZipUnpack, getUnpackedPackDetails, isBlankProjectForZipPromotion } from '../store/unpackProject';
 import { authoringWorkspaceMode } from '../store/projectWorkState';
 import {
   MEDIA_LANDING_LIBRARY,
@@ -50,7 +50,16 @@ function projectFromUnpackResult({
   result = {},
   savedDuringUnpack = false,
 }) {
-  const entries = sanitizeImportedEntries(result?.entries ?? []);
+  const rawEntries = result?.entries ?? [];
+  const singleUntitledStory = rawEntries.length === 1 && rawEntries[0].type === 'story'
+    && !String(rawEntries[0].name ?? '').trim();
+  const promoting = isBlankProjectForZipPromotion(baseProject, menuId, { savedDuringUnpack });
+  // Une histoire seule sans nom prend toujours le titre du pack ; la fiche du
+  // catalogue n'y contribue que lorsque le pack devient le projet.
+  const namingResult = promoting ? result : { ...result, catalogueMetadata: null };
+  const entries = sanitizeImportedEntries(singleUntitledStory
+    ? [{ ...rawEntries[0], name: getUnpackedPackDetails({ result: namingResult, zipPath, zipName }).packMetadata.title }]
+    : rawEntries);
   if (!entries.length) return null;
 
   const unpacked = buildProjectAfterZipUnpack({
@@ -423,7 +432,8 @@ export function useImportSession({
       const extractedDirName = sanitizeImportedName(currentZipItem.name || itemId, itemId).replace(/[/\\:*?"<>|]/g, '_');
       const destDir = `${getExtractedZipsDir(wsDir)}/${extractedDirName}`;
       const result = await withProjectMediaOutput({ ...capturedStorage, root: wsDir }, async (output) => invoke('unpack_zip_to_entries', {
-        zipPath: currentZipItem.zipPath, destDir, proposedPackName: t('import:names.pack.fallback'), ...await output.arguments(),
+        zipPath: currentZipItem.zipPath, destDir, proposedPackName: null,
+        catalogueMetadata: isBlankProjectForZipPromotion(baseProject, menuId), ...await output.arguments(),
       }));
       if (workEpoch != null && store.workEpochRef.current !== workEpoch) return;
       const transformed = projectFromUnpackResult({
@@ -503,7 +513,7 @@ export function useImportSession({
     const extractedDirName = sanitizeImportedName(zipName || zipPath, zipPath).replace(/[/\\:*?"<>|]/g, '_');
     const destDir = `${getExtractedZipsDir(workspaceDir)}/${extractedDirName}`;
     const result = await withProjectMediaOutput({ root: workspaceDir, storage: baseProject.storage, ephemeral }, async (output) => invoke('unpack_zip_to_entries', {
-      zipPath, destDir, proposedPackName: t('import:names.pack.fallback'), ...await output.arguments(),
+      zipPath, destDir, proposedPackName: null, catalogueMetadata: true, ...await output.arguments(),
     }));
     return projectFromUnpackResult({
       baseProject,

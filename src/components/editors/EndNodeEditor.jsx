@@ -68,6 +68,7 @@ export function EndNodeEditor({
         </div>
 
         <AudioField
+          levelLabel={{ role: 'night' }}
           label={t("tree:endNode.audio.label")}
           labelRef={{ key: "tree:endNode.audio.label" }}
           file={nightModeAudio}

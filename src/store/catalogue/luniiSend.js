@@ -1,11 +1,12 @@
 // Sending catalogue stories to a Lunii: pure rules shared by the drag, the buttons,
 // the activity pill and the panel. No IPC and no rendered text here: only keys.
 import { luniiRows, luniiWriteRefusal } from './luniiDevices.js';
+import { cardTitle } from './entryModel.js';
 import { coverAddress } from './coverAddress.js';
 import { damagedLine, damagedRefusal } from './damagedMedia.js';
 
 export const OPEN_STATES = Object.freeze(['ready', 'readOnly', 'damaged']);
-const SETTLED = Object.freeze(['done', 'refused', 'failed', 'interrupted']);
+const SETTLED = Object.freeze(['done', 'refused', 'failed', 'interrupted', 'notStarted']);
 /** Steps of a story being sent, in the order the engine enters them (a step is skipped when it does not happen). */
 export const ACTIVE_STEPS = Object.freeze(['preparing', 'generating', 'convertingSounds', 'convertingImages', 'encrypting', 'copying', 'finalizing']);
 const CANCEL_CODES = Object.freeze(['STORYTELLER_SEND_CANCELLED', 'GENERATION_CANCELLED']);
@@ -170,8 +171,13 @@ export function buildSelection(cards, revision, devices = [], chosen = new Map()
   return { entries, skipped, official, damaged };
 }
 
+/** What a send shows of each story, from the moment it is queued until its bilan. */
+export function sendEntryItems(entries) {
+  return entries.map(({ selection, card }) => ({ exemplarId: selection.exemplarId, ficheId: card.id, title: cardTitle(card), coverSignature: card.coverSignature ?? null }));
+}
+
 export function sendContext({ operationId, device, startIndex, cards, entries, skipped = [], official = [], damaged = [] }) {
-  const refused = (card, code, params = {}) => ({ ficheId: card.id, title: card.displayTitle ?? card.title ?? null, reason: { code, params } });
+  const refused = (card, code, params = {}) => ({ ficheId: card.id, title: cardTitle(card), reason: { code, params } });
   const refusedCard = card => {
     if (official.includes(card)) return refused(card, 'STORYTELLER_OFFICIAL_REFUSED');
     const reason = damaged.includes(card) ? damagedCardRefusal(card) : null;
@@ -180,7 +186,7 @@ export function sendContext({ operationId, device, startIndex, cards, entries, s
   return {
     operationId, deviceId: device.id, deviceName: device.name ?? null, startIndex,
     startPosition: screenPosition(device, startIndex),
-    entries: entries.map(({ selection, card }) => ({ exemplarId: selection.exemplarId, ficheId: card.id, title: card.displayTitle ?? card.title ?? null, coverSignature: card.coverSignature ?? null })),
+    entries: sendEntryItems(entries),
     // Catalogue order, like the cards themselves.
     refused: [...official, ...damaged, ...skipped].sort((a, b) => cards.indexOf(a) - cards.indexOf(b)).map(refusedCard),
     cards: cards.length,
@@ -192,7 +198,7 @@ export function sendTerminal(snapshot) { return ['success', 'partial', 'failed',
 /** Per-story lines of an operation snapshot, joined with the context's titles. */
 export function sendItems(context, snapshot) {
   const byId = new Map((snapshot?.result?.stories ?? []).map(item => [item.exemplarId, item]));
-  return context.entries.map(entry => ({ ...entry, step: 'pending', progress: 0, reason: null, ...(byId.get(entry.exemplarId) ?? {}) }));
+  return context.entries.map(entry => ({ ...entry, step: 'pending', progress: 0, reason: null, deviceFault: false, ...(byId.get(entry.exemplarId) ?? {}) }));
 }
 export function sendProgress(context, snapshot) {
   const items = sendItems(context, snapshot);
@@ -215,7 +221,7 @@ export function virtualRows(context, snapshot) {
   const rows = [];
   let shown = 0;
   for (const item of items) {
-    if (['refused', 'failed', 'interrupted'].includes(item.step) || (item.step === 'pending' && sendTerminal(snapshot))) continue;
+    if (['refused', 'failed', 'interrupted', 'notStarted'].includes(item.step) || (item.step === 'pending' && sendTerminal(snapshot))) continue;
     rows.push({ key: `sending:${item.exemplarId}`, index: context.startIndex + shown, origin: context.startIndex, position: context.startPosition + shown, title: item.title, ficheId: item.ficheId, coverSignature: item.coverSignature, step: item.step, progress: item.progress });
     shown += 1;
   }
@@ -228,10 +234,19 @@ export function mergeSendingRows(rows, virtual) {
   const out = [];
   let before = 0;
   for (let i = 0; i <= listed.length; i += 1) {
-    for (const v of virtual.filter(row => Math.min(row.origin ?? row.index, listed.length) === i)) { out.push({ ...v, sending: true }); before += 1; }
+    // A queued story is not on the Lunii yet: it takes no number and shifts none.
+    for (const v of virtual.filter(row => Math.min(row.origin ?? row.index, listed.length) === i)) { out.push({ ...v, sending: true }); if (!v.queued) before += 1; }
     if (i < listed.length) out.push(listed[i].position == null ? listed[i] : { ...listed[i], position: listed[i].position + before });
   }
   return [...out, ...orphans];
+}
+
+/** Count file failures only in the engine's structured validation list, never in raw text or labels. */
+function missingFileCount(cause) {
+  if (cause?.code === 'FILES_NOT_FOUND_OR_INACCESSIBLE') return 1;
+  if (cause?.code !== 'VALIDATION_PROJECT_ERRORS' || !Array.isArray(cause.params?.errors?.messages)) return null;
+  const count = cause.params.errors.messages.reduce((total, message) => total + (missingFileCount(message) ?? 0), 0);
+  return count || null;
 }
 
 /** Why a story did not leave: i18n key, parameters and the follow-up action. */
@@ -246,7 +261,10 @@ export function refusalPresentation(reason, { position = null } = {}) {
     case 'STORYTELLER_STORY_DUPLICATE_UNLISTED': return { key: 'catalogue:lunii.sendRefused.duplicateUnlisted', params: {}, action: 'see' };
     case 'STORYTELLER_NO_SPACE': return { key: 'catalogue:lunii.sendRefused.noSpace', params: {}, bytes: reason?.params?.missingBytes ?? null, action: null };
     case 'STORYTELLER_NO_SPACE_UNKNOWN': return { key: 'catalogue:lunii.sendRefused.noSpaceUnknown', params: {}, action: null };
-    case 'STORYTELLER_PROJECT_INCOMPLETE': return { key: 'catalogue:lunii.sendRefused.incomplete', params: {}, cause: reason?.params?.cause ?? null, action: 'editor' };
+    case 'STORYTELLER_PROJECT_INCOMPLETE': {
+      const count = missingFileCount(reason?.params?.cause);
+      return { key: count == null ? 'catalogue:lunii.sendRefused.incomplete' : 'catalogue:lunii.sendRefused.incompleteCount', params: count == null ? {} : { count }, action: 'editor' };
+    }
     case 'STORYTELLER_NAVIGATION_REFUSED': return { key: 'catalogue:lunii.sendRefused.navigation', params: {}, action: 'editor' };
     case 'STORYTELLER_IMAGE_UNREADABLE':
     case 'STORYTELLER_SOUND_UNREADABLE': {
@@ -271,7 +289,7 @@ export function sendReport(context, snapshot, devices = []) {
   items.forEach(item => {
     if (item.step === 'done') { done.push({ ...item, position: context.startPosition + done.length }); if (item.reason) warning = true; return; }
     if (item.step === 'interrupted') { if (interrupted) notStarted.push(item); else interrupted = item; return; }
-    if (item.step === 'pending') { notStarted.push(item); return; }
+    if (['pending', 'notStarted'].includes(item.step)) { notStarted.push(item); return; }
     if (!['refused', 'failed'].includes(item.step)) return;
     if (CANCEL_CODES.includes(item.reason?.code)) { notStarted.push(item); return; }
     const card = { id: item.ficheId, uuids: [] };
@@ -279,10 +297,29 @@ export function sendReport(context, snapshot, devices = []) {
     (item.step === 'refused' ? refused : failed).push({ ...item, presentation: refusalPresentation(item.reason, { position: here?.position ?? null }), seeKey: here?.key ?? null });
   });
   for (const local of context.refused ?? []) refused.push({ ...local, presentation: refusalPresentation(local.reason), seeKey: null });
-  return { done, refused, failed, interrupted, notStarted, cancelled: notStarted.length, warning, status: snapshot?.status ?? 'running', deviceName: context.deviceName };
+  return { done, refused, failed, interrupted, notStarted, deviceFault: items.some(item => item.deviceFault === true), cancelled: notStarted.length, warning, status: snapshot?.status ?? 'running', deviceName: context.deviceName };
 }
 /** "4 et 5" style list is formatted by the view; here just the numbers. */
 export function reportPositions(report) { return report.done.map(d => d.position); }
+
+/** Only an explicitly queued, unplugged send delegates its story to the queue report. */
+export function queueSendInterruption(context, snapshot) {
+  if (!context?.queueEntryId || !sendTerminal(snapshot)) return null;
+  const interrupted = sendReport(context, snapshot).interrupted;
+  return interrupted?.reason?.code === 'STORYTELLER_SEND_DISCONNECTED' ? interrupted : null;
+}
+
+/** Only a finished multi-operation run can replace the send's own bilan.
+ * Keep the terminal card until publication, and keep ownership after dismissal.
+ */
+export function queueCoversSend(context, queues = {}) {
+  if (!context?.queueEntryId) return false;
+  const entries = queues[context.deviceId] ?? [];
+  const entry = entries.find(item => item.id === context.queueEntryId);
+  if (!entry?.sendInterruption) return false;
+  const run = entries.filter(item => item.run === entry.run);
+  return run.length >= 2 && !run.some(item => ['queued', 'running'].includes(item.state));
+}
 
 export function sendCoverAddress(row) { return coverAddress(row.ficheId, row.coverSignature); }
 

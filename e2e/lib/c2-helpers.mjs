@@ -2,7 +2,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { dropFiles } from './drop.mjs';
-import { clickButton, MODALS } from './actions.mjs';
+import { clickButton, MODALS, openPackMetadata } from './actions.mjs';
 import { answerNext } from './dialogs.mjs';
 import {
   nodeOverlayCenter, createGraphAction, selectGraphNode, selectNodePickerOption, wireStageOkToSelectedAction,
@@ -176,12 +176,15 @@ export async function pickImageField(page, scope, filePath, { timeout = 30_000 }
 // « Appliquer & générer » reste désactivé (« Renseigne le titre du pack avant
 // de générer. ») et `generatePack` attendrait une archive qui ne viendra pas.
 export async function setPackTitle(page, title, { timeout = 15_000 } = {}) {
-  await page.locator('.chrome-titlebar-pack-recap').click();
-  const sheet = page.locator('.pack-meta-modal');
-  if (!await sheet.waitFor({ timeout }).then(() => true, () => false)) return false;
-  await sheet.locator('.pack-meta-field-row').filter({ hasText: 'Titre du pack' }).locator('input').first().fill(title);
-  await sheet.getByRole('contentinfo').getByRole('button', { name: 'Appliquer', exact: true }).click();
-  return sheet.waitFor({ state: 'hidden', timeout }).then(() => true, () => false);
+  try {
+    const sheet = await openPackMetadata(page, { timeout });
+    if (!await sheet.waitFor({ timeout }).then(() => true, () => false)) return false;
+    await sheet.locator('.pack-meta-field-row').filter({ hasText: 'Titre du pack' }).locator('input').first().fill(title);
+    await sheet.getByRole('contentinfo').getByRole('button', { name: 'Appliquer', exact: true }).click();
+    return sheet.waitFor({ state: 'hidden', timeout }).then(() => true, () => false);
+  } catch {
+    return false;
+  }
 }
 
 // Menu contextuel d'un nœud de l'arbre (`TreeNode.jsx`, `data-tree-node-id` /

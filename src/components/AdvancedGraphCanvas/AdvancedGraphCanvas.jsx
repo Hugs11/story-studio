@@ -38,9 +38,6 @@ export default function AdvancedGraphCanvas({
   createEngine = undefined,
   bridge = null,
   onAuthoredPositionsChange = null,
-  // Transmise telle quelle à l'étage de canvas : voir `GraphCanvasStage`.
-  // L'application ne la pose pas ; seule la recette du banc s'en sert.
-  surfaceRef = null,
 }) {
   useTranslation('graph', { i18n: graphTranslationEngine() });
   const view = useAdvancedGraphView({ payload, projectDescriptor, projectEpoch, bridge });
@@ -93,7 +90,6 @@ export default function AdvancedGraphCanvas({
         history={history}
         edgeVisibility={edgeVisibility}
         onEdgeVisibilityChange={setEdgeVisibility}
-        surfaceRef={surfaceRef}
       />
 
       <GraphInspector inspected={view.inspected} onFocusPath={revealPath} />

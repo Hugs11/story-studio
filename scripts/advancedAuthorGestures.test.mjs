@@ -9,7 +9,6 @@ import {
   walkProjectMediaReferences,
 } from '../src/store/projectModel.js';
 import { hierarchicalProjectType } from '../src/store/projectWorkState.js';
-import { bumpPackVersion } from '../src/utils/packConvention.js';
 
 // Le payload porte un entier au-delà de 2^53 dans une extension opaque : s'il
 // était ouvert par `JSON.parse` puis réémis en JavaScript, sa valeur changerait.
@@ -146,9 +145,7 @@ test('un geste avancé ne fabrique aucun chemin hiérarchique', async () => {
   );
 });
 
-// Un pack repris dans le graphe porte la version d'origine + 1, par la
-// règle même de la chaîne Libre. Les deux chaînes proposent donc la même
-// version pour le même pack.
+// Un pack repris conserve sa version ; sans version exploitable, il reçoit 1.
 function revisionInvoker(version, calls, opaqueMembers = []) {
   return async (command, args) => {
     calls.push({ command, args });
@@ -176,9 +173,9 @@ for (const [label, version, original] of [
     ]);
     assert.deepEqual(calls[1].args.gesture, {
       gesture: 'set-document-metadata',
-      update: { version: { form: 'set', value: bumpPackVersion(original) } },
+      update: { version: { form: 'set', value: original > 0 ? original : 1 } },
     });
-    assert.ok(calls[1].args.gesture.update.version.value >= 2);
+    assert.ok(calls[1].args.gesture.update.version.value >= 1);
     assert.equal(revised.authoring.payload, MUTATED);
     assert.equal(project.authoring.payload, PAYLOAD);
   });

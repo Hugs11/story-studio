@@ -432,7 +432,7 @@ test('FICHEMENU the fiche has no overflow button; removal shows only when every 
   assert.ok(!render(unplugged).ids.includes('catalogue-fiche-remove'));
   const { tree, ids } = render(gone);
   assert.ok(ids.includes('catalogue-fiche-remove'));
-  assert.ok(elements(tree).some(e => e.props?.children === 'Fichier introuvable — déplacé ou supprimé hors de Story Studio.'));
+  assert.ok(elements(tree).some(e => e.props?.children === 'Introuvable au dernier emplacement connu.'));
   find(tree, e => e.props?.id === 'catalogue-fiche-remove').props.onClick();
   assert.deepEqual(removed, ['removeFromCatalogue']);
 });
@@ -863,6 +863,9 @@ test('FICHEMENU unrolled trash keeps a fixed footprint, anchors right, uses dang
   const open = rule('.catalogue-exemplar-trash.is-expanded > button');
   assert.match(open, /position: absolute/); assert.match(open, /right: 0/); assert.match(open, /max-width: none/);
   assert.match(open, /var\(--danger-bg\)/); assert.match(open, /var\(--danger-text\)/); assert.doesNotMatch(open, /#[\da-f]{3,8}\b/i);
+  assert.match(open, /width: 100%/);
+  assert.match(css, /\.catalogue-fiche-copy-actions:has\(> \.catalogue-exemplar-trash\.is-expanded\) > :not\(\.catalogue-exemplar-trash\) \{ visibility: hidden/);
+  assert.match(rule('.catalogue-exemplar-trash-error'), /left: 0/);
   assert.match(css, /prefers-reduced-motion: reduce\) \{\s*\.catalogue-exemplar-trash\.is-expanded > button \{ animation: none/);
 });
 

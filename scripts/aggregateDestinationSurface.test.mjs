@@ -7,7 +7,6 @@ import { createTestI18n } from './i18nTestSetup.mjs';
 import { mountSurface } from './chromeBench.mjs';
 const { AggregateDestinationChoice, AggregateGenerationReview } = await import('../src/components/AggregatePacks/AggregateDestinationChoice.jsx');
 const { PackNameModal } = await import('../src/components/layout/PackNameModal.jsx');
-const { GenerationFolderPromptContent } = await import('../src/components/Catalogue/open/GenerationFolderPrompt.jsx');
 const engine = createTestI18n();
 await i18next.init({ ...engine.options, resources: engine.options.resources });
 
@@ -43,18 +42,10 @@ for (const language of ['fr','en','it']) {
   test(`${language}: embedded metadata offers the selected destination without a second generation action`,async()=>{
     await i18next.changeLanguage(language);
     const label=i18next.t('home:aggregate.destination.editor');
-    const html=mountSurface(React.createElement(PackNameModal,{open:true,embedded:true,allowUnknownAge:true,primaryActionLabel:label,packMetadata:{title:'Histoires',uuid:'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',minAge:''},onClose(){},onSaveAndGenerate(){}})).html;
+    const html=mountSurface(React.createElement(PackNameModal,{open:true,embedded:true,primaryActionLabel:label,packMetadata:{title:'Histoires',uuid:'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',minAge:''},onClose(){},onSaveAndGenerate(){}})).html;
     assert.ok(html.includes(label));
     assert.ok(html.includes(`aria-label="${label}"`));
     assert.doesNotMatch(html,/pack-meta-age-chip is-active[^>]*>3/);
     assert.doesNotMatch(html,/home:/);
-  });
-
-  test(`${language}: source-folder proposal remains an explicit choice after generation`,async()=>{
-    await i18next.changeLanguage(language);
-    const html=mountSurface(React.createElement(GenerationFolderPromptContent,{folder:'/NAS/Été',onChoose(){}})).html;
-    assert.match(html,/<aside/);
-    assert.equal((html.match(/<button/g)||[]).length,2);
-    assert.doesNotMatch(html,/catalogue:/);
   });
 }

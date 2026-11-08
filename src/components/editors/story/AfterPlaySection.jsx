@@ -517,6 +517,7 @@ export function AfterPlaySection({
           </div>
         )}
         <AudioField
+          levelLabel={{ entry: node.name, step: '' }}
           label={promptAudioLabel}
           labelRef={{ key: usesGlobalEndNodeAudio ? "tree:story.endAudio.shared" : hasEndNode ? "tree:story.endAudio.replacement" : "tree:story.endAudio.local" }}
           description={promptAudioDescription}

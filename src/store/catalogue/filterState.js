@@ -57,3 +57,8 @@ export function effectiveCriteria(state) {
   return state.additions === null ? { query: state.query, filters: state.filters }
     : { query: '', filters: normalizeFilters({ availability: 'all' }) };
 }
+
+export function compactTagLabel(ids, tags) {
+  const labels = ids.slice(0, 2).map(id => tags.find(tag => tag.id === id)?.label ?? id);
+  return labels.join(', ') + (ids.length > 2 ? ` +${ids.length - 2}` : '');
+}

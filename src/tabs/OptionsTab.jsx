@@ -14,7 +14,10 @@ import { AiImagesSection } from './OptionsTab/AiImagesSection';
 import { AdvancedSection } from './OptionsTab/AdvancedSection';
 import { YoutubeSection } from './OptionsTab/YoutubeSection';
 import { DiagnosticSection } from './OptionsTab/DiagnosticSection';
+import { MediaSubscriptionsSection } from './OptionsTab/MediaSubscriptionsSection';
 import './OptionsTab.css';
+
+const MEDIA_SUBSCRIPTIONS_SECTION = 'media-subscriptions';
 
 export function OptionsTab({
   copyFilesEnabled,
@@ -43,6 +46,7 @@ export function OptionsTab({
   onCopyLogPath = null,
   onResolveLogPath = null,
   project = null,
+  subscriptions = {},
   initialSection = null,
   initialFocus = null,
   asModal = false,
@@ -104,6 +108,11 @@ export function OptionsTab({
             className={sectionClass('catalogue')}
             sectionRef={registerSection('catalogue')}
             workspaceDir={useWorkspaceForNewProjects ? displayedWorkspaceDir : null}
+          />
+          <MediaSubscriptionsSection
+            className={sectionClass(MEDIA_SUBSCRIPTIONS_SECTION)}
+            sectionRef={registerSection(MEDIA_SUBSCRIPTIONS_SECTION)}
+            subscriptions={subscriptions}
           />
           <ProjectsMediaSection
             className={sectionClass('projects-media')}

@@ -1,4 +1,6 @@
-> 🇬🇧 [English](README.md) | 🇫🇷 **Français** | 🇮🇹 [Italiano](README.it.md)
+<p align="center">
+  🇬🇧 <a href="README.md" lang="en">English</a> | 🇫🇷 <strong>Français</strong> | 🇮🇹 <a href="README.it.md" lang="it">Italiano</a>
+</p>
 
 <p align="center">
   <img src="public/logostory.svg" alt="Story Studio" width="240">
@@ -12,7 +14,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI : builds desktop" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#configuration-requise"><img alt="Plateformes : Windows, Linux et macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.10" src="https://img.shields.io/badge/version-0.9.10-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.11" src="https://img.shields.io/badge/version-0.9.11-2F80ED.svg"></a>
   <a href="#statut-bêta"><img alt="Statut : bêta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -66,9 +68,11 @@ L'écriture sur la conteuse (envoi, suppression, réorganisation et rapatriement
 - Les packs officiels Lunii ne sont jamais recopiés sur ton ordinateur.
 - Story Studio est fourni « en l'état », sans aucune garantie (voir la [licence](LICENSE)). **Tu l'utilises avec ta conteuse à tes propres risques** : les auteurs ne peuvent pas être tenus responsables d'une perte de données ou d'un dysfonctionnement de l'appareil.
 
-## Version 0.9.10
+## Version 0.9.11
 
-Story Studio 0.9.10 ajoute un catalogue local et la gestion directe de la Lunii : consulte, envoie et rapatrie des packs, gère la liste de la conteuse et éjecte-la. Les titres et jaquettes officiels sont facultatifs et nécessitent ton accord.
+Cette version sert surtout à rendre Story Studio plus fiable. Quand la Lunii est occupée, les opérations attendent leur tour au lieu d’être refusées. Un son trop faible est signalé quand tu l’ajoutes. Si tu veux, Story Studio peut aussi te prévenir quand une nouvelle version sort.
+
+Depuis la 0.9.10, Story Studio a un catalogue local et gère directement la Lunii. Tu peux consulter, envoyer et rapatrier des packs, gérer la liste de la conteuse et l’éjecter. Les titres et jaquettes officiels sont facultatifs et demandent ton accord.
 
 L’interface est disponible en français, anglais et italien. Les traductions anglaise et italienne sont produites puis relues par IA ; les corrections sont bienvenues. Sur une installation existante sans préférence de langue, l’interface reste en français ; tu peux la changer dans les Préférences. Une nouvelle installation utilise la langue du système si elle est disponible, sinon l’anglais.
 
@@ -329,7 +333,7 @@ Médias, jamais supprimés du disque.
 
 ## Roadmap
 
-- Finaliser et valider les paquets Windows x64, Linux x86_64 et macOS Apple Silicon.
+- Corriger les bugs restants.
 - Sortir de la bêta avec une v1 finalisée.
 - Rendre le logiciel compatible avec d'autres types de boîtes à histoires.
 

@@ -221,6 +221,12 @@ export function hasUnsavedWork({
     || Object.keys(canonicalMediaTags(mediaTags)).length > 0;
 }
 
+// Un nom libre déjà choisi ne repasse pas par la fiche à chaque génération.
+export function hasConfirmedFreeExportName(project) {
+  return project?.packMetadata?.namingMode === 'legacy'
+    && !!String(project.packMetadata.legacyExportName ?? '').trim();
+}
+
 export function hasExplicitExportPackName(project) {
   const metadata = project?.packMetadata ?? {};
   if (metadata.namingMode === 'legacy') return !!String(metadata.legacyExportName || '').trim();

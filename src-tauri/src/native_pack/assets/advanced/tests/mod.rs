@@ -323,3 +323,30 @@ pub(super) fn causes(error: &AssetPreparationError) -> Vec<MediaCause> {
         other => panic!("refus média attendu, obtenu {other:?}"),
     }
 }
+
+#[test]
+fn advanced_audio_labels_match_shared_fixture() {
+    let cases: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../../scripts/fixtures/audio-level-labels.json"
+    ))
+    .unwrap();
+    for case in cases
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["source"].get("stage").is_some())
+    {
+        let stage = serde_json::json!({"uuid": ENTRY, "name": case["source"]["stage"], "audio": "audio-ref"});
+        let document = document_with(&stage.to_string(), "");
+        let destinations = vec![super::inventory::MediaDestination {
+            stage_uuid: ENTRY.to_string(),
+            kind: MediaKind::Audio,
+            asset_ref: "audio-ref".to_string(),
+        }];
+        let label = stage_label_of(&document, &destinations, "audio-ref");
+        assert_eq!(label.to_string(), case["expected"]["fr"].as_str().unwrap());
+        if case["source"]["stage"].as_str().unwrap().trim().is_empty() {
+            assert_eq!(label.value()["code"], codes::GENERATION_AUDIO_UNNAMED_LABEL);
+        }
+    }
+}

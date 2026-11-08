@@ -32,6 +32,6 @@ mod tests;
 
 pub(crate) use graph_import::story_audio;
 
-pub(crate) use extraction::read_pack_uuid;
+pub(crate) use extraction::{read_pack_uuid, write_project_thumbnail};
 
 pub(crate) use validation::{validate_pack_asset_name, MAX_STORY_JSON_BYTES};

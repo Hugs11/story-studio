@@ -1,18 +1,16 @@
 ---
-import { existsSync } from 'node:fs';
 import '../styles/landing.css';
 
-const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screenshots/catalogue-lunii-dark.png', import.meta.url));
 ---
 <!doctype html>
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Story Studio pour Lunii — Créer ses histoires et gérer sa collection</title>
+    <title>Story Studio pour Lunii — Crée tes histoires et gère ta collection</title>
     <meta
       name="description"
-      content="Story Studio 0.9.10 : créez vos histoires, organisez votre collection et transférez vos packs sur votre Lunii. Application locale pour Windows, Linux et macOS, en français, anglais et italien."
+      content="Crée tes histoires, range ta collection et envoie tes packs sur ta Lunii avec Story Studio 0.9.11. Application locale pour Windows, Linux et macOS, en français, anglais et italien."
     />
     <meta name="robots" content="index, follow" />
     <meta name="google-site-verification" content="EW_r5pSDajA6Py5Z_duzkWnG2z-j_8UgUwk07VyOa4c" />
@@ -23,7 +21,7 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
     <meta property="og:title" content="Story Studio pour Lunii — Histoires, catalogue et transferts" />
     <meta
       property="og:description"
-      content="Créez vos histoires, gérez votre collection et connectez votre Lunii. Gratuit et open source, pour Windows, Linux et macOS, en français, anglais et italien."
+      content="Crée tes histoires, gère ta collection et connecte ta Lunii. Gratuit et open source, pour Windows, Linux et macOS, en français, anglais et italien."
     />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Story Studio" />
@@ -37,7 +35,7 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Story Studio pour Lunii — Histoires, catalogue et transferts" />
-    <meta name="twitter:description" content="Créez vos histoires, gérez votre collection et connectez votre Lunii. Application gratuite et open source pour Windows, Linux et macOS, en français, anglais et italien." />
+    <meta name="twitter:description" content="Crée tes histoires, gère ta collection et connecte ta Lunii. Application gratuite et open source pour Windows, Linux et macOS, en français, anglais et italien." />
     <meta name="twitter:image" content="https://hugs11.github.io/story-studio/social-card.png" />
     <meta name="twitter:image:alt" content="Story Studio — éditeur de packs d'histoires pour la Lunii" />
 
@@ -54,7 +52,7 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
         "applicationCategory": "MultimediaApplication",
         "inLanguage": ["fr", "en", "it"],
         "operatingSystem": "Windows 10+, Linux x86_64, macOS 11+",
-        "softwareVersion": "0.9.10",
+        "softwareVersion": "0.9.11",
         "license": "https://github.com/Hugs11/story-studio/blob/main/LICENSE",
         "author": {
           "@type": "Person",
@@ -78,7 +76,7 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
         <img class="logo" src="logostory.svg" alt="Story Studio" />
         <div class="badge" id="version-badge" aria-live="polite">
           <span class="dot"></span>
-          <span id="version-text">Story Studio 0.9.10</span>
+          <span id="version-text">Story Studio 0.9.11</span>
         </div>
       </div>
     </header>
@@ -91,27 +89,27 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
             Story Studio est un logiciel pour créer et modifier des packs
             pour les boîtes à histoires Lunii. Il intègre des outils pour
             éditer le son et les images, et évite de devoir jongler avec
-            Audacity ou d'autres logiciels pour créer son pack d'histoires.
+            Audacity ou d'autres logiciels pour créer ton pack d'histoires.
             Gratuit et open source, il est disponible sur Windows, Linux
             et macOS. Tout reste local : images, audio, navigation,
             simulation et génération du ZIP.
           </p>
           <p class="tagline">
-            L'Éditeur par menus organise vos Dossiers et vos Histoires sous
+            L'Éditeur par menus organise tes Dossiers et tes Histoires sous
             forme hiérarchique ; l'Éditeur graphe permet de créer des structures
             plus complexes, comme des quiz ou des histoires à choix multiples.
             L'Éditeur simplifié propose un parcours guidé.
           </p>
           <p class="tagline">
-            Le catalogue rassemble vos packs : recherche, filtres, favoris et
-            étiquettes. Branchez votre Lunii pour consulter ses histoires,
-            transférer vos packs, les rapatrier dans votre collection et
+            Le catalogue rassemble tes packs, avec recherche, filtres, favoris et
+            étiquettes. Branche ta Lunii pour consulter ses histoires,
+            transférer tes packs, les rapatrier dans ta collection et
             éjecter l'appareil depuis Story Studio.
           </p>
           <p class="tagline">
             L'interface est disponible en français, anglais et italien.
             Les traductions anglaise et italienne sont produites puis vérifiées
-            par IA. Vous pouvez proposer une correction sur GitHub :
+            par IA. Tu peux proposer une correction sur GitHub :
             <a href="https://github.com/Hugs11/story-studio/blob/main/TRANSLATING.md">contribuer aux traductions</a>.
           </p>
 
@@ -141,14 +139,11 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
           </div>
 
           <div class="release-card" aria-labelledby="latest-release-title">
-            <h2 id="latest-release-title">Nouveautés de la version 0.9.10</h2>
+            <h2 id="latest-release-title">Nouveautés de la version 0.9.11</h2>
             <ul>
-              <li>Catalogue local : recherche, filtres, vues en vignettes et en liste, favoris, étiquettes, corbeille, assemblage et sauvegarde.</li>
-              <li>Connexion directe à la Lunii : consultez ses histoires, envoyez et rapatriez des packs, gérez sa liste et éjectez l’appareil.</li>
-              <li>Titres et jaquettes officiels facultatifs, récupérés avec votre accord. Sauvegardez votre Lunii avant la première écriture.</li>
-              <li>Interface en français, anglais et italien ; traductions anglaise et italienne produites puis vérifiées par IA, ouvertes aux corrections sur GitHub.</li>
-              <li>Suivi de sources podcast et YouTube pour retrouver leurs nouveaux contenus.</li>
-              <li>Diverses corrections et améliorations de fiabilité.</li>
+              <li>Quand la Lunii est occupée, tes envois, rapatriements et retraits attendent leur tour. La liste montre ce qui reste à faire.</li>
+              <li>Un son trop faible est signalé quand tu l’ajoutes. Si tu veux, Story Studio te prévient aussi quand une nouvelle version sort, sans rien installer tout seul.</li>
+              <li>Beaucoup de corrections sur la Lunii, le catalogue et les éditeurs.</li>
             </ul>
           </div>
 
@@ -158,7 +153,7 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
             <div>
               <h2 id="community-title">Une idée, un retour ou besoin d'aide ?</h2>
               <p>
-                Rejoignez le Discord de Story Studio pour proposer une fonctionnalité,
+                Rejoins le Discord de Story Studio pour proposer une fonctionnalité,
                 échanger autour d'un bug ou accéder aux versions bêta.
               </p>
             </div>
@@ -175,8 +170,8 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
           <div class="demo-card" aria-labelledby="demo-packs-title">
             <h2 id="demo-packs-title">Deux packs pour découvrir Story Studio</h2>
             <p>
-              Ouvrez-les dans le Simulateur, explorez leur structure puis adaptez-les
-              librement dans l'éditeur.
+              Ouvre-les dans le Simulateur, explore leur structure puis adapte-les
+              comme tu veux dans l'éditeur.
             </p>
             <div class="demo-links">
               <a class="demo-link" href="https://drive.proton.me/urls/5ND49D487R#IxRa3Bd0Lm8L" target="_blank" rel="noopener noreferrer">
@@ -195,9 +190,9 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
               </a>
             </div>
             <ol class="demo-steps">
-              <li>Téléchargez le fichier ZIP du pack depuis Proton Drive.</li>
-              <li>Lancez Story Studio et cliquez sur <strong>Modifier un pack existant</strong>.</li>
-              <li>Sélectionnez le fichier <code>.zip</code> téléchargé.</li>
+              <li>Télécharge le fichier ZIP du pack depuis Proton Drive.</li>
+              <li>Lance Story Studio et clique sur <strong>Modifier un pack existant</strong>.</li>
+              <li>Sélectionne le fichier <code>.zip</code> téléchargé.</li>
             </ol>
             <p class="demo-note">
               Ces packs sont distribués séparément du logiciel et leurs contenus ne
@@ -215,9 +210,9 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
           <h2>Du premier import au pack prêt à jouer</h2>
           <p class="journey-intro">
             Story Studio rassemble tout le parcours dans une application locale :
-            partir de ses propres fichiers ou d'un pack existant, préparer les
+            partir de tes propres fichiers ou d'un pack existant, préparer les
             médias, construire la navigation, tester le résultat et générer un
-            pack prêt pour la Lunii. Le catalogue permet aussi de gérer sa
+            pack prêt pour la Lunii. Le catalogue permet aussi de gérer ta
             collection et les transferts vers l'appareil.
           </p>
 
@@ -227,8 +222,8 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
                 <span class="journey-number">1</span>
                 <h3>Démarrer un projet ou importer des histoires</h3>
                 <p>
-                  Créez selon vos envies, reprenez un travail enregistré,
-                  modifiez un pack ZIP/7z existant ou partez d'un podcast ou de
+                  Crée selon tes envies, reprends un travail enregistré,
+                  modifie un pack ZIP/7z existant ou pars d'un podcast ou de
                   YouTube. Des parcours guidés permettent aussi d'agréger
                   plusieurs packs ou d'analyser un pack communautaire.
                 </p>
@@ -238,30 +233,29 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
               </figure>
             </article>
 
-            <article class="journey-step">
+            <article class="journey-step journey-step--flip">
               <div class="journey-copy">
                 <span class="journey-number">2</span>
-                <h3>Gérer sa collection et transférer ses packs sur la Lunii</h3>
+                <h3>Gérer ta collection et transférer tes packs sur la Lunii</h3>
                 <p>
-                  Ajoutez vos dossiers sources et retrouvez vos packs en vignettes
-                  ou en liste. Recherchez, filtrez et organisez votre collection
-                  avec les favoris et les étiquettes, puis sauvegardez les données
-                  de votre catalogue.
+                  Ajoute tes dossiers sources et retrouve tes packs en vignettes
+                  ou en liste. Recherche, filtre et organise ta collection
+                  avec les favoris et les étiquettes, puis sauvegarde les données
+                  de ton catalogue.
                 </p>
               </div>
               <div class="journey-copy">
                 <p>
-                  Branchez votre Lunii pour voir ses histoires, envoyer vos packs,
+                  Branche ta Lunii pour voir ses histoires, envoyer tes packs,
                   les rapatrier dans le catalogue et gérer la liste de l'appareil.
-                  Suivez les transferts et éjectez la Lunii une fois terminé.
+                  Suis les transferts et éjecte la Lunii une fois terminé.
                   Les titres et jaquettes officiels sont facultatifs et nécessitent
-                  votre accord. Sauvegardez votre Lunii avant la première écriture.
+                  ton accord. Sauvegarde ta Lunii avant la première écriture.
                 </p>
               </div>
-              {/* Capture du catalogue avec la Lunii branchée, affichée dès que le fichier est disponible. */}
-              {hasCatalogueScreenshot && <figure class="journey-media">
+              <figure class="journey-media journey-media--span2">
                 <img src="assets/screenshots/catalogue-lunii-dark.png" alt="Catalogue de Story Studio avec une Lunii connectée et sa liste d'histoires" loading="lazy" />
-              </figure>}
+              </figure>
             </article>
 
             <article class="journey-step">
@@ -269,7 +263,7 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
                 <span class="journey-number">3</span>
                 <h3>Préparer les fichiers audio</h3>
                 <p>
-                  Importez ou enregistrez un son, puis ajustez-le avant de
+                  Importe ou enregistre un son, puis ajuste-le avant de
                   l'utiliser dans une histoire. Un enregistrement long peut être
                   découpé en extraits réutilisables ; plusieurs fichiers peuvent
                   aussi être réordonnés et assemblés en une seule piste sans
@@ -303,18 +297,27 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
               </div>
             </article>
 
-            <article class="journey-step">
-              <div class="journey-copy">
+            <article class="journey-rows">
+              <div class="journey-row journey-row--text">
                 <span class="journey-number">4</span>
-                <h3>Générer les voix et les images</h3>
-                <p>
-                  Piper fournit une synthèse vocale locale prête à l'emploi ;
-                  XTTS peut être utilisé pour des voix personnalisées. Pour les
-                  illustrations, Story Studio pilote les workflows ComfyUI
-                  configurés dans l'application.
-                </p>
+                <div class="journey-copy">
+                  <h3>Générer les voix et les images</h3>
+                  <p>
+                    Piper fournit une synthèse vocale locale prête à l'emploi ;
+                    XTTS peut être utilisé pour des voix personnalisées. Pour les
+                    illustrations, Story Studio pilote les workflows ComfyUI
+                    configurés dans l'application.
+                  </p>
+                </div>
+                <div class="journey-copy">
+                  <h3>Modifier et adapter les images</h3>
+                  <p>
+                    Les images peuvent ensuite être recadrées, redimensionnées et
+                    ajustées au format 320×240 de la boîte à histoires.
+                  </p>
+                </div>
               </div>
-              <div class="media-pair">
+              <div class="media-trio">
                 <figure>
                   <img
                     src="assets/screenshots/voice-generation-dark.png"
@@ -331,97 +334,97 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
                   />
                   <figcaption>Créer une illustration avec ComfyUI</figcaption>
                 </figure>
+                <figure>
+                  <img
+                    src="assets/screenshots/image-editor-dark.png"
+                    alt="Outils de recadrage et d'ajustement d'une image"
+                    loading="lazy"
+                  />
+                  <figcaption>Recadrer et ajuster une image</figcaption>
+                </figure>
               </div>
-              <div class="journey-copy">
-                <h3>Modifier et adapter les images</h3>
-                <p>
-                  Les images peuvent ensuite être recadrées, redimensionnées et
-                  ajustées au format 320×240 de la boîte à histoires.
-                </p>
-              </div>
-              <figure class="journey-media journey-media--compact">
-                <img
-                  src="assets/screenshots/image-editor-dark.png"
-                  alt="Outils de recadrage et d'ajustement d'une image"
-                  loading="lazy"
-                />
-              </figure>
             </article>
 
-            <article class="journey-step">
-              <div class="journey-copy">
-                <span class="journey-number">5</span>
-                <h3>Construire et tester la navigation</h3>
-                <p>
-                  L'Éditeur par menus organise simplement les Dossiers et les
-                  Histoires sous forme d'arborescence. Le panneau Réglages et le
-                  Diagramme permettent ensuite de relire les retours et les
-                  enchaînements produits.
-                </p>
+            <article class="journey-rows">
+              <div class="journey-row">
+                <div class="journey-copy">
+                  <span class="journey-number">5</span>
+                  <h3>Construire et tester la navigation</h3>
+                  <p>
+                    L'Éditeur par menus organise simplement les Dossiers et les
+                    Histoires sous forme d'arborescence. Le panneau Réglages et le
+                    Diagramme permettent ensuite de relire les retours et les
+                    enchaînements produits.
+                  </p>
+                </div>
+                <figure class="journey-media">
+                  <img
+                    src="assets/screenshots/workspace-dark.png"
+                    alt="Éditeur par menus avec l'Arbre, les Réglages et le Diagramme"
+                    loading="lazy"
+                  />
+                </figure>
               </div>
-              <figure class="journey-media">
-                <img
-                  src="assets/screenshots/workspace-dark.png"
-                  alt="Éditeur par menus avec l'Arbre, les Réglages et le Diagramme"
-                  loading="lazy"
-                />
-              </figure>
-              <div class="journey-copy">
-                <p>
-                  <a href="docs/editeur-graphe/">L'Éditeur graphe</a> donne directement accès aux Écrans, aux
-                  Listes de choix et à leurs raccords. Il permet de construire
-                  des histoires à choix multiples, des quiz, des tirages
-                  aléatoires et des parcours croisés.
-                </p>
+              <div class="journey-row journey-row--flip">
+                <div class="journey-copy">
+                  <p>
+                    <a href="docs/editeur-graphe/">L'Éditeur graphe</a> donne directement accès aux Écrans, aux
+                    Listes de choix et à leurs raccords. Il permet de construire
+                    des histoires à choix multiples, des quiz, des tirages
+                    aléatoires et des parcours croisés.
+                  </p>
+                  <p>
+                    Les deux éditeurs partagent la Bibliothèque médias, les outils audio, la file de
+                    rendu et le même Simulateur flottant. Tu peux parcourir
+                    l'histoire comme sur la boîte avant de générer le ZIP.
+                  </p>
+                </div>
+                <figure class="journey-media">
+                  <img
+                    src="assets/screenshots/diagram-simulator-dark.png"
+                    alt="Diagramme du pack avec le Simulateur flottant"
+                    loading="lazy"
+                  />
+                </figure>
               </div>
-              <div class="journey-copy">
-                <p>
-                  Les deux éditeurs partagent la Bibliothèque médias, les outils audio, la file de
-                  rendu et le même Simulateur flottant. Vous pouvez parcourir
-                  l'histoire comme sur la boîte avant de générer le ZIP.
-                </p>
-              </div>
-              <figure class="journey-media">
-                <img
-                  src="assets/screenshots/diagram-simulator-dark.png"
-                  alt="Diagramme du pack avec le Simulateur flottant"
-                  loading="lazy"
-                />
-              </figure>
             </article>
 
-            <article class="journey-step">
-              <div class="journey-copy">
-                <span class="journey-number">6</span>
-                <h3>Vérifier les réglages puis générer le ZIP</h3>
-                <p>
-                  Contrôlez dans la Fiche du pack les métadonnées, la Vignette
-                  catalogue et le traitement audio avant la génération du ZIP. Story Studio
-                  vérifie la structure, l'identité et les médias, puis relit le
-                  ZIP produit avant de terminer la génération du ZIP.
-                </p>
+            <article class="journey-rows">
+              <div class="journey-row">
+                <div class="journey-copy">
+                  <span class="journey-number">6</span>
+                  <h3>Vérifier les réglages puis générer le ZIP</h3>
+                  <p>
+                    Contrôle dans la Fiche du pack les métadonnées, la Vignette
+                    catalogue et le traitement audio avant la génération du ZIP. Story Studio
+                    vérifie la structure, l'identité et les médias, puis relit le
+                    ZIP produit avant de terminer.
+                  </p>
+                </div>
+                <figure class="journey-media">
+                  <img
+                    src="assets/screenshots/pack-metadata-dark.png"
+                    alt="Fiche du pack avec la Vignette catalogue, l'UUID et le nom du ZIP"
+                    loading="lazy"
+                  />
+                </figure>
               </div>
-              <figure class="journey-media">
-                <img
-                  src="assets/screenshots/pack-metadata-dark.png"
-                  alt="Fiche du pack avec la Vignette catalogue, l'UUID et le nom du ZIP"
-                  loading="lazy"
-                />
-              </figure>
-              <div class="journey-copy">
-                <p>
-                  Le parcours de vérification peut aussi analyser un pack
-                  communautaire existant : format, images, niveau sonore,
-                  silences et navigation sont réunis dans un rapport lisible.
-                </p>
+              <div class="journey-row journey-row--flip">
+                <div class="journey-copy">
+                  <p>
+                    Le parcours de vérification peut aussi analyser un pack
+                    communautaire existant : format, images, niveau sonore,
+                    silences et navigation sont réunis dans un rapport lisible.
+                  </p>
+                </div>
+                <figure class="journey-media">
+                  <img
+                    src="assets/screenshots/pack-checker-dark.png"
+                    alt="Rapport de vérification d'un pack communautaire"
+                    loading="lazy"
+                  />
+                </figure>
               </div>
-              <figure class="journey-media">
-                <img
-                  src="assets/screenshots/pack-checker-dark.png"
-                  alt="Rapport de vérification d'un pack communautaire"
-                  loading="lazy"
-                />
-              </figure>
             </article>
           </div>
         </div>
@@ -451,25 +454,25 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
           <h2>Installer Story Studio</h2>
           <div class="steps">
             <div class="step">
-              <h3>Choisissez votre plateforme</h3>
+              <h3>Choisis ta plateforme</h3>
               <p>
-                Le bouton en haut de la page propose le paquet recommandé pour votre
+                Le bouton en haut de la page propose le paquet recommandé pour ton
                 système. La page GitHub Releases donne accès à tous les formats.
               </p>
             </div>
             <div class="step">
-              <h3>Installez le paquet</h3>
+              <h3>Installe le paquet</h3>
               <p>
-                Sous Windows, lancez l'EXE ou utilisez le MSI. Sous Linux,
-                exécutez l'AppImage ou installez le DEB/RPM. Sur Mac Apple
-                Silicon, ouvrez le DMG et glissez l'app dans Applications.
+                Sous Windows, lance l'EXE ou utilise le MSI. Sous Linux,
+                exécute l'AppImage ou installe le DEB/RPM. Sur Mac Apple
+                Silicon, ouvre le DMG et glisse l'app dans Applications.
               </p>
             </div>
             <div class="step">
-              <h3>Lancez Story Studio</h3>
+              <h3>Lance Story Studio</h3>
               <p>
                 Le build macOS n'est pas notarisé : au premier lancement,
-                faites un Contrôle-clic sur l'app puis choisissez
+                fais un Contrôle-clic sur l'app puis choisis
                 <em>Ouvrir</em>, sans désactiver Gatekeeper globalement.
               </p>
             </div>
@@ -557,10 +560,10 @@ const hasCatalogueScreenshot = existsSync(new URL('../../public/assets/screensho
         }
 
         function setFallback(message) {
-          versionText.textContent = message || "Story Studio 0.9.10 — Voir les téléchargements";
+          versionText.textContent = message || "Story Studio 0.9.11 — Voir les téléchargements";
           label.textContent = "Voir les téléchargements";
           btn.setAttribute("href", RELEASES_URL);
-          meta.textContent = "Vous serez redirigé vers la page GitHub Releases.";
+          meta.textContent = "Ce bouton ouvre la page GitHub Releases.";
         }
 
         fetch(API, { headers: { Accept: "application/vnd.github+json" } })

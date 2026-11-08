@@ -6,7 +6,7 @@ import { getLastExportDir, saveLastExportDir } from './useFileDialog';
 import { ensureExportsDir, projectToRustExport } from '../store/projectIO';
 import { getGenerateErrors } from '../store/projectValidation';
 import { mediaVerificationProblem, verifyMenuProduction } from '../store/production/mediaVerification.js';
-import { hasExplicitExportPackName } from '../store/projectHelpers';
+import { hasConfirmedFreeExportName, hasExplicitExportPackName } from '../store/projectHelpers';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { logger } from '../utils/logger';
 import { askImportedUuidRevision } from './importedUuidRevision';
@@ -57,11 +57,12 @@ export function usePackGeneration({
       ? projectOverride
       : store.project;
     // Étape « métadonnées » avant de générer : on nomme/confirme le pack avant.
-    // Éditeur libre (pack) : toujours. Mode simple : seulement si le nom d'export
-    // n'est pas encore défini (comportement existant conservé pour ce premier tour).
+    // Un nom libre confirmé évite cette étape après réouverture. Dans la
+    // session d'import, elle reste nécessaire pour le choix de l'UUID.
+    // Le mode simple l'ouvre aussi si son nom d'export manque.
     const isPack = projectForGeneration.projectType === 'pack';
     const isSimple = projectForGeneration.projectType === 'simple';
-    const needsMetadataStep = !skipMetadata && (
+    const needsMetadataStep = !skipMetadata && (!hasConfirmedFreeExportName(projectForGeneration) || importedPackPendingMetaRef.current) && (
       isPack
       || (isSimple && (!hasExplicitExportPackName(projectForGeneration) || importedPackPendingMetaRef.current))
     );

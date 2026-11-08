@@ -178,7 +178,6 @@
   "project.recent.title": "Projet récent",
   "media.copy.progress": "Copie dans le projet…",
   "media.cover.progress": "Extraction de la jaquette…",
-  "names.pack.fallback": "Pack importé",
   "pack.invalid.message": "Archive importée invalide ou inaccessible : {{path}}\n\n{{reason}}",
   "folder.read.prefix": "Impossible de lire le dossier : ",
   "project.recent.prefix": "Impossible d’ouvrir ce projet récent :\n",
@@ -264,5 +263,10 @@
   "folder.pack.copy.failed": "Le pack du dossier n’a pas pu être copié dans le projet. Vérifie l’espace disque et que le projet n’est pas verrouillé.",
   "format.legacyLink.unsupported": "Ce projet contient un ancien nœud Lien, qui n'est plus pris en charge.",
   "format.legacyLink.found": "ancien nœud Lien",
-  "format.legacyLink.expected": "dossier, histoire ou pack importé"
+  "format.legacyLink.expected": "dossier, histoire ou pack importé",
+  "media.follow.already": "Déjà suivi pour ce projet",
+  "media.follow.alreadyPaused": "Déjà suivi (suspendu) pour ce projet",
+  "media.follow.manage": "Préférences → Suivis des médias",
+  "media.follow.manageButton": "Gérer les suivis des médias dans les préférences",
+  "media.follow.sources": "Sources suivies pour ce projet"
 }

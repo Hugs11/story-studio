@@ -315,7 +315,7 @@ impl Store {
                     #[cfg(test)]
                     if let Some((ready, release)) = pause {
                         let _ = ready.send(());
-                        let _ = release.recv_timeout(Duration::from_secs(5));
+                        let _ = release.recv();
                     }
                     #[cfg(not(test))]
                     let response: Option<Vec<u8>> = None;
@@ -392,7 +392,7 @@ impl Store {
     }
     #[cfg(test)]
     pub(crate) fn lunii_cover_test_waiters(&self, count: usize) {
-        let until = Instant::now() + Duration::from_secs(5);
+        let until = Instant::now() + crate::test_support::timeout();
         while self.lunii.cover_waiters.load(Ordering::SeqCst) < count {
             assert!(
                 Instant::now() < until,

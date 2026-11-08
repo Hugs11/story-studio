@@ -9,10 +9,14 @@ import { useLocalFile } from '../../hooks/useLocalFile';
 import { useMediaMetadata } from '../../hooks/useMediaMetadata';
 import { notifyFileChanged } from '../../store/fileMetadataCache';
 import { useProjectContext } from '../../store/ProjectContext';
+import { readPackAudioProcessing } from '../../config/audioProcessing';
 import { isTtsAvailable } from '../../store/xttsSettings';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { basename, pathKey, stripWindowsLongPathPrefix } from '../../utils/fileUtils';
 import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
+import { useAudioLevelNotice } from '../../hooks/useAudioLevelNotice';
+import { audioLevelMark, generationLevelLabel } from '../../store/audioLevelNotice';
+import { AudioLevelMark } from './AudioLevelMark';
 import { RecordModal } from '../RecordModal/RecordModal';
 // reason: lazy() pour sortir wavesurfer.js (~18 KB gz) + AudioEditorModal du
 // chunk partage. Charge uniquement quand l'utilisateur ouvre l'editeur audio.
@@ -55,6 +59,7 @@ export function AudioField({
   ttsFilenameHint = 'tts',
   xttsTarget = null,
   emptyBadge = null,
+  levelLabel = null,
 }) {
   const { t } = useTranslation('tree');
   // eslint-disable-next-line i18next/no-literal-string -- nom de dossier local stable
@@ -68,6 +73,7 @@ export function AudioField({
     projectName,
     xttsSettings,
     pathAudit,
+    globalOptions,
     onImportFile,
     onSave,
     onUpdateXttsSettings,
@@ -94,6 +100,8 @@ export function AudioField({
   const ttsAvailable = isTtsAvailable(xttsSettings);
   const showFilledState = !!file && fileAvailable;
   const audioUrl = useLocalFile(showFilledState ? file : null);
+  const levelNotice = useAudioLevelNotice(showFilledState ? file : null, dropWrapRef, { version: audioUrl });
+  const levelMark = audioLevelMark(levelNotice, readPackAudioProcessing(globalOptions).harmonizeLoudness);
   const tooltipText = description || displayPath || '';
   const progressRatio = duration > 0 ? Math.max(0, Math.min(1, currentTime / duration)) : 0;
   const playedBars = Math.round(progressRatio * FILLED_WAVE_HEIGHTS.length);
@@ -383,6 +391,7 @@ export function AudioField({
               <Tooltip text={tooltipText} wrap>
                 <span className="audio-time">{label || filename}</span>
               </Tooltip>
+              <AudioLevelMark mark={levelMark} label={generationLevelLabel(levelLabel, t, label || filename)} />
             </div>
 
             <Tooltip text={t("tree:audio.play.seek")} className="audio-wave-tip">

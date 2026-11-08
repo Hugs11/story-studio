@@ -423,9 +423,6 @@ impl Store {
             path: resolve_existing(&root.path),
         };
         let root = &resolved_root;
-        if reachable && self.empty_known_source(&root.source_id)? {
-            return self.mark_source_unavailable(&root.source_id);
-        }
         // Restore durable anchors before unchanged-file detection: a native
         // restore can keep exactly the previous size, date and file identity.
         self.restore_trashed_paths(&changes.iter().map(|c| c.path.clone()).collect::<Vec<_>>())?;
@@ -502,23 +499,6 @@ impl Store {
         Ok(result)
     }
 
-    /// A disconnected volume can leave an accessible, empty mount directory.
-    /// Keep this conservative shared rule on every platform and on later scans.
-    pub(crate) fn empty_known_source(&self, source: &str) -> Result<bool> {
-        let root = self.read(|c| {
-            c.query_row("SELECT coalesce(resolved_path,path) FROM source WHERE id=?1 AND EXISTS(SELECT 1 FROM cache.coverage v JOIN cache.observation o ON o.exemplar_id=v.exemplar_id WHERE v.source_id=?1 AND o.state IN ('available','unavailable'))", [source], |r| r.get::<_,Vec<u8>>(0)).optional()
-        })?;
-        let Some(root) = root else {
-            return Ok(false);
-        };
-        let root = super::sources::native(root);
-        let probed = root.clone();
-        Ok(probe::bounded(&root, probe::PROBE_TIMEOUT, move || {
-            std::fs::read_dir(probed).is_ok_and(|mut entries| entries.next().is_none())
-        })
-        .unwrap_or(false))
-    }
-
     /// Compares the whole source with the index and reanalyses only what
     /// differs (size, date or file identity), then confirms the absences of a
     /// completely listed source. An unreachable root only marks its exemplars
@@ -592,32 +572,6 @@ impl Store {
             {
                 found.candidates.push(path);
             }
-        }
-        if found.complete
-            && !cancel.load(Ordering::Relaxed)
-            && self.empty_known_source(&root.source_id)?
-        {
-            let access_changed = self.note_source_access(&root.source_id, "unavailable")?;
-            let mut result = self.mark_source_unavailable(&root.source_id)?;
-            result.changed |= access_changed || retired.is_some();
-            if access_changed {
-                if let Some(auto) = self.begin_automatic_refresh(root, 0)? {
-                    auto.update(|p| {
-                        p.roots.failed = 1;
-                        p.record_scope_error(
-                            crate::support::paths::path_for_frontend(&root.path),
-                            "volumeUnavailable",
-                            String::new(),
-                        );
-                    });
-                    auto.finish(&Ok(Refreshed {
-                        changed: result.changed,
-                        revision: result.revision,
-                        ..Default::default()
-                    }));
-                }
-            }
-            return Ok(result);
         }
         // Scope errors are reported only when their fingerprint changes (new
         // or resolved), across restarts; a cut-short walk concludes nothing.

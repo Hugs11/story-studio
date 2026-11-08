@@ -746,7 +746,8 @@ pub fn rename_project_folder(
 }
 
 #[tauri::command]
-pub fn copy_project_media(
+pub fn copy_project_media<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
     source_path: String,
     root: String,
     category: String,
@@ -761,6 +762,13 @@ pub fn copy_project_media(
             project_destination.as_ref(),
             session_root.as_deref(),
         )
+    })
+    .inspect(|copied| {
+        crate::services::catalogue::open::import_metadata::remember_copy(
+            &app,
+            &source_path,
+            &copied.path,
+        );
     })
 }
 

@@ -392,7 +392,11 @@ async function quietReadFixture(extra = {}) {
 
 test('D43: a write during a quiet read is neither refused nor ignored, and the stale result is dropped', async () => {
   const { store, calls, pending } = await quietReadFixture();
-  const result = await store.mutate('d', 'hide', ['k', true]);
+  const mutation = store.mutate('d', 'hide', ['k', true]);
+  await tick();
+  // The mandatory post-entry read also waits on this simulated facade.
+  pending.pop()({ id: 'd', state: 'ready', stories: [{ key: 'w' }], orphans: [] });
+  const result = await mutation;
   assert.ok(result);
   assert.equal(store.getSnapshot().error, null);
   assert.ok(calls.some(c => c[0] === 'hide'));

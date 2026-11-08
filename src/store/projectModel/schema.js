@@ -27,7 +27,7 @@ export const DEFAULT_PACK_METADATA = Object.freeze({
   title: '',
   author: '',
   version: 1,
-  minAge: '3',
+  minAge: '',
   producer: '',
   bonus: '',
   description: '',
@@ -430,6 +430,13 @@ function normalizePackMinAge(value) {
   return parsed || DEFAULT_PACK_METADATA.minAge;
 }
 
+// Same alias priority as storyteller/send/project.rs: retain the first stored,
+// nonempty string, including the root alias used by historical project files.
+export function readSavedPackUuid(project = {}) {
+  return [project.packMetadata?.uuid, project.packMetadata?.packUuid, project.packUuid]
+    .find(value => typeof value === 'string' && value.trim())?.trim() ?? '';
+}
+
 function normalizePackMetadata(value = {}) {
   const metadata = value && typeof value === 'object' ? value : {};
   const namingMode = metadata.namingMode === 'legacy' ? 'legacy' : 'convention';
@@ -443,7 +450,7 @@ function normalizePackMetadata(value = {}) {
     producer: String(metadata.producer ?? '').trim(),
     bonus: String(metadata.bonus ?? '').trim(),
     description: String(metadata.description ?? '').trim(),
-    uuid: String(metadata.uuid ?? metadata.packUuid ?? '').trim(),
+    uuid: readSavedPackUuid({ packMetadata: metadata }),
     originalUuid: String(metadata.originalUuid ?? metadata.uuid ?? metadata.packUuid ?? '').trim(),
     namingMode,
     legacyExportName: String(metadata.legacyExportName ?? '').trim(),
@@ -498,7 +505,7 @@ export function migrateProjectData(rawData = {}, {
   // Le writer ne doit jamais fabriquer une nouvelle identité à chaque export.
   // Un projet chargé sans UUID la reçoit ici une seule fois, dans son payload
   // persistant, depuis la même source aléatoire que les IDs d'authoring.
-  if (!packMetadata.uuid) packMetadata.uuid = makeId();
+  packMetadata.uuid = readSavedPackUuid(source) || makeId();
 
   const saveStem = basenameNoExt(savePath);
   const explicitProjectName = String(source.projectName ?? '').trim();
@@ -536,6 +543,7 @@ export function normalizeBaseProject(project = {}) {
   // mutations génériques : aucun normaliseur récursif ne reçoit un niveau 62.
   assertProjectMenuDepth(project);
   const packMetadata = normalizePackMetadata(project.packMetadata ?? buildPackMetadataFromLegacy(project));
+  packMetadata.uuid = readSavedPackUuid(project) || packMetadata.uuid;
   const projectName = cleanProjectName(project.projectName || project.name, '');
   const shouldUseRootEntries = Array.isArray(project.rootEntries)
     && (project.rootEntries.length > 0 || !hasLegacyRootEntries(project));

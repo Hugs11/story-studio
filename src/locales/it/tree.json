@@ -616,5 +616,10 @@
   "diagram.stories.unit_one": "<number>{{count}}</number><unit>storia</unit>",
   "diagram.stories.unit_many": "<number>{{count}}</number><unit>storie</unit>",
   "diagram.stories.unit_other": "<number>{{count}}</number><unit>storie</unit>",
-  "zip.folder.choose": "Scegli una cartella"
+  "zip.folder.choose": "Scegli una cartella",
+  "audio.level.current": "Questo verdetto riguarda l’audio attuale; verrà aggiornato se lo modifichi.",
+  "audio.level.nearMuteNoHarmonize": "L’audio «{{label}}» è quasi inudibile: l’armonizzazione del volume è disattivata per questo pack.",
+  "audio.level.nearMuteBoost": "L’audio «{{label}}» è quasi muto: durante la generazione del pack, Story Studio lo amplificherà molto; il rumore di fondo potrà diventare più udibile.",
+  "audio.level.strongLimiting": "Durante la generazione del pack, Story Studio ridurrà molto i picchi dell’audio «{{label}}» per uniformarne il volume; alcuni picchi potranno sembrare compressi.",
+  "audio.level.silent": "L’audio «{{label}}» è silenzioso: la Lunii non riprodurrà nulla in questo punto."
 }

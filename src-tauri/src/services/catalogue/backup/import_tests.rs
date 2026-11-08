@@ -479,7 +479,8 @@ fn roundtrip_export_import_preserves_labels_memberships_and_images() {
 }
 fn wait(store: &Store, receipt: &Value) -> crate::services::catalogue::events::Progress {
     let id = receipt["operationId"].as_str().unwrap();
-    for _ in 0..1000 {
+    let started = std::time::Instant::now();
+    loop {
         let progress = store.get_operation(id).unwrap();
         if matches!(
             progress.status.as_str(),
@@ -487,9 +488,12 @@ fn wait(store: &Store, receipt: &Value) -> crate::services::catalogue::events::P
         ) {
             return progress;
         }
+        assert!(
+            started.elapsed() < crate::test_support::timeout(),
+            "import did not finish"
+        );
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
-    panic!("import did not finish")
 }
 #[test]
 fn real_operations_revalidate_source_revision_choices_and_request_ids() {
@@ -2502,7 +2506,7 @@ fn preview_computation_keeps_the_writer_available_and_pins_its_revision() {
                 }))
                 .unwrap();
             });
-            recv.recv_timeout(std::time::Duration::from_secs(2))
+            recv.recv_timeout(crate::test_support::timeout())
                 .expect("preview must not hold the writer")
                 .unwrap();
             worker.join().unwrap();

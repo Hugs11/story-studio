@@ -9,8 +9,8 @@ test('additive source contract and source commands preserve revisions', async ()
   const api=createCatalogueApi({listen:async()=>()=>{},invoke:async(command,args)=>{calls.push({command,args});return command==='catalogue_list_sources'?{items:[source],sourcesRevision:3}:{sourceId:source.id,sourcesRevision:4};}});
   const list=await api.listSources('/workspace');
   assert.deepEqual(list.items[0],source);
-  await api.addSource('/packs',3,true);await api.removeSource('source-id',4,9);await api.explainPath('/packs/file.zip');await api.getExclusions();
-  assert.deepEqual(calls[1],{command:'catalogue_add_source',args:{path:'/packs',expectedSourcesRevision:3,declined:true}});
+  await api.addSource('/packs',3);await api.removeSource('source-id',4,9);await api.explainPath('/packs/file.zip');await api.getExclusions();
+  assert.deepEqual(calls[1],{command:'catalogue_add_source',args:{path:'/packs',expectedSourcesRevision:3}});
   assert.deepEqual(calls[2],{command:'catalogue_remove_source',args:{sourceId:'source-id',expectedSourcesRevision:4,expectedCatalogueRevision:9}});
   assert.equal(calls[3].command,'catalogue_explain_path');
 });
@@ -32,19 +32,18 @@ test('partially installed subscription cleans itself when the next listener fail
   const api=createCatalogueApi({invoke:async()=>{},listen:async()=>{if(++installed===2)throw new Error('offline');return ()=>released++;}});
   await assert.rejects(()=>api.subscribeOperations(()=>{}));assert.equal(released,1);
 });
-test('duplicate identity and remembered refusals have distinct notices', async()=>{
+test('duplicate identity has its own notice', async()=>{
   const {sourceAddResult}=await import('../src/store/catalogue/sourceView.js');
   const items=[{id:'same',status:'active',path:'/alias'}];
   assert.equal(sourceAddResult(items,{sourceId:'same'}).alreadyActive,true);
   assert.equal(sourceAddResult(items,{sourceId:'same'}).notice.key,'catalogue:sources.duplicate.message');
-  assert.equal(sourceAddResult(items,{sourceId:'same'},true).notice.key,'catalogue:sources.declined.message');
 });
 test('a folder added inside an active source is explained with the enclosing path', async()=>{
   const {sourceAddResult}=await import('../src/store/catalogue/sourceView.js');
   const before=[{id:'parent',status:'active',path:'/packs'}];
   const after=[...before,{id:'child',status:'active',path:'/packs/B',includedIn:'parent'}];
-  assert.deepEqual(sourceAddResult(before,{sourceId:'child'},false,after).notice,{key:'catalogue:sources.nested.message',params:{path:'/packs'}});
-  assert.equal(sourceAddResult(before,{sourceId:'other'},false,[...before,{id:'other',status:'active',path:'/elsewhere',includedIn:null}]).notice.key,'catalogue:sources.added.message');
+  assert.deepEqual(sourceAddResult(before,{sourceId:'child'},after).notice,{key:'catalogue:sources.nested.message',params:{path:'/packs'}});
+  assert.equal(sourceAddResult(before,{sourceId:'other'},[...before,{id:'other',status:'active',path:'/elsewhere',includedIn:null}]).notice.key,'catalogue:sources.added.message');
   assert.equal(sourceAddResult(before,{sourceId:'child'}).notice.key,'catalogue:sources.added.message');
 });
 test('operation and explanation fixtures travel unchanged across IPC',async()=>{
@@ -69,4 +68,16 @@ test('source removal preview and confirmed card erasure carry the snapshot revis
 test('removal preview reports a coded conflict without stringifying the error', async () => {
   const api = createCatalogueApi({ listen: async () => () => {}, invoke: async () => { throw { code: 'CATALOG_REVISION_CONFLICT', params: {} }; } });
   await assert.rejects(api.previewRemoveSource('A'), error => error.code === 'CATALOG_REVISION_CONFLICT');
+});
+
+test('hidden empty technical source duplicate keeps the duplicate notice', async () => {
+  const { sourceAddResult } = await import('../src/store/catalogue/sourceView.js');
+  assert.equal(sourceAddResult([], { sourceId: 'new', sourcesRevision: 5 }, [], 4).alreadyActive, false);
+  for (const visible of [false, true]) {
+    const items = visible ? [{ id: 'technical', status: 'active', origin: 'repatriated' }] : [];
+    assert.deepEqual(sourceAddResult(items, { sourceId: 'technical', sourcesRevision: 4 }, items, 4), {
+      alreadyActive: true,
+      notice: { key: 'catalogue:sources.duplicate.message', params: {} },
+    });
+  }
 });

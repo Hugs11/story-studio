@@ -1795,14 +1795,6 @@
     "source": "native_pack/assets/audio.rs:455"
   },
   {
-    "code": "GENERATION_AUDIO_SILENT_REFUSED",
-    "params": {
-      "role": "Exemple role"
-    },
-    "expected": "Préparation audio native impossible pour Exemple role : audio silencieux",
-    "source": "native_pack/assets/audio.rs:459"
-  },
-  {
     "code": "GENERATION_AUDIO_LEVEL_MEASURE_FAILED",
     "params": {
       "role": "Exemple role",

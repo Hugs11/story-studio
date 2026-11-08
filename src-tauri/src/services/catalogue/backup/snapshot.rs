@@ -158,9 +158,7 @@ impl Store {
                     )?;
                 }
                 document["rootHints"] = json!(tx
-                    .prepare(
-                        "SELECT path FROM source WHERE status IN ('active','hint') ORDER BY id"
-                    )
+                    .prepare("SELECT path FROM source WHERE status='active' ORDER BY id")
                     .map_err(error)?
                     .query_map([], |r| r.get::<_, Vec<u8>>(0))
                     .map_err(error)?

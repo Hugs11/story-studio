@@ -18,7 +18,7 @@ import { join } from 'node:path';
 
 import { launchApp } from '../lib/launch.mjs';
 import { createRun } from '../lib/run-context.mjs';
-import { importPack } from '../lib/actions.mjs';
+import { importPack, openPackMetadata } from '../lib/actions.mjs';
 import { answerNext } from '../lib/dialogs.mjs';
 import { extractFixtureMedia } from '../lib/fixtures.mjs';
 import { resizeSettingsToMinimum } from '../lib/settings-panel.mjs';
@@ -52,7 +52,7 @@ async function overflowsIn(page, selector) {
 }
 
 async function openSheet(page) {
-  await page.locator('.chrome-titlebar-pack-recap').click();
+  await openPackMetadata(page);
   const panel = page.locator('.pack-meta-cover-panel--editable');
   await panel.waitFor({ timeout: 15_000 });
   await page.waitForTimeout(300);

@@ -294,10 +294,12 @@ fn emit_audio_warnings(warnings: &[NativeGenerationWarning], emit: &dyn Fn(&str)
                 .into_transport(),
         );
         log::warn!(target: "generation_audio",
-            "{} role='{}' initial={:.1} LUFS final={} gain={:.1} dB limiting={:.1} dB",
+            "{} role='{}' initial={} final={} gain={:.1} dB limiting={:.1} dB",
             warning.code,
             warning.role,
-            warning.initial_integrated_lufs,
+            warning.initial_integrated_lufs
+                .map(|value| format!("{value:.1} LUFS"))
+                .unwrap_or_else(|| "non mesuré".to_string()),
             warning
                 .final_integrated_lufs
                 .map(|value| format!("{value:.1} LUFS"))

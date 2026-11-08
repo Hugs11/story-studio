@@ -46,7 +46,7 @@ test('resume, unknown metadata, read-only volume and orphan banners explain the 
     // Expectation changed on purpose: the firmware version is not a read-only
     // cause; the engine's readOnlyReason is (30 Oct. 2026 incident).
     ['readOnly', { ...device, firmware: '3.1.0', readOnlyReason: 'volume' }, /doit être vérifiée.*pas été éjectée.*fsck\.vfat.*chkdsk.*Utilitaire de disque/],
-    ['orphans', { ...device, orphans: [{ parked: true, sizeBytes: 100 }] }, /hors de la liste/],
+    ['orphans', { ...device, orphans: [{ parked: true, complete: true, sizeBytes: 100 }] }, /hors de la liste/],
   ]) {
     const tree = render(LuniiBanner, { kind, device: value });
     assert.match(text(tree), expected);
@@ -91,8 +91,10 @@ test('S1 is the only empty state offering an action; S2/S19/S18/S17 have their o
   }
 });
 
-test('damaged and read-only lists still permit eject; busy and opening refuse it', () => {
-  for (const [state, busy, disabled] of [['damaged', false, false], ['readOnly', false, false], ['ready', true, true], ['opening', false, true]]) {
+// Expectation changed on purpose: a busy Lunii no longer refuses
+// ejection silently; the button stays active and asks what to do with the running writes.
+test('damaged, read-only and busy lists permit eject; opening refuses it', () => {
+  for (const [state, busy, disabled] of [['damaged', false, false], ['readOnly', false, false], ['ready', true, false], ['opening', false, true]]) {
     const tree = render(LuniiPanelHeader, { device: { ...device, state, busy } });
     const eject = elements(tree).find(e => e.type === Button && e.props['aria-label'] === 'Éjecter');
     assert.equal(eject.props.disabled, disabled);
@@ -367,7 +369,7 @@ test('row: eye and bin only, the bin runs the same removal as the menu entry, or
   assert.equal(row.props.onContextMenu, undefined, 'no context menu on the row');
 });
 
-test('D45: a duplicate parked copy offers naming and Supprimer, never put-back, and is not counted by put-back-all', async () => {
+test('D45: a duplicate parked copy offers only Supprimer, never put-back, and is not counted by put-back-all', async () => {
   const { storyMenuEntries } = await import('../src/components/Catalogue/lunii/LuniiStoryMenu.jsx');
   const { restorableOrphans } = await import('../src/store/catalogue/luniiDevices.js');
   const calls = [];
@@ -379,7 +381,8 @@ test('D45: a duplicate parked copy offers naming and Supprimer, never put-back, 
   const note = elements(row).find(e => e.props?.className === 'lunii-orphan-note');
   assert.equal(tipOf(row, note), 'Cette histoire est déjà dans la liste : cette copie ne sert plus');
   const labels = elements(row).filter(e => e.type === Button).map(b => b.props['aria-label']).filter(l => l !== 'Réordonner');
-  assert.deepEqual(labels, ['Nommer cette histoire', 'Supprimer']);
+  // Naming is intentionally excluded for every orphan, including duplicates.
+  assert.deepEqual(labels, ['Supprimer']);
   elements(row).find(e => e.type === Button && e.props['aria-label'] === 'Supprimer').props.onClick();
   assert.deepEqual(calls, [['remove', device, [copy]]]);
   const keys = storyMenuEntries({ device, story: copy, gestures, t: engineT }).map(e => e.key);
@@ -464,7 +467,7 @@ test('dragging Lunii stories out to the catalogue repatriates the repatriable on
   } finally { app.unmount(); }
 });
 
-test('orphan banner: one « Tout remettre dans la liste » button, refused with its reason', () => {
+test('mixed orphan banner offers restoration and deletion, refused with their reasons', () => {
   const orphans = [
     { key: '00000003', complete: true, knownUuid: '00000000-0000-4000-8000-000000000003', sizeBytes: 10 },
     { key: '00000004', complete: false, knownUuid: '00000000-0000-4000-8000-000000000004', sizeBytes: 10 },
@@ -474,15 +477,16 @@ test('orphan banner: one « Tout remettre dans la liste » button, refused with 
   const gestures = { restoreOrphans: value => restored.push(value) };
   const ready = { ...device, orphans, banner: ['orphans'] };
   let buttons = elements(render(LuniiBanner, { kind: 'orphans', device: ready, gestures })).filter(e => e.type === Button);
-  assert.equal(buttons.length, 1);
+  assert.equal(buttons.length, 2);
   assert.match(text(buttons[0]), /^Remettre dans la liste$/);
   assert.equal(buttons[0].props.disabled, false);
   buttons[0].props.onClick(); assert.deepEqual(restored, [ready]);
   // Writing refused: disabled, with the refusal as reason.
   for (const value of [{ ...ready, state: 'readOnly' }, { ...ready, busy: true }]) {
     const refused = render(LuniiBanner, { kind: 'orphans', device: value, gestures });
-    const button = elements(refused).find(e => e.type === Button);
-    assert.equal(button.props.disabled, true); assert.ok(tipOf(refused, button));
+    for (const button of elements(refused).filter(e => e.type === Button)) {
+      assert.equal(button.props.disabled, true); assert.ok(tipOf(refused, button));
+    }
   }
   // Nothing complete and identified: disabled, with its own reason.
   const none = { ...ready, orphans: orphans.slice(1) };
@@ -550,5 +554,150 @@ test('grid reserve yields first, then fiche only below the combined side-panel m
     assert.equal(luniiWidth, 330);
     assert.deepEqual(bounds, { min: ficheWidth, max: ficheWidth });
     assert.equal(parent - luniiWidth - bounds.max, gridWidth);
+  }
+});
+
+test('the dedicated zone under the last story shows the end insertion and drops through the shared gesture', async () => {
+  const { useLuniiDnd } = await import('../src/hooks/useLuniiDnd.js');
+  const { createLuniiGestures } = await import('../src/store/catalogue/luniiGestures.js');
+  const dev = { ...device, stories: [{ key: 'a' }, { key: 'b' }, { key: 'c' }] };
+  const writes = [];
+  const lunii = { luniiDevices: [dev], selection: { side: 'lunii', ids: [] }, store: { mutate: async (...args) => { writes.push(args); } } };
+  lunii.gestures = createLuniiGestures(lunii, () => '', async () => true, () => {});
+  let target = 'end';
+  const elementAt = () => ({ closest: () => ({ dataset: { luniiDrop: target, deviceId: 'd' } }) });
+  const app = runner(() => useLuniiDnd({ lunii, elementAt }));
+  const moved = { activatorEvent: { clientX: 5, clientY: 5 }, delta: { x: 0, y: 20 } };
+  try {
+    for (const key of ['a', 'c']) {
+      let dnd = app.render();
+      dnd.handlers.onDragStart({ active: { data: { current: { kind: 'lunii-row', deviceId: 'd', key } } } });
+      dnd.handlers.onDragMove(moved); dnd = app.render();
+      assert.equal(dnd.insertion, key === 'a' ? 3 : null);
+      const panel = render(LuniiPanel, { lunii, dnd });
+      assert.equal(elements(panel).filter(e => e.props?.className === 'lunii-insertion-end').length, key === 'a' ? 1 : 0);
+      assert.ok(elements(panel).filter(e => e.type === LuniiStoryRow).every(e => !e.props.insertion));
+      const zone = elements(panel).find(e => e.props?.['data-lunii-drop'] === 'end');
+      assert.equal(zone.props.className, 'lunii-reorder-end');
+      assert.equal(zone.props['data-device-id'], 'd');
+      for (const surface of ['banner', 'list padding', 'scrollbar', 'sending row']) {
+        target = 'scroll';
+        dnd.handlers.onDragMove(moved); dnd = app.render();
+        assert.equal(dnd.insertion, null, surface);
+        dnd.handlers.onDragEnd(moved); dnd = app.render();
+        assert.equal(writes.length, key === 'a' ? 0 : 1, `${surface}: no write`);
+        dnd.handlers.onDragStart({ active: { data: { current: { kind: 'lunii-row', deviceId: 'd', key } } } });
+      }
+      target = 'end';
+      dnd.handlers.onDragMove(moved); dnd = app.render();
+      dnd.handlers.onDragEnd(moved); dnd = app.render();
+      assert.equal(dnd.insertion, null);
+    }
+    assert.deepEqual(writes, [['d', 'reorder', [{ rowKey: null, index: 3 }], ['a'], { a: '' }]], 'C at the end writes nothing');
+  } finally { app.unmount(); }
+});
+
+// The banner delegates to the row's removal gesture and its confirmation.
+test('incomplete stories alone offer deletion only; complete stories offer restoration only', () => {
+  const complete = { key: 'full', complete: true, knownUuid: 'uuid', sizeBytes: 30 };
+  const incomplete = { key: '.story-studio-install-test', complete: false, sizeBytes: 20 };
+  const calls = [];
+  const gestures = { remove: (...args) => calls.push(args) };
+  for (const orphans of [[incomplete], [complete], [complete, incomplete]]) {
+    const value = { ...device, orphans };
+    const tree = render(LuniiBanner, { kind: 'orphans', device: value, gestures });
+    const buttons = elements(tree).filter(e => e.type === Button);
+    assert.deepEqual(buttons.map(text), orphans.length === 2 ? ['Remettre dans la liste', 'Supprimer'] : orphans[0].complete ? ['Remettre dans la liste'] : ['Supprimer']);
+    const remove = buttons.find(e => text(e) === 'Supprimer');
+    if (remove) {
+      assert.equal(text(elements(tree).filter(e => e.type === 'h3').at(-1)).trim(), 'Histoires incomplètes (20 byte)');
+      remove.props.onClick();
+      assert.deepEqual(calls.at(-1), [value, [{ ...incomplete, orphan: true }]]);
+      for (const patch of [{ state: 'readOnly' }, { busy: true }]) {
+        const refused = render(LuniiBanner, { kind: 'orphans', device: { ...value, ...patch }, gestures });
+        const button = elements(refused).find(e => e.type === Button && text(e) === 'Supprimer');
+        assert.equal(button.props.disabled, true);
+        assert.ok(tipOf(refused, button));
+      }
+    } else assert.doesNotMatch(text(tree), /Histoires incomplètes/);
+  }
+});
+
+test('banner removal includes parked leftovers and excludes pending removals and incomplete duplicates', () => {
+  const incomplete = { key: 'partial', complete: false, title: 'Partielle', sizeBytes: 20 };
+  const pending = { ...incomplete, key: 'pending', sizeBytes: 300 };
+  const duplicate = { ...incomplete, key: 'duplicate', duplicateOfListed: true, sizeBytes: 4000 };
+  const parked = { ...incomplete, key: 'parked:partial', parked: true, sizeBytes: 50000 };
+  const calls = [];
+  const gestures = { remove: (...args) => calls.push(args) };
+  const value = { ...device, queueActive: true, busy: true, orphans: [incomplete, pending, duplicate, parked], banner: ['orphans'] };
+  const lunii = { luniiDevices: [value], selection: { side: 'catalogue', ids: [] }, store: {}, gestures,
+    luniiQueue: { d: [{ id: 'send', kind: 'send', state: 'running', keys: [] }, { id: 'remove', kind: 'remove', state: 'queued', keys: [pending.key] }] } };
+  // Render the panel first to verify the queue marks reach its banner.
+  const panel = render(LuniiPanel, { lunii });
+  const banner = elements(panel).find(e => e.type === LuniiBanner);
+  const tree = render(LuniiBanner, banner.props);
+  assert.equal(text(elements(tree).find(e => e.type === 'h3')).trim(), 'Histoires incomplètes (50 kB)');
+  const button = elements(tree).find(e => e.type === Button);
+  assert.equal(button.props.disabled, false);
+  button.props.onClick();
+  assert.deepEqual(calls, [[value, [{ ...incomplete, orphan: true }, { ...parked, orphan: true }]]]);
+  // Only the pending leftover remains: keep the action visible with the row's reason.
+  const allWaiting = render(LuniiBanner, { ...banner.props, device: { ...value, orphans: [pending, duplicate] } });
+  const disabled = elements(allWaiting).find(e => e.type === Button);
+  assert.equal(text(elements(allWaiting).find(e => e.type === 'h3')).trim(), 'Histoires incomplètes (300 byte)');
+  assert.equal(disabled.props.disabled, true);
+  assert.equal(tipOf(allWaiting, disabled), 'Retrait en attente : annule-le d’abord pour agir sur cette histoire.');
+  for (const orphans of [[parked], [duplicate, parked]]) {
+    const parkedTree = render(LuniiBanner, { kind: 'orphans', device: { ...device, orphans }, gestures });
+    const remove = elements(parkedTree).find(e => e.type === Button);
+    assert.equal(text(remove), 'Supprimer');
+    assert.equal(remove.props.disabled, false);
+    remove.props.onClick();
+    assert.deepEqual(calls.at(-1)[1], [{ ...parked, orphan: true }]);
+  }
+});
+
+test('banner restoration excludes stories awaiting removal and explains when all candidates await removal', async () => {
+  const { createLuniiGestures } = await import('../src/store/catalogue/luniiGestures.js');
+  const { queuedMarks, removalPending } = await import('../src/store/catalogue/luniiQueueView.js');
+  const first = { key: 'first', complete: true, knownUuid: 'uuid-first', sizeBytes: 20 };
+  const pending = { ...first, key: 'pending', knownUuid: 'uuid-pending', sizeBytes: 300 };
+  const writes = [];
+  const gestures = createLuniiGestures({ store: { mutate: (...args) => writes.push(args) } }, engineT);
+  for (const action of ['remove', 'delete']) {
+    const marks = action === 'remove' ? queuedMarks([{ id: 'remove', kind: 'remove', state: 'queued', keys: [pending.key] }]) : new Map([[pending.key, [{ entryId: 'delete', action }]]]);
+    assert.equal(removalPending(marks.get(pending.key)), true);
+    const tree = render(LuniiBanner, { kind: 'orphans', device: { ...device, queueActive: true, busy: true, orphans: [first, pending] }, gestures, marks });
+    assert.match(text(tree), /2 histoires hors de la liste/);
+    assert.match(text(tree), /320 byte/);
+    const button = elements(tree).find(e => e.type === Button);
+    assert.equal(button.props.disabled, false);
+    button.props.onClick();
+    assert.deepEqual(writes.at(-1), ['d', 'restoreOrphans', [[{ key: first.key, knownUuid: first.knownUuid }]], [first.key], { [first.key]: first.title ?? '' }]);
+    const allWaiting = render(LuniiBanner, { kind: 'orphans', device: { ...device, orphans: [pending] }, gestures, marks });
+    assert.match(text(allWaiting), /1 histoire hors de la liste/);
+    assert.match(text(allWaiting), /300 byte/);
+    const disabled = elements(allWaiting).find(e => e.type === Button);
+    assert.equal(disabled.props.disabled, true);
+    assert.equal(tipOf(allWaiting, disabled), 'Retrait en attente : annule-le d’abord pour agir sur cette histoire.');
+  }
+});
+
+test('untitled orphans never offer a naming pencil', () => {
+  for (const complete of [true, false]) {
+    const tree = render(LuniiStoryRow, { device, story: { key: 'orphan', orphan: true, complete }, onSelect() {} });
+    assert.equal(elements(tree).find(e => e.type === Button && e.props.className === 'lunii-story-name'), undefined);
+  }
+});
+
+test('engine orphan banners never render an empty section, including parked and pending stories', () => {
+  for (const complete of [false, true]) for (const parked of [false, true]) for (const pending of [false, true]) {
+    const story = { key: 'orphan', complete, parked, sizeBytes: 123, knownUuid: 'uuid' };
+    const marks = pending ? new Map([[story.key, [{ action: 'remove' }]]]) : new Map();
+    const tree = render(LuniiBanner, { kind: 'orphans', device: { ...device, orphans: [story, { ...story, key: 'duplicate', duplicateOfListed: true }] }, marks });
+    assert.ok(elements(tree).some(e => e.type === 'h3' && text(e).trim()));
+    assert.ok(elements(tree).some(e => e.type === Button));
+    assert.doesNotMatch(text(tree), /\(0 byte\)/);
   }
 });

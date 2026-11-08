@@ -8,6 +8,7 @@ export function useLuniiGestures(lunii) {
   const { showChoiceDialog } = useErrorDialog();
   const [announcement, setAnnouncement] = useState('');
   const confirm = (title, message, label, kind) => showChoiceDialog(luniiConfirmation(t, title, message, label, kind));
-  return { announcement, ...createLuniiGestures(lunii, t, confirm, setAnnouncement) };
+  const choose = dialog => showChoiceDialog({ variant: 'lunii', ...dialog });
+  return { announcement, ...createLuniiGestures(lunii, t, confirm, setAnnouncement, choose) };
 }
 

@@ -16,13 +16,23 @@ import i18next from 'i18next';
 
 import { STAGE_KIND } from '../advancedGraphView/graphViewModel.js';
 
+// Partagé avec la fiche : un nom automatique ne devient pas une proposition de titre.
+function defaultNodeNamePattern(kind) {
+  const pattern = kind === STAGE_KIND
+    ? /^(?:Écran|Ecran|Stage|Screen|Schermata) (\d+)$/
+    : /^(?:Liste|Action|Action node|List|Choice list|Lista) (\d+)$/;
+  return pattern;
+}
+
+export function isDefaultNodeName(name, kind = STAGE_KIND) {
+  return defaultNodeNamePattern(kind).test(String(name ?? '').trim());
+}
+
 // `reserved` porte les noms déjà promis à des créations que l'index ne montre
 // pas encore : la vue est relue par un aller-retour **après** le geste, et une
 // création enchaînée dans cette fenêtre recevrait sinon le même numéro.
 export function nextDefaultNodeName(index, kind, reserved = []) {
-  const pattern = kind === STAGE_KIND
-    ? /^(?:Écran|Ecran|Stage|Screen|Schermata) (\d+)$/
-    : /^(?:Liste|Action|Action node|List|Choice list|Lista) (\d+)$/;
+  const pattern = defaultNodeNamePattern(kind);
   let highest = 0;
   const consider = (text) => {
     const match = typeof text === 'string' ? pattern.exec(text.trim()) : null;

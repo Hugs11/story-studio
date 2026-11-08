@@ -540,13 +540,13 @@
     }
   },
   "titleBar.pack.fallback": {
-    "context": "Barre de titre ; repli visuel sans titre d’audiobook ; ouvre ses métadonnées.",
+    "context": "Bandeau des deux éditeurs : « Sans titre » si titre absent et projet jamais enregistré. EN « Untitled », IT « Senza titolo » relus pour ce sens.",
     "en": {
-      "sourceHash": "0584a85b5eb9",
+      "sourceHash": "2c847c1c25d5",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "0584a85b5eb9",
+      "sourceHash": "2c847c1c25d5",
       "status": "ai-reviewed"
     }
   },
@@ -1486,6 +1486,132 @@
       "status": "ai-reviewed"
     }
   },
+  "app.luniiClose.title": {
+    "context": "Fermeture application ; titre lorsqu’une opération Lunii est en cours.",
+    "maxLength": 28,
+    "en": {
+      "sourceHash": "853ec9c40424",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "853ec9c40424",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.luniiClose.message.send": {
+    "context": "Fermeture application ; un envoi vers la Lunii est en cours.",
+    "en": {
+      "sourceHash": "13a872417d21",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "13a872417d21",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.luniiClose.message.sendTitled": {
+    "context": "Fermeture application ; envoi vers la Lunii en cours ; title = titre de l’histoire.",
+    "en": {
+      "sourceHash": "a488449d0582",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a488449d0582",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.luniiClose.message.generic": {
+    "context": "Fermeture application ; une opération sur la Lunii est en cours (suppression, ordre, rapatriement…).",
+    "en": {
+      "sourceHash": "f0dac07f5d36",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f0dac07f5d36",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.luniiClose.message.genericTitled": {
+    "context": "Fermeture application ; opération sur la Lunii en cours ; title = titre de l’histoire concernée.",
+    "en": {
+      "sourceHash": "e969d7cb9d52",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e969d7cb9d52",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.luniiClose.messageQueued": {
+    "context": "Fermeture application ; une opération Lunii est en cours et d’autres attendent derrière elle.",
+    "en": {
+      "sourceHash": "a8a404feac6d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a8a404feac6d",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.luniiClose.wait": {
+    "context": "Fermeture application ; attend la fin de l’opération Lunii, puis ferme l’application.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "61abe6617c5d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "61abe6617c5d",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.luniiClose.cancelRest": {
+    "context": "Fermeture application ; annule les opérations Lunii en attente (pas celle en cours), puis attend la fin.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "88dc9562c96b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "88dc9562c96b",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.luniiClose.stay": {
+    "context": "Fermeture application ; renonce à fermer, l’opération Lunii continue.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "846a71b38b1c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "846a71b38b1c",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.luniiClose.notice": {
+    "context": "Notification pendant l’attente de fermeture ; l’application se ferme dès la fin de l’opération Lunii.",
+    "en": {
+      "sourceHash": "272e0fe09deb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "272e0fe09deb",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.luniiClose.keepOpen": {
+    "context": "Notification d’attente de fermeture ; annule la fermeture différée.",
+    "maxLength": 24,
+    "en": {
+      "sourceHash": "846a71b38b1c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "846a71b38b1c",
+      "status": "ai-reviewed"
+    }
+  },
   "app.graph.title": {
     "context": "Dialogue création graphe ; titre en cas d’échec de création du projet.",
     "maxLength": 26,
@@ -1762,69 +1888,91 @@
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.languages.title": {
-    "context": "Notes de version bêta 0.9.10 > languages.title",
+  "releaseNotes.current.queue.title": {
+    "context": "Notes de version 0.9.11 > titre court : les opérations Lunii s’enchaînent dans une file d’attente.",
     "en": {
-      "sourceHash": "991ffa151f62",
+      "sourceHash": "80107fb64d84",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "991ffa151f62",
+      "sourceHash": "80107fb64d84",
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.languages.detail": {
-    "context": "Notes de version bêta 0.9.10 > languages.detail",
+  "releaseNotes.current.queue.detail": {
+    "context": "Notes de version 0.9.11 > détail de la file d’attente Lunii (envois, rapatriements, retraits traités un par un, visibles dans la liste).",
     "en": {
-      "sourceHash": "524abfd93ecc",
+      "sourceHash": "7e79925f5090",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "524abfd93ecc",
+      "sourceHash": "7e79925f5090",
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.catalogue.title": {
-    "context": "Notes de version bêta 0.9.10 > catalogue.title",
+  "releaseNotes.current.sound.title": {
+    "context": "Notes de version 0.9.11 > titre court : le niveau d’un son est vérifié dès son ajout.",
     "en": {
-      "sourceHash": "103451395067",
+      "sourceHash": "7d2c80a5843a",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "103451395067",
+      "sourceHash": "7d2c80a5843a",
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.catalogue.detail": {
-    "context": "Notes de version bêta 0.9.10 > catalogue.detail",
+  "releaseNotes.current.sound.detail": {
+    "context": "Notes de version 0.9.11 > détail du repère ambre posé sur un son au niveau problématique.",
     "en": {
-      "sourceHash": "8ff59c06880b",
+      "sourceHash": "be9a671559ab",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "8ff59c06880b",
+      "sourceHash": "be9a671559ab",
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.missing.title": {
-    "context": "Notes de version bêta 0.9.10 > connexion à la Lunii",
+  "releaseNotes.current.updates.title": {
+    "context": "Notes de version 0.9.11 > titre court : avis facultatif de nouvelle version publiée.",
     "en": {
-      "sourceHash": "35ee98844938",
+      "sourceHash": "e9550d7586da",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "35ee98844938",
+      "sourceHash": "e9550d7586da",
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.missing.detail": {
-    "context": "Notes de version bêta 0.9.10 > connexion à la Lunii",
+  "releaseNotes.current.updates.detail": {
+    "context": "Notes de version 0.9.11 > détail de l’avis de nouvelle version (avec accord, aucune installation automatique).",
     "en": {
-      "sourceHash": "519e0798a519",
+      "sourceHash": "e003e55af25f",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "519e0798a519",
+      "sourceHash": "e003e55af25f",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.episodes.title": {
+    "context": "Notes de version 0.9.11 > titre court : nouveaux épisodes des sources suivies (podcasts, YouTube).",
+    "en": {
+      "sourceHash": "79f01a0fba7e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "79f01a0fba7e",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.episodes.detail": {
+    "context": "Notes de version 0.9.11 > détail : les nouveaux épisodes sont signalés sur tous les écrans.",
+    "en": {
+      "sourceHash": "5ebd2e7d8f4b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5ebd2e7d8f4b",
       "status": "ai-reviewed"
     }
   },
@@ -1842,11 +1990,45 @@
   "releaseNotes.current.fixes.label": {
     "context": "Release notes: single summary line for all bug fixes, next to the FIX badge.",
     "en": {
-      "sourceHash": "695c503b4256",
+      "sourceHash": "faa67296bf39",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "695c503b4256",
+      "sourceHash": "faa67296bf39",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.luniiClose.closeFailed": {
+    "context": "Notification après une attente de fermeture ; la fermeture a été refusée par une opération interne.",
+    "en": {
+      "sourceHash": "deecc555d2ce",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "deecc555d2ce",
+      "status": "ai-reviewed"
+    }
+  },
+  "app.luniiClose.dismiss": {
+    "context": "Notification de fermeture impossible ; ferme la notification.",
+    "maxLength": 8,
+    "en": {
+      "sourceHash": "565339bc4d33",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "565339bc4d33",
+      "status": "ai-reviewed"
+    }
+  },
+  "appModals.importNotice.title": {
+    "context": "Titre de la notification commune présentant les avis après un import de pack ou de médias.",
+    "en": {
+      "sourceHash": "f14eebdc9444",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f14eebdc9444",
       "status": "ai-reviewed"
     }
   }

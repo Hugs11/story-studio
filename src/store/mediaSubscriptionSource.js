@@ -139,12 +139,22 @@ export async function collectPendingEntries({ firstPage, pendingIds, fetchPage, 
 // Le projet ouvert est détenu par l'hôte ; les surfaces d'import le consultent
 // par cette recherche, installée par le hook de suivi, sans recevoir le projet.
 let projectSubscriptionLookup = null;
+let projectSubscriptionList = null;
 
-export function setProjectSubscriptionLookup(lookup) {
+export function setProjectSubscriptionLookup(lookup, list = null) {
   projectSubscriptionLookup = lookup;
+  projectSubscriptionList = list;
   return () => {
-    if (projectSubscriptionLookup === lookup) projectSubscriptionLookup = null;
+    if (projectSubscriptionLookup === lookup) {
+      projectSubscriptionLookup = null;
+      projectSubscriptionList = null;
+    }
   };
+}
+
+/** Sources réellement suivies ici, y compris en pause, pour l'import éditeur. */
+export function getProjectFollowedSources(source) {
+  return projectSubscriptionList?.(source) ?? [];
 }
 
 /**

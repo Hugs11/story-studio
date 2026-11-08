@@ -18,6 +18,7 @@ const sleep = ms => new Promise(done => setTimeout(done, ms));
 // Clé `KEYS.WORKSPACE_DIR` de `src/store/persistentSettings.js`, et workspace
 // par défaut de l'app (`projectIO.js`) : jamais écrit par un test.
 const WORKSPACE_KEY = 'storyStudioWorkspaceDir';
+const RELEASE_CHECK_KEY = 'storyStudio.releaseCheckEnabled';
 const REAL_WORKSPACE = join(homedir(), 'Documents', 'story-studio');
 
 async function cdpReady() {
@@ -74,9 +75,13 @@ function killTree(pid) {
 async function dismissReleaseNotes(page) {
   const notes = page.locator('.release-notes-box');
   const visible = await notes.waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false);
-  if (!visible) return;
-  await notes.locator('.release-notes-start').click();
-  await notes.waitFor({ state: 'hidden', timeout: 5000 });
+  if (visible) {
+    await notes.locator('.release-notes-start').click();
+    await notes.waitFor({ state: 'hidden', timeout: 5000 });
+  }
+  // Filet de sécurité seulement : la préférence est posée avant les modules.
+  const decline = page.locator('#release-check-decline');
+  if (await decline.count()) await decline.click();
 }
 
 export async function launchApp({ runDir, fresh = false, workspaceDir = null, timeoutMs = 15 * 60_000, exePath = null, env = null } = {}) {
@@ -147,9 +152,14 @@ export async function launchApp({ runDir, fresh = false, workspaceDir = null, ti
   mkdirSync(workspace, { recursive: true });
   // Installer la préférence avant les modules de l'app : une initialisation
   // asynchrone du premier document peut sinon réécrire le workspace par défaut.
-  await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [WORKSPACE_KEY, workspace]);
-  const current = await page.evaluate(key => localStorage.getItem(key), WORKSPACE_KEY);
-  if (current !== workspace) {
+  await page.addInitScript(([key, value, releaseKey]) => {
+    localStorage.setItem(key, value);
+    localStorage.setItem(releaseKey, 'false');
+  }, [WORKSPACE_KEY, workspace, RELEASE_CHECK_KEY]);
+  const initialized = await page.evaluate(([key, value, releaseKey]) => (
+    localStorage.getItem(key) === value && localStorage.getItem(releaseKey) === 'false'
+  ), [WORKSPACE_KEY, workspace, RELEASE_CHECK_KEY]);
+  if (!initialized) {
     const session = await page.context().newCDPSession(page);
     // Après remise à zéro du profil, ne pas relire un cache WebView2 périmé.
     await session.send('Network.enable');

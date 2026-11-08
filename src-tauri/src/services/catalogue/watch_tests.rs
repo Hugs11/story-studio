@@ -47,7 +47,7 @@ impl Fixture {
                 Arc::new(|_, _| {}),
             )
             .unwrap();
-        assert!(until(Duration::from_secs(20), || {
+        assert!(until(|| {
             !matches!(
                 store
                     .get_operation(&receipt.operation_id)
@@ -80,7 +80,7 @@ impl Fixture {
         )
         .unwrap();
         assert!(
-            until(Duration::from_secs(20), || {
+            until(|| {
                 let status = service.status();
                 !status.sources.is_empty()
                     && status
@@ -112,9 +112,9 @@ fn fast() -> Config {
     }
 }
 
-fn until(timeout: Duration, mut condition: impl FnMut() -> bool) -> bool {
+fn until(mut condition: impl FnMut() -> bool) -> bool {
     let start = Instant::now();
-    while start.elapsed() < timeout {
+    while start.elapsed() < crate::test_support::timeout() {
         if condition() {
             return true;
         }
@@ -256,12 +256,12 @@ fn autosave_series_publishes_each_save_without_any_full_rescan() {
         let title = format!("Version {index:02}");
         own_save(registry, &target, &project(Some(UUID_A), &title), index);
         assert!(
-            until(Duration::from_secs(10), || titles(&store).contains(&title)),
+            until(|| titles(&store).contains(&title)),
             "save {index} published"
         );
     }
     // Native events of the saves are recognised as our own writes.
-    assert!(until(Duration::from_secs(10), || {
+    assert!(until(|| {
         delta(store.activity.snapshot(), before).absorbed >= 1
     }));
     std::thread::sleep(Duration::from_millis(500));
@@ -303,13 +303,12 @@ fn external_write_rename_and_move_are_refreshed_in_place() {
 
     // An external program writes a new pack.
     std::fs::write(f.root().join("b.zip"), zip_bytes(UUID_B, "Externe")).unwrap();
-    assert!(until(Duration::from_secs(10), || titles(&store)
-        .contains(&"Externe".to_owned())));
+    assert!(until(|| titles(&store).contains(&"Externe".to_owned())));
 
     // Renaming (moving) a pack with UUID keeps its card.
     std::fs::create_dir(f.root().join("rangement")).unwrap();
     std::fs::rename(f.root().join("a.zip"), f.root().join("rangement/a.zip")).unwrap();
-    assert!(until(Duration::from_secs(10), || {
+    assert!(until(|| {
         let states = exemplar_states(&store);
         states.contains(&("a.zip".into(), "missing".into()))
             && states.contains(&("a.zip".into(), "available".into()))
@@ -328,8 +327,7 @@ fn external_write_rename_and_move_are_refreshed_in_place() {
         f.root().join("rangement/ancien.mbah"),
     )
     .unwrap();
-    assert!(until(Duration::from_secs(10), || entries(&store).len()
-        == before_move + 1));
+    assert!(until(|| entries(&store).len() == before_move + 1));
     let work = delta(store.activity.snapshot(), before);
     assert_eq!(work.full_scans + work.inventories, 0, "{work:?}");
     assert!(favorite(&store, &card), "personal data kept");
@@ -900,7 +898,7 @@ fn lost_events_are_reconciled_at_startup_on_overflow_and_after_wake_up() {
         )
         .unwrap();
     }
-    assert!(until(Duration::from_secs(15), || {
+    assert!(until(|| {
         (0..5).all(|i| titles(&store).contains(&format!("Rafale {i}")))
     }));
     assert!(delta(store.activity.snapshot(), before).reconciliations >= 1);
@@ -908,7 +906,7 @@ fn lost_events_are_reconciled_at_startup_on_overflow_and_after_wake_up() {
     // A wake-up reconciles without reanalysing unchanged files.
     let before = store.activity.snapshot();
     service.wake();
-    assert!(until(Duration::from_secs(10), || {
+    assert!(until(|| {
         delta(store.activity.snapshot(), before).reconciliations >= 1
     }));
     assert_eq!(delta(store.activity.snapshot(), before).analyses, 0);
@@ -945,8 +943,7 @@ fn never_scanned_source_is_not_indexed_silently_and_polling_detects_changes() {
     };
     let (service, _registry, _) = f.start(&store, config);
     std::fs::write(f.root().join("b.zip"), zip_bytes(UUID_B, "Scruté")).unwrap();
-    assert!(until(Duration::from_secs(15), || titles(&store)
-        .contains(&"Scruté".to_owned())));
+    assert!(until(|| titles(&store).contains(&"Scruté".to_owned())));
     service.stop();
 }
 
@@ -963,8 +960,7 @@ fn failed_own_write_is_released_and_reconciled() {
     std::thread::sleep(Duration::from_millis(400));
     assert!(titles(&store).is_empty());
     registry.finish(&id, false, Vec::new());
-    assert!(until(Duration::from_secs(10), || titles(&store)
-        .contains(&"Partiel".to_owned())));
+    assert!(until(|| titles(&store).contains(&"Partiel".to_owned())));
     service.stop();
 }
 
@@ -988,7 +984,7 @@ fn reconciliation_leaves_files_of_an_active_own_write_alone() {
 
     let before = store.activity.snapshot();
     service.wake();
-    assert!(until(Duration::from_secs(10), || {
+    assert!(until(|| {
         delta(store.activity.snapshot(), before).reconciliations >= 1
     }));
     std::thread::sleep(Duration::from_millis(300));
@@ -1004,8 +1000,7 @@ fn reconciliation_leaves_files_of_an_active_own_write_alone() {
     std::fs::write(&known, zip_bytes(UUID_B, "Connu")).unwrap();
     let before = store.activity.snapshot();
     registry.finish(&id, true, vec![target.clone(), known.clone()]);
-    assert!(until(Duration::from_secs(10), || titles(&store)
-        .contains(&"Corrigé".to_owned())));
+    assert!(until(|| titles(&store).contains(&"Corrigé".to_owned())));
     std::thread::sleep(Duration::from_millis(400));
     let analyses = delta(store.activity.snapshot(), before).analyses;
     // One analysis per rewritten file (the target and the recreated one).
@@ -1251,8 +1246,7 @@ fn queued_committed_write_does_not_publish_a_new_active_write() {
     assert_eq!(notifications.load(Ordering::SeqCst), 0);
     std::fs::write(&path, project(Some(UUID_A), "B final")).unwrap();
     registry.finish(&b, true, Vec::new());
-    assert!(until(Duration::from_secs(10), || titles(&store)
-        .contains(&"B final".into())));
+    assert!(until(|| titles(&store).contains(&"B final".into())));
     assert!(!titles(&store).contains(&"B provisoire".into()));
     service.stop();
 }
@@ -1268,7 +1262,7 @@ fn explicit_scan_preserves_active_write_without_analysis_or_absence() {
     // The process-wide registry is shared with concurrently running tests: a
     // save that meets a busy analyser is deliberately not declared. This test
     // needs a declared write, so it waits for a declaration that succeeds.
-    let deadline = Instant::now() + Duration::from_secs(20);
+    let deadline = Instant::now() + crate::test_support::timeout();
     let write = loop {
         let id = registry.begin(Declaration::new("projectSave").exact(&path));
         if !id.is_empty() {
@@ -1302,42 +1296,31 @@ fn native_root_removal_and_recreation_reinstalls_watcher_and_emits_return() {
     // removing the root name also invalidates native Linux watches.
     let away = f.0.join("away");
     std::fs::rename(&root, &away).unwrap();
-    assert!(until(Duration::from_secs(10), || service.status().sources
-        [0]
-    .mode
-        == "unavailable"
+    assert!(until(|| service.status().sources[0].mode == "unavailable"
         && exemplar_states(&store)[0].1 == "unavailable"));
     let disconnected = store.list_entries(100, None).unwrap().catalogue_revision;
     let events = notifications.load(Ordering::SeqCst);
     assert!(disconnected > revision);
     std::fs::rename(&away, &root).unwrap();
-    assert!(until(Duration::from_secs(10), || service.status().sources
-        [0]
-    .mode
-        == "native"
+    assert!(until(|| service.status().sources[0].mode == "native"
         && exemplar_states(&store)[0].1 == "available"
         && notifications.load(Ordering::SeqCst) > events));
     assert!(store.list_entries(100, None).unwrap().catalogue_revision > disconnected);
     // Genuine deletion/recreation follows the same probe/reinstallation path.
     std::fs::remove_dir_all(&root).unwrap();
-    assert!(until(Duration::from_secs(10), || service.status().sources
-        [0]
-    .mode
-        == "unavailable"));
+    assert!(until(|| service.status().sources[0].mode == "unavailable"));
     std::fs::create_dir(&root).unwrap();
     std::fs::write(&path, &bytes).unwrap();
-    assert!(until(Duration::from_secs(10), || service.status().sources
-        [0]
-    .mode
-        == "native"
+    assert!(until(|| service.status().sources[0].mode == "native"
         && exemplar_states(&store)[0].1 == "available"));
     std::fs::write(
         root.join("new.mbah"),
         project(Some(UUID_B), "Nouvelle arborescence"),
     )
     .unwrap();
-    assert!(until(Duration::from_secs(10), || titles(&store)
-        .contains(&"Nouvelle arborescence".into())));
+    assert!(until(
+        || titles(&store).contains(&"Nouvelle arborescence".into())
+    ));
     service.stop();
 }
 
@@ -2061,10 +2044,9 @@ fn unregistered_workspace_exclusions_apply_to_watcher_events() {
     let store = f.open();
     f.scan(&store);
     let (service, _, _) = f.start(&store, fast());
-    assert!(until(Duration::from_secs(10), || service.status().sources
-        [0]
-    .last_reconciled_at
-    .is_some()));
+    assert!(until(|| service.status().sources[0]
+        .last_reconciled_at
+        .is_some()));
     let reconciliations = store.activity.snapshot().reconciliations;
     for name in [
         "sauvegardes/versions-securite/y.mbah",
@@ -2078,7 +2060,7 @@ fn unregistered_workspace_exclusions_apply_to_watcher_events() {
         ("x.mbah".into(), "available".into()),
     ];
     let mut stable_since = None;
-    assert!(until(Duration::from_secs(20), || {
+    assert!(until(|| {
         // Read every anchor, including retired ones: later retirement must not
         // hide an erroneous publication by the event path.
         let mut paths = store
@@ -2449,26 +2431,105 @@ fn startup_detects_date_only_change_and_same_stat_replacement() {
 }
 
 #[test]
-fn startup_empty_mount_is_a_reported_problem_not_a_deletion() {
+fn startup_empty_source_is_missing_and_available() {
     let f = Fixture::new();
-    std::fs::write(f.root().join("a.zip"), zip_bytes(UUID_A, "Débranché")).unwrap();
+    std::fs::write(f.root().join("a.zip"), zip_bytes(UUID_A, "Absent")).unwrap();
     let store = f.open();
     f.scan(&store);
-    let events = startup_events(&store);
     std::fs::rename(f.root(), f.0.join("detached")).unwrap();
     std::fs::create_dir(f.0.join("source")).unwrap();
-    assert_eq!(startup_check(&f, &store).missing, 0);
+    assert_eq!(startup_check(&f, &store).missing, 1);
     assert_eq!(
         exemplar_states(&store),
-        vec![("a.zip".into(), "unavailable".into())]
+        vec![("a.zip".into(), "missing".into())]
     );
-    assert_eq!(events.lock().unwrap().last().unwrap().1.status, "partial");
-    events.lock().unwrap().clear();
+    assert_eq!(
+        store.list_sources().unwrap().items[0].availability,
+        "available"
+    );
+    assert_eq!(startup_check(&f, &store).missing, 0);
+}
+
+#[test]
+fn empty_source_preserves_cards_and_personal_data_across_scans_and_reopen() {
+    let f = Fixture::new();
+    for (name, uuid) in [("a.zip", UUID_A), ("b.zip", UUID_B)] {
+        std::fs::write(f.root().join(name), zip_bytes(uuid, name)).unwrap();
+    }
+    let store = f.open();
+    f.scan(&store);
+    let cards = store.query_entries(200, None, true).unwrap().items;
+    assert_eq!(cards.len(), 2);
+    let ids: Vec<String> = cards
+        .iter()
+        .map(|c| c["id"].as_str().unwrap().to_owned())
+        .collect();
+    store
+        .mutate(
+            serde_json::from_value(serde_json::json!({
+                "kind":"changeTags", "requestKey":"empty-tags", "ficheIds":ids,
+                "addLabels":["Personnel"], "addTagIds":[], "removeTagIds":[]
+            }))
+            .unwrap(),
+            store.list_sources().unwrap().catalogue_revision,
+        )
+        .unwrap();
+    store.write(|tx| {
+        tx.execute("UPDATE fiche SET favorite=1", []).unwrap();
+        tx.execute("INSERT INTO provenance(id,kind) VALUES ('empty-note','manual')", []).unwrap();
+        for id in &ids {
+            tx.execute("INSERT INTO correction VALUES (?1,'description','','defined','\"Note personnelle\"','empty-note',NULL,1)", [id]).unwrap();
+        }
+        Ok(())
+    }).unwrap();
+    let check = |store: &Store, state: &str| {
+        let current = store.query_entries(200, None, true).unwrap().items;
+        let mut listed: Vec<String> = current
+            .iter()
+            .map(|c| c["id"].as_str().unwrap().to_owned())
+            .collect();
+        listed.sort();
+        let mut expected = ids.clone();
+        expected.sort();
+        // The very same cards come back, not merely the same number of cards.
+        assert_eq!(listed, expected);
+        for id in &ids {
+            let card = store.get_card(id).unwrap();
+            assert_eq!(card["favorite"], true);
+            assert_eq!(card["tags"][0]["label"], "Personnel");
+            let note: String = store.read(|c| c.query_row("SELECT value_json FROM correction WHERE fiche_id=?1 AND field='description'", [id], |r| r.get(0))).unwrap();
+            assert_eq!(note, "\"Note personnelle\"");
+        }
+        assert!(exemplar_states(store).iter().all(|(_, s)| s == state));
+        assert_eq!(exemplar_states(store).len(), 2);
+        assert_eq!(
+            store.list_sources().unwrap().items[0].availability,
+            "available"
+        );
+    };
+    std::fs::rename(f.root(), f.0.join("detached")).unwrap();
+    std::fs::create_dir(f.0.join("source")).unwrap();
     startup_check(&f, &store);
-    assert!(
-        events.lock().unwrap().is_empty(),
-        "same problem is not republished every pass"
+    check(&store, "missing");
+    f.scan(&store);
+    check(&store, "missing");
+    drop(store);
+    let store = Arc::new(Store::open(&f.0.join("data"), &f.0.join("cache")).unwrap());
+    startup_check(&f, &store);
+    check(&store, "missing");
+    std::fs::remove_dir(f.root()).unwrap();
+    std::fs::rename(f.0.join("detached"), f.0.join("source")).unwrap();
+    f.scan(&store);
+    check(&store, "available");
+    std::fs::remove_dir_all(f.root()).unwrap();
+    startup_check(&f, &store);
+    assert_eq!(
+        store.list_sources().unwrap().items[0].availability,
+        "unavailable"
     );
+    assert!(exemplar_states(&store)
+        .iter()
+        .all(|(_, s)| s == "unavailable"));
 }
 
 #[test]
@@ -2818,4 +2879,87 @@ fn startup_removal_held_by_a_write_is_not_counted_as_unprocessed() {
     assert_eq!(terminal.candidates.discovered, 1);
     assert_eq!(terminal.outcomes.not_processed, 0);
     assert_eq!(terminal.status, "success");
+}
+
+#[test]
+fn repatriated_nested_workspace_has_one_copy_one_watcher_and_survives_parent_removal() {
+    let f = Fixture::new();
+    let store = f.open();
+    let parent = store.list_sources().unwrap().items[0].id.clone();
+    let id = uuid::Uuid::parse_str(UUID_A).unwrap();
+    let clear = f.0.join(id.to_string());
+    crate::support::fs_pack_reader::fs_fixtures::write_dialect_fixture_pack(&clear);
+    let zip = f.0.join("fixture.zip");
+    crate::support::fs_pack_reader::read_fs_pack_to_studio_zip(&clear, &zip, "Conte").unwrap();
+    store
+        .publish_repatriated_story(&zip, id, &f.root(), "Conte")
+        .unwrap();
+    f.scan(&store);
+    let sources = store.list_sources().unwrap();
+    assert_eq!(sources.items.len(), 2);
+    assert_eq!(sources.exemplar_count, 1);
+    assert!(sources.items.iter().all(|s| s.exemplar_count == 1));
+    let child = sources
+        .items
+        .iter()
+        .find(|s| s.origin == "repatriated")
+        .unwrap();
+    assert_eq!(child.included_in.as_deref(), Some(parent.as_str()));
+    let entries = store.list_entries(100, None).unwrap();
+    assert_eq!(entries.items.len(), 1);
+    assert_eq!(
+        store
+            .read(
+                |c| c.query_row("SELECT count(*) FROM cache.observation", [], |r| r
+                    .get::<_, i64>(0))
+            )
+            .unwrap(),
+        1
+    );
+    assert_eq!(entries.items[0]["exemplars"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        entries.items[0]["exemplars"][0]["sourceIds"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    let (service, _, _) = f.start(&store, fast());
+    assert!(until(|| service.status().sources.len() == 1));
+    assert_eq!(service.status().sources[0].source_id, parent);
+    store
+        .remove_source(&parent, sources.sources_revision)
+        .unwrap();
+    service.sources_changed();
+    assert!(until(|| {
+        let status = service.status();
+        status.sources.len() == 1 && status.sources[0].source_id == child.id
+    }));
+    let sources = store.list_sources().unwrap();
+    assert_eq!(sources.exemplar_count, 1);
+    assert_eq!(
+        sources
+            .items
+            .iter()
+            .filter(|s| s.status == "active")
+            .count(),
+        1
+    );
+    assert_eq!(store.list_entries(100, None).unwrap().items.len(), 1);
+    assert!(store.device_card_link(id).unwrap().is_some());
+    f.scan(&store);
+    assert_eq!(store.list_entries(100, None).unwrap().items.len(), 1);
+    // The child watcher continues to ingest disk changes after parent removal.
+    let other = uuid::Uuid::parse_str(UUID_B).unwrap();
+    let clear = f.0.join(other.to_string());
+    crate::support::fs_pack_reader::fs_fixtures::write_dialect_fixture_pack(&clear);
+    let next = f.0.join("next.zip");
+    crate::support::fs_pack_reader::read_fs_pack_to_studio_zip(&clear, &next, "Autre").unwrap();
+    std::fs::copy(next, f.root().join("packs-rapatries/Autre.zip")).unwrap();
+    assert!(until(
+        || store.list_entries(100, None).unwrap().items.len() == 2
+    ));
+    assert_eq!(store.list_sources().unwrap().exemplar_count, 2);
+    assert_eq!(service.status().sources.len(), 1);
+    service.stop();
 }

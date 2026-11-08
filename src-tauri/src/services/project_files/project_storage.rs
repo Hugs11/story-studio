@@ -517,18 +517,21 @@ fn owns_folder(path: &Path, parent: &Path, work_id: &str) -> bool {
 }
 fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let temporary = path.with_file_name(format!(".story-studio-write-{}", uuid::Uuid::new_v4()));
+    atomic_write_to(path, bytes, &temporary)
+}
+pub(crate) fn atomic_write_to(path: &Path, bytes: &[u8], temporary: &Path) -> Result<(), String> {
     let result = (|| {
         let mut file = OpenOptions::new()
             .write(true)
             .create_new(true)
-            .open(&temporary)
+            .open(temporary)
             .map_err(io_error)?;
         file.write_all(bytes).map_err(io_error)?;
         file.sync_all().map_err(io_error)?;
-        fs::rename(&temporary, path).map_err(io_error)
+        fs::rename(temporary, path).map_err(io_error)
     })();
     if result.is_err() {
-        let _ = fs::remove_file(&temporary);
+        let _ = fs::remove_file(temporary);
     }
     result
 }

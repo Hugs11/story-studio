@@ -148,12 +148,16 @@ fn lunii_pending_cover_keeps_absent_status_while_the_pack_image_is_displayed() {
     f.store.download_lunii_covers(Arc::new(move |_, _| {
         changed.send(()).unwrap();
     }));
-    started.recv_timeout(Duration::from_secs(5)).unwrap();
+    started
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
     // Release the worker even when checking the pending state finds a regression.
     let status = f.store.lunii_thumbnail(id).unwrap().map(|t| t.state);
     let displayed = f.store.get_thumbnail(None, Some(id), None).unwrap().state;
     release.send(()).unwrap();
-    retained.recv_timeout(Duration::from_secs(5)).unwrap();
+    retained
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
     assert_eq!(status, Some("absent"));
     assert_eq!(displayed, "ready");
 }

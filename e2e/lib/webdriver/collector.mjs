@@ -3,6 +3,7 @@
 export function installCollector(workspace) {
   const queue = window.__E2E_WD_EVENTS__ = [];
   const push = (kind, data) => queue.push({ kind, at: Date.now(), ...data });
+  localStorage.setItem('storyStudio.releaseCheckEnabled', 'false');
   if (workspace) localStorage.setItem('storyStudioWorkspaceDir', workspace);
   for (const type of ['log', 'info', 'debug', 'warn', 'error']) {
     const original = console[type].bind(console);

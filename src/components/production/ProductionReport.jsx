@@ -70,6 +70,7 @@ function warningMessage(warning) {
 }
 
 function warningDetails(warning) {
+  if (warning?.code === 'AUDIO_SILENT_KEPT') return '';
   const measurements = [
     Number.isFinite(warning?.initialIntegratedLufs)
       ? translateProduction('production:report.measurement.initial', { value: warning.initialIntegratedLufs.toFixed(1) })

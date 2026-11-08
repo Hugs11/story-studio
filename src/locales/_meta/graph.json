@@ -1876,7 +1876,7 @@
     }
   },
   "creation.pack.defaultName": {
-    "context": "Éditeur graphe > creation ; src/hooks/useAdvancedProjectEntry.js ; présentation paramétrée au rendu. Sens et rôle : « Nouveau pack ». Action courte, onglet, badge ou libellé accessible ; conserver la formulation compacte.",
+    "context": "Titre provisoire historique, reconnu dans les anciens documents, plus écrit à la création.",
     "maxLength": 36,
     "en": {
       "sourceHash": "f11b45780c4e",

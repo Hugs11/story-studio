@@ -1,12 +1,13 @@
 import i18next from 'i18next';
 
 export const RELEASE_NOTES = Object.freeze({
-  version: '0.9.10',
-  date: '2026-11-02',
+  version: '0.9.11',
+  date: '2026-11-08',
   highlights: [
-    ['common:releaseNotes.current.languages.title', 'common:releaseNotes.current.languages.detail'],
-    ['common:releaseNotes.current.catalogue.title', 'common:releaseNotes.current.catalogue.detail'],
-    ['common:releaseNotes.current.missing.title', 'common:releaseNotes.current.missing.detail'],
+    ['common:releaseNotes.current.queue.title', 'common:releaseNotes.current.queue.detail'],
+    ['common:releaseNotes.current.sound.title', 'common:releaseNotes.current.sound.detail'],
+    ['common:releaseNotes.current.updates.title', 'common:releaseNotes.current.updates.detail'],
+    ['common:releaseNotes.current.episodes.title', 'common:releaseNotes.current.episodes.detail'],
   ],
   fixes: [
     ['common:releaseNotes.current.fixes.label'],

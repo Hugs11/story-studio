@@ -195,3 +195,107 @@ test('une liste rafraîchie garde les fichiers déjà reliés', () => {
   // Les métadonnées viennent de la liste à jour.
   assert.deepEqual(refreshed[0].labels, ['Accueil']);
 });
+
+// Exécute les fonctions de production de la modale sans son rendu JSX ni Tauri.
+const { readFileSync } = await import('node:fs');
+const modalSource = readFileSync(new URL('../src/components/MissingMediaRelink/MissingMediaRelinkModal.jsx', import.meta.url), 'utf8');
+const scanSource = modalSource.slice(modalSource.indexOf('async function scanFolderByName('), modalSource.indexOf('function mergeResolvedRows('));
+function scanner(readDir) {
+  return new Function('readDir', 'joinPath', 'basename', 'MAX_SCAN_FILES', `${scanSource}; return scanFolderByName;`)(
+    readDir, (dir, name) => `${dir}/${name}`, (path) => path.split('/').pop(), 12000,
+  );
+}
+
+test('recherche : correspondances conservées et dossiers illisibles signalés, y compris la racine', async () => {
+  const scan = scanner(async (dir) => {
+    if (dir !== '/workspace') throw new Error('access denied');
+    return [
+      { name: 'closed', isDirectory: true },
+      { name: 'a.wav', isFile: true },
+      { name: 'nested', isDirectory: true },
+    ];
+  });
+  const result = await scan('/workspace', new Set(['a.wav']));
+  assert.deepEqual(result.matches.get('a.wav'), ['/workspace/a.wav']);
+  assert.deepEqual(result.unreadableFolders, ['/workspace/closed', '/workspace/nested']);
+  assert.equal(result.truncated, false);
+  assert.equal(result.scanned, 1);
+  assert.deepEqual((await scan('/closed', new Set())).unreadableFolders, ['/closed']);
+});
+
+test('recherche : plafond de 12 000 conservé et troncature signalée', async () => {
+  const scan = scanner(async () => Array.from({ length: 12001 }, (_, i) => ({ name: `${i}.wav`, isFile: true })));
+  const result = await scan('/workspace', new Set(['0.wav', '12000.wav']));
+  assert.equal(result.scanned, 12000);
+  assert.equal(result.truncated, true);
+  assert.deepEqual(result.matches.get('0.wav'), ['/workspace/0.wav']);
+  assert.deepEqual(result.matches.get('12000.wav'), []);
+  assert.deepEqual(result.unreadableFolders, []);
+});
+
+test('application : une recherche en vol bloque le handler et le bouton malgré les anciens résultats', async () => {
+  const applySource = modalSource.slice(modalSource.indexOf('  async function handleApply()'), modalSource.indexOf('  const progressPct'));
+  let calls = 0;
+  const run = (scanningKey) => new Function('resolvedCount', 'applying', 'scanningKey', 'setApplying', 'onApply', 'replacements', `${applySource}; return handleApply();`)(
+    1, false, scanningKey, () => {}, async () => { calls += 1; }, { '/old': '/new' },
+  );
+  await run('__workspace__');
+  await run('/group');
+  assert.equal(calls, 0);
+  await run('');
+  assert.equal(calls, 1);
+  assert.match(modalSource, /onClick=\{handleApply\}\s+disabled=\{resolvedCount === 0 \|\| applying \|\| Boolean\(scanningKey\)\}/);
+  assert.match(modalSource, /scanResult.truncated \|\| scanResult.unreadableFolders.length > 0/);
+  assert.match(modalSource, /setScanWarning\(scanResult\)/);
+});
+
+function folderScanHarness(initialRows, findFirstExisting) {
+  let rows = initialRows;
+  const helpers = modalSource.slice(modalSource.indexOf('function mergeResolvedRows('), modalSource.indexOf('// Rôle représentatif'));
+  const scan = modalSource.slice(modalSource.indexOf('  async function runFolderScan('), modalSource.indexOf('  async function handleChooseGroupFolder('));
+  const run = new Function('pathKey', 'isResolved', 'candidatePathsForRelinkRoot', 'findFirstExisting', 'scanFolderByName', 'setRows', 'setScanWarning', `${helpers}\n${scan}\nreturn runFolderScan;`)(
+    (path) => path, (row) => row.status === 'found' && Boolean(row.replacementPath),
+    candidatePathsForRelinkRoot, findFirstExisting,
+    async () => ({ matches: new Map(), truncated: false, unreadableFolders: [] }),
+    (update) => { rows = update(rows); }, () => {},
+  );
+  return { run, rows: () => rows, setRows: (next) => { rows = next; } };
+}
+
+for (const folder of ['/workspace', '/chosen-group']) {
+  test(`recherche ${folder} : choix manuel conservé sans revérification`, async () => {
+    const manual = { path: '/old/a.wav', fileName: 'a.wav', status: 'found', replacementPath: '/manual/a.wav', matches: ['/manual/a.wav'] };
+    const pending = { path: '/old/b.wav', fileName: 'b.wav', status: 'missing' };
+    const checked = [];
+    const f = folderScanHarness([manual, pending], async (paths) => { checked.push(...paths); return null; });
+    await f.run(folder, f.rows());
+    assert.strictEqual(f.rows()[0], manual);
+    assert.ok(checked.every((path) => !path.endsWith('/a.wav')));
+    assert.ok(checked.some((path) => path.endsWith('/b.wav')));
+  });
+
+  test(`recherche ${folder} : résultat trouvé conservé lors de la seconde recherche sans correspondance`, async () => {
+    let available = true;
+    const f = folderScanHarness([{ path: '/old/a.wav', fileName: 'a.wav', status: 'missing' }], async () => available ? '/found/a.wav' : null);
+    await f.run(folder, f.rows());
+    const found = f.rows()[0];
+    assert.equal(found.status, 'found');
+    available = false;
+    await f.run(folder, f.rows());
+    assert.strictEqual(f.rows()[0], found);
+    assert.equal(f.rows()[0].replacementPath, '/found/a.wav');
+  });
+}
+
+test('un choix manuel effectué pendant une recherche reste prioritaire sur son résultat tardif', async () => {
+  let release;
+  const pending = new Promise((resolve) => { release = resolve; });
+  const original = { path: '/old/a.wav', fileName: 'a.wav', status: 'missing' };
+  const f = folderScanHarness([original], async () => pending);
+  const scan = f.run('/workspace', f.rows());
+  const manual = { ...original, status: 'found', replacementPath: '/manual/a.wav', matches: ['/manual/a.wav'] };
+  f.setRows([manual]);
+  release(null);
+  await scan;
+  assert.strictEqual(f.rows()[0], manual);
+});

@@ -53,6 +53,22 @@ function graphJob(fields = {}) {
 const freeReport = (fields) => renderJobReport(job(fields));
 const graphReport = (fields) => renderJobReport(graphJob(fields));
 
+test('AUDIO_SILENT_KEPT reste un avis nommé accompagnant un pack produit dans les deux éditeurs', () => {
+  const warning = {
+    code: 'AUDIO_SILENT_KEPT', label: 'Histoire — Étape',
+    message: JSON.stringify({ code: 'AUDIO_SILENT_KEPT', params: { label: 'Histoire — Étape' } }),
+    initialIntegratedLufs: null, finalIntegratedLufs: null, gainDb: 0, expectedLimitingDb: 0,
+  };
+  const reports = [
+    freeReport({ status: 'done', resultPath: '/sorties/pack.zip', warnings: [warning] }),
+    graphReport({ status: 'done', resultPath: '/sorties/pack.zip', result: { zipPath: '/sorties/pack.zip', warnings: [warning] } }),
+  ];
+  for (const report of reports) {
+    assert.equal(report.status, PRODUCTION_STATUS.SUCCEEDED);
+    assert.deepEqual(report.result.warnings, [warning]);
+  }
+});
+
 // ── Le même vocabulaire des deux côtés ──────────────────────────────────────
 
 test('les deux chaînes rendent les mêmes états, sous les mêmes noms', () => {

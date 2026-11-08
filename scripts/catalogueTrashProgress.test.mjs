@@ -43,7 +43,7 @@ test('CORB inline progress: spinner while planning, confirming and running, row 
     await settle(); releasePlan(); await settle(); tree = render();
     assert.equal(spinner(tree), false); assert.equal(button(tree).props['aria-label'], 'Mettre à la corbeille');
     clock = 400; button(tree).props.onClick({ detail: 2, stopPropagation() {} }); tree = render();
-    assert.equal(spinner(tree), true); assert.equal(status(tree), 'Mise à la corbeille…');
+    assert.equal(spinner(tree), true); assert.equal(status(tree), 'En cours…'); assert.equal(button(tree).props['aria-label'], 'Mise à la corbeille…');
     assert.equal(busy.at(-1), true, 'row is told to grey out as soon as the confirmation click lands');
     await settle(); tree = render();
     assert.equal(spinner(tree), true, 'still running while start is pending'); assert.equal(busy.at(-1), true);

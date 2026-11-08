@@ -2,7 +2,6 @@ import { consumeGenerationRequest } from '../src/store/catalogue/generationLandi
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generationState, generationTag, generationFilterState } from '../src/store/catalogue/generationState.js';
-import { generationFolder, shouldProposeGenerationFolder } from '../src/store/catalogue/generationProposal.js';
 import { normalizeEntry } from '../src/store/catalogue/entryModel.js';
 import { formatTags } from '../src/store/catalogue/formatTag.js';
 import { filterControls } from '../src/store/catalogue/filterState.js';
@@ -28,12 +27,6 @@ test('unknown state is never inferred from a UUID or dates',()=>{
   assert.equal(card.packState,null);
   assert.equal(formatTags([{format:'zip',available:true,generation:{state:'modifiedSince'}}])[0].regenerate,false,'the regeneration dot belongs only to projects');
   assert.deepEqual(generationState({state:'invented'}),{state:'unknown',outputExemplarId:null});
-});
-test('generation folder proposal is production-only, explicit and suppressed by coverage, exclusion or decline',()=>{
-  assert.equal(generationFolder('/packs/a.zip'),'/packs');
-  assert.equal(generationFolder('C:\\packs\\a.zip'),'C:\\packs');
-  for(const params of [{explanation:{coveredBySourceId:'s'}},{explanation:{excluded:{role:'cache'}}},{explanation:{},declined:true},{explanation:{},event:'projectSaved'},{explanation:null}]) assert.equal(shouldProposeGenerationFolder(params),false);
-  assert.equal(shouldProposeGenerationFolder({explanation:{coveredBySourceId:null,excluded:null}}),true);
 });
 test('recordGeneration is a typed IPC call after the host success callback',async()=>{
   const calls=[];

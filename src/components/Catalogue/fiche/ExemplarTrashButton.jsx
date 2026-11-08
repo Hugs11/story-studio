@@ -63,6 +63,8 @@ export function ExemplarTrashButton({ card, exemplar, expanded, onExpand, onDone
   const working = ['planning', 'confirming', 'running'].includes(phase);
   const permanent = flow.state.permanentPending || plan?.action === 'deletePermanently';
   const progress = phase === 'planning' ? t('catalogue:trash.preparing') : permanent ? t('catalogue:trash.deleting') : t('catalogue:trash.working');
+  const shortProgress = phase === 'planning' ? progress : permanent ? t('catalogue:trash.deleting') : t('catalogue:trash.workingShort');
+  const shortLabel = permanent ? t('catalogue:trash.deleteConfirmShort') : t('catalogue:trash.confirmShort');
   const label = (flow.state.permanentPending || plan?.action === 'deletePermanently') ? (exemplar.member ? t('catalogue:trash.archiveDelete', { name: archiveName }) : t('catalogue:trash.delete')) : title;
   return <span ref={wrap} className={`catalogue-exemplar-trash ${expanded ? 'is-expanded' : ''}`} onBlur={event => {
     if (!event.currentTarget.contains(event.relatedTarget) && !active && phase !== 'failed') onExpand(null);
@@ -79,8 +81,8 @@ export function ExemplarTrashButton({ card, exemplar, expanded, onExpand, onDone
           if (expanded) { void flow.confirm(); return; }
           onExpand(exemplar.id); void flow.preview(); button.current?.focus();
         }}>
-        {expanded && working ? <><Loader2 className="catalogue-exemplar-trash-spinner" width={16} height={16} aria-hidden="true" /><span role="status">{progress}</span></>
-          : <><Trash2 width={16} height={16} />{expanded && <><span>{label}</span><Check width={16} height={16} /></>}</>}
+        {expanded && working ? <><Loader2 className="catalogue-exemplar-trash-spinner" width={16} height={16} aria-hidden="true" /><span role="status" className="catalogue-exemplar-trash-text">{shortProgress}</span></>
+          : <><Trash2 width={16} height={16} />{expanded && <><span className="catalogue-exemplar-trash-text">{shortLabel}</span><Check width={16} height={16} /></>}</>}
       </Button></Tooltip>}
   </span>;
 }

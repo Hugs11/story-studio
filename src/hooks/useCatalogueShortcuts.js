@@ -14,14 +14,17 @@ export function useCatalogueShortcuts(handlers, { active = true } = {}) {
   current.current = { ...handlers, active };
   useEffect(() => {
     const onKeyDown = (event) => {
-      if (event.defaultPrevented || event.target?.closest?.('[role="dialog"], [role="menu"], dialog')) return;
+      if (event.target?.closest?.('[role="dialog"], [role="menu"], dialog')) return;
       const actionId = findShortcutAction(event, getCurrentShortcuts(), 'catalogue');
       if (!actionId || !catalogueShortcutsEnabled(current.current.active, current.current.blocked())) return;
       if (actionId === 'catalogueSearch') {
+        // La capture globale peut avoir neutralisé la recherche native de la
+        // WebView. La recherche de cette portée reste disponible, même en saisie.
         event.preventDefault();
         current.current.search();
         return;
       }
+      if (event.defaultPrevented) return;
       if (isEditableTarget(event.target)) return;
       if (actionId === 'catalogueSelectAll') {
         event.preventDefault();

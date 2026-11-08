@@ -19,6 +19,7 @@ pub struct CatalogueState {
     /// Consultation sessions of the simulator (see `open::consultation`).
     consultations: std::sync::OnceLock<Arc<open::consultation::Registry>>,
     editor_extractions: std::sync::OnceLock<Arc<open::editor_extractions::Registry>>,
+    import_sources: open::import_metadata::Sources,
 }
 
 impl CatalogueState {
@@ -108,6 +109,7 @@ pub mod assembly;
 pub mod backup;
 
 mod device_cards;
+pub(crate) use device_cards::RepatriationTarget;
 pub mod lunii_db;
 mod official_packs;
 pub(crate) use official_packs::observed_official;

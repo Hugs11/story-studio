@@ -1,3 +1,4 @@
+import { hasConfirmedFreeExportName } from '../projectHelpers.js';
 // Un seul bouton de production, et la chaîne qu'il emprunte.
 //
 // Un pack produit par Story Studio va sur le même appareil quel que soit
@@ -54,11 +55,11 @@ export function productionChain(workspaceMode) {
  * bouton, rien pour le clavier — parce que la chaîne Libre accepte un projet
  * explicite en premier argument et sait déjà distinguer les deux.
  */
-export function createProductionCommand({ readWorkspaceMode, startFree, startAdvanced }) {
+export function createProductionCommand({ readWorkspaceMode, startFree, startAdvanced, startAdvancedDirect = startAdvanced, readProject = () => null, readImportedPackPendingMeta = () => false }) {
   return function produce(...args) {
     switch (productionChain(readWorkspaceMode())) {
       case PRODUCTION_CHAIN.ADVANCED:
-        return startAdvanced();
+        return hasConfirmedFreeExportName(readProject()) && !readImportedPackPendingMeta() ? startAdvancedDirect() : startAdvanced();
       case PRODUCTION_CHAIN.FREE:
         return startFree(...args);
       default:

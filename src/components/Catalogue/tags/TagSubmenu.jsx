@@ -73,6 +73,7 @@ export function TagMenuEntries({ tags, cards = [], targets = [], busy, onMutate,
         </button>}
       {tags.length > 0 && <div className="project-menu-sep" role="separator" />}
     </>}
+    {filtering && tags.length === 0 && <p className="catalogue-menu-empty">{t('catalogue:tags.filterEmpty')}</p>}
     {tags.map(tag => <button type="button" key={tag.id} role="menuitemcheckbox" aria-checked={checked(tag)} aria-disabled={unavailable || undefined}
       className="project-menu-item" onClick={() => { void toggle(tag); }}>
       <span aria-hidden="true" className="catalogue-tag-check">{checked(tag) === true ? <Check width={14} height={14} /> : checked(tag) === 'mixed' ? '–' : ''}</span>

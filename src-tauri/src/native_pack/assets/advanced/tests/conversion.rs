@@ -179,10 +179,7 @@ fn an_entirely_silent_media_is_prepared_and_never_refused() {
     let source = scratch.write_source("src", "silence.wav", &wav_bytes(&silence(0.5)));
     let document = document_with(&stage(ENTRY, true, Some("silence.wav"), None), "");
 
-    // Le mode Libre refuse ici : `edge_plan_for_generation` rejette
-    // `EdgeMeasure::AllSilence` **avant** d'envisager la copie verbatim. Un
-    // silence voulu par l'auteur n'est pas un média substitué, ce que la
-    // préparation refuse.
+    // Les deux éditeurs acceptent le silence sans gain et avec un avis nommé.
     let preparation = prepare_advanced_assets(
         &document,
         &[binding("silence.wav", &source)],
@@ -203,6 +200,48 @@ fn an_entirely_silent_media_is_prepared_and_never_refused() {
         !record.applied_plan.contains(&"gain"),
         "un niveau inétablissable ne se corrige pas : inventer un gain changerait le son livré"
     );
+    let [warning] = preparation.audio_warnings.as_slice() else {
+        panic!("le silence doit porter un avis");
+    };
+    assert_eq!(warning.code, "AUDIO_SILENT_KEPT");
+    assert_eq!(warning.initial_integrated_lufs, None);
+    assert_eq!(warning.gain_db, 0.0);
+
+    // Même avis lorsque le MP3 natif est copié sans aucune transformation.
+    let verbatim_scratch = Scratch::new("silence-verbatim");
+    let verbatim_source = verbatim_scratch.write_source(
+        "src",
+        "silence.mp3",
+        &fs::read(&preparation.archive_entries[0].output_path).unwrap(),
+    );
+    let verbatim_document = document_with(&stage(ENTRY, true, Some("silence.mp3"), None), "");
+    let verbatim = prepare_advanced_assets(
+        &verbatim_document,
+        &[binding("silence.mp3", &verbatim_source)],
+        &verbatim_scratch.workspace(),
+        &ffmpeg,
+        &AdvancedAudioOptions::default(),
+    )
+    .expect("copie verbatim du silence");
+    assert_eq!(verbatim.assets[0].transformation, Transformation::Verbatim);
+    assert!(verbatim.audio_warnings.is_empty());
+
+    // The device path uses the same neutral planner: no late silence analysis.
+    let storyteller = prepare_storyteller_assets(
+        &verbatim_document,
+        &[binding("silence.mp3", &verbatim_source)],
+        &Scratch::new("silence-storyteller").workspace(),
+        &ffmpeg,
+        None,
+        &mut |_| {},
+    )
+    .expect("device preparation")
+    .expect("not cancelled");
+    assert_eq!(
+        storyteller.assets[0].transformation,
+        Transformation::Verbatim
+    );
+    assert!(storyteller.audio_warnings.is_empty());
 }
 
 #[test]
@@ -587,4 +626,31 @@ fn nothing_is_written_outside_the_workspace() {
             && scratch.workspace().join("outputs").is_dir(),
         "tout ce que la préparation écrit vit sous son espace de travail"
     );
+}
+
+/// Off/Add without harmonization never had an analysis pass. An unavailable
+/// tool must therefore remain irrelevant while planning these conversions.
+#[test]
+fn audio_planning_without_analysis_options_never_runs_a_tool() {
+    for silence_mode in [SilenceMode::Off, SilenceMode::Add] {
+        let plan = plan_audio(
+            std::path::Path::new("missing-ffmpeg-s5c"),
+            std::path::Path::new("missing-audio-s5c"),
+            None,
+            &AdvancedAudioOptions {
+                silence_mode,
+                ..AdvancedAudioOptions::default()
+            },
+            std::time::Duration::ZERO,
+        )
+        .expect("no new measurement or rejection");
+        assert!(matches!(
+            plan,
+            ConversionPlan::AudioEncode {
+                silent: false,
+                notice: None,
+                ..
+            }
+        ));
+    }
 }

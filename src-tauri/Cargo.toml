@@ -1,6 +1,6 @@
 [package]
 name = "story-studio"
-version = "0.9.10"
+version = "0.9.11"
 description = "Cross-platform desktop editor for creating Lunii-compatible story packs"
 authors = ["hugs11"]
 license = "MIT"
@@ -25,6 +25,8 @@ base64 = "=0.22.1"
 aes = "=0.8.4"
 junkyard = { version = "=0.1.0", default-features = false }
 tauri = { version = "2", features = [] }
+# Already supplied by Tauri; async admission and coalescing for audio analysis.
+tokio = { version = "=1.51.0", features = ["sync", "rt"] }
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "=2.4.5"
 serde = { version = "1", features = ["derive"] }

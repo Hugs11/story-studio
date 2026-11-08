@@ -287,7 +287,7 @@ fn source_example_roundtrip_v6_v7_and_v6_on_v7_navigation_media_catalogue() {
             }
         }
         let (fiche, _) = store
-            .publish_repatriated_story(&zip, authorization.uuid())
+            .publish_repatriated_story(&zip, authorization.uuid(), &cache.0, "Conte")
             .unwrap();
         assert_eq!(
             store
@@ -421,7 +421,7 @@ fn acquisition_preserves_inconsistent_and_undecodable_media_v6_v7() {
                 }
             }
             store
-                .publish_repatriated_story(&zip, authorization.uuid())
+                .publish_repatriated_story(&zip, authorization.uuid(), &cache.0, "Conte")
                 .unwrap();
             assert!(store
                 .device_card_link(authorization.uuid())
@@ -503,7 +503,9 @@ fn real_v7_complete_repatriation_headers() {
             );
         }
     }
-    let (fiche, _) = store.publish_repatriated_story(&zip, id).unwrap();
+    let (fiche, _) = store
+        .publish_repatriated_story(&zip, id, &cache.0, "Conte")
+        .unwrap();
     assert_eq!(store.device_card_link(id).unwrap().unwrap().0, fiche);
     assert!(snapshot(&root.0) == before);
 }
@@ -665,18 +667,21 @@ fn refusals_sidecar_and_cancelled_worker_leave_no_device_write_or_catalogue_resi
         device,
         id,
         worker_cache.clone(),
+        (cache.0.clone(), "Conte".into()),
         Arc::clone(&op),
         sink,
     );
     let progress = op.progress.lock().unwrap();
     assert_eq!(progress.status, "cancelled");
+    assert_eq!(progress.error.as_ref().unwrap().device_fault, Some(false));
     assert_eq!(
         progress.error.as_ref().unwrap().code,
         codes::STORYTELLER_SEND_CANCELLED
     );
+    drop(progress);
     assert_eq!(fs::read_dir(&worker_cache).unwrap().count(), 0);
     assert!(store.device_card_link(id).unwrap().is_none());
-    assert!(!store.repatriated_root().unwrap().exists());
+    assert!(!cache.0.join("packs-rapatries").exists());
     assert_eq!(snapshot(&root.0), before);
     assert_eq!(
         observed.lock().unwrap().last().unwrap().0,
@@ -775,4 +780,84 @@ fn short_mp3_roundtrip_retains_ambiguous_zero_padding() {
         assert_eq!(bytes.len(), 432);
         assert!(bytes[mp3.len()..].iter().all(|b| *b == 0));
     }
+}
+
+#[test]
+fn missing_workspace_refuses_before_reconstruction_without_touching_device_or_cache() {
+    let root = scratch();
+    metadata(&root.0, 6);
+    fs::create_dir(root.0.join(".content")).unwrap();
+    fs::write(root.0.join(".pi"), []).unwrap();
+    let data = scratch();
+    let cache = scratch();
+    let store = Arc::new(Store::open(&data.0.join("data"), &data.0.join("cache")).unwrap());
+    let device = Device::open(&root.0, &data.0).unwrap();
+    let before = snapshot(&root.0);
+    let op = store
+        .begin_lunii_transfer(
+            "missing-workspace".into(),
+            1,
+            Arc::new(|_, _| {}),
+            "luniiRepatriate",
+        )
+        .unwrap();
+    let worker_cache = cache.0.join("worker");
+    let missing = cache.0.join("missing-workspace");
+    run(
+        Arc::clone(&store),
+        device,
+        Uuid::new_v4(),
+        worker_cache.clone(),
+        (missing.clone(), "Conte".into()),
+        Arc::clone(&op),
+        Arc::new(|_, _| {}),
+    );
+    let progress = op.progress.lock().unwrap();
+    assert_eq!(progress.status, "failed");
+    assert_eq!(progress.error.as_ref().unwrap().device_fault, Some(false));
+    assert_eq!(
+        progress.error.as_ref().unwrap().code,
+        codes::STORYTELLER_WORKSPACE_UNAVAILABLE
+    );
+    drop(progress);
+    assert!(!worker_cache.exists());
+    assert!(!missing.exists());
+    assert_eq!(snapshot(&root.0), before);
+    assert!(store.all_sources().unwrap().items.is_empty());
+}
+
+#[test]
+fn disconnected_repatriation_reports_device_fault_instead_of_pack_failure() {
+    let root = scratch();
+    metadata(&root.0, 6);
+    fs::create_dir(root.0.join(".content")).unwrap();
+    fs::write(root.0.join(".pi"), []).unwrap();
+    let data = scratch();
+    let cache = scratch();
+    let store = Arc::new(Store::open(&data.0.join("data"), &data.0.join("cache")).unwrap());
+    let device = Device::open(&root.0, &data.0).unwrap();
+    let op = store
+        .begin_lunii_transfer(
+            "disconnected".into(),
+            1,
+            Arc::new(|_, _| {}),
+            "luniiRepatriate",
+        )
+        .unwrap();
+    fs::remove_file(root.0.join(".md")).unwrap();
+    run(
+        Arc::clone(&store),
+        device,
+        Uuid::new_v4(),
+        cache.0.join("worker"),
+        (cache.0.clone(), "Conte".into()),
+        Arc::clone(&op),
+        Arc::new(|_, _| {}),
+    );
+    let progress = op.progress.lock().unwrap();
+    let error = progress.error.as_ref().unwrap();
+    assert_eq!(error.code, codes::STORYTELLER_REPATRIATE_DISCONNECTED);
+    assert_eq!(error.device_fault, Some(true));
+    drop(progress);
+    assert!(store.all_sources().unwrap().items.is_empty());
 }

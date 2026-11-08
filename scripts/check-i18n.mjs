@@ -28,8 +28,8 @@ const MEDIA_NEUTRAL_KEYS = new Set([
   'imageEditor.filter.saturation', 'imageEditor.levels.gamma', 'audioEditor.transport.stop',
   'audioEditor.zoom.label', 'assembly.options.title', 'splitter.source.label', 'splitter.destination.label',
   'record.preview.pause', 'relink.kind.audio', 'relink.kind.image', 'relink.kind.archive', 'relink.kind.media',
-  'subscriptions.source.fallback', 'subscriptions.notifications.title', 'subscriptions.notifications.count_one',
-  'subscriptions.notifications.count_other', 'usage.field.audio', 'usage.field.image', 'usage.label.homeStep',
+  'subscriptions.source.fallback', 'subscriptions.notifications.title',
+  'usage.field.audio', 'usage.field.image', 'usage.label.homeStep',
 ]);
 // Lot 4.12 — exemples : gabarits ne contenant que des paramètres et de la
 // ponctuation (comptes déjà traduits). Liste nominative, aucune exemption par motif.
@@ -59,9 +59,6 @@ export const CHECKER_NEUTRAL_KEYS = {
 const TABLE_CALLS = {
   "src/components/Catalogue/activity/CatalogueActivity.jsx:pill.label": ["catalogue:activity.pill.info"],
   "src/components/Catalogue/CatalogueFilterBar.jsx:key": ["catalogue:filter.favorites.only", "catalogue:palette.incomplete", "catalogue:filter.missingFiles.label"],
-  "src/components/Catalogue/CatalogueToolbar.jsx:section.key": ["catalogue:palette.packs", "catalogue:palette.refine"],
-  "src/components/Catalogue/CatalogueToolbar.jsx:entry.card.exemplars.some(exemplar => exemplar.format === 'project') ? 'catalogue:palette.project' : 'catalogue:palette.pack'": ["catalogue:palette.project", "catalogue:palette.pack"],
-  "src/components/Catalogue/CatalogueToolbar.jsx:entry.key": ["catalogue:palette.ageSuggestion", "catalogue:palette.tagSuggestion", "catalogue:filter.favorites.only", "catalogue:palette.incomplete", "catalogue:format.project.label", "catalogue:format.zip.label", "catalogue:format.sevenZip.label", "catalogue:format.folder.label", "catalogue:filter.missingFiles.label"],
   "src/components/Catalogue/CatalogueFilterBar.jsx:FAMILY_CONTROLS.find(control => control.family === item.family)?.key ?? item.key": ["catalogue:filter.family.language", "catalogue:filter.family.format", "catalogue:filter.family.projectType", "catalogue:filter.family.source", "catalogue:filter.tags.label", "catalogue:filter.family.packState", "catalogue:filter.family.missing"],
   "src/components/Catalogue/CatalogueToolbar.jsx:item.key": ["catalogue:filter.favorites.only", "catalogue:palette.incomplete", "catalogue:filter.missingFiles.label", "catalogue:filter.tags.label", "catalogue:filter.family.format", "catalogue:filter.family.language"],
   "src/components/Catalogue/CatalogueViewControls.jsx:level.labelKey": ["catalogue:toolbar.density.compact", "catalogue:toolbar.density.normal", "catalogue:toolbar.density.large"],
@@ -245,15 +242,17 @@ const TABLE_CALLS = {
   'src/components/AggregatePacks/AggregatePacksFunnel.jsx:step.labelKey': ['home:aggregate.step.packs', 'home:aggregate.step.audio', 'home:aggregate.step.image', 'home:aggregate.step.metadata'],
   // Tables fermées du shell ; clés explicites validées même avant leur rendu.
   'src/components/common/ReleaseNotesModal.jsx:title': [
-    'common:releaseNotes.current.languages.title',
-    'common:releaseNotes.current.catalogue.title',
-    'common:releaseNotes.current.missing.title',
+    'common:releaseNotes.current.queue.title',
+    'common:releaseNotes.current.sound.title',
+    'common:releaseNotes.current.updates.title',
+    'common:releaseNotes.current.episodes.title',
     'common:releaseNotes.current.fixes.label',
   ],
   'src/components/common/ReleaseNotesModal.jsx:detail': [
-    'common:releaseNotes.current.languages.detail',
-    'common:releaseNotes.current.catalogue.detail',
-    'common:releaseNotes.current.missing.detail',
+    'common:releaseNotes.current.queue.detail',
+    'common:releaseNotes.current.sound.detail',
+    'common:releaseNotes.current.updates.detail',
+    'common:releaseNotes.current.episodes.detail',
   ],
   'src/store/toolbarModel.js:labelKey': [
     'common:project.home.label',
@@ -310,7 +309,7 @@ const TABLE_CALLS = {
   'src/tabs/OptionsTab/InterfaceSection.jsx:LANGUAGE_LABEL_KEYS[language]': ['settings:interface.language.'],
   'src/tabs/OptionsTab/InterfaceSection.jsx:option.labelKey': ['settings:interface.theme.'],
   'src/tabs/OptionsTab/OptionsSectionNav.jsx:group.labelKey': ['settings:navigation.'],
-  'src/tabs/OptionsTab/OptionsSectionNav.jsx:item.labelKey': ['settings:navigation.', 'settings:interface.section.title'],
+  'src/tabs/OptionsTab/OptionsSectionNav.jsx:item.labelKey': ['settings:navigation.', 'settings:interface.section.title', 'media:subscriptions.section.title'],
 };
 
 export function sourceHash(text) {
@@ -334,7 +333,7 @@ function same(left, right) { return JSON.stringify(left) === JSON.stringify(righ
 
 // Noms de formats et mots identiques dans la langue cible (bibliothèque de packs).
 export const CATALOGUE_NEUTRAL_KEYS = {
-  en: new Set(['lunii.unknownValue', 'lunii.position', 'toolbar.search.shortcut', 'palette.pack', 'palette.packs', 'tags.moreCount', 'toolbar.count.packs_one', 'toolbar.count.packs_many', 'toolbar.count.packs_other', 'startup.page.catalogue', 'fiche.edit.modeLabel', 'fiche.edit.field.description', 'fiche.edit.field.bonus', 'fiche.edit.language.ca', 'fiche.edit.language.eu', 'fiche.edit.language.br', 'fiche.edit.language.oc', 'open.choice.option.label', 'open.choice.option.detail', 'format.zip.label', 'format.sevenZip.label', 'filter.family.format', 'toolbar.sort.format', 'filter.family.collection', 'formatTag.count', 'details.duration.minutes_one', 'details.duration.minutes_other', 'details.version.value', 'details.column.version', 'exemplar.column.format', 'exemplar.column.actions', 'fiche.field.uuid', 'toolbar.view.cards', 'details.value.notProvided', 'fiche.edit.origin.none', 'details.duration.hours_one', 'details.duration.hours_other', 'details.duration.hoursMinutes_one', 'details.duration.hoursMinutes_other', 'details.duration.hours_many', 'details.duration.hoursMinutes_many', 'fiche.modal.position', 'selection.panel.tagCount']),
+  en: new Set(['lunii.unknownValue', 'lunii.position', 'toolbar.search.shortcut', 'tags.moreCount', 'toolbar.count.packs_one', 'toolbar.count.packs_many', 'toolbar.count.packs_other', 'startup.page.catalogue', 'fiche.edit.modeLabel', 'fiche.edit.field.description', 'fiche.edit.field.bonus', 'fiche.edit.language.ca', 'fiche.edit.language.eu', 'fiche.edit.language.br', 'fiche.edit.language.oc', 'open.choice.option.label', 'open.choice.option.detail', 'format.zip.label', 'format.sevenZip.label', 'filter.family.format', 'toolbar.sort.format', 'filter.family.collection', 'formatTag.count', 'details.duration.minutes_one', 'details.duration.minutes_other', 'details.version.value', 'details.column.version', 'exemplar.column.format', 'exemplar.column.actions', 'fiche.field.uuid', 'toolbar.view.cards', 'details.value.notProvided', 'fiche.edit.origin.none', 'details.duration.hours_one', 'details.duration.hours_other', 'details.duration.hoursMinutes_one', 'details.duration.hoursMinutes_other', 'details.duration.hours_many', 'details.duration.hoursMinutes_many', 'fiche.modal.position', 'selection.panel.tagCount']),
   it: new Set(['toolbar.density.normal', 'toolbar.density.large', 'lunii.unknownValue', 'toolbar.search.shortcut', 'tags.moreCount', 'toolbar.count.packs_one', 'fiche.edit.field.bonus', 'open.choice.option.label', 'open.choice.option.detail', 'format.zip.label', 'format.sevenZip.label', 'formatTag.count', 'details.duration.minutes_one', 'details.duration.minutes_many', 'details.duration.minutes_other', 'details.version.value', 'fiche.field.uuid', 'details.value.notProvided', 'fiche.edit.origin.none', 'details.duration.hours_one', 'details.duration.hours_other', 'details.duration.hoursMinutes_one', 'details.duration.hoursMinutes_other', 'details.duration.hours_many', 'details.duration.hoursMinutes_many', 'fiche.modal.position', 'selection.panel.tagCount']),
 };
 
@@ -587,6 +586,8 @@ export async function checkProject(root = resolve('.'), { publicLanguages = PUBL
   if (!rustMessages) result.errors.push('rust-messages: fichier obligatoire absent');
   const used = new Set((rustMessages?.messages ?? rustMessages ?? []).map(({ code }) => `rust:${code}`));
   used.add('common:error.fallback.unexpected');
+  // Titres historiques reconnus via les catalogues dans advancedExamples/transaction.js.
+  used.add('graph:creation.pack.defaultName');
   // Descripteurs stockés et présentateur statique du suivi, résolus hors JSX.
   for (const key of ['import:folder.read.prefix', 'import:project.recent.prefix', 'import:media.follow.pending', 'import:media.follow.active', 'import:media.follow.pauseOnSave', 'import:media.follow.resumeOnSave', 'import:media.follow.paused', 'import:media.follow.initial']) used.add(key);
   for (const path of await filesUnder(resolve(root, 'src'))) {

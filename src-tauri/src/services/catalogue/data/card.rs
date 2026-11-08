@@ -67,7 +67,10 @@ fn source_references(
 }
 
 /// Compose source slots at read time: durable reference first, then available
-/// siblings by modification time and stable id. Nothing becomes a correction or
+/// siblings by modification time and stable id, except explicitly chosen project
+/// thumbnails (nonempty thumbnailImage with sameImage != true), which precede
+/// file references. rootImage and entry-screen fallbacks are not choices.
+/// Nothing becomes a correction or
 /// a portable reference value. No source I/O is performed here.
 fn complete_references(
     c: &Connection,
@@ -83,6 +86,27 @@ fn complete_references(
         reference.retain(|(field, _), _| field != "cover");
     }
     let ids = available_exemplars(c, card)?;
+    // A project cover explicitly stored by the author precedes durable file
+    // references. Keep its observed value and supplier together for assembly.
+    for id in chosen_cover_projects(c, card)? {
+        let unreadable: bool = c.query_row(
+            "SELECT EXISTS(SELECT 1 FROM cache.extracted_value v JOIN cache.observation o ON o.exemplar_id=v.exemplar_id WHERE v.exemplar_id=?1 AND v.field='cover' AND v.candidate_key='@unreadable:' || o.content_revision)",
+            [&id], |r| r.get(0))?;
+        if unreadable {
+            continue;
+        }
+        if let Some(candidate) = cached_candidates(c, &id)?
+            .unwrap_or_default()
+            .get(&("cover".into(), String::new()))
+            .filter(|v| v["validity"] == "valid" && !v["value"].is_null())
+        {
+            reference.insert(
+                ("cover".into(), String::new()),
+                (candidate["value"].clone(), format!("observed:{id}")),
+            );
+            break;
+        }
+    }
     let mut ages = Vec::new();
     for id in ids {
         let unreadable: bool = c.query_row(
@@ -91,7 +115,7 @@ fn complete_references(
         for (key, candidate) in cached_candidates(c, &id)?.unwrap_or_default() {
             if candidate["validity"] == "valid"
                 && !candidate["value"].is_null()
-                && !(key.0 == "cover" && unreadable)
+                && !(key.0 == "cover" && (unreadable || candidate["value"]["available"] == false))
             {
                 if key.0 == "ageMin" {
                     ages.push((key, candidate["value"].clone(), format!("observed:{id}")));
@@ -135,6 +159,21 @@ fn available_exemplars(c: &Connection, card: &str) -> rusqlite::Result<Vec<Strin
     Ok(ids)
 }
 
+/// Read only cached project fields: the entry-screen fallback is not a choice.
+fn chosen_cover_projects(c: &Connection, card: &str) -> rusqlite::Result<Vec<String>> {
+    c.prepare(
+        "SELECT e.id FROM exemplar e JOIN cache.observation o ON o.exemplar_id=e.id
+         WHERE e.fiche_id=?1 AND e.retired=0 AND o.state='available' AND o.format='project'
+         AND json_type(o.raw_observation_json,'$.raw.thumbnailImage')='text'
+         AND json_extract(o.raw_observation_json,'$.raw.thumbnailImage')!=''
+         AND coalesce(json_type(o.raw_observation_json,'$.raw.sameImage'),'null')!='true'
+         AND coalesce(json_type(o.raw_observation_json,'$.cover.available'),'null')!='false'
+         AND EXISTS(SELECT 1 FROM cache.coverage v JOIN source s ON s.id=v.source_id LEFT JOIN source_health h ON h.source_id=s.id WHERE v.exemplar_id=e.id AND s.status='active' AND coalesce(h.availability,'available')!='unavailable')
+         ORDER BY o.modified_at DESC,e.id ASC",
+    )?.query_map([card], |r| r.get::<_, String>(0))?
+        .collect()
+}
+
 /// Resolve once per thumbnail request, then try the ordered covers without
 /// recalculating all fields after each negative readability observation.
 pub(crate) fn cover_exemplars(c: &Connection, card: &str) -> rusqlite::Result<Vec<String>> {
@@ -162,7 +201,10 @@ pub(crate) fn cover_exemplars_from(
             ids.push(id);
         }
     }
-    for id in available_exemplars(c, card)? {
+    for id in chosen_cover_projects(c, card)?
+        .into_iter()
+        .chain(available_exemplars(c, card)?)
+    {
         if ids.contains(&id) {
             continue;
         }
@@ -172,7 +214,10 @@ pub(crate) fn cover_exemplars_from(
                 .unwrap_or_default()
                 .iter()
                 .any(|((field, _), v)| {
-                    field == "cover" && v["validity"] == "valid" && !v["value"].is_null()
+                    field == "cover"
+                        && v["validity"] == "valid"
+                        && !v["value"].is_null()
+                        && v["value"]["available"] != false
                 })
         {
             ids.push(id);

@@ -764,7 +764,9 @@ mod tests {
             // Block only the first observation, outside the filesystem itself.
             finishing.finish(&id, true, vec![]);
         });
-        blocked_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        blocked_rx
+            .recv_timeout(crate::test_support::timeout())
+            .unwrap();
         let (done_tx, done_rx) = std::sync::mpsc::channel();
         let saving = registry.clone();
         let save = std::thread::spawn(move || {
@@ -772,7 +774,7 @@ mod tests {
             let remote_verdict = saving.classify(&remote, Instant::now());
             done_tx.send((id, remote_verdict)).unwrap();
         });
-        let result = done_rx.recv_timeout(Duration::from_millis(500));
+        let result = done_rx.recv_timeout(crate::test_support::timeout());
         // Always release and join, including the expected regression failure.
         drop(release_tx);
         let _ = worker.join();
@@ -905,7 +907,7 @@ mod serialization_tests {
             registry.begin(Declaration::new("other").exact(root.with_extension("elsewhere")));
         registry.finish(&independent, false, Vec::new());
         registry.finish(&first, false, Vec::new());
-        let id = wait.recv_timeout(Duration::from_secs(2)).unwrap();
+        let id = wait.recv_timeout(crate::test_support::timeout()).unwrap();
         second.join().unwrap();
         registry.finish(&id, false, Vec::new());
         let _ = std::fs::remove_dir_all(root);
@@ -938,7 +940,9 @@ mod temporary_serialization_tests {
                 "second write waits in either declaration order"
             );
             registry.finish(&first, false, Vec::new());
-            let second = receiver.recv_timeout(Duration::from_secs(2)).unwrap();
+            let second = receiver
+                .recv_timeout(crate::test_support::timeout())
+                .unwrap();
             thread.join().unwrap();
             registry.finish(&second, false, Vec::new());
             let _ = std::fs::remove_dir_all(root);

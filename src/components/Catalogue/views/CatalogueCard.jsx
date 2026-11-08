@@ -7,6 +7,7 @@ import { useCatalogueTranslation } from '../../../i18n/useCatalogueTranslation.j
 import { latestExemplarDuration } from '../../../store/catalogue/ficheSummary.js';
 import { ageCell } from '../../../store/catalogue/detailsRow.js';
 import { formatTags } from '../../../store/catalogue/formatTag.js';
+import { cardTitle } from '../../../store/catalogue/entryModel.js';
 import { domId } from '../../../store/catalogue/viewModes.js';
 import { CardFormatTags } from './CardFormatTags.jsx';
 import { CardCover } from './CardCover.jsx';
@@ -56,7 +57,7 @@ export function CatalogueCard({ item, index, view, dragSource }) {
         {view.luniiFicheIds?.has(card.id) && <Tooltip text={t('catalogue:lunii.already')} asChild wrap><span className="catalogue-card-lunii" role="img" aria-label={t('catalogue:lunii.already')}><LuniiIcon width={14} height={14} /></span></Tooltip>}
         <FavoriteStar favorite={card.favorite} busy={view.dataBusy} tabIndex={active ? 0 : -1} onChange={() => view.onFavorite?.(card)} />
         <div className="catalogue-card-info">
-          <h3 className="catalogue-card-title">{(card.displayTitle ?? card.title) ?? t('catalogue:card.untitled')}</h3>
+          <h3 className="catalogue-card-title">{cardTitle(card) ?? t('catalogue:card.untitled')}</h3>
           <SearchExplanation item={item} />
           <div className="catalogue-card-meta">
             <div className="catalogue-card-details">

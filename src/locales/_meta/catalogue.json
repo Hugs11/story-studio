@@ -1337,17 +1337,6 @@
       "status": "ai-reviewed"
     }
   },
-  "sources.declined.message": {
-    "context": "Bibliothèque de packs, annonce après le refus d’un dossier proposé, et état d’une proposition refusée.",
-    "en": {
-      "sourceHash": "750a03bfc2fe",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "750a03bfc2fe",
-      "status": "ai-reviewed"
-    }
-  },
   "sources.state.unknown": {
     "context": "Bibliothèque de packs, ligne d’une source : état d’accès ou dernier résultat inconnu. Libellé court.",
     "maxLength": 32,
@@ -1402,42 +1391,6 @@
     },
     "it": {
       "sourceHash": "3707ec3e386d",
-      "status": "ai-reviewed"
-    }
-  },
-  "proposals.title.label": {
-    "context": "Bibliothèque de packs, titre de la zone des dossiers proposés après un changement de dossier de travail. Titre court.",
-    "maxLength": 48,
-    "en": {
-      "sourceHash": "32ff7b76c2c1",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "32ff7b76c2c1",
-      "status": "ai-reviewed"
-    }
-  },
-  "proposals.accept.label": {
-    "context": "Bibliothèque de packs, proposition de dossier : bouton qui l’ajoute comme source. Bouton.",
-    "maxLength": 20,
-    "en": {
-      "sourceHash": "8393b7bd1e85",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "8393b7bd1e85",
-      "status": "ai-reviewed"
-    }
-  },
-  "proposals.decline.label": {
-    "context": "Bibliothèque de packs, proposition de dossier : bouton qui refuse et mémorise le refus. Bouton.",
-    "maxLength": 20,
-    "en": {
-      "sourceHash": "283348d05e1c",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "283348d05e1c",
       "status": "ai-reviewed"
     }
   },
@@ -1502,11 +1455,11 @@
   "tracker.close.help": {
     "context": "Bibliothèque de packs, suivi : aide qui distingue fermer le suivi et annuler.",
     "en": {
-      "sourceHash": "a3e4de04783f",
+      "sourceHash": "33f2e329bec1",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "a3e4de04783f",
+      "sourceHash": "33f2e329bec1",
       "status": "ai-reviewed"
     }
   },
@@ -3975,52 +3928,6 @@
     },
     "maxLength": 80
   },
-  "generation.folder.question": {
-    "context": "Catalogue : generation.folder.question, état attesté du projet ou proposition discrète dans le résultat d’une génération réussie.",
-    "en": {
-      "status": "ai-reviewed",
-      "sourceHash": "426cac6ebb6e"
-    },
-    "it": {
-      "status": "ai-reviewed",
-      "sourceHash": "426cac6ebb6e"
-    }
-  },
-  "generation.folder.add": {
-    "context": "Catalogue : generation.folder.add, état attesté du projet ou proposition discrète dans le résultat d’une génération réussie.",
-    "en": {
-      "status": "ai-reviewed",
-      "sourceHash": "4aa4eb0c13e0"
-    },
-    "it": {
-      "status": "ai-reviewed",
-      "sourceHash": "4aa4eb0c13e0"
-    },
-    "maxLength": 80
-  },
-  "generation.folder.decline": {
-    "context": "Catalogue : generation.folder.decline, état attesté du projet ou proposition discrète dans le résultat d’une génération réussie.",
-    "en": {
-      "status": "ai-reviewed",
-      "sourceHash": "8a13cb49b4b9"
-    },
-    "it": {
-      "status": "ai-reviewed",
-      "sourceHash": "8a13cb49b4b9"
-    },
-    "maxLength": 80
-  },
-  "generation.folder.busy": {
-    "context": "Catalogue : generation.folder.busy, état attesté du projet ou proposition discrète dans le résultat d’une génération réussie.",
-    "en": {
-      "status": "ai-reviewed",
-      "sourceHash": "f7a9f1407555"
-    },
-    "it": {
-      "status": "ai-reviewed",
-      "sourceHash": "f7a9f1407555"
-    }
-  },
   "startup.resume.message_one": {
     "context": "Bandeau en tête du catalogue : nombre de reprises, nom et date de la plus récente ; aucune reprise automatique.",
     "en": {
@@ -4301,11 +4208,11 @@
     "context": "Catalogue : application explicite des métadonnées aux fichiers, aperçu et publication contrôlée.",
     "en": {
       "status": "ai-reviewed",
-      "sourceHash": "7e8320ffbff4"
+      "sourceHash": "f6f389dec1a9"
     },
     "it": {
       "status": "ai-reviewed",
-      "sourceHash": "7e8320ffbff4"
+      "sourceHash": "f6f389dec1a9"
     }
   },
   "diagnostics.duplicates": {
@@ -6145,13 +6052,13 @@
     }
   },
   "offline.missing.notice": {
-    "context": "Catalogue : avis en tête d’une fiche dont tous les exemplaires sont introuvables, au-dessus du bouton « Retirer du catalogue » ; ton neutre, sans rouge.",
+    "context": "Catalogue : avis en tête d’une fiche dont tous les exemplaires sont introuvables, au-dessus du bouton « Retirer du catalogue » ; ton neutre, sans rouge ; constate l’absence au dernier emplacement connu sans affirmer une suppression.",
     "en": {
-      "sourceHash": "ec6a3efe758d",
+      "sourceHash": "1d0591b6d4c1",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "ec6a3efe758d",
+      "sourceHash": "1d0591b6d4c1",
       "status": "ai-reviewed"
     }
   },
@@ -6613,6 +6520,39 @@
       "status": "ai-reviewed"
     }
   },
+  "trash.confirmShort": {
+    "context": "Libellé court de confirmation, dans le bouton rouge déplié de la ligne d’exemplaire (place très réduite, suivi d’une coche) : mise à la corbeille d’un fichier ou dossier.",
+    "en": {
+      "sourceHash": "3b4cb0d3e2c2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3b4cb0d3e2c2",
+      "status": "ai-reviewed"
+    }
+  },
+  "trash.deleteConfirmShort": {
+    "context": "Libellé court de confirmation, dans le bouton rouge déplié de la ligne d’exemplaire (place très réduite, suivi d’une coche) : effacement définitif.",
+    "en": {
+      "sourceHash": "08d89f75fc49",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "08d89f75fc49",
+      "status": "ai-reviewed"
+    }
+  },
+  "trash.workingShort": {
+    "context": "Texte court d’opération en cours dans le bouton rouge déplié de la ligne d’exemplaire (mise à la corbeille en cours).",
+    "en": {
+      "sourceHash": "2e64da4c8af7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2e64da4c8af7",
+      "status": "ai-reviewed"
+    }
+  },
   "trash.trashed": {
     "context": "Corbeille depuis la ligne d’exemplaire ; name est sa version (vN) ou sa désignation courte.",
     "en": {
@@ -6635,28 +6575,6 @@
       "status": "ai-reviewed"
     }
   },
-  "palette.pack": {
-    "context": "Catalogue : recherche-palette et critère de filtre, libellé compact.",
-    "en": {
-      "sourceHash": "80dc21673e55",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "80dc21673e55",
-      "status": "ai-reviewed"
-    }
-  },
-  "palette.project": {
-    "context": "Catalogue : recherche-palette et critère de filtre, libellé compact.",
-    "en": {
-      "sourceHash": "9c466199f8ec",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "9c466199f8ec",
-      "status": "ai-reviewed"
-    }
-  },
   "palette.incomplete": {
     "context": "Catalogue : recherche-palette et critère de filtre, libellé compact.",
     "en": {
@@ -6665,61 +6583,6 @@
     },
     "it": {
       "sourceHash": "3160128ee824",
-      "status": "ai-reviewed"
-    }
-  },
-  "palette.tagSuggestion": {
-    "context": "Catalogue : recherche-palette et critère de filtre, libellé compact.",
-    "en": {
-      "sourceHash": "3a3f0f87aa7e",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "3a3f0f87aa7e",
-      "status": "ai-reviewed"
-    }
-  },
-  "palette.results": {
-    "context": "Catalogue : recherche-palette et critère de filtre, libellé compact.",
-    "en": {
-      "sourceHash": "7348495b491f",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "7348495b491f",
-      "status": "ai-reviewed"
-    }
-  },
-  "palette.packs": {
-    "context": "Catalogue : recherche-palette et critère de filtre, libellé compact.",
-    "en": {
-      "sourceHash": "3e784fc40cfb",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "3e784fc40cfb",
-      "status": "ai-reviewed"
-    }
-  },
-  "palette.refine": {
-    "context": "Catalogue : recherche-palette et critère de filtre, libellé compact.",
-    "en": {
-      "sourceHash": "17288ff74d8f",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "17288ff74d8f",
-      "status": "ai-reviewed"
-    }
-  },
-  "palette.empty": {
-    "context": "Catalogue : recherche-palette et critère de filtre, libellé compact.",
-    "en": {
-      "sourceHash": "1f2648bbeee2",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "1f2648bbeee2",
       "status": "ai-reviewed"
     }
   },
@@ -6749,35 +6612,6 @@
     },
     "it": {
       "sourceHash": "969135968c47",
-      "status": "ai-reviewed"
-    }
-  },
-  "palette.ageSuggestion_one": {
-    "context": "Catalogue : recherche-palette et critère de filtre, libellé compact.",
-    "en": {
-      "sourceHash": "3295d42d42e4",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "3295d42d42e4",
-      "status": "ai-reviewed"
-    }
-  },
-  "palette.ageSuggestion_many": {
-    "context": "Catalogue : recherche-palette et critère de filtre, libellé compact.",
-    "it": {
-      "sourceHash": "528d1e644cbf",
-      "status": "ai-reviewed"
-    }
-  },
-  "palette.ageSuggestion_other": {
-    "context": "Catalogue : recherche-palette et critère de filtre, libellé compact.",
-    "en": {
-      "sourceHash": "528d1e644cbf",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "528d1e644cbf",
       "status": "ai-reviewed"
     }
   },
@@ -8216,17 +8050,6 @@
       "status": "ai-reviewed"
     }
   },
-  "lunii.busy": {
-    "context": "Catalogue > panneau Lunii en consultation : busy",
-    "en": {
-      "sourceHash": "230290cf4b8d",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "230290cf4b8d",
-      "status": "ai-reviewed"
-    }
-  },
   "lunii.free": {
     "context": "Catalogue > panneau Lunii en consultation : free",
     "en": {
@@ -8239,13 +8062,13 @@
     }
   },
   "lunii.counts": {
-    "context": "Catalogue > panneau Lunii en consultation : counts",
+    "context": "Catalogue > panneau Lunii : nombres d’histoires visibles et masquées, présentés après leur libellé pour éviter les accords au pluriel.",
     "en": {
-      "sourceHash": "3220336b2ab5",
+      "sourceHash": "1b3475724da9",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "3220336b2ab5",
+      "sourceHash": "1b3475724da9",
       "status": "ai-reviewed"
     }
   },
@@ -8532,6 +8355,17 @@
     },
     "it": {
       "sourceHash": "2f9106a86a23",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.interruptedLeftovers": {
+    "context": "Bannière Lunii : histoires incomplètes hors liste, hors copies en double et restes rangés ; taille des histoires sans retrait en attente.",
+    "en": {
+      "sourceHash": "53bf914f97a6",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "53bf914f97a6",
       "status": "ai-reviewed"
     }
   },
@@ -9007,6 +8841,721 @@
       "status": "ai-reviewed"
     }
   },
+  "lunii.movedQueued": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "20f5779f1ac2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "20f5779f1ac2",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.sendWaiting": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "2f6c8477e92b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2f6c8477e92b",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.cancelSend_one": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "563f71fa3e07",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "563f71fa3e07",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.cancelSend_many": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "3ca259e483d7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3ca259e483d7",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.cancelSend_other": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "3ca259e483d7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3ca259e483d7",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.cancelGesture": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "5ae6abdea42e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5ae6abdea42e",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.cancelDevice": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "e9449341ca52",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e9449341ca52",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.removingReason": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "f9d07d556967",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f9d07d556967",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.repairWaiting": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "0928d05d9749",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "0928d05d9749",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.unresponsive": {
+    "context": "Panneau Lunii : une écriture en file n'a donné aucun signe depuis une minute ; rien n'est arrêté.",
+    "en": {
+      "sourceHash": "133af89b5a77",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "133af89b5a77",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.ejectQueue.title": {
+    "context": "Panneau Lunii : éjection demandée pendant que des opérations s’exécutent ou attendent (file).",
+    "en": {
+      "sourceHash": "451476f18a25",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "451476f18a25",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.ejectQueue.message_one": {
+    "context": "Panneau Lunii : éjection demandée pendant que des opérations s’exécutent ou attendent (file).",
+    "en": {
+      "sourceHash": "7edc6b8a2202",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7edc6b8a2202",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.ejectQueue.message_many": {
+    "context": "Panneau Lunii : éjection demandée pendant que des opérations s’exécutent ou attendent (file).",
+    "en": {
+      "sourceHash": "290be256d92f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "290be256d92f",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.ejectQueue.message_other": {
+    "context": "Panneau Lunii : éjection demandée pendant que des opérations s’exécutent ou attendent (file).",
+    "en": {
+      "sourceHash": "290be256d92f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "290be256d92f",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.ejectQueue.wait": {
+    "context": "Panneau Lunii : éjection demandée pendant que des opérations s’exécutent ou attendent (file).",
+    "en": {
+      "sourceHash": "61abe6617c5d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "61abe6617c5d",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.ejectQueue.cancelRest": {
+    "context": "Panneau Lunii : éjection demandée pendant que des opérations s’exécutent ou attendent (file).",
+    "en": {
+      "sourceHash": "88dc9562c96b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "88dc9562c96b",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.ejectQueue.stay": {
+    "context": "Panneau Lunii : éjection demandée pendant que des opérations s’exécutent ou attendent (file).",
+    "en": {
+      "sourceHash": "bcd1b273c47c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bcd1b273c47c",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.ejectQueue.pending": {
+    "context": "Panneau Lunii : éjection demandée pendant que des opérations s’exécutent ou attendent (file).",
+    "en": {
+      "sourceHash": "2785ecc07610",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2785ecc07610",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.ejectQueue.cancelPending": {
+    "context": "Panneau Lunii : éjection demandée pendant que des opérations s’exécutent ou attendent (file).",
+    "en": {
+      "sourceHash": "bb1ca184765f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "bb1ca184765f",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.ejectQueue.ejectLater": {
+    "context": "Panneau Lunii : éjection demandée pendant que des opérations s’exécutent ou attendent (file).",
+    "en": {
+      "sourceHash": "7557734382dc",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7557734382dc",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.unresponsiveHeld": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "a4bc8bf1ebd4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a4bc8bf1ebd4",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.selectionLeaving_one": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "7dc4edd74dfe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7dc4edd74dfe",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.selectionLeaving_many": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "8ec67b75090f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8ec67b75090f",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.selectionLeaving_other": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "8ec67b75090f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8ec67b75090f",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.title": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "72f2bed023cd",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "72f2bed023cd",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.announce": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "20ae464fafaf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "20ae464fafaf",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.counts": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "32aea777c676",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "32aea777c676",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.failedList": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "c4e96bcdfd00",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c4e96bcdfd00",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.notStartedList": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "555285c444f7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "555285c444f7",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.stoppedGone": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "82dfed20cb2e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "82dfed20cb2e",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.stoppedFault": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "5a18c595a01f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5a18c595a01f",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.excluded_one": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "f87080c438a0",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "f87080c438a0",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.excluded_many": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "afa4275b93bf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "afa4275b93bf",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.excluded_other": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "afa4275b93bf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "afa4275b93bf",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.item": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "00e496503256",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "00e496503256",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.send": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "8784d20ec130",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8784d20ec130",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.repatriate": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "6a7cc3fd31f3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6a7cc3fd31f3",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.remove": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "87069e464cec",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "87069e464cec",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.delete": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "858c847b742b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "858c847b742b",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.putBack": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "21ea0ef01c36",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "21ea0ef01c36",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.hide": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "834a8daab721",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "834a8daab721",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.show": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "18b23488e966",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "18b23488e966",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.name": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "b2c124536d21",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "b2c124536d21",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.move": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "fc83b50e3b60",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fc83b50e3b60",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.rename": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "496197013d01",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "496197013d01",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.repair": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "226cdcb82ebf",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "226cdcb82ebf",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.restore": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "e9c3ecfc75da",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e9c3ecfc75da",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queueReport.kind.other": {
+    "context": "Panneau Lunii et activité du Catalogue : bilan de fin de file d'opérations Lunii, gestes en attente vus depuis l'inspecteur.",
+    "en": {
+      "sourceHash": "d7c9f92ed999",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d7c9f92ed999",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.collapsed_one": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "8a607f4cf196",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "8a607f4cf196",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.collapsed_many": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "7f6710bfaeab",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7f6710bfaeab",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.collapsed_other": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "7f6710bfaeab",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7f6710bfaeab",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.count_one": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "acc2cf0c490b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "acc2cf0c490b",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.count_many": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "15b1910a54c2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "15b1910a54c2",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.count_other": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "15b1910a54c2",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "15b1910a54c2",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.action.remove": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "2e0dee66fbbb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2e0dee66fbbb",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.action.delete": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "33987077a364",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "33987077a364",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.action.putBack": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "4d82e216f52e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4d82e216f52e",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.action.hide": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "92af550ba523",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "92af550ba523",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.action.show": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "d31c763efd56",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d31c763efd56",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.action.name": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "6863ec31e832",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6863ec31e832",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.action.move": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "6638ec3be173",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6638ec3be173",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.action.repatriate": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "cf0121ecf473",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cf0121ecf473",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.action.rename": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "25680c7b8d27",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "25680c7b8d27",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.action.repair": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "1d4d93d05ec8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "1d4d93d05ec8",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.queue.action.restore": {
+    "context": "Panneau Lunii : opérations en attente dans la file (envoi, geste ou suppression pas encore lancés).",
+    "en": {
+      "sourceHash": "000596165285",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "000596165285",
+      "status": "ai-reviewed"
+    }
+  },
   "lunii.removeHelp": {
     "context": "Panneau Lunii : gestes explicites, sélection et confirmations.",
     "en": {
@@ -9414,17 +9963,6 @@
       "status": "ai-reviewed"
     }
   },
-  "lunii.sendBusy": {
-    "context": "Info-bulle de Éjecter pendant un envoi.",
-    "en": {
-      "sourceHash": "3edd108afd11",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "3edd108afd11",
-      "status": "ai-reviewed"
-    }
-  },
   "lunii.sendTitle": {
     "context": "Pastille d’activité : envoi en cours, bilan et refus d’un envoi vers la Lunii.",
     "en": {
@@ -9690,24 +10228,13 @@
     }
   },
   "lunii.sendRefused.incomplete": {
-    "context": "Pastille d’activité : envoi en cours, bilan et refus d’un envoi vers la Lunii.",
+    "context": "Carte de refus d’envoi d’un projet incomplet vers la Lunii : résumé sans détail système, nombre de fichiers issu de la cause structurée si disponible, ouverture dans son éditeur.",
     "en": {
-      "sourceHash": "b1842600a692",
+      "sourceHash": "29dec50f3853",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "b1842600a692",
-      "status": "ai-reviewed"
-    }
-  },
-  "lunii.sendRefused.incompleteUnknown": {
-    "context": "Pastille d’activité : envoi en cours, bilan et refus d’un envoi vers la Lunii.",
-    "en": {
-      "sourceHash": "9b43ec9dadd9",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "9b43ec9dadd9",
+      "sourceHash": "29dec50f3853",
       "status": "ai-reviewed"
     }
   },
@@ -9855,35 +10382,35 @@
     }
   },
   "lunii.sendBilan.notStarted_one": {
-    "context": "Pastille d’activité : envoi en cours, bilan et refus d’un envoi vers la Lunii.",
+    "context": "Étape ou bilan d’envoi Lunii : histoire non lancée après arrêt du lot ou annulation.",
     "en": {
-      "sourceHash": "0d7af98bee7c",
+      "sourceHash": "94a4c9b77df2",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "0d7af98bee7c",
+      "sourceHash": "94a4c9b77df2",
       "status": "ai-reviewed"
     }
   },
   "lunii.sendBilan.notStarted_many": {
-    "context": "Pastille d’activité : envoi en cours, bilan et refus d’un envoi vers la Lunii.",
+    "context": "Étape ou bilan d’envoi Lunii : histoire non lancée après arrêt du lot ou annulation.",
     "en": {
-      "sourceHash": "9560f0dca92b",
+      "sourceHash": "7f437cc20a6c",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "9560f0dca92b",
+      "sourceHash": "7f437cc20a6c",
       "status": "ai-reviewed"
     }
   },
   "lunii.sendBilan.notStarted_other": {
-    "context": "Pastille d’activité : envoi en cours, bilan et refus d’un envoi vers la Lunii.",
+    "context": "Étape ou bilan d’envoi Lunii : histoire non lancée après arrêt du lot ou annulation.",
     "en": {
-      "sourceHash": "9560f0dca92b",
+      "sourceHash": "7f437cc20a6c",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "9560f0dca92b",
+      "sourceHash": "7f437cc20a6c",
       "status": "ai-reviewed"
     }
   },
@@ -10425,6 +10952,57 @@
     },
     "it": {
       "sourceHash": "38e162b5dd64",
+      "status": "ai-reviewed"
+    }
+  },
+  "sources.repatriated.managed": {
+    "context": "Dossier technique visible en grisé et non retirable ; ses packs restent au catalogue.",
+    "en": {
+      "sourceHash": "665357b2a96a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "665357b2a96a",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.sendRefused.incompleteCount_one": {
+    "context": "Carte de refus d’envoi d’un projet incomplet vers la Lunii : résumé sans détail système, nombre de fichiers issu de la cause structurée si disponible, ouverture dans son éditeur.",
+    "en": {
+      "sourceHash": "cb2e9a9b1127",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cb2e9a9b1127",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.sendRefused.incompleteCount_other": {
+    "context": "Carte de refus d’envoi d’un projet incomplet vers la Lunii : résumé sans détail système, nombre de fichiers issu de la cause structurée si disponible, ouverture dans son éditeur.",
+    "en": {
+      "sourceHash": "438f88e797e4",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "438f88e797e4",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.sendAction.openProject": {
+    "context": "Carte de refus d’envoi d’un projet incomplet vers la Lunii : résumé sans détail système, nombre de fichiers issu de la cause structurée si disponible, ouverture dans son éditeur.",
+    "en": {
+      "sourceHash": "c17176d05c5a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c17176d05c5a",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.sendRefused.incompleteCount_many": {
+    "context": "Carte de refus d’envoi d’un projet incomplet vers la Lunii : résumé sans détail système, nombre de fichiers issu de la cause structurée si disponible, ouverture dans son éditeur.",
+    "it": {
+      "sourceHash": "438f88e797e4",
       "status": "ai-reviewed"
     }
   }

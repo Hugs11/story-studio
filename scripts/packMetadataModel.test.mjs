@@ -34,16 +34,17 @@ const value = (v) => ({ presence: 'value', value: v });
 const absent = { presence: 'absent', value: null };
 const nulled = { presence: 'null', value: null };
 
-test('le titre proposé reprend la racine puis le projet sans écraser un titre renseigné', () => {
+test('la fiche garde le titre renseigné et propose une racine personnalisée quand il est vide', () => {
   for (const projectType of ['pack', 'simple']) {
-    assert.equal(suggestedPackTitle({ projectType, rootName: 'La forêt', projectName: 'Mon histoire', packMetadata: { title: 'Nouveau pack' } }), projectType === 'pack' ? 'La forêt' : 'Mon histoire');
+    assert.equal(suggestedPackTitle({ projectType, rootName: 'La forêt', projectName: 'Mon histoire', packMetadata: { title: 'Nouveau pack' } }), 'Nouveau pack');
     assert.equal(suggestedPackTitle({ projectType, rootName: 'La forêt', packMetadata: { title: 'Titre choisi' } }), 'Titre choisi');
   }
-  const project = { authoringMode: 'advanced', projectName: 'Projet enregistré' };
+  assert.equal(suggestedPackTitle({ projectType: 'pack', rootName: 'La forêt', packMetadata: { title: '' } }), 'La forêt');
   const view = { metadata: { title: value('Nouveau pack') }, entryTitle: 'La forêt' };
-  assert.equal(advancedPackMetadataDraft(view, project).title, 'La forêt');
-  assert.equal(advancedPackMetadataDraft({ ...view, entryTitle: '' }, project).title, 'Projet enregistré');
-  assert.equal(advancedPackMetadataDraft({ ...view, metadata: { title: value('Titre importé') } }, project).title, 'Titre importé');
+  assert.equal(advancedPackMetadataDraft(view).title, 'Nouveau pack');
+  assert.equal(advancedPackMetadataDraft({ ...view, metadata: {}, entryTitle: '' }).title, '');
+  assert.equal(advancedPackMetadataDraft({ ...view, metadata: {} }).title, 'La forêt');
+  assert.equal(advancedPackMetadataDraft({ ...view, metadata: { title: value('Titre importé') } }).title, 'Titre importé');
   assert.equal(suggestedPackTitle({ projectType: 'pack', rootName: 'Menu racine', projectName: 'Nouveau pack' }), '');
 });
 
@@ -213,21 +214,20 @@ test('le bandeau ne compose pas un âge minimum que le graphe n’a pas', () => 
   assert.equal(advancedPackRecap(null), null);
 });
 
-test('le bandeau libre garde exactement la ligne qu’il affichait', () => {
+test('le bandeau menus affiche l’âge uniquement s’il existe', () => {
   assert.deepEqual(
     freePackRecap({ packMetadata: { title: 'Contes', minAge: '6', version: 3 } }, 'pack'),
     { title: 'Contes', line: '6+ · v3' },
   );
-  // Les replis Libre sont conservés : ils viennent de la convention de nom, qui
-  // les exige. C'est côté graphe qu'ils seraient inventés, pas ici.
+  // Sans âge enregistré, aucune valeur ne figure dans le bandeau.
   assert.deepEqual(
     freePackRecap({ packMetadata: {} }, 'pack'),
-    { title: '', line: '3+ · v1' },
+    { title: '', line: 'v1' },
   );
   // Un projet 'simple' sans titre de pack retombe sur le nom du projet.
   assert.deepEqual(
     freePackRecap({ projectName: 'Mon projet', packMetadata: {} }, 'simple'),
-    { title: 'Mon projet', line: '3+ · v1' },
+    { title: 'Mon projet', line: 'v1' },
   );
   assert.equal(freePackRecap({}, null), null);
 });
@@ -357,4 +357,23 @@ test('the graph cover is the envelope thumbnail, else the entry stage image the 
   assert.equal(advancedCoverImage({ ...bound('resolved'), thumbnailImage: '/thumb.png' }, 'entry.png'), '/thumb.png');
   assert.equal(advancedCoverImage(bound('missing'), 'entry.png'), null);
   assert.equal(advancedCoverImage(bound('resolved'), null), null);
+});
+
+
+test('la proposition ignore tous les noms automatiques des générateurs, dans les trois langues', async () => {
+  const { nextDefaultNodeName } = await import('../src/store/advancedAuthoring/defaultNodeNames.js');
+  const { createTestI18n } = await import('./i18nTestSetup.mjs');
+  const { default: i18next } = await import('i18next');
+  const engine = createTestI18n();
+  await i18next.init({ ...engine.options, resources: engine.options.resources });
+  for (const language of ['fr', 'en', 'it']) {
+    await i18next.changeLanguage(language);
+    for (const rootName of [i18next.t('home:project.creation.rootName'), i18next.t('home:project.creation.folderName'), i18next.t('tree:menu.creation.name')]) {
+      assert.equal(suggestedPackTitle({ rootName }), '', rootName);
+    }
+    const automatic = nextDefaultNodeName(null, 'stage');
+    assert.equal(advancedPackMetadataDraft({ metadata: {}, entryTitle: automatic }).title, '', automatic);
+    assert.equal(advancedPackMetadataDraft({ metadata: {}, entryTitle: 'La forêt' }).title, 'La forêt');
+  }
+  await i18next.changeLanguage('fr');
 });

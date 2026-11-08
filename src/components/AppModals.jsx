@@ -3,11 +3,11 @@ import { lazy } from 'react';
 import { renderDeferred } from './renderDeferred';
 import { SaveProgressModal } from './common/SaveProgressModal';
 import { GenerateProgressModal } from './GenerateModal/GenerateProgressModal';
-import { ImportNoticeToast } from './common/ImportNoticeToast';
+import { NotificationToast } from './common/NotificationToast';
+import { presentStoredError } from '../i18n/userMessage.js';
 import { CreditsModal } from './common/CreditsModal';
 import { SessionMediaTriageModal } from './SessionMediaTriage/SessionMediaTriageModal';
 import { isAdvancedProject } from '../store/projectModel/envelope';
-import { suggestedPackTitle } from '../store/packMetadataModel';
 import { ReleaseNotesModal } from './common/ReleaseNotesModal';
 
 const OptionsTab = lazy(() => import('../tabs/OptionsTab').then((module) => ({ default: module.OptionsTab })));
@@ -107,6 +107,8 @@ export function AppModals({
   // fiche du pack, y compris avant que le document de graphe ait été lu une
   // première fois.
   const graphProject = isAdvancedProject(project);
+  // eslint-disable-next-line i18next/no-literal-string -- Identifiant technique de section des préférences.
+  const openMediaSubscriptions = () => optionsTabProps.openPreferences({ section: 'media-subscriptions' });
 
   return (
     <>
@@ -149,6 +151,7 @@ export function AppModals({
 
       {modals.isOpen('podcastImport') && renderDeferred(
         <PodcastImportModal
+          onManageSubscriptions={() => { modals.close('podcastImport'); onSubscriptionImportClosed?.(); openMediaSubscriptions(); }}
           onImport={onPodcastEditorImport}
           initialSource={subscriptionImportSource?.source === 'podcast' ? subscriptionImportSource : null}
           onClose={() => { modals.close('podcastImport'); onSubscriptionImportClosed?.(); }}
@@ -177,6 +180,7 @@ export function AppModals({
 
       {youtubeFunnelMode && renderDeferred(
         <YoutubeImportFunnel
+          onManageSubscriptions={() => { setYoutubeFunnelMode(null); onSubscriptionImportClosed?.(); openMediaSubscriptions(); }}
           mode={youtubeFunnelMode}
           toLibrary={youtubeFunnelMode === 'editor' && graphProject}
           initialSource={subscriptionImportSource?.source === 'youtube' ? subscriptionImportSource : null}
@@ -210,10 +214,7 @@ export function AppModals({
       {packMetadata.open && renderDeferred(
         <PackNameModal
           open={packMetadata.open}
-          packMetadata={{
-            ...(project.packMetadata ?? {}),
-            title: suggestedPackTitle(project),
-          }}
+          packMetadata={project.packMetadata ?? {}}
           advanced={advancedMetadataForm}
           project={project}
           // `rootImage` est un média d'arbre : il n'existe pas dans un projet
@@ -286,9 +287,8 @@ export function AppModals({
         </GenerateProgressModal>
       )}
 
-      {importNotice && (
-        <ImportNoticeToast message={importNotice} onClose={() => setImportNotice(null)} />
-      )}
+      <NotificationToast visible={Boolean(importNotice)} longDetail title={t('common:appModals.importNotice.title')}
+        detail={importNotice ? presentStoredError(importNotice) : null} onClose={() => setImportNotice(null)} />
 
       {/* Credits modal */}
       {modals.isOpen('credits') && (

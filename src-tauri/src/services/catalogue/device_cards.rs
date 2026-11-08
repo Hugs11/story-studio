@@ -133,6 +133,83 @@ fn cover(served: super::cover_store::Served) -> (Option<Vec<u8>>, bool) {
         _ => (None, true),
     }
 }
+/// Owns only the fixed child it created, never a pre-existing directory.
+/// Held across reconstruction so failure/cancellation also cleans an empty child.
+pub(crate) struct RepatriationTarget {
+    pub directory: std::path::PathBuf,
+    created: bool,
+}
+impl Drop for RepatriationTarget {
+    fn drop(&mut self) {
+        if self.created {
+            let _ = std::fs::remove_dir(&self.directory);
+        }
+    }
+}
+impl RepatriationTarget {
+    pub(crate) fn prepare(workspace: &std::path::Path) -> super::Result<Self> {
+        let owned = workspace.to_owned();
+        super::probe::bounded(workspace, super::probe::PROBE_TIMEOUT, move || {
+            Self::prepare_on_disk(&owned)
+        })
+        .unwrap_or_else(|| {
+            Err(crate::support::user_message::UserMessage::new(
+                crate::support::user_message::codes::STORYTELLER_WORKSPACE_UNAVAILABLE,
+            ))
+        })
+    }
+
+    fn prepare_on_disk(workspace: &std::path::Path) -> super::Result<Self> {
+        let unavailable = |_| {
+            crate::support::user_message::UserMessage::new(
+                crate::support::user_message::codes::STORYTELLER_WORKSPACE_UNAVAILABLE,
+            )
+        };
+        if !workspace.is_absolute() || !workspace.is_dir() {
+            return Err(unavailable(()));
+        }
+        let workspace = std::fs::canonicalize(workspace).map_err(|_| unavailable(()))?;
+        let directory = workspace.join("packs-rapatries");
+        let created = match std::fs::create_dir(&directory) {
+            Ok(()) => true,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => false,
+            Err(_) => return Err(unavailable(())),
+        };
+        let target = Self { directory, created };
+        // A fixed child must not redirect writes outside the workspace.
+        let resolved = std::fs::canonicalize(&target.directory).map_err(|_| unavailable(()))?;
+        if !resolved.is_dir() || resolved.parent() != Some(workspace.as_path()) {
+            return Err(unavailable(()));
+        }
+        // Test real write access before the long reconstruction, on the target volume.
+        let probe = crate::services::storyteller::Scratch::new(&target.directory)
+            .map_err(|_| unavailable(()))?;
+        std::fs::write(probe.0.join("probe"), b"1").map_err(|_| unavailable(()))?;
+        drop(probe);
+        Ok(target)
+    }
+}
+
+// Keep room for collision suffixes and the extension, including on UTF-8 filesystems.
+fn repatriated_stem(title: &str, id: Uuid) -> String {
+    let cleaned = crate::native_pack::sanitized_project_name(title);
+    let mut stem = String::new();
+    if title.chars().any(char::is_alphanumeric) {
+        for ch in cleaned.chars().take(100) {
+            if stem.len() + ch.len_utf8() > 200 {
+                break;
+            }
+            stem.push(ch);
+        }
+    }
+    let stem = stem.trim_end_matches(['.', ' ']);
+    if stem.chars().any(char::is_alphanumeric) {
+        stem.to_owned()
+    } else {
+        format!("Pack-rapatrie-{}", &id.to_string()[..8])
+    }
+}
+
 impl Store {
     /// Uses the ordinary scan observation and identity/grouping publication.
     /// This durable directory is outside the disposable catalogue/cache trees.
@@ -140,6 +217,8 @@ impl Store {
         &self,
         zip: &std::path::Path,
         id: Uuid,
+        workspace: &std::path::Path,
+        archive_name: &str,
     ) -> super::Result<(String, i64)> {
         let _heavy = self.scans.heavy.lock().map_err(super::store::error)?;
         if self.device_card_link(id)?.is_some() {
@@ -147,19 +226,51 @@ impl Store {
                 crate::support::user_message::codes::STORYTELLER_ALREADY_IN_CATALOGUE,
             ));
         }
-        let directory = self.repatriated_root()?;
-        let result = (|| {
-            std::fs::create_dir_all(&directory).map_err(super::store::error)?;
-            let directory = std::fs::canonicalize(&directory).map_err(super::store::error)?;
+        let target = RepatriationTarget::prepare(workspace)?;
+        (|| {
+            let directory =
+                std::fs::canonicalize(&target.directory).map_err(super::store::error)?;
             // Copy and sync on the destination volume before exclusive publication.
             let scratch = crate::services::storyteller::Scratch::new(&directory)?;
             let temporary = scratch.0.join("pack.tmp");
             std::fs::copy(zip, &temporary).map_err(super::store::error)?;
             crate::support::file_sync::sync_file(&temporary).map_err(super::store::error)?;
-            let source = "repatriated-stories";
-            let path = directory.join(format!("{id}-{}.zip", Uuid::new_v4()));
+            use sha2::{Digest, Sha256};
+            let source = format!(
+                "repatriated-{:x}",
+                Sha256::digest(super::path_identity::key(&directory))
+            );
+            let stem = repatriated_stem(archive_name, id);
             let temporary_id = super::writes::file_id(&temporary);
-            if let Err(error) = super::files::publish::no_replace(&temporary, &path) {
+            let mut index = 1u64;
+            let (path, publication) = loop {
+                if index > 1000 {
+                    return Err(super::store::error(
+                        "repatriation filename collision limit reached",
+                    ));
+                }
+                let suffix = if index == 1 {
+                    String::new()
+                } else {
+                    format!(" ({index})")
+                };
+                let path = directory.join(format!("{stem}{suffix}.zip"));
+                if path.symlink_metadata().is_ok() {
+                    index += 1;
+                    continue;
+                }
+                let publication = super::files::publish::no_replace(&temporary, &path);
+                if publication.is_err()
+                    && temporary.exists()
+                    && path.symlink_metadata().is_ok()
+                    && super::writes::file_id(&path) != temporary_id
+                {
+                    index += 1;
+                    continue;
+                }
+                break (path, publication);
+            };
+            if let Err(error) = publication {
                 // A rename can succeed before its directory sync fails. Remove
                 // only our own file, never a rival that exclusive rename refused.
                 if temporary_id.is_some() && super::writes::file_id(&path) == temporary_id {
@@ -171,7 +282,7 @@ impl Store {
             let result = (|| {
                 let cancel = std::sync::atomic::AtomicBool::new(false);
                 let items = super::scan::observe(
-                    source,
+                    &source,
                     &path,
                     &super::scan::token(&path),
                     &cancel,
@@ -183,7 +294,7 @@ impl Store {
                         "repatriated archive observation refused",
                     ));
                 }
-                let published = self.publish_repatriated_items(&directory, source, &items)?;
+                let published = self.publish_repatriated_items(&directory, &source, &items)?;
                 indexed = true;
                 let fiche = self
                     .device_card_link(id)?
@@ -195,12 +306,7 @@ impl Store {
                 let _ = std::fs::remove_file(path);
             }
             result
-        })();
-        if result.is_err() {
-            // remove_dir only removes an empty directory, never prior stories.
-            let _ = std::fs::remove_dir(&directory);
-        }
-        result
+        })()
     }
     pub(crate) fn device_card_link(
         &self,
@@ -284,7 +390,7 @@ mod repatriated_source_tests {
             .unwrap()
     }
     #[test]
-    fn repatriated_source_is_unique_hidden_immutable_and_scannable() {
+    fn repatriated_source_is_unique_per_directory_visible_immutable_and_scannable() {
         let root = crate::services::storyteller::Scratch::new(
             &crate::support::paths::canonical_temp_dir(),
         )
@@ -293,10 +399,10 @@ mod repatriated_source_tests {
             std::sync::Arc::new(Store::open(&root.0.join("data"), &root.0.join("cache")).unwrap());
         let first = Uuid::new_v4();
         store
-            .publish_repatriated_story(&fixture(&root.0, first), first)
+            .publish_repatriated_story(&fixture(&root.0, first), first, &root.0, "Conte")
             .unwrap();
         let source = technical(&store);
-        assert!(store.list_sources().unwrap().items.is_empty());
+        assert_eq!(store.list_sources().unwrap().items.len(), 1);
         assert_eq!(
             store.preview_remove_source(&source.0).err().unwrap().code,
             crate::support::user_message::codes::CATALOG_SOURCE_NOT_FOUND
@@ -308,23 +414,17 @@ mod repatriated_source_tests {
                 store.list_sources().unwrap().catalogue_revision
             )
             .is_err());
-        assert!(store
-            .add_source(
-                &store.repatriated_root().unwrap(),
-                store.sources_revision().unwrap(),
-                false
-            )
-            .is_err());
-        assert!(store
-            .add_source(
-                &store.repatriated_root().unwrap(),
-                store.sources_revision().unwrap(),
-                true
-            )
-            .is_err());
+        let revision = store.sources_revision().unwrap();
+        for declined in [false, true] {
+            let duplicate = store
+                .add_source(&root.0.join("packs-rapatries"), revision, declined)
+                .unwrap();
+            assert_eq!(duplicate.source_id, source.0);
+            assert_eq!(duplicate.sources_revision, revision);
+        }
         let second = Uuid::new_v4();
         store
-            .publish_repatriated_story(&fixture(&root.0, second), second)
+            .publish_repatriated_story(&fixture(&root.0, second), second, &root.0, "Conte")
             .unwrap();
         assert_eq!(technical(&store), source);
         let sources = store.all_sources().unwrap();
@@ -352,10 +452,60 @@ mod repatriated_source_tests {
                 assert_eq!(progress.candidates.processed, 2);
                 break;
             }
-            assert!(start.elapsed() < std::time::Duration::from_secs(20));
+            assert!(start.elapsed() < crate::test_support::timeout());
             std::thread::sleep(std::time::Duration::from_millis(5));
         }
-        assert!(store.list_sources().unwrap().items.is_empty());
+        assert_eq!(store.list_sources().unwrap().items.len(), 1);
+    }
+    #[test]
+    fn repatriation_replaces_removed_manual_source_before_or_after_first_acquisition() {
+        for acquired_before_removal in [false, true] {
+            let root = crate::services::storyteller::Scratch::new(
+                &crate::support::paths::canonical_temp_dir(),
+            )
+            .unwrap();
+            let store = Store::open(&root.0.join("data"), &root.0.join("cache")).unwrap();
+            let directory = root.0.join("packs-rapatries");
+            fs::create_dir(&directory).unwrap();
+            let manual = store.add_source(&directory, 0, false).unwrap();
+            let id = Uuid::new_v4();
+            let zip = fixture(&root.0, id);
+            if acquired_before_removal {
+                store
+                    .publish_repatriated_story(&zip, id, &root.0, "Conte")
+                    .unwrap();
+            }
+            store
+                .remove_source(&manual.source_id, store.sources_revision().unwrap())
+                .unwrap();
+            store
+                .read(|c| {
+                    for table in ["cache.coverage", "cache.file_state", "source_health"] {
+                        let count: i64 = c.query_row(
+                            &format!("SELECT count(*) FROM {table} WHERE source_id=?1"),
+                            [&manual.source_id],
+                            |r| r.get(0),
+                        )?;
+                        assert_eq!(count, 0, "{table}");
+                    }
+                    Ok(())
+                })
+                .unwrap();
+            assert!(store.device_card_link(id).unwrap().is_none());
+            store
+                .publish_repatriated_story(&zip, id, &root.0, "Conte")
+                .unwrap();
+            let entries = store.list_entries(100, None).unwrap();
+            assert_eq!(entries.items.len(), 1);
+            let link = store.device_card_link(id).unwrap().unwrap();
+            assert_eq!(entries.items[0]["id"], link.0);
+            let sources = store.list_sources().unwrap();
+            assert_eq!(sources.items.len(), 1);
+            assert_eq!(sources.items[0].origin, "repatriated");
+            assert_eq!(sources.items[0].status, "active");
+            assert_eq!(sources.items[0].exemplar_count, 1);
+            assert_ne!(sources.items[0].id, manual.source_id);
+        }
     }
     #[test]
     fn repatriated_publication_failures_leave_no_source_or_empty_directory() {
@@ -365,33 +515,314 @@ mod repatriated_source_tests {
         .unwrap();
         let store = Store::open(&root.0.join("data"), &root.0.join("cache")).unwrap();
         assert!(store
-            .publish_repatriated_story(&root.0.join("missing.zip"), Uuid::new_v4())
+            .publish_repatriated_story(&root.0.join("missing.zip"), Uuid::new_v4(), &root.0, "")
             .is_err());
-        assert!(!store.repatriated_root().unwrap().exists());
+        assert!(!root.0.join("packs-rapatries").exists());
         let invalid = root.0.join("invalid.zip");
         fs::write(&invalid, b"invalid zip").unwrap();
         assert!(store
-            .publish_repatriated_story(&invalid, Uuid::new_v4())
+            .publish_repatriated_story(&invalid, Uuid::new_v4(), &root.0, "")
             .is_err());
-        assert!(!store.repatriated_root().unwrap().exists());
+        assert!(!root.0.join("packs-rapatries").exists());
         let id = Uuid::new_v4();
         let zip = fixture(&root.0, id);
         super::super::files::publish::FAIL_PUBLICATION.with(|v| v.set(true));
-        let failed = store.publish_repatriated_story(&zip, id);
+        let failed = store.publish_repatriated_story(&zip, id, &root.0, "Conte");
         super::super::files::publish::FAIL_PUBLICATION.with(|v| v.set(false));
         assert!(failed.is_err());
-        assert!(!store.repatriated_root().unwrap().exists());
+        assert!(!root.0.join("packs-rapatries").exists());
         assert!(store.all_sources().unwrap().items.is_empty());
         // Force failure inside the indexing transaction, after source insertion.
         store.write(|tx| { tx.execute_batch("CREATE TRIGGER refuse_repatriated BEFORE INSERT ON exemplar BEGIN SELECT RAISE(ABORT,'test publication failure'); END;").map_err(super::super::store::error)?; Ok(()) }).unwrap();
         let id = Uuid::new_v4();
         assert!(store
-            .publish_repatriated_story(&fixture(&root.0, id), id)
+            .publish_repatriated_story(&fixture(&root.0, id), id, &root.0, "Conte")
             .is_err());
-        assert!(!store.repatriated_root().unwrap().exists());
+        assert!(!root.0.join("packs-rapatries").exists());
         assert!(store.all_sources().unwrap().items.is_empty());
         assert!(store.device_card_link(id).unwrap().is_none());
     }
+    #[test]
+    fn repatriated_destinations_names_collisions_and_workspace_changes() {
+        let root = crate::services::storyteller::Scratch::new(
+            &crate::support::paths::canonical_temp_dir(),
+        )
+        .unwrap();
+        let store = Store::open(&root.0.join("data"), &root.0.join("cache")).unwrap();
+        let first = root.0.join("work-one");
+        let second = root.0.join("work-two");
+        fs::create_dir(&first).unwrap();
+        fs::create_dir(&second).unwrap();
+        let id = Uuid::new_v4();
+        let zip = fixture(&root.0, id);
+        let folder = first.join("packs-rapatries");
+        fs::create_dir(&folder).unwrap();
+        let manual = store
+            .add_source(&folder, store.sources_revision().unwrap(), false)
+            .unwrap();
+        store
+            .write(|tx| {
+                tx.execute(
+                    "INSERT OR REPLACE INTO source_health(source_id,last_scan_at,last_scan_status,availability) VALUES (?1,42,'success','available')",
+                    [&manual.source_id],
+                )
+                .map_err(super::super::store::error)?;
+                Ok(())
+            })
+            .unwrap();
+        let source_before = store.read(|c| c.query_row("SELECT json_array(id,hex(path),hex(path_key),origin,status,revision,hex(resolved_path)) FROM source WHERE id=?1", [&manual.source_id], |r| r.get::<_, String>(0))).unwrap();
+        let revision_before = store.sources_revision().unwrap();
+        fs::write(folder.join("5+]Le_Conte.zip"), b"rival").unwrap();
+        fs::write(folder.join("5+]Le_Conte (2).zip"), b"rival two").unwrap();
+        store
+            .publish_repatriated_story(&zip, id, &first, "5+]Le Conte")
+            .unwrap();
+        assert_eq!(store.read(|c| c.query_row("SELECT json_array(id,hex(path),hex(path_key),origin,status,revision,hex(resolved_path)) FROM source WHERE id=?1", [&manual.source_id], |r| r.get::<_, String>(0))).unwrap(), source_before);
+        assert_eq!(store.sources_revision().unwrap(), revision_before);
+        assert!(folder.join("5+]Le_Conte (3).zip").is_file());
+        assert_eq!(fs::read(folder.join("5+]Le_Conte.zip")).unwrap(), b"rival");
+        assert_eq!(
+            fs::read(folder.join("5+]Le_Conte (2).zip")).unwrap(),
+            b"rival two"
+        );
+        assert_eq!(
+            store
+                .publish_repatriated_story(&zip, id, &second, "Conte")
+                .unwrap_err()
+                .code,
+            crate::support::user_message::codes::STORYTELLER_ALREADY_IN_CATALOGUE
+        );
+        assert!(!second.join("packs-rapatries").exists());
+        let id = Uuid::new_v4();
+        store
+            .publish_repatriated_story(&fixture(&root.0, id), id, &second, "")
+            .unwrap();
+        assert!(second
+            .join("packs-rapatries")
+            .join(format!("Pack-rapatrie-{}.zip", &id.to_string()[..8]))
+            .is_file());
+        let id = Uuid::new_v4();
+        store
+            .publish_repatriated_story(&fixture(&root.0, id), id, &second, "Conte:/?!")
+            .unwrap();
+        assert!(second.join("packs-rapatries/Conte.zip").is_file());
+        let list = store.list_sources().unwrap();
+        assert_eq!(list.items.len(), 2);
+        assert_eq!(list.exemplar_count, 3);
+        assert_ne!(list.items[0].id, list.items[1].id);
+        assert!(list
+            .items
+            .iter()
+            .any(|s| s.id == manual.source_id && s.origin == "manual"));
+        assert_eq!(store.all_sources().unwrap().items.len(), 2);
+        assert_eq!(
+            list.items
+                .iter()
+                .find(|s| s.native_path == folder)
+                .unwrap()
+                .last_scan_at,
+            Some(42)
+        );
+        assert_eq!(
+            list.items
+                .iter()
+                .filter(|s| s.origin == "repatriated" && s.id.starts_with("repatriated-"))
+                .count(),
+            1
+        );
+    }
+    #[test]
+    fn repatriated_workspace_refused_without_writes_and_existing_child_survives_failure() {
+        let root = crate::services::storyteller::Scratch::new(
+            &crate::support::paths::canonical_temp_dir(),
+        )
+        .unwrap();
+        let store = Store::open(&root.0.join("data"), &root.0.join("cache")).unwrap();
+        for workspace in [
+            std::path::PathBuf::from("relative-workspace"),
+            root.0.join("absent"),
+        ] {
+            let error = store
+                .publish_repatriated_story(
+                    &root.0.join("missing.zip"),
+                    Uuid::new_v4(),
+                    &workspace,
+                    "",
+                )
+                .unwrap_err();
+            assert_eq!(
+                error.code,
+                crate::support::user_message::codes::STORYTELLER_WORKSPACE_UNAVAILABLE
+            );
+        }
+        assert!(!root.0.join("absent").exists());
+        let folder = root.0.join("packs-rapatries");
+        fs::create_dir(&folder).unwrap();
+        assert!(store
+            .publish_repatriated_story(&root.0.join("missing.zip"), Uuid::new_v4(), &root.0, "")
+            .is_err());
+        assert!(folder.is_dir());
+        assert_eq!(fs::read_dir(&folder).unwrap().count(), 0);
+        fs::remove_dir(&folder).unwrap();
+        fs::write(&folder, b"preexisting blocker").unwrap();
+        let error = store
+            .publish_repatriated_story(&root.0.join("missing.zip"), Uuid::new_v4(), &root.0, "")
+            .unwrap_err();
+        assert_eq!(
+            error.code,
+            crate::support::user_message::codes::STORYTELLER_WORKSPACE_UNAVAILABLE
+        );
+        assert_eq!(fs::read(&folder).unwrap(), b"preexisting blocker");
+        assert!(store.all_sources().unwrap().items.is_empty());
+    }
+    #[test]
+    fn repatriated_target_must_not_redirect_outside_workspace() {
+        let root = crate::services::storyteller::Scratch::new(
+            &crate::support::paths::canonical_temp_dir(),
+        )
+        .unwrap();
+        let outside = root.0.join("outside");
+        let workspace = root.0.join("work");
+        fs::create_dir(&outside).unwrap();
+        fs::create_dir(&workspace).unwrap();
+        let normal = RepatriationTarget::prepare(&workspace).unwrap();
+        assert!(normal.directory.is_dir());
+        drop(normal);
+        if !super::super::tests::directory_link(&outside, &workspace.join("packs-rapatries")) {
+            return;
+        }
+        assert!(RepatriationTarget::prepare(&workspace).is_err());
+        assert_eq!(fs::read_dir(&outside).unwrap().count(), 0);
+        assert!(workspace.join("packs-rapatries").symlink_metadata().is_ok());
+    }
+    #[test]
+    fn repatriated_sources_hidden_only_when_empty() {
+        for source in ["repatriated-stories", "repatriated-new-workspace"] {
+            repatriated_source_visibility(source);
+        }
+    }
+    fn repatriated_source_visibility(source: &str) {
+        let root = crate::services::storyteller::Scratch::new(
+            &crate::support::paths::canonical_temp_dir(),
+        )
+        .unwrap();
+        let store = Store::open(&root.0.join("data"), &root.0.join("cache")).unwrap();
+        let directory = root.0.join(source);
+        fs::create_dir(&directory).unwrap();
+        store
+            .publish_repatriated_items(&directory, source, &[])
+            .unwrap();
+        assert!(store.list_sources().unwrap().items.is_empty());
+        assert_eq!(store.all_sources().unwrap().items.len(), 1);
+        let id = Uuid::new_v4();
+        let path = directory.join("legacy.zip");
+        fs::copy(fixture(&root.0, id), &path).unwrap();
+        let items = super::super::scan::observe(
+            source,
+            &path,
+            &super::super::scan::token(&path),
+            &AtomicBool::new(false),
+            &store.activity,
+            true,
+        );
+        store
+            .publish_repatriated_items(&directory, source, &items)
+            .unwrap();
+        let list = store.list_sources().unwrap();
+        assert_eq!(list.items.len(), 1);
+        assert_eq!(list.items[0].origin, "repatriated");
+        assert_eq!(list.items[0].exemplar_count, 1);
+        assert!(store.preview_remove_source(source).is_err());
+        assert!(path.is_file());
+        fs::remove_file(&path).unwrap();
+        store
+            .publish_targeted(
+                "legacy-removed",
+                store.sources_revision().unwrap(),
+                source,
+                &[],
+                &[super::super::path_identity::key(&path)],
+            )
+            .unwrap();
+        assert!(store.list_sources().unwrap().items.is_empty());
+        assert_eq!(store.all_sources().unwrap().items.len(), 1);
+    }
+    #[test]
+    fn repatriated_names_clean_before_fallback_and_truncate_before_suffix() {
+        let id = Uuid::nil();
+        for title in ["", "..", "!!!", "🎵🌙", "[]()++", " /?! "] {
+            assert_eq!(repatriated_stem(title, id), "Pack-rapatrie-00000000");
+        }
+        assert_eq!(repatriated_stem("story-studio", id), "story-studio");
+        assert_eq!(repatriated_stem(&"é".repeat(150), id), "é".repeat(100));
+        assert_eq!(
+            repatriated_stem(&format!("{}..titre", "a".repeat(98)), id),
+            "a".repeat(98)
+        );
+        assert!(repatriated_stem(&"界".repeat(150), id).len() <= 200);
+    }
+
+    #[test]
+    fn repatriated_collisions_have_a_hard_limit_without_touching_rivals() {
+        let root = crate::services::storyteller::Scratch::new(
+            &crate::support::paths::canonical_temp_dir(),
+        )
+        .unwrap();
+        let store = Store::open(&root.0.join("data"), &root.0.join("cache")).unwrap();
+        let directory = root.0.join("packs-rapatries");
+        fs::create_dir(&directory).unwrap();
+        let title = "é".repeat(150);
+        let stem = repatriated_stem(&title, Uuid::nil());
+        for index in 1..=1000 {
+            let suffix = if index == 1 {
+                String::new()
+            } else {
+                format!(" ({index})")
+            };
+            fs::write(directory.join(format!("{stem}{suffix}.zip")), b"rival").unwrap();
+        }
+        let id = Uuid::new_v4();
+        assert!(store
+            .publish_repatriated_story(&fixture(&root.0, id), id, &root.0, &title)
+            .is_err());
+        assert_eq!(fs::read_dir(&directory).unwrap().count(), 1000);
+        assert!(fs::read_dir(&directory)
+            .unwrap()
+            .all(|entry| fs::read(entry.unwrap().path()).unwrap() == b"rival"));
+        assert!(store.all_sources().unwrap().items.is_empty());
+    }
+
+    #[test]
+    fn repatriated_workspace_probe_timeout_refuses_without_waiting_for_mount() {
+        let root = crate::services::storyteller::Scratch::new(
+            &crate::support::paths::canonical_temp_dir(),
+        )
+        .unwrap();
+        let path = root.0.clone();
+        let (entered, started) = std::sync::mpsc::channel();
+        let (release, held) = std::sync::mpsc::channel::<()>();
+        let worker = std::thread::spawn(move || {
+            super::super::probe::bounded(&path, crate::test_support::timeout(), move || {
+                entered.send(()).unwrap();
+                held.recv().unwrap();
+            })
+        });
+        started.recv().unwrap();
+        let begin = std::time::Instant::now();
+        let result = RepatriationTarget::prepare(&root.0);
+        release.send(()).unwrap();
+        worker.join().unwrap();
+        assert_eq!(
+            result.err().unwrap().code,
+            crate::support::user_message::codes::STORYTELLER_WORKSPACE_UNAVAILABLE
+        );
+        assert!(
+            begin.elapsed()
+                < super::super::probe::PROBE_TIMEOUT + std::time::Duration::from_secs(2)
+        );
+        assert!(!root.0.join("packs-rapatries").exists());
+    }
+
     #[test]
     fn repatriated_indexing_uses_sources_revision_after_concurrent_source_change() {
         let root = crate::services::storyteller::Scratch::new(
@@ -401,7 +832,7 @@ mod repatriated_source_tests {
         let store = Store::open(&root.0.join("data"), &root.0.join("cache")).unwrap();
         let id = Uuid::new_v4();
         let zip = fixture(&root.0, id);
-        let directory = store.repatriated_root().unwrap();
+        let directory = root.0.join("repatriated-stories");
         fs::create_dir(&directory).unwrap();
         let path = directory.join("story.zip");
         fs::copy(zip, &path).unwrap();
@@ -426,7 +857,7 @@ mod repatriated_source_tests {
             .publish_repatriated_items(&directory, source, &observed)
             .unwrap();
         assert!(store.device_card_link(id).unwrap().is_some());
-        assert_eq!(store.list_sources().unwrap().items.len(), 1);
+        assert_eq!(store.list_sources().unwrap().items.len(), 2);
         assert_eq!(store.all_sources().unwrap().items.len(), 2);
     }
 }

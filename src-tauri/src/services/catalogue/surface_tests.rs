@@ -18,7 +18,7 @@ impl Fixture {
         Arc::new(store::Store::open(&self.0.join("data"), &self.0.join("cache")).unwrap())
     }
     fn wait(&self, store: &store::Store, id: &str) -> events::Progress {
-        let deadline = Instant::now() + Duration::from_secs(10);
+        let deadline = Instant::now() + crate::test_support::timeout();
         loop {
             let p = store.get_operation(id).unwrap();
             if !matches!(p.status.as_str(), "running" | "queued" | "cancelling") {
@@ -35,53 +35,26 @@ impl Drop for Fixture {
     }
 }
 #[test]
-fn source_contract_and_hint_resolution_are_durable() {
+fn source_contract_is_durable() {
     let f = Fixture::new();
     let store = f.store();
-    std::fs::create_dir_all(f.0.join("first")).unwrap();
+    std::fs::create_dir_all(f.0.join("first/exports")).unwrap();
     store
         .remember_workspace(Some(f.0.join("first").to_str().unwrap()))
         .unwrap();
-    let second = f.0.join("second");
-    std::fs::create_dir_all(second.join("exports")).unwrap();
-    std::fs::create_dir_all(second.join("sauvegardes")).unwrap();
-    store
-        .remember_workspace(Some(second.to_str().unwrap()))
-        .unwrap();
     let list = store.list_sources().unwrap();
-    let hint = list
+    let exports = list
         .items
         .iter()
-        .find(|s| s.status == "hint" && s.path.ends_with("exports"))
+        .find(|s| s.status == "active" && s.path.ends_with("exports"))
         .unwrap();
-    let id = hint.id.clone();
-    let accepted = store
-        .add_source(&hint.native_path, list.sources_revision, false)
-        .unwrap();
-    let hints = store.list_sources().unwrap();
-    assert_eq!(
-        hints.items.iter().find(|s| s.id == id).unwrap().status,
-        "active"
-    );
-    let hint = hints.items.iter().find(|s| s.status == "hint").unwrap();
-    let declined_id = hint.id.clone();
+    let id = exports.id.clone();
     store
-        .add_source(&hint.native_path, accepted.sources_revision, true)
+        .add_source(&exports.native_path, list.sources_revision, false)
         .unwrap();
     drop(store);
     let store = f.store();
-    store
-        .remember_workspace(Some(second.to_str().unwrap()))
-        .unwrap();
     let list = store.list_sources().unwrap();
-    assert_eq!(
-        list.items
-            .iter()
-            .find(|s| s.id == declined_id)
-            .unwrap()
-            .status,
-        "declined"
-    );
     let actual = serde_json::to_value(list.items.iter().find(|s| s.id == id).unwrap()).unwrap();
     let fixture: serde_json::Value = serde_json::from_str(include_str!(
         "../../../../scripts/fixtures/catalogue/source.json"

@@ -64,7 +64,7 @@ function audio(node) {
   return elements(node).find((entry) => entry.type === PackAudioProcessingFields);
 }
 
-test('la fiche propose les trois modes de silence, un seul actif et la durée courante', (t) => {
+test('la fiche propose deux modes et un interrupteur, avec la durée courante', (t) => {
   for (const mode of ['normalize', 'add', 'off']) {
     const updates = [];
     const hook = runner(() => PackAudioProcessingFields({
@@ -74,13 +74,36 @@ test('la fiche propose les trois modes de silence, un seul actif et la durée co
     t.after(() => hook.unmount());
     const node = hook.render();
     const segments = elements(node).filter((entry) => entry.props.className?.split(' ').includes('pack-meta-audio-segment'));
-    assert.equal(segments.length, 3);
+    assert.equal(segments.length, 2);
     assert.deepEqual(segments.map((entry) => entry.props['aria-pressed']),
-      ['normalize', 'add', 'off'].map((candidate) => candidate === mode));
+      ['normalize', 'add'].map((candidate) => candidate === (mode === 'off' ? 'normalize' : mode)));
     assert.equal(elements(node).find((entry) => entry.props.className === 'pack-meta-audio-duration').props.children, '0,4 s');
+    const toggle = elements(node).find((entry) => entry.props.ariaLabel === 'Activer le traitement des silences de début et de fin');
+    assert.equal(toggle.props.on, mode !== 'off');
+    const content = elements(node).find((entry) => entry.type === 'fieldset');
+    assert.equal(content.props.disabled, mode === 'off');
+    assert.equal(content.props.inert, mode === 'off');
+    if (mode === 'off') toggle.props.onChange(true);
     segments[1].props.onClick();
-    assert.deepEqual(updates, [['silenceMode', 'add']]);
+    assert.deepEqual(updates, mode === 'off'
+      ? [['silenceMode', 'normalize'], ['silenceMode', 'add']]
+      : [['silenceMode', 'add']]);
   }
+});
+
+test('éteindre puis rallumer restaure le dernier mode de la session', (t) => {
+  const values = { silenceMode: 'normalize', harmonizeLoudness: true };
+  const hook = runner(() => PackAudioProcessingFields({
+    values, onChange: (field, value) => { values[field] = value; },
+  }));
+  t.after(() => hook.unmount());
+  const toggle = () => elements(hook.render()).find((entry) => entry.props.ariaLabel === 'Activer le traitement des silences de début et de fin');
+  elements(hook.render()).find((entry) => entry.props['aria-label']?.startsWith('Ajouter')).props.onClick();
+  assert.equal(values.silenceMode, 'add');
+  toggle().props.onChange(false);
+  assert.equal(values.silenceMode, 'off');
+  toggle().props.onChange(true);
+  assert.equal(values.silenceMode, 'add');
 });
 
 test('le stylo ouvre deux saisies et la remise par défaut efface les deux personnalisations', (t) => {
@@ -301,4 +324,51 @@ test('assembly with unknown age survives editor metadata confirmation and final 
   assert.doesNotMatch(generateConventionName(project.packMetadata),/^3\+\]/);
   assert.doesNotMatch(projectToRustExport(project).name,/^3\+\]/);
   hook.unmount();
+});
+
+
+for (const graph of [false, true]) {
+  test(`${graph ? 'graphe' : 'menus'} : la puce active revient à un âge vide, conservé à la validation`, async (t) => {
+    const state = setup({ graph });
+    state.props.packMetadata.minAge = '6';
+    t.after(() => state.hook.unmount());
+    state.hook.render(); state.hook.flush();
+    const chip = () => elements(state.hook.render()).find(entry => entry.type === 'button' && entry.props.children?.[0] === '6');
+    assert.equal(chip().props['aria-pressed'], true);
+    chip().props.onClick();
+    assert.equal(chip().props['aria-pressed'], false);
+    await control(state.hook.render(), 'Appliquer').props.onClick();
+    assert.equal((graph ? state.saved[0].naming : state.saved[0]).minAge, '');
+    chip().props.onClick();
+    assert.equal(chip().props['aria-pressed'], true);
+  });
+}
+
+test('fiche menus : titre proposé depuis la racine, Annuler ne modifie pas le projet', async (t) => {
+  const state = setup();
+  state.project.rootName = 'La forêt';
+  state.props.packMetadata.title = '';
+  t.after(() => state.hook.unmount());
+  state.hook.render(); state.hook.flush();
+  const title = elements(state.hook.render()).find(entry => entry.type === 'input' && entry.props.placeholder === i18next.t('home:packName.title.placeholder'));
+  assert.equal(title.props.value, 'La forêt');
+  control(state.hook.render(), 'Annuler').props.onClick();
+  assert.equal(state.props.packMetadata.title, '');
+  assert.equal(state.saved.length, 0);
+});
+
+test('fiche graphe : la proposition reste dans le brouillon jusqu’à Appliquer', async (t) => {
+  const { advancedPackMetadataDraft } = await import('../src/store/packMetadataModel.js');
+  const view = { metadata: {}, entryTitle: 'La forêt' };
+  const state = setup({ graph: true });
+  state.props.advanced.draft = advancedPackMetadataDraft(view);
+  t.after(() => state.hook.unmount());
+  state.hook.render(); state.hook.flush();
+  const title = elements(state.hook.render()).find(entry => entry.type === 'input' && entry.props.placeholder === i18next.t('home:packName.title.placeholder'));
+  assert.equal(title.props.value, 'La forêt');
+  control(state.hook.render(), 'Annuler').props.onClick();
+  assert.deepEqual(view.metadata, {});
+  assert.equal(state.saved.length, 0);
+  await control(state.hook.render(), 'Appliquer').props.onClick();
+  assert.equal(state.saved[0].title, 'La forêt');
 });

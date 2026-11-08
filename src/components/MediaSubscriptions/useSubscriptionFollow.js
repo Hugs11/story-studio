@@ -1,8 +1,16 @@
 import { useCallback, useRef, useState } from 'react';
-import { findProjectSubscription, sameSubscriptionSource } from '../../store/mediaSubscriptionSource.js';
+import { findProjectSubscription, getProjectFollowedSources, sameSubscriptionSource } from '../../store/mediaSubscriptionSource.js';
 import { translateMedia } from '../../i18n/mediaPresentation.js';
 
 const EMPTY_FOLLOW = Object.freeze({ enabled: false, touched: false, subscriptionId: null, state: null });
+
+/** Préremplissage local uniquement : aucun accès réseau ni initialSource de notification. */
+export function useFollowedImportSource(source, enabled = true) {
+  const sources = enabled ? getProjectFollowedSources(source) : [];
+  const [url, setUrl] = useState(() => sources.length === 1 ? sources[0].url : '');
+  const followed = sources.find((item) => sameSubscriptionSource(item, { source, url })) ?? null;
+  return { sources, url, setUrl, followed };
+}
 
 /**
  * État de la case « Suivre » des imports podcast et YouTube.
@@ -39,7 +47,9 @@ export function useSubscriptionFollow(source, initialSource) {
     setFollow((current) => {
       const keep = !previousUrl || previousUrl === url ? current : EMPTY_FOLLOW;
       if (!known) return { ...keep, subscriptionId: null, state: null };
-      if (keep.touched) return { ...keep, subscriptionId: known.subscriptionId, state: known.state };
+      if (keep.touched && known.state !== 'active' && known.state !== 'paused') {
+        return { ...keep, subscriptionId: known.subscriptionId, state: known.state };
+      }
       return {
         enabled: known.state === 'active' || known.state === 'pending',
         touched: false,

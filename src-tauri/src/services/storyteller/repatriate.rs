@@ -452,11 +452,13 @@ pub(crate) fn run(
     device: Device,
     id: Uuid,
     cache: PathBuf,
+    destination: (PathBuf, String),
     op: Arc<Operation>,
     sink: Sink,
 ) {
     op.emit(&sink, false);
     let result = (|| {
+        let _target = crate::services::catalogue::RepatriationTarget::prepare(&destination.0)?;
         fs::create_dir_all(&cache).map_err(failure)?;
         let scratch = Scratch::new(&cache)?;
         let zip = acquire(&store, &device, id, &scratch.0, &op.cancel, |percent| {
@@ -465,6 +467,15 @@ pub(crate) fn run(
                 p.result = Some(serde_json::json!({"progress":percent}));
             }
             op.emit(&sink, false);
+        })
+        .map_err(|error| {
+            // A disappearing volume is not an incomplete pack. Keep local
+            // workspace/publication failures outside this device-read boundary.
+            if !device.root.join(".md").is_file() {
+                UserMessage::new(codes::STORYTELLER_REPATRIATE_DISCONNECTED)
+            } else {
+                error
+            }
         })?;
         // Cancellation and publication share the progress mutex. After this
         // boundary publication completes, and late cancellation is a no-op.
@@ -473,7 +484,7 @@ pub(crate) fn run(
             check(&op.cancel)?;
             op.published.store(true, Ordering::SeqCst);
         }
-        store.publish_repatriated_story(&zip, id)
+        store.publish_repatriated_story(&zip, id, &destination.0, &destination.1)
     })();
     if let Ok(mut p) = op.progress.lock() {
         p.scan_complete = true;
@@ -499,7 +510,7 @@ pub(crate) fn run(
                 if let Some(detail) = &reason.detail {
                     log::warn!(target: "lunii_repatriate", "{}", detail);
                 }
-                p.error = Some(reason);
+                p.error = Some(driver::classify_error(reason, "preparing"));
                 p.outcomes.refused = 1;
             }
         }

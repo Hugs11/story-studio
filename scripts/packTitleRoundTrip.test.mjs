@@ -17,7 +17,7 @@ import { buildExportRequest } from '../src/store/advancedExport/exportRequest.js
 import { prepareImportedAdvancedProject } from '../src/store/projectModel/authoring.js';
 import { normalizeProjectData, projectToRustExport } from '../src/store/projectModel.js';
 import { getUnpackedPackDetails } from '../src/store/unpackProject.js';
-import { bumpPackVersion, generateConventionName } from '../src/utils/packConvention.js';
+import { generateConventionName } from '../src/utils/packConvention.js';
 
 const EDGE = { leading: 0, trailing: 0 };
 
@@ -41,14 +41,14 @@ for (const [label, title, metadata, expected] of [
 
 // ── Import graphe : le titre lisible, l'âge dans les champs de nommage ──────
 
-function graphImportInvoker(title, calls) {
+function graphImportInvoker(title, calls, version = 5) {
   return async (command, args) => {
     calls.push({ command, args });
     if (command === 'read_advanced_graph_view') {
       return {
         metadata: {
           title: title == null ? { presence: 'absent' } : { presence: 'value', value: title },
-          version: { presence: 'value', value: 5 },
+          version: { presence: 'value', value: version },
         },
         opaqueMembers: [],
       };
@@ -95,7 +95,7 @@ test('import graphe d’un pack au titre libre : le titre reste tel quel, le nom
   const titles = metadataGestures(calls).map((update) => update.title).filter(Boolean);
   assert.deepEqual(titles, []);
   assert.equal(prepared.packMetadata.namingMode, 'convention');
-  assert.equal(prepared.packMetadata.minAge, '3');
+  assert.equal(prepared.packMetadata.minAge, '');
 });
 
 test('import graphe et import par menus donnent la même fiche', async () => {
@@ -145,7 +145,7 @@ test('export graphe en nom libre : story.json garde le titre du document', () =>
   assert.equal('storyTitle' in request, false);
 });
 
-// ── Aller-retour : deux cycles par éditeur ──────────────────────────────────
+// ── Aller-retour : trois cycles par éditeur ──────────────────────────────────
 
 // Ce que l'éditeur par menus écrit dans `story.json` : le `name` exporté.
 function menusCycle(storyTitle, version, zipPath) {
@@ -153,7 +153,7 @@ function menusCycle(storyTitle, version, zipPath) {
   const project = normalizeProjectData({
     projectType: 'pack',
     projectName: 'pack',
-    packMetadata: { ...packMetadata, version: bumpPackVersion(version) },
+    packMetadata,
     rootEntries: [],
   });
   return {
@@ -167,12 +167,12 @@ function menusCycle(storyTitle, version, zipPath) {
 async function graphCycle(storyTitle, version, zipPath) {
   const calls = [];
   const prepared = await prepareImportedAdvancedProject(importedGraph(), {
-    invokeCommand: graphImportInvoker(storyTitle, calls),
+    invokeCommand: graphImportInvoker(storyTitle, calls, version),
     packPath: zipPath,
   });
   const updates = metadataGestures(calls);
   const fiche = updates.find((update) => update.title)?.title?.value ?? storyTitle;
-  const nextVersion = bumpPackVersion(version);
+  const nextVersion = metadataGestures(calls)[0].version.value;
   return {
     fiche,
     produced: advancedStoryTitle({ packMetadata: prepared.packMetadata, title: fiche, version: nextVersion }),
@@ -184,6 +184,8 @@ for (const [label, start, startVersion, readable] of [
   ['convention avec auteur', '3+]Le_Renard[by_Ésope_V5', 5, 'Le Renard'],
   ['convention sans auteur, autre âge', '5+]Le_Renard_V5', 5, 'Le Renard'],
   ['titre libre', 'Les histoires du soir', 1, 'Les histoires du soir'],
+  ['titre libre', 'Le_Renard_V3', 3, 'Le Renard'],
+  ['titre libre', 'Le Renard V3', 3, 'Le Renard'],
 ]) {
   for (const [editor, cycle] of [['menus', menusCycle], ['graphe', graphCycle]]) {
     test(`aller-retour ${editor}, ${label} : fiche lisible, âge posé une seule fois`, async () => {
@@ -195,9 +197,9 @@ for (const [label, start, startVersion, readable] of [
         const result = await cycle(title, version, zipPath);
         seen.push(result);
         assert.equal(result.fiche, readable, `cycle ${round + 1} : fiche`);
-        assert.match(result.produced, /^\d\+\]/, `cycle ${round + 1} : convention`);
-        assert.equal((result.produced.match(/\d\+\]/g) ?? []).length, 1);
-        assert.equal((result.produced.match(/_V\d+/g) ?? []).length, 1);
+        assert.equal((result.produced.match(/\d\+\]/g) ?? []).length, label === 'titre libre' ? 0 : 1);
+        assert.equal((result.produced.match(/_V\d+/g) ?? []).length, startVersion > 1 ? 1 : 0);
+        assert.equal(result.version, startVersion);
         assert.doesNotMatch(result.produced, /Ésope.*Ésope/);
         title = result.produced;
         version = result.version;
@@ -205,6 +207,19 @@ for (const [label, start, startVersion, readable] of [
       assert.equal(seen[1].produced.replace(/_V\d+$/, ''), seen[2].produced.replace(/_V\d+$/, ''));
     });
   }
+}
+
+for (const [editor, cycle] of [['menus', menusCycle], ['graphe', graphCycle]]) {
+  test(`${editor} : Mission V2 en version 5 conserve son suffixe de titre sur trois cycles`, async () => {
+    let title = 'Mission V2';
+    for (let round = 0; round < 3; round += 1) {
+      const result = await cycle(title, 5, `C:/packs/mission-${round}.zip`);
+      assert.equal(result.fiche, 'Mission V2');
+      assert.equal(result.produced, 'Mission_V2_V5');
+      assert.equal(result.version, 5);
+      title = result.produced;
+    }
+  });
 }
 
 test('les deux éditeurs produisent le même titre d’archive pour le même pack', async () => {
@@ -218,7 +233,7 @@ test('les deux éditeurs produisent le même titre d’archive pour le même pac
 
 // ── Nouveau projet graphe : convention par défaut ───────────────────────────
 
-test('un nouveau projet graphe est en convention : l’archive porte l’âge', async () => {
+test('un nouveau projet graphe est en convention sans âge inventé', async () => {
   const { acquireCreatedAdvancedProject } = await import('../src/store/projectModel/authoring.js');
   const project = await acquireCreatedAdvancedProject({
     title: 'Le Renard',
@@ -226,10 +241,11 @@ test('un nouveau projet graphe est en convention : l’archive porte l’âge', 
   });
   assert.equal(project.packMetadata.namingMode, 'convention');
   const storyTitle = advancedStoryTitle({ packMetadata: project.packMetadata, title: 'Le Renard', version: 1 });
-  assert.equal(storyTitle, '3+]Le_Renard');
+  assert.equal(project.packMetadata.minAge, '');
+  assert.equal(storyTitle, 'Le_Renard');
   assert.equal(advancedArchiveBaseName({ packMetadata: project.packMetadata, title: 'Le Renard', version: 1 }), storyTitle);
   // Aller-retour : regénérer depuis le titre déjà composé ne double rien.
-  assert.equal(advancedStoryTitle({ packMetadata: project.packMetadata, title: storyTitle, version: 2 }), '3+]Le_Renard_V2');
+  assert.equal(advancedStoryTitle({ packMetadata: project.packMetadata, title: storyTitle, version: 2 }), 'Le_Renard_V2');
 });
 
 test('un nouveau projet graphe sans titre reste sans nom composé', async () => {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useCatalogueTranslation } from '../../../i18n/useCatalogueTranslation.js';
 import { presentCatalogueError } from '../../../store/catalogue/catalogueApi.js';
 import { luniiWriteRefusal } from '../../../store/catalogue/luniiDevices.js';
+import { removalPending } from '../../../store/catalogue/luniiQueueView.js';
 import { MenuPopover, MenuItem } from '../../layout/MenuPopover.jsx';
 import { Button } from '../../common/Button.jsx';
 import { Ellipsis, Pencil, Download, Eye, Trash2 } from '../../icons/LucideLocal.jsx';
@@ -16,9 +17,11 @@ export function writeReason(device, t, method) {
  * `{ key, Icon, label, enabled, detail, title, separatorBefore, run }`.
  * Repatriation is offered only for a story the catalogue does not hold yet.
  */
-export function storyMenuEntries({ device, story, gestures, onName, t }) {
-  const reason = writeReason(device, t);
-  const repatriateReason = story.kind === 'official' ? t('catalogue:lunii.officialReason') : writeReason(device, t, 'repatriateMany');
+export function storyMenuEntries({ device, story, gestures, onName, t, queued = [] }) {
+  // A removal already waits: no contradicting gesture is offered without saying why.
+  const waitingRemoval = removalPending(queued) ? t('catalogue:lunii.queue.removingReason') : null;
+  const reason = writeReason(device, t) || waitingRemoval;
+  const repatriateReason = story.kind === 'official' ? t('catalogue:lunii.officialReason') : writeReason(device, t, 'repatriateMany') || waitingRemoval;
   const entries = [];
   if (!story.orphan && story.kind === 'unknown') entries.push({ key: 'name', Icon: Pencil, label: t('catalogue:lunii.nameStory'), enabled: !reason, title: reason, run: onName });
   if (!story.orphan && !story.catalogueFicheId) entries.push({ key: 'repatriate', Icon: Download, label: t('catalogue:lunii.repatriate'), enabled: !repatriateReason, detail: repatriateReason, run: () => gestures?.repatriate(device, [story]) });
@@ -28,13 +31,13 @@ export function storyMenuEntries({ device, story, gestures, onName, t }) {
   return entries;
 }
 
-export function LuniiStoryMenu({ device, story, gestures, onName }) {
+export function LuniiStoryMenu({ device, story, gestures, onName, queued = [] }) {
   const { t } = useCatalogueTranslation();
   const [open, setOpen] = useState(false);
   const run = action => { setOpen(false); action?.(); };
   return <MenuPopover open={open} onOpenChange={setOpen} activation="click" title={story.title || t('catalogue:lunii.untitled')} label={t('catalogue:lunii.menu')}
     trigger={({ openPopover }) => <Button size="sm" variant="icon" aria-haspopup="menu" aria-expanded={open} aria-label={t('catalogue:lunii.menu')} onClick={openPopover}><Ellipsis width={14} height={14} /></Button>}>
-    {storyMenuEntries({ device, story, gestures, onName, t }).flatMap(entry => [
+    {storyMenuEntries({ device, story, gestures, onName, t, queued }).flatMap(entry => [
       entry.separatorBefore && <div key={`${entry.key}-separator`} role="separator" />,
       <MenuItem key={entry.key} Icon={entry.Icon} label={entry.label} disabled={!entry.enabled} detail={entry.detail} title={entry.title} onClick={() => run(entry.run)} />,
     ])}

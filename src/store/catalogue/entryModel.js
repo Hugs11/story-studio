@@ -199,6 +199,9 @@ export function displayTitle(value) {
     ? parts[0].trim() : value;
 }
 
+/** Nom d'une histoire partout où l'interface la nomme : celui de sa carte du catalogue (`null` sans titre). */
+export function cardTitle(card) { return card?.displayTitle ?? card?.title ?? null; }
+
 /**
  * Normalise une entrée publiée. Les exemplaires retirés (remplacés par une
  * nouvelle identité au même emplacement) ne sont pas présentés.

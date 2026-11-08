@@ -39,6 +39,23 @@ pub(crate) fn measure_loudness_ebur128(
     input: &Path,
     pre_filters: &[String],
 ) -> Result<LoudnessMeasure, String> {
+    measure_loudness(ffmpeg, input, pre_filters, false)
+}
+
+pub(crate) fn measure_loudness_for_generation(
+    ffmpeg: &Path,
+    input: &Path,
+    pre_filters: &[String],
+) -> Result<LoudnessMeasure, String> {
+    measure_loudness(ffmpeg, input, pre_filters, true)
+}
+
+fn measure_loudness(
+    ffmpeg: &Path,
+    input: &Path,
+    pre_filters: &[String],
+    allow_infinite: bool,
+) -> Result<LoudnessMeasure, String> {
     let mut cmd = Command::new(ffmpeg);
     cmd.args(ebur128_args(input, pre_filters))
         .stdout(Stdio::null())
@@ -69,14 +86,38 @@ pub(crate) fn measure_loudness_ebur128(
                 .into_transport()
         });
     }
-    parse_ebur128_summary(&String::from_utf8_lossy(&out.stderr)).ok_or_else(|| {
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let measure = if allow_infinite {
+        parse_summary(&stderr, true)
+    } else {
+        parse_ebur128_summary(&stderr)
+    };
+    measure.ok_or_else(|| {
         user_message::UserMessage::new(codes::AUDIO_EBUR128_MEASURE_INCOMPLETE)
             .with_detail("Mesure audio ebur128 incomplète.".to_string())
             .into_transport()
     })
 }
 
+/// Add-time analysis and generation accept digital silence.
+/// Checker callers retain the strict public measurement above.
+pub(super) fn measure_loudness_for_level(
+    ffmpeg: &Path,
+    input: &Path,
+    pre_filters: &[String],
+    deadline: std::time::Instant,
+) -> Result<LoudnessMeasure, String> {
+    let stderr = super::level::run_level_tool(ffmpeg, &ebur128_args(input, pre_filters), deadline)?;
+    parse_summary(&stderr, true).ok_or_else(|| {
+        user_message::UserMessage::new(codes::AUDIO_EBUR128_MEASURE_INCOMPLETE).into_transport()
+    })
+}
+
 pub(crate) fn parse_ebur128_summary(stderr: &str) -> Option<LoudnessMeasure> {
+    parse_summary(stderr, false)
+}
+
+pub(crate) fn parse_summary(stderr: &str, allow_infinite: bool) -> Option<LoudnessMeasure> {
     let summary = stderr.rsplit("Summary:").next().unwrap_or(stderr);
     let mut section = "";
     let mut integrated_lufs = None;
@@ -90,11 +131,11 @@ pub(crate) fn parse_ebur128_summary(stderr: &str) -> Option<LoudnessMeasure> {
             "True peak:" => section = "peak",
             _ => {
                 if section == "integrated" && line.starts_with("I:") {
-                    integrated_lufs = parse_measure_value(line);
+                    integrated_lufs = parse_measure_value(line, allow_infinite);
                 } else if section == "range" && line.starts_with("LRA:") {
-                    loudness_range_lu = parse_measure_value(line);
+                    loudness_range_lu = parse_measure_value(line, allow_infinite);
                 } else if section == "peak" && line.starts_with("Peak:") {
-                    true_peak_db = parse_measure_value(line);
+                    true_peak_db = parse_measure_value(line, allow_infinite);
                 }
             }
         }
@@ -224,13 +265,13 @@ fn in_range(value: f64, (min, max): (f64, f64)) -> bool {
     (min..=max).contains(&value)
 }
 
-fn parse_measure_value(line: &str) -> Option<f64> {
+fn parse_measure_value(line: &str, allow_infinite: bool) -> Option<f64> {
     let value = line.split(':').nth(1)?.split_whitespace().next()?;
     let parsed = value.parse::<f64>().ok()?;
-    parsed.is_finite().then_some(parsed)
+    (parsed.is_finite() || (allow_infinite && parsed.is_infinite())).then_some(parsed)
 }
 
-fn compact_ffmpeg_error(stderr: &[u8]) -> String {
+pub(super) fn compact_ffmpeg_error(stderr: &[u8]) -> String {
     let text = String::from_utf8_lossy(stderr);
     let lines: Vec<&str> = text
         .lines()

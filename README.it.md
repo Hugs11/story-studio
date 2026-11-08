@@ -1,4 +1,6 @@
-> 🇬🇧 [English](README.md) | 🇫🇷 [Français](README.fr.md) | 🇮🇹 **Italiano**
+<p align="center">
+  🇬🇧 <a href="README.md" lang="en">English</a> | 🇫🇷 <a href="README.fr.md" lang="fr">Français</a> | 🇮🇹 <strong>Italiano</strong>
+</p>
 
 <p align="center"><img src="public/logostory.svg" alt="Story Studio" width="240"></p>
 <p align="center">Un moderno editor desktop per creare, unire, provare e generare audiolibri compatibili con Lunii.</p>
@@ -6,7 +8,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: build desktop" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="Licenza: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requisiti"><img alt="Piattaforme: Windows, Linux e macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Versione 0.9.10" src="https://img.shields.io/badge/version-0.9.10-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Versione 0.9.11" src="https://img.shields.io/badge/version-0.9.11-2F80ED.svg"></a>
   <a href="#stato-beta"><img alt="Stato: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -45,9 +47,11 @@ La scrittura sul dispositivo (invio, eliminazione, riordino e recupero di audiol
 - Gli audiolibri ufficiali Lunii non vengono mai copiati sul tuo computer.
 - Story Studio è fornito "così com'è", senza alcuna garanzia (vedi la [licenza](LICENSE)). **Lo usi con il tuo dispositivo a tuo rischio**: gli autori non possono essere ritenuti responsabili di perdite di dati o malfunzionamenti del dispositivo.
 
-## Versione 0.9.10
+## Versione 0.9.11
 
-Story Studio 0.9.10 aggiunge un catalogo locale e la gestione diretta della Lunii: consulta, invia e recupera audiolibri, gestisci la lista del dispositivo ed espellilo. Titoli e copertine ufficiali sono facoltativi e richiedono il tuo consenso.
+Questa versione serve soprattutto a rendere Story Studio più affidabile. Quando la Lunii è occupata, le operazioni aspettano il loro turno invece di essere rifiutate. Un suono troppo debole viene segnalato quando lo aggiungi. Se vuoi, Story Studio può anche avvisarti quando esce una nuova versione.
+
+Dalla 0.9.10, Story Studio ha un catalogo locale e gestisce direttamente la Lunii. Puoi consultare, inviare e recuperare audiolibri, gestire la lista del dispositivo ed espellerlo. Titoli e copertine ufficiali sono facoltativi e richiedono il tuo consenso.
 
 L’interfaccia è disponibile in francese, inglese e italiano. Le traduzioni inglesi e italiane sono prodotte e riviste con IA; le correzioni sono benvenute. In un’installazione esistente senza preferenza di lingua, l’interfaccia rimane in francese; puoi cambiarla nelle Preferenze. Una nuova installazione usa la lingua del sistema se disponibile, altrimenti l’inglese.
 
@@ -248,9 +252,9 @@ Il modello di sicurezza, le note sulle terze parti e il changelog sono attualmen
 
 ## Roadmap
 
-- Completare e convalidare i pacchetti Windows x64, Linux x86_64 e macOS Apple Silicon.
-- Uscire dalla beta con una versione 1 rifinita.
-- Supportare altri dispositivi per storie.
+- Correggere i bug rimanenti.
+- Uscire dalla beta con una versione 1 definitiva.
+- Rendere l’app compatibile con altri dispositivi per storie.
 
 ## Contribuire
 

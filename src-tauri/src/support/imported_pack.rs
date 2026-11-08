@@ -23,6 +23,7 @@ pub(crate) mod cancellation;
 mod source_tree;
 mod studio_folder;
 
+pub(crate) use bundle::child_identity as bundle_child_identity;
 pub(crate) use bundle::portable_key as archive_portable_key;
 pub use bundle::BundleChildEntry;
 use bundle::{collect_bundle_children, has_annex_archives, BUNDLE_CONTAINER_FINGERPRINT_VERSION};

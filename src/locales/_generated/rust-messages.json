@@ -16,6 +16,10 @@
     "params": []
   },
   {
+    "code": "STORYTELLER_WORKSPACE_UNAVAILABLE",
+    "params": []
+  },
+  {
     "code": "STORYTELLER_REPATRIATE_REFUSED",
     "params": [
       "cause"
@@ -42,7 +46,31 @@
     "params": []
   },
   {
+    "code": "STORYTELLER_REPATRIATE_DISCONNECTED",
+    "params": []
+  },
+  {
     "code": "STORYTELLER_PROJECT_INVALID",
+    "params": []
+  },
+  {
+    "code": "STORYTELLER_PROJECT_SAVE_REQUIRED",
+    "params": []
+  },
+  {
+    "code": "STORYTELLER_PROJECT_OPEN_ID_REQUIRED",
+    "params": []
+  },
+  {
+    "code": "STORYTELLER_PROJECT_LEGACY_SAVE_REQUIRED",
+    "params": []
+  },
+  {
+    "code": "STORYTELLER_PROJECT_ID_RECHECK_FAILED",
+    "params": []
+  },
+  {
+    "code": "STORYTELLER_PROJECT_IDENTITY_SAVE_FAILED",
     "params": []
   },
   {
@@ -87,6 +115,10 @@
   },
   {
     "code": "STORYTELLER_DEVICE_GONE",
+    "params": []
+  },
+  {
+    "code": "STORYTELLER_DEVICE_UNRESPONSIVE",
     "params": []
   },
   {
@@ -5356,6 +5388,25 @@
     "params": []
   },
   {
+    "code": "GENERATION_AUDIO_STEP_LABEL",
+    "params": [
+      "story",
+      "step"
+    ]
+  },
+  {
+    "code": "GENERATION_AUDIO_UNTITLED_STORY_LABEL",
+    "params": []
+  },
+  {
+    "code": "GENERATION_AUDIO_UNTITLED_MENU_LABEL",
+    "params": []
+  },
+  {
+    "code": "GENERATION_AUDIO_UNNAMED_LABEL",
+    "params": []
+  },
+  {
     "code": "GENERATION_AUDIO_NIGHT_LABEL",
     "params": []
   },
@@ -6717,9 +6768,9 @@
     ]
   },
   {
-    "code": "GENERATION_AUDIO_SILENT_REFUSED",
+    "code": "AUDIO_SILENT_KEPT",
     "params": [
-      "role"
+      "label"
     ]
   },
   {

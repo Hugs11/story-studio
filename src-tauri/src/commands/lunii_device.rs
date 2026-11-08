@@ -333,6 +333,8 @@ fn inspect_mode(
                     .unwrap_or_else(|| device.root.join(".content").join(&s.folder))
             });
         let value = json!({
+            "ageMin": match resolution { Some(Resolution::Known(card)) => card.age_min, _ => None },
+            "ageMax": match resolution { Some(Resolution::Known(card)) => card.age_max, _ => None },
             "key": key, "knownUuid": known, "identityConflict": identity == Identity::Contradicted, "title": title, "kind": kind, "previewError": preview_error,
             "hidden": s.probable_hidden, "parkingPending": s.parking_pending, "parked": s.folder.starts_with("parked:"), "duplicateOfListed": is_duplicate_of_listed(known, &in_list), "complete": s.complete,
             "directoryPresent": s.directory_present, "sizeBytes": bytes(&story_path),
@@ -439,6 +441,10 @@ pub async fn lunii_device_inspect(
     })
     .await
 }
+fn classify_send_setup_error(error: UserMessage) -> UserMessage {
+    // Reservation and Device::open access the device before local preparation.
+    driver::classify_error(error, "device")
+}
 #[tauri::command]
 pub async fn lunii_device_send(
     app: tauri::AppHandle,
@@ -448,59 +454,64 @@ pub async fn lunii_device_send(
     request_id: String,
     audio_edge_silence: Option<AudioEdgeSilenceDefaults>,
 ) -> Result<Value> {
-    run(app, move |app, store| {
-        if selection.is_empty() || selection.len() > 1000 {
-            return Err(failure("selection"));
-        }
-        let sink = catalogue::operation_sink(app.clone());
-        // requestId identifies an attempt even if reservation fails. A retry
-        // uses a fresh ID (documented in luniiDeviceApi.js).
-        let op = store.begin_lunii_send(request_id, selection.len(), Arc::clone(&sink))?;
-        let receipt = {
-            let p = op.progress.lock().map_err(failure)?;
-            json!({
-                "operationId": p.operation_id,
-                "requestId": p.request_id,
-                "catalogueRevision": p.catalogue_revision,
-                "sourcesRevision": p.sources_revision
-            })
-        };
-        if op.started.swap(true, std::sync::atomic::Ordering::SeqCst) {
-            return Ok(receipt);
-        }
-        let setup = (|| {
-            let reservation = reserve(app, &device_id)?;
-            let device = device(app, &device_id)?;
-            Ok::<_, UserMessage>((reservation, device))
-        })();
-        let (reservation, device) = match setup {
-            Ok(value) => value,
-            Err(error) => {
-                if let Ok(mut p) = op.progress.lock() {
-                    p.status = "failed".into();
-                    p.error = Some(error.clone());
-                }
-                op.emit(&sink, true);
-                return Err(error);
+    async {
+        run(app, move |app, store| {
+            if selection.is_empty() || selection.len() > 1000 {
+                return Err(failure("selection"));
             }
-        };
-        let app = app.clone();
-        std::thread::spawn(move || {
-            let _reservation = reservation;
-            send::run(
-                app,
-                store,
-                device,
-                selection,
-                position,
-                audio_edge_silence.unwrap_or_default(),
-                op,
-                sink,
-            );
-        });
-        Ok(receipt)
-    })
+            let sink = catalogue::operation_sink(app.clone());
+            // requestId identifies an attempt even if reservation fails. A retry
+            // uses a fresh ID (documented in luniiDeviceApi.js).
+            let op = store.begin_lunii_send(request_id, selection.len(), Arc::clone(&sink))?;
+            let receipt = {
+                let p = op.progress.lock().map_err(failure)?;
+                json!({
+                    "operationId": p.operation_id,
+                    "requestId": p.request_id,
+                    "catalogueRevision": p.catalogue_revision,
+                    "sourcesRevision": p.sources_revision
+                })
+            };
+            if op.started.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                return Ok(receipt);
+            }
+            let setup = (|| {
+                let reservation = reserve(app, &device_id)?;
+                let device = device(app, &device_id)?;
+                Ok::<_, UserMessage>((reservation, device))
+            })();
+            let (reservation, device) = match setup {
+                Ok(value) => value,
+                Err(error) => {
+                    let error = classify_send_setup_error(error);
+                    if let Ok(mut p) = op.progress.lock() {
+                        p.status = "failed".into();
+                        p.error = Some(error.clone());
+                    }
+                    op.emit(&sink, true);
+                    return Err(error);
+                }
+            };
+            let app = app.clone();
+            std::thread::spawn(move || {
+                let _reservation = reservation;
+                send::run(
+                    app,
+                    store,
+                    device,
+                    selection,
+                    position,
+                    audio_edge_silence.unwrap_or_default(),
+                    op,
+                    sink,
+                );
+            });
+            Ok(receipt)
+        })
+        .await
+    }
     .await
+    .map_err(|error| driver::classify_error(error, "preparing"))
 }
 #[tauri::command]
 pub async fn lunii_device_cancel(
@@ -532,11 +543,15 @@ pub async fn lunii_device_remove(
     device_id: String,
     keys: Vec<String>,
 ) -> Result<Value> {
-    let actions = keys
-        .iter()
-        .map(|k| uuid(k).map(Action::Remove))
-        .collect::<Result<_>>()?;
-    apply(app, device_id, actions).await
+    async {
+        let actions = keys
+            .iter()
+            .map(|k| uuid(k).map(Action::Remove))
+            .collect::<Result<_>>()?;
+        apply(app, device_id, actions).await
+    }
+    .await
+    .map_err(|error| driver::classify_error(error, "device"))
 }
 #[tauri::command]
 pub async fn lunii_device_reorder(
@@ -544,14 +559,18 @@ pub async fn lunii_device_reorder(
     device_id: String,
     keys: Vec<String>,
 ) -> Result<Value> {
-    apply(
-        app,
-        device_id,
-        vec![Action::Reorder(
-            keys.iter().map(|k| uuid(k)).collect::<Result<_>>()?,
-        )],
-    )
+    async {
+        apply(
+            app,
+            device_id,
+            vec![Action::Reorder(
+                keys.iter().map(|k| uuid(k)).collect::<Result<_>>()?,
+            )],
+        )
+        .await
+    }
     .await
+    .map_err(|error| driver::classify_error(error, "device"))
 }
 #[tauri::command]
 pub async fn lunii_device_hide(
@@ -560,25 +579,33 @@ pub async fn lunii_device_hide(
     key: String,
     hidden: bool,
 ) -> Result<Value> {
-    let id = uuid(&key)?;
-    apply(
-        app,
-        device_id,
-        vec![if hidden {
-            Action::Hide(id)
-        } else {
-            Action::Show(id)
-        }],
-    )
+    async {
+        let id = uuid(&key)?;
+        apply(
+            app,
+            device_id,
+            vec![if hidden {
+                Action::Hide(id)
+            } else {
+                Action::Show(id)
+            }],
+        )
+        .await
+    }
     .await
+    .map_err(|error| driver::classify_error(error, "device"))
 }
 #[tauri::command]
 pub async fn lunii_device_repair(app: tauri::AppHandle, device_id: String) -> Result<Value> {
-    apply(app, device_id, vec![Action::RepairPlaylist]).await
+    async { apply(app, device_id, vec![Action::RepairPlaylist]).await }
+        .await
+        .map_err(|error| driver::classify_error(error, "device"))
 }
 #[tauri::command]
 pub async fn lunii_device_restore(app: tauri::AppHandle, device_id: String) -> Result<Value> {
-    apply(app, device_id, vec![Action::RestorePlaylist]).await
+    async { apply(app, device_id, vec![Action::RestorePlaylist]).await }
+        .await
+        .map_err(|error| driver::classify_error(error, "device"))
 }
 #[tauri::command]
 pub async fn lunii_device_orphan(
@@ -588,15 +615,19 @@ pub async fn lunii_device_orphan(
     restore: bool,
     known_uuid: Option<String>,
 ) -> Result<Value> {
-    let action = if restore {
-        Action::Restore {
-            folder: key,
-            known_uuid: known_uuid.as_deref().map(uuid).transpose()?,
-        }
-    } else {
-        Action::DeleteOrphan(key)
-    };
-    apply(app, device_id, vec![action]).await
+    async {
+        let action = if restore {
+            Action::Restore {
+                folder: key,
+                known_uuid: known_uuid.as_deref().map(uuid).transpose()?,
+            }
+        } else {
+            Action::DeleteOrphan(key)
+        };
+        apply(app, device_id, vec![action]).await
+    }
+    .await
+    .map_err(|error| driver::classify_error(error, "device"))
 }
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -611,14 +642,18 @@ pub async fn lunii_device_orphans_restore(
     device_id: String,
     items: Vec<OrphanItem>,
 ) -> Result<Value> {
-    if items.len() > 100_000 {
-        return Err(failure("items"));
+    async {
+        if items.len() > 100_000 {
+            return Err(failure("items"));
+        }
+        let items = items
+            .into_iter()
+            .map(|item| Ok((item.key, uuid(&item.known_uuid)?)))
+            .collect::<Result<_>>()?;
+        apply(app, device_id, vec![Action::RestoreOrphans(items)]).await
     }
-    let items = items
-        .into_iter()
-        .map(|item| Ok((item.key, uuid(&item.known_uuid)?)))
-        .collect::<Result<_>>()?;
-    apply(app, device_id, vec![Action::RestoreOrphans(items)]).await
+    .await
+    .map_err(|error| driver::classify_error(error, "device"))
 }
 #[tauri::command]
 pub async fn lunii_device_name_story(
@@ -627,15 +662,19 @@ pub async fn lunii_device_name_story(
     key: String,
     title: String,
 ) -> Result<Value> {
-    run(app, move |app, store| {
-        let _reservation = reserve(app, &device_id)?;
-        device(app, &device_id)?
-            .name_card(uuid(&key)?, &*store, title)
-            .map_err(UserMessage::from)?;
-        drop(_reservation);
-        inspect(app, &store, &device_id)
-    })
+    async {
+        run(app, move |app, store| {
+            let _reservation = reserve(app, &device_id)?;
+            device(app, &device_id)?
+                .name_card(uuid(&key)?, &*store, title)
+                .map_err(UserMessage::from)?;
+            drop(_reservation);
+            inspect(app, &store, &device_id)
+        })
+        .await
+    }
     .await
+    .map_err(|error| driver::classify_error(error, "device"))
 }
 #[tauri::command]
 pub async fn lunii_device_rename(
@@ -643,15 +682,19 @@ pub async fn lunii_device_rename(
     device_id: String,
     name: String,
 ) -> Result<Value> {
-    run(app, move |app, store| {
-        let _reservation = reserve(app, &device_id)?;
-        device(app, &device_id)?
-            .rename(name)
-            .map_err(UserMessage::from)?;
-        drop(_reservation);
-        inspect(app, &store, &device_id)
-    })
+    async {
+        run(app, move |app, store| {
+            let _reservation = reserve(app, &device_id)?;
+            device(app, &device_id)?
+                .rename(name)
+                .map_err(UserMessage::from)?;
+            drop(_reservation);
+            inspect(app, &store, &device_id)
+        })
+        .await
+    }
     .await
+    .map_err(|error| driver::classify_error(error, "device"))
 }
 #[tauri::command]
 pub async fn lunii_device_repatriate(
@@ -659,49 +702,64 @@ pub async fn lunii_device_repatriate(
     device_id: String,
     key: String,
     request_id: String,
+    workspace_dir: std::path::PathBuf,
+    archive_name: String,
 ) -> Result<Value> {
-    run(app, move |app, store| {
-        let id = uuid(&key)?;
-        let sink = catalogue::operation_sink(app.clone());
-        let op = store.begin_lunii_transfer(request_id, 1, Arc::clone(&sink), "luniiRepatriate")?;
-        let receipt = {
-            let p = op.progress.lock().map_err(failure)?;
-            json!({"operationId":p.operation_id,"requestId":p.request_id,
+    async {
+        run(app, move |app, store| {
+            let id = uuid(&key)?;
+            let sink = catalogue::operation_sink(app.clone());
+            let op =
+                store.begin_lunii_transfer(request_id, 1, Arc::clone(&sink), "luniiRepatriate")?;
+            let receipt = {
+                let p = op.progress.lock().map_err(failure)?;
+                json!({"operationId":p.operation_id,"requestId":p.request_id,
                 "catalogueRevision":p.catalogue_revision,"sourcesRevision":p.sources_revision})
-        };
-        if op.started.swap(true, std::sync::atomic::Ordering::SeqCst) {
-            return Ok(receipt);
-        }
-        let setup = (|| {
-            let reservation = reserve(app, &device_id)?;
-            let device = device(app, &device_id)?;
-            let cache = app
-                .path()
-                .app_cache_dir()
-                .map_err(failure)?
-                .join("storyteller-repatriate");
-            Ok::<_, UserMessage>((reservation, device, cache))
-        })();
-        let (reservation, device, cache) = match setup {
-            Ok(value) => value,
-            Err(error) => {
-                if let Ok(mut p) = op.progress.lock() {
-                    p.status = "failed".into();
-                    p.error = Some(error.clone());
-                }
-                op.emit(&sink, true);
-                return Err(error);
+            };
+            if op.started.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                return Ok(receipt);
             }
-        };
-        let app = app.clone();
-        std::thread::spawn(move || {
-            let _reservation = reservation;
-            crate::services::storyteller::repatriate::run(store, device, id, cache, op, sink);
-            catalogue::sources_changed(&app);
-        });
-        Ok(receipt)
-    })
+            let setup = (|| {
+                let reservation = reserve(app, &device_id)?;
+                let device = device(app, &device_id)?;
+                let cache = app
+                    .path()
+                    .app_cache_dir()
+                    .map_err(failure)?
+                    .join("storyteller-repatriate");
+                Ok::<_, UserMessage>((reservation, device, cache))
+            })();
+            let (reservation, device, cache) = match setup {
+                Ok(value) => value,
+                Err(error) => {
+                    if let Ok(mut p) = op.progress.lock() {
+                        p.status = "failed".into();
+                        p.error = Some(driver::classify_error(error.clone(), "preparing"));
+                    }
+                    op.emit(&sink, true);
+                    return Err(error);
+                }
+            };
+            let app = app.clone();
+            std::thread::spawn(move || {
+                let _reservation = reservation;
+                crate::services::storyteller::repatriate::run(
+                    store,
+                    device,
+                    id,
+                    cache,
+                    (workspace_dir, archive_name),
+                    op,
+                    sink,
+                );
+                catalogue::sources_changed(&app);
+            });
+            Ok(receipt)
+        })
+        .await
+    }
     .await
+    .map_err(|error| driver::classify_error(error, "preparing"))
 }
 #[tauri::command]
 pub async fn lunii_device_eject(app: tauri::AppHandle, device_id: String) -> Result<Value> {
@@ -782,6 +840,19 @@ fn official_cover(store: &Store, id: Uuid) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn lunii_send_setup_io_failure_is_a_device_fault() {
+        let error = classify_send_setup_error(driver::Error::Io.into());
+        assert_eq!(error.code, codes::STORYTELLER_WRITE_FAILED);
+        assert_eq!(error.device_fault, Some(true));
+        let returned = driver::classify_error(error.clone(), "preparing");
+        assert_eq!(returned.device_fault, Some(true));
+        assert_eq!(serde_json::to_value(error).unwrap()["deviceFault"], true);
+        assert_eq!(
+            driver::classify_error(failure("selection"), "preparing").device_fault,
+            Some(false)
+        );
+    }
     #[test]
     fn discovery_handles_survive_refresh_and_disappear_without_exposing_paths() {
         let registry = Registry::default();
