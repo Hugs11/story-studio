@@ -10,16 +10,22 @@ function savegame.read()
     return value
 end
 
-function savegame.write(value)
-    if not progression or not progression.save then return false, "unavailable" end
-    local ok, result = pcall(progression.save, slot, value)
-    if not ok or result == false then return false, "write" end
-    local stored, problem = savegame.read()
-    if problem or not stored then return false, "readback" end
-    for key, item in pairs(value) do
-        if stored[key] ~= item then return false, "readback" end
-    end
+local function equal(first, second)
+    if first == nil or second == nil then return first == second end
+    for key, item in pairs(first) do if second[key] ~= item then return false end end
+    for key, item in pairs(second) do if first[key] ~= item then return false end end
     return true
+end
+
+function savegame.write(value, previous)
+    if not progression or not progression.save then return false, "unavailable" end
+    -- Meme un appel en erreur peut avoir ecrit : seule la relecture permet de trancher.
+    pcall(progression.save, slot, value)
+    local stored, problem = savegame.read()
+    if problem then return false, "uncertain" end
+    if equal(stored, value) then return true end
+    if equal(stored, previous) then return false, "write" end
+    return false, "uncertain"
 end
 
 return savegame

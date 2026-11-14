@@ -30,7 +30,8 @@ luac -p scripts/prototypes/flam-native/savegame.lua
 ```
 
 La voix française installée par Story Studio est choisie par défaut ; un autre
-modèle peut être passé avec --voice. Piper peut être omis s’il est dans le PATH.
+modèle peut être passé avec --voice. L’option --piper peut être omise si
+l’exécutable est dans le PATH.
 Les quatre narrations sont originales et disponibles dans les fichiers texte.
 
 Le résultat se trouve dans exports/flam-inventaire-prototype/ :
@@ -38,8 +39,8 @@ cle-des-lucioles.plain.pk, manifeste et aperçu de l’introduction.
 Aucune métadonnée d’appareil n’est incluse dans cette archive de travail.
 
 Le runtime utilise le profil Audio B : stéréo 44,1 kHz, 128 kbit/s, ID3/Xing et
-table audio. Une narration propre à chaque scène est relue au début lors d’une
-reprise. La ressource mono de comparaison reste dans le pack mais n’est pas
+table audio. Une narration propre à chaque scène est jouée à son entrée et relue
+au début lors d’une reprise. La ressource mono de comparaison reste dans le pack mais n’est pas
 sélectionnée par le runtime. Le succès antérieur de B n’établit pas la cause
 exacte du silence initial, plusieurs caractéristiques ayant été modifiées.
 
@@ -60,6 +61,16 @@ lucioles, isolé par le firmware dans l’aventure. Chaque écriture est relue a
 confirmation. Cette relecture prouve un aller-retour de l’API, pas une résistance
 à une coupure arbitraire pendant l’écriture flash. Les données restaurées sont
 validées ; une sauvegarde inconnue n’est pas silencieusement remplacée.
+
+Si une écriture a peut-être abouti mais que sa relecture échoue, l’écran
+« Sauvegarde à vérifier » impose de relire la partie. Il ne propose pas une
+annulation fictive d’une action potentiellement déjà persistée. L’annulation
+reste disponible lorsque la relecture confirme que l’état précédent est intact.
+
+La durée annoncée par le lecteur est vérifiée avant d’accepter une fin audio,
+avec une tolérance d’une seconde. Une durée indisponible est signalée. Chaque
+lecture possède un identifiant ; les callbacks d’une lecture quittée ne peuvent
+pas terminer la narration suivante.
 
 Le retour bibliothèque laisse un écran actif et conserve le module : le firmware
 ne rappelle pas nécessairement setup. Consulter l’inventaire ne déplace pas le

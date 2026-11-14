@@ -2,10 +2,7 @@
 local adventure = {}
 local scenes = require("scenes")
 local savegame = require("savegame")
-local function initialPartie()
-    return {schema = 1, scene = "clairiere", keys = 0, chest = 0, door = 0}
-end
-local partie = initialPartie()
+local partie = scenes.initialPartie()
 local hasPartie = false
 local loadProblem, pendingSave
 local choices, rows = {}, {}
@@ -14,6 +11,8 @@ local styles = {}
 local selected, phase, ticks, lastClick, loading = 1, "ready", 0, -20, 0
 local audioPending, audioAccepted, heardPlay = false, false, false
 local loadResult, lastEvent, playedSecond, playStarted = "-", "-", 0, 0
+local expectedDuration = 0
+local playbackId = 0
 
 local function text(parent, value, y, height, size)
     local obj = lv.label.new(parent)
@@ -41,7 +40,11 @@ end
 
 local function storageError(kind)
     phase, selected = "storage-error", 1
-    if kind == "read" then
+    if kind == "uncertain" then
+        choices = {{label = "Relire la partie", action = "reload"}, {label = "Bibliothèque", action = "leave"}}
+        lv.label.set_text(heading, "Sauvegarde à vérifier")
+        lv.label.set_text(body, "L'action a peut-être été sauvée.\nRelis la partie avant de continuer.")
+    elseif kind == "read" then
         choices = {{label = "Réessayer", action = "reload"}, {label = "Bibliothèque", action = "leave"}}
         lv.label.set_text(heading, "Sauvegarde illisible")
         lv.label.set_text(body, "Ta partie n'a pas été effacée.\nRéessaie ou quitte l'aventure.")
@@ -55,32 +58,23 @@ local function storageError(kind)
     drawChoices()
 end
 
-local function validPartie(value)
-    if type(value) ~= "table" or value.schema ~= 1 or type(value.scene) ~= "string" then return false end
-    for _, name in ipairs({"keys", "chest", "door"}) do
-        if value[name] ~= 0 and value[name] ~= 1 then return false end
-    end
-    if value.keys + value.door ~= value.chest then return false end
-    if value.scene == "fin" and value.door ~= 1 then return false end
-    local fields = {schema = true, scene = true, keys = true, chest = true, door = true}
-    for name in pairs(value) do if not fields[name] then return false end end
-    return scenes.describe(value) ~= nil
-end
-
 local function restore()
     local restored, problem = savegame.read()
-    if restored and not validPartie(restored) then problem = "invalid" end
+    if restored and not scenes.validPartie(restored) then problem = "invalid" end
     loadProblem = problem
     if not problem then
+        pendingSave = nil
         if restored then partie, hasPartie = restored, true
-        else partie, hasPartie = initialPartie(), false end
+        else partie, hasPartie = scenes.initialPartie(), false end
     end
 end
 
 local function commit(candidate)
-    if not savegame.write(candidate) then
+    local ok, problem = savegame.write(candidate, hasPartie and partie or nil)
+    if not ok then
         pendingSave = candidate
-        storageError("write")
+        if problem == "uncertain" then loadProblem = "uncertain" end
+        storageError(problem == "uncertain" and "uncertain" or "write")
         return false
     end
     pendingSave = nil
@@ -110,8 +104,9 @@ local function inventory()
 end
 
 local function welcome()
-    if loadProblem then storageError("read"); return end
+    if loadProblem then storageError(loadProblem == "uncertain" and "uncertain" or "read"); return end
     phase, selected, audioPending, audioAccepted, heardPlay = "ready", 1, false, false, false
+    playbackId = playbackId + 1
     choices = {{label = hasPartie and "Reprendre" or "Commencer", action = "intro"}}
     if hasPartie then choices[#choices + 1] = {label = "Recommencer", action = "confirm-restart"} end
     choices[#choices + 1] = {label = "Bibliothèque", action = "leave"}
@@ -137,8 +132,10 @@ end
 local function beginNarration()
     if not hasPartie and not commit(partie) then return end
     phase, audioPending, audioAccepted, heardPlay = "intro", true, false, false
+    playbackId = playbackId + 1
     loading, loadResult, lastEvent, playedSecond, playStarted = 0, "-", "-", 0, ticks
-    lv.label.set_text(body, "Écoute le début de ton aventure...")
+    lv.label.set_text(heading, scenes.describe(partie).title)
+    lv.label.set_text(body, "Écoute le début de cette scène...")
     for _, row in ipairs(rows) do lv.label.set_text(row, "") end
     diagnostics()
 end
@@ -164,7 +161,7 @@ local function click()
         lv.label.set_text(hint, "Un nouveau départ pour cette aventure.")
         drawChoices()
     elseif option.action == "restart" then
-        if commit(initialPartie()) then beginNarration() end
+        if commit(scenes.initialPartie()) then beginNarration() end
     elseif option.action == "welcome" then welcome()
     elseif option.action == "leave" then leave()
     elseif option.action == "inventory" then inventory()
@@ -174,7 +171,7 @@ local function click()
         for name, value in pairs(partie) do candidate[name] = value end
         candidate.scene = option.destination
         for name, value in pairs(option.effects or {}) do candidate[name] = value end
-        if commit(candidate) then showChoices() end
+        if commit(candidate) then beginNarration() end
     end
 end
 
@@ -200,11 +197,11 @@ end
 local function feedback(status, second)
     if phase ~= "intro" then return end
     lastEvent = tostring(status)
-    if status == "play" and type(second) == "number" then playedSecond = second end
+    if audioAccepted and type(second) == "number" then playedSecond = math.max(playedSecond, second) end
     if status == "play" then heardPlay = true end
     -- Le chargement peut notifier l'arret de l'ancienne piste avant audio.play.
     if audioAccepted and heardPlay and status == "stop" then
-        if playedSecond >= 1 or ticks - playStarted >= 40 then
+        if playedSecond >= expectedDuration - 1 then
             showChoices()
         else
             audioError("Lecture arrêtée trop tôt.\nNote les valeurs ci-dessous.")
@@ -219,7 +216,7 @@ local function tick()
     if audioAccepted then
         if audio.get_status() == "play" then heardPlay = true end
         if ticks - playStarted > 160 and audio.get_status() == "stop" then
-            if heardPlay and ticks - playStarted >= 40 then
+            if heardPlay and playedSecond >= expectedDuration - 1 then
                 showChoices()
             else
                 audioError("La narration ne démarre pas.\nNote les valeurs ci-dessous.")
@@ -232,8 +229,16 @@ local function tick()
     if audio.get_status() == "stop" then
         audioPending = false
         local path = scenes.describe(partie).audio
-        loadResult = audio.load(0, path, feedback)
+        local id = playbackId
+        loadResult = audio.load(0, path, function(status, second)
+            if id == playbackId then feedback(status, second) end
+        end)
         if loadResult == 0 then
+            expectedDuration = audio.duration and tonumber(audio.duration()) or nil
+            if not expectedDuration or expectedDuration <= 1 then
+                audioError("Durée audio indisponible.\nLa lecture n'est pas validée.")
+                return
+            end
             -- Accepter les evenements de lecture seulement apres le retour de load.
             audioAccepted, heardPlay, playStarted = true, false, ticks
             audio.play()
@@ -265,7 +270,7 @@ function adventure.start()
     lv.style.set_bg_opa(background, lv.OPA_COVER)
     styles[#styles + 1] = background
     lv.obj.add_style(root, background, lv.STATE_DEFAULT)
-    heading = text(root, "Le passage des lucioles", 8, 34, lv.font.nunito_bold_20)
+    heading = text(root, "La clé des lucioles", 8, 34, lv.font.nunito_bold_20)
     body = text(root, "Écoute le début de ton aventure...", 48, 62, lv.font.nunito_bold_16)
     first = text(root, "", 111, 26, lv.font.nunito_bold_16)
     second = text(root, "", 140, 26, lv.font.nunito_bold_16)

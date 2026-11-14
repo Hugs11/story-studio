@@ -30,6 +30,15 @@ sauvegarde matérielle sans le masquer par une simple conservation en mémoire.
 
 ## Comments
 
+- Pack final installé par relecture sur la FLAM 2.4.1 : nouvelle identité
+  « La clé des lucioles ». Les fichiers contrôlés des autres histoires, du
+  premier prototype, des sauvegardes existantes et des métadonnées sont inchangés.
+  Le rapport d’installation local reste marqué en attente de validation humaine.
+
+- [Revue Standards et Spec](../review.md) effectuée sur le diff depuis le commit
+  de départ. Corrections testées : écriture incertaine sans fausse annulation,
+  arrêt audio prématuré, callbacks périmés et narrations lors des transitions.
+
 - Implémentation locale prête : inventaire, coffre unique, porte conservée après
   consommation et accueil reprendre/recommencer. Le pack possède une nouvelle
   identité et conserve le premier prototype fonctionnel.

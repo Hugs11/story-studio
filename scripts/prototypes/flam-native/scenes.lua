@@ -44,4 +44,20 @@ function scenes.describe(partie)
     end
 end
 
+function scenes.initialPartie()
+    return {schema = 1, scene = "clairiere", keys = 0, chest = 0, door = 0}
+end
+
+function scenes.validPartie(value)
+    if type(value) ~= "table" or value.schema ~= 1 or type(value.scene) ~= "string" then return false end
+    for _, name in ipairs({"keys", "chest", "door"}) do
+        if value[name] ~= 0 and value[name] ~= 1 then return false end
+    end
+    if value.keys + value.door ~= value.chest then return false end
+    if value.scene == "fin" and value.door ~= 1 then return false end
+    local fields = {schema = true, scene = true, keys = true, chest = true, door = true}
+    for name in pairs(value) do if not fields[name] then return false end end
+    return scenes.describe(value) ~= nil
+end
+
 return scenes

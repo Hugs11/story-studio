@@ -107,6 +107,12 @@ FLAM**. Le [guide du prototype](../scripts/prototypes/flam-native/README.md)
 décrit le parcours de validation. Le ticket doit rester ouvert en attente du
 résultat matériel, même si les contrôles locaux passent.
 
+Le pack final est installé sur la FLAM 2.4.1 de l’utilisateur, séparément de la
+première aventure. La revue Standards/Spec a conduit à corriger la gestion des
+écritures incertaines, le contrôle des narrations interrompues et les callbacks
+audio périmés. Ces corrections ont leurs reproductions au même point d’entrée
+Lua. Le test après extinction reste à effectuer sur l’appareil.
+
 ## Faits et limites connus
 
 Le support FLAM du dépôt est actuellement en lecture seule : voir [le support existant](flam-support.md). La création d’une aventure jouable sur FLAM n’est pas démontrée par la lecture de sa bibliothèque.

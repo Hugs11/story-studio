@@ -82,6 +82,12 @@ def audio_map(path):
     return header + b"".join(struct.pack("<II", *entry) for entry in entries)
 
 
+def encode_stereo(source, destination):
+    run("ffmpeg", "-v", "error", "-i", str(source), "-ac", "2", "-ar", "44100",
+        "-codec:a", "libmp3lame", "-b:a", "128k", "-id3v2_version", "3",
+        "-map_metadata", "-1", str(destination))
+
+
 def build(output, piper, voice, audio_source=None):
     output.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="flam-narration-") as temporary:
@@ -96,9 +102,7 @@ def build(output, piper, voice, audio_source=None):
                 "-codec:a", "libmp3lame", "-b:a", "128k", "-write_xing", "0",
                 "-id3v2_version", "0", "-map_metadata", "-1", str(mp3))
         stereo = Path(temporary) / "intro-stereo.mp3"
-        run("ffmpeg", "-v", "error", "-i", str(mp3), "-ac", "2", "-ar", "44100",
-            "-codec:a", "libmp3lame", "-b:a", "128k", "-id3v2_version", "3",
-            "-map_metadata", "-1", str(stereo))
+        encode_stereo(mp3, stereo)
         files = {
             "info.plain": f"{TITLE}\nPrototype Story Studio\n000000\n{TITLE}".encode(),
             "version": b"1",
@@ -117,9 +121,7 @@ def build(output, piper, voice, audio_source=None):
             clip_mp3 = Path(temporary) / f"{name}-stereo.mp3"
             run(str(piper), "--model", str(voice), "--input-file", str(SOURCE / f"{name}.txt"),
                 "--output-file", str(clip_wav))
-            run("ffmpeg", "-v", "error", "-i", str(clip_wav), "-ac", "2", "-ar", "44100",
-                "-codec:a", "libmp3lame", "-b:a", "128k", "-id3v2_version", "3",
-                "-map_metadata", "-1", str(clip_mp3))
+            encode_stereo(clip_wav, clip_mp3)
             files[f"sounds/{name}-stereo.mp3"] = clip_mp3.read_bytes()
             files[f"sounds/{name}-stereo.mp3map"] = audio_map(clip_mp3)
         with zipfile.ZipFile(output / PACK, "w", zipfile.ZIP_STORED) as archive:

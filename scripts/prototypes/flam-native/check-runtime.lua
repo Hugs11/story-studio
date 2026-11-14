@@ -3,7 +3,7 @@ local folder = arg[0]:match("^(.*)/")
 package.path = folder .. "/?.lua;" .. package.path
 local callbacks, labels, update, feedback, exited, plays, loadResult, audioStatus, loadedPath
 local saves = {}
-local rejectWrite, rejectRead, discardWrite = false, false, false
+local rejectWrite, rejectRead, discardWrite, failReadAfterWrite = false, false, false, false
 local function copy(value)
     if type(value) ~= "table" then return value end
     local result = {}
@@ -19,6 +19,7 @@ progression = {
         if rejectWrite then return false end
         if discardWrite then return end
         saves[slot] = copy(value)
+        if failReadAfterWrite then rejectRead = true end
     end,
 }
 progression.save("temoin", {texte = "autre aventure intacte"})
@@ -46,6 +47,7 @@ lv.event.get_key_value = function(event) return event end
 lv.timer.new = function(callback) update = callback; return {} end
 audio = {get_status = function() return audioStatus end,
          get_volume = function() return 50 end,
+         duration = function() return 16 end,
          stop = function() audioStatus = "stop" end,
          load = function(_, path, callback)
              assert(path:match("%-stereo%.mp3$"))
@@ -94,40 +96,48 @@ local function narration()
     feedback("stop", 16)
 end
 
+local function travel(label)
+    choose(label)
+    if visible():find("Écoute", 1, true) then
+        callbacks[lv.EVENT_KEY](string.char(10)) -- Double notification pendant le changement de scene.
+        narration()
+    end
+end
+
 start()
 click()
 narration()
-choose("Voir la porte")
+travel("Voir la porte")
 expect("Ouvrir - nécessite une clé")
 choose("Inventaire")
 expect("Clé : 0")
 choose("Retour à la scène")
 expect("Ouvrir - nécessite une clé")
-choose("Retour à la clairière")
+travel("Retour à la clairière")
 expect("Explorer le coffre")
 print("OK : porte conditionnelle et inventaire vide consultable sans impasse")
 
-choose("Explorer le coffre")
-choose("Prendre la clé")
+travel("Explorer le coffre")
+travel("Prendre la clé")
 callbacks[lv.EVENT_KEY](string.char(10)) -- Seconde notification du meme appui.
 expect("Le coffre est vide")
 choose("Inventaire")
 expect("Clé : 1")
 choose("Retour à la scène")
-choose("Retour à la clairière")
-choose("Explorer le coffre")
+travel("Retour à la clairière")
+travel("Explorer le coffre")
 expect("Le coffre est vide")
-choose("Retour à la clairière")
-choose("Voir la porte")
-choose("Ouvrir avec la clé")
+travel("Retour à la clairière")
+travel("Voir la porte")
+travel("Ouvrir avec la clé")
 expect("La porte est ouverte")
 choose("Inventaire")
 expect("Clé : 0")
 choose("Retour à la scène")
-choose("Traverser la porte")
+travel("Traverser la porte")
 expect("Fin de l'aventure")
-choose("Retour à la clairière")
-choose("Voir la porte")
+travel("Retour à la clairière")
+travel("Voir la porte")
 expect("La porte est ouverte")
 print("OK : recompense unique, consommation coherente et porte durablement ouverte")
 
@@ -140,8 +150,8 @@ expect("La porte est ouverte")
 choose("Inventaire")
 expect("Clé : 0")
 choose("Retour à la scène")
-choose("Retour à la clairière")
-choose("Explorer le coffre")
+travel("Retour à la clairière")
+travel("Explorer le coffre")
 expect("Le coffre est vide")
 print("OK : une nouvelle instance retrouve la porte ouverte et le coffre vide")
 
@@ -160,13 +170,13 @@ narration()
 choose("Inventaire")
 expect("Clé : 0")
 choose("Retour à la scène")
-choose("Voir la porte")
+travel("Voir la porte")
 expect("Ouvrir - nécessite une clé")
 choose("[x] Ouvrir - nécessite une clé")
 expect("La porte est fermée")
-choose("Retour à la clairière")
-choose("Explorer le coffre")
-choose("Prendre la clé")
+travel("Retour à la clairière")
+travel("Explorer le coffre")
+travel("Prendre la clé")
 start()
 choose("Reprendre")
 narration()
@@ -182,17 +192,17 @@ expect("Clé : 1")
 print("OK : reprise avec cle, nouvelle partie explicite et relance du meme module")
 
 choose("Retour à la scène")
-choose("Retour à la clairière")
-choose("Voir la porte")
+travel("Retour à la clairière")
+travel("Voir la porte")
 rejectWrite = true
-choose("Ouvrir avec la clé")
+travel("Ouvrir avec la clé")
 expect("Sauvegarde impossible")
 choose("Annuler")
 choose("Inventaire")
 expect("Clé : 1")
 choose("Retour à la scène")
 rejectWrite = false
-choose("Ouvrir avec la clé")
+travel("Ouvrir avec la clé")
 expect("La porte est ouverte")
 rejectRead = true
 start()
@@ -217,12 +227,12 @@ expect("La porte est ouverte")
 print("OK : une sauvegarde incompatible est signalee avant de proposer une nouvelle partie")
 
 discardWrite = true
-choose("Retour à la clairière")
+travel("Retour à la clairière")
 expect("Sauvegarde impossible")
 choose("Annuler")
 expect("La porte est ouverte")
 discardWrite = false
-choose("Retour à la clairière")
+travel("Retour à la clairière")
 expect("Explorer le coffre")
 print("OK : une ecriture sans effet est detectee par relecture, sans avancer silencieusement")
 
@@ -256,7 +266,57 @@ narration()
 choose("Inventaire")
 expect("Clé : 0")
 choose("Retour à la scène")
-choose("Voir la porte")
+travel("Voir la porte")
 expect("La porte est fermée")
 assert(progression.load("temoin").texte == "autre aventure intacte")
 print("OK : sauvegarde avant acquisition et temoin d'une autre aventure preserves")
+
+travel("Retour à la clairière")
+travel("Explorer le coffre")
+travel("Prendre la clé")
+back_callback()
+choose("Recommencer")
+failReadAfterWrite = true
+choose("Oui, recommencer")
+expect("Sauvegarde à vérifier")
+assert(not visible():find("Annuler", 1, true), "Une reinitialisation peut deja etre persistante : ne pas proposer une fausse annulation")
+failReadAfterWrite, rejectRead = false, false
+choose("Relire la partie")
+choose("Reprendre")
+narration()
+choose("Inventaire")
+expect("Clé : 0")
+print("OK : une ecriture incertaine impose une reconciliation, sans fausse annulation")
+
+start()
+choose("Reprendre")
+advance(1)
+feedback("play", 1)
+audioStatus = "stop"
+feedback("stop", 1)
+expect("Lecture arrêtée trop tôt")
+print("OK : une seconde de lecture ne valide pas une narration de seize secondes")
+
+start()
+choose("Reprendre")
+advance(1)
+local oldFeedback = feedback
+back_callback()
+choose("Reprendre")
+advance(1)
+oldFeedback("play", 16)
+oldFeedback("stop", 16)
+expect("Écoute")
+assert(audioStatus == "play")
+feedback("play", 15)
+audioStatus = "stop"
+feedback("stop", 16)
+expect("Explorer le coffre")
+print("OK : les callbacks d'une ancienne lecture ne terminent pas la nouvelle narration")
+
+choose("Voir la porte")
+expect("Écoute")
+narration()
+assert(loadedPath == "porte-stereo.mp3")
+expect("La porte est fermée")
+print("OK : entrer dans une scene joue aussi sa narration, pas seulement reprendre")
