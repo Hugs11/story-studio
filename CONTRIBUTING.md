@@ -10,20 +10,47 @@ reproducible testing and clear release notes.
 ```sh
 git clone https://github.com/hugs11/story-studio.git
 cd story-studio
-npm install
+npm ci
+node scripts/prepare-platform-tools.mjs
+npm run build:piper-runtime
 npm run tauri:dev
 ```
 
 Prerequisites:
 
 - Node.js 20.19+ or 22.12+ (required by Vite 8)
-- Rust stable
+- Rustup (the repository's `rust-toolchain.toml` selects Rust 1.96.0,
+  including Clippy and rustfmt)
 - [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/) for your
   target platform
 - Windows 10 or later, a supported glibc-based Linux distribution, or macOS 11
   or later on Apple Silicon
+- A C/C++ toolchain, Git, CMake 3.26 or newer, and Ninja on Linux/macOS
+  (Visual Studio 2022 on Windows), for the bundled Piper runtime
+
+The platform-tool preparation command downloads and verifies FFmpeg and 7-Zip
+for the current platform. Build Piper before the first desktop launch: the Tauri
+configuration includes it as a required resource. These generated tools are
+ignored by Git and only need rebuilding when their pinned inputs change.
+
+If Rustup was just installed, load its environment with `. "$HOME/.cargo/env"`
+before running the commands above so Cargo uses the pinned toolchain.
 
 The dev server runs on `localhost:1420` with hot reload. The Rust backend recompiles automatically when you save a `.rs` file.
+
+On Linux, use `./start.sh` to start from this checkout. It loads the Rust
+environment, uses the project directory automatically and focuses an existing
+instance when one is already running. A terminal shows build logs while the
+app runs.
+
+To add **Story Studio** to your application launcher (including Omarchy):
+
+```sh
+./scripts/install-local-launcher.sh
+```
+
+The shortcut points to this checkout and uses its icon. Run the installer again
+if you move the project. It does not build or install a release package.
 
 If port `1420` is already in use:
 

@@ -16,6 +16,12 @@ disabled in both the interface and the backend. The Lunii device writer refuses
 FLAM roots, including roots containing both `.md` and `.mdf`. Inspection does
 not create sidecars, regenerate playlists, clear caches or read device keys.
 
+A separate [experimental native-Lua prototype](../scripts/prototypes/flam-native/README.md)
+can be prepared and installed explicitly outside the app's production transfer path.
+Its second version has user-confirmed playback with audio profile B and return
+to the start screen on firmware 2.4.1. Inventory, dice and durable saves remain
+unvalidated. This does not enable FLAM writes in the app.
+
 ## File layout
 
 - `.mdf` identifies the device family. Inspection reads only the first 50 bytes:
