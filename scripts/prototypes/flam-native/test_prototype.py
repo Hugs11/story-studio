@@ -28,8 +28,12 @@ class TransferTests(unittest.TestCase):
         self.files = {
             "uuid.bin": p.STORY.bytes, "version": b"1", "info.plain": b"Titre\nSous-titre\n000000\nTitre",
             "main.lua": b"function setup() end", "script/passage.lua": b"return {}",
+            "script/scenes.lua": b"return {}", "script/savegame.lua": b"return {}",
             "sounds/intro.mp3": b"audio-original", "sounds/intro.mp3map": bytes(12),
             "sounds/intro-stereo.mp3": b"audio-stereo", "sounds/intro-stereo.mp3map": bytes(12),
+            "sounds/coffre-stereo.mp3": b"coffre", "sounds/coffre-stereo.mp3map": bytes(12),
+            "sounds/porte-stereo.mp3": b"porte", "sounds/porte-stereo.mp3map": bytes(12),
+            "sounds/fin-stereo.mp3": b"fin", "sounds/fin-stereo.mp3map": bytes(12),
         }
         with zipfile.ZipFile(self.output / p.PACK, "w") as archive:
             for name, data in self.files.items():

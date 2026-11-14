@@ -87,6 +87,26 @@ Premier essai matériel rapporté : clic sonore sans narration et réouverture s
 
 **Retour utilisateur sur la version 2 : « tout fonctionne correctement avec audio B et le retour à l’écran ».** La lecture native et le retour à un départ actif sont donc confirmés sur cet appareil. Le profil B (stéréo avec en-têtes ID3/Xing) reste la référence du prototype. La comparaison ne permet pas d’isoler la cause technique du silence initial. L’inventaire, les dés, la sauvegarde durable et un essai explicitement Wi-Fi désactivé ne sont pas validés par ce retour.
 
+### Deuxième jalon : inventaire et reprise
+
+Le prototype **La clé des lucioles** implémente le coffre à récompense unique,
+la quantité de clés, la porte conditionnelle et sa conservation après
+consommation. Il dispose d’une identité différente du premier prototype, qui
+reste intact. La spécification et le ticket sont conservés dans le suivi local
+de la fonctionnalité « flam-inventaire-persistance ».
+
+Le même point d’entrée Lua vérifie le parcours complet, la réouverture du module
+et une nouvelle instance avec sauvegarde simulée conservée. Il couvre également
+les refus de lecture/écriture, une sauvegarde incompatible, une écriture sans
+effet et la confirmation d’un nouveau départ. Les modules de contenu, de rendu
+et de stockage restent séparés ; aucun format de production n’est fixé.
+
+La conservation via les API natives de progression est implémentée avec
+relecture, mais **la reprise après extinction n’est pas encore prouvée sur
+FLAM**. Le [guide du prototype](../scripts/prototypes/flam-native/README.md)
+décrit le parcours de validation. Le ticket doit rester ouvert en attente du
+résultat matériel, même si les contrôles locaux passent.
+
 ## Faits et limites connus
 
 Le support FLAM du dépôt est actuellement en lecture seule : voir [le support existant](flam-support.md). La création d’une aventure jouable sur FLAM n’est pas démontrée par la lecture de sa bibliothèque.

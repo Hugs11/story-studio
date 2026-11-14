@@ -12,6 +12,11 @@ public version; this file stays as the concise project history.
 
 ### Added
 
+- Prototype natif FLAM expérimental « La clé des lucioles » : inventaire,
+  récompense unique, porte conditionnelle et reprise via le stockage hôte.
+  La conservation après extinction reste à confirmer sur appareil ; les
+  transferts FLAM de l’application restent en lecture seule.
+
 - Initial read-only FLAM support: detect mounted devices, browse their ordered
   story lists and cached titles, show firmware and storage capacity, and eject.
   Transfers, retrieval, editing and repair are not yet supported for FLAM.

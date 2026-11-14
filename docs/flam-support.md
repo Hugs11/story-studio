@@ -22,6 +22,11 @@ Its second version has user-confirmed playback with audio profile B and return
 to the start screen on firmware 2.4.1. Inventory, dice and durable saves remain
 unvalidated. This does not enable FLAM writes in the app.
 
+The next experimental story, **La clé des lucioles**, adds a one-time chest
+reward, an inventory, a conditional door and a host-storage resume path under a
+separate identity. Runtime and transfer checks pass locally; durable saves on
+the physical device remain subject to the documented acceptance walkthrough.
+
 ## File layout
 
 - `.mdf` identifies the device family. Inspection reads only the first 50 bytes:

@@ -1,138 +1,127 @@
-# Prototype jetable : une aventure Lua sur FLAM
+# Prototype jetable : inventaire et reprise sur FLAM
 
-Question : une création Lua native originale peut-elle être lue sur la FLAM
-2.4.1 connectée, avec audio, deux choix et retour à la bibliothèque ?
+Ce second jalon ajoute une aventure originale, **La clé des lucioles** :
+clairière, coffre, clé consommable, porte conditionnelle et fin explicite.
+Il est séparé du transfert de production, sans framework tiers ni contenu commercial.
 
-L’aventure **Le passage des lucioles** contient une narration française originale,
-deux chemins et une fin différente selon le choix. Aucun inventaire, dé ou état
-persistant n’est implémenté. Un échec de chargement audio est affiché explicitement.
+## État de validation
 
-## Diagnostic matériel, version 2
+Le premier prototype **Le passage des lucioles** reste installé sous son identité
+d’origine. L’utilisateur a confirmé sa lecture Audio B et son retour à l’écran
+de départ sur le firmware 2.4.1.
 
-Premier retour utilisateur sur la version 1 : un clic sonore sans narration ;
-après retour à la bibliothèque, réouverture sur la même fin. Le MP3 installé
-était identique au pack et sa voix se décodait sur ordinateur.
+**La sauvegarde durable du second prototype attend une validation sur la FLAM.**
+Le harnais prouve les règles de partie et la restauration via un stockage simulé ;
+il ne prouve pas la conservation des données par le firmware après extinction.
 
-Le second problème est reproduit dans `check-runtime.lua` : le firmware conserve
-le module Lua à la réouverture, sans rappeler `setup()`. Le retour bibliothèque
-prépare désormais un écran de départ actif, sans détruire les objets ni le timer.
-La narration démarre par un clic explicite et ne joue pas derrière la bibliothèque.
+## Construire et vérifier
 
-Pour isoler le son, l’écran **Lucioles - diagnostic 2** propose deux profils :
-
-- **B, stéréo**, sélectionné par défaut : même narration réencodée en stéréo avec
-  en-têtes ID3/Xing ; sa table audio est régénérée.
-- **A, mono original** : MP3 et table conservés octet pour octet de la première
-  version. La molette change le profil avant de cliquer pour lancer la narration.
-
-Pendant le test, les dernières lignes montrent le volume `V`, l’état du lecteur,
-le retour de chargement `L`, le dernier événement `E` et la dernière seconde de
-lecture signalée `t`. Ces observations servent à séparer un problème de format,
-de chargement ou de lecture. Un arrêt pendant `audio.load` n’est plus interprété
-comme une narration terminée. Un arrêt prématuré est affiché ; un clic permet
-alors de tester les branches sans prétendre que l’audio fonctionne.
-
-**Résultat matériel de la version 2 :** l’utilisateur confirme que tout fonctionne
-avec **Audio B**, ainsi que le retour à l’écran de départ, sur sa FLAM 2.4.1.
-Le profil B est donc la référence pour la suite. Le profil A n’a pas reçu de
-validation positive distincte. Cet essai ne permet pas d’attribuer le silence
-initial à un facteur précis : canaux, en-têtes, table audio ou séquencement des
-événements ont besoin d’une comparaison isolée pour établir cette causalité.
-
-Après remplacement des fichiers, **éteindre complètement puis rallumer la FLAM**
-pour éviter de reprendre l’ancien module toujours en mémoire.
-
-Le code Lua appelle directement les API hôtes documentées ; aucun framework
-communautaire ni fichier d’une histoire commerciale n’est embarqué.
-
-## Construire
-
-Prérequis : Python 3, `cryptography`, FFmpeg/ffprobe, Piper et une voix française.
-L’analyse syntaxique et le contrôle de parcours nécessitent Lua 5.4.
-
-Depuis la racine du dépôt :
+Prérequis : Python 3, cryptography, FFmpeg/ffprobe, Piper, une voix française et
+Lua 5.4 pour les contrôles. Depuis la racine :
 
 ```sh
-python scripts/prototypes/flam-native/prototype.py build \
-  --piper /chemin/vers/piper \
-  --voice /chemin/vers/fr_FR-siwis-medium.onnx
-```
-
-La voix installée par Story Studio est choisie par défaut. `--piper` est facultatif
-si l’exécutable est dans le `PATH`. Le résultat se trouve dans
-`exports/flam-native-prototype/` : archive de travail `.plain.pk` et manifeste.
-Cette archive contient les sources et l’audio, sans métadonnées d’appareil.
-
-## Vérifier localement
-
-```sh
+python scripts/prototypes/flam-native/prototype.py build --piper /chemin/vers/piper
 python -m unittest discover -s scripts/prototypes/flam-native -p 'test_*.py'
 lua scripts/prototypes/flam-native/check-runtime.lua
-luac -p scripts/prototypes/flam-native/main.lua
+python -m py_compile scripts/prototypes/flam-native/*.py
 luac -p scripts/prototypes/flam-native/passage.lua
+luac -p scripts/prototypes/flam-native/scenes.lua
+luac -p scripts/prototypes/flam-native/savegame.lua
 ```
 
-Les tests vérifient la publication et son annulation sur un volume synthétique,
-la conservation des autres histoires, le refus d’un remplacement et les deux
-parcours Lua sur hôte factice. Ils ne valident ni LVGL réel ni la lecture matérielle.
-La table `.mp3map` est générée à partir des trames mesurées par ffprobe ; son
-fonctionnement sur le firmware reste inclus dans l’essai matériel.
+La voix française installée par Story Studio est choisie par défaut ; un autre
+modèle peut être passé avec --voice. Piper peut être omis s’il est dans le PATH.
+Les quatre narrations sont originales et disponibles dans les fichiers texte.
+
+Le résultat se trouve dans exports/flam-inventaire-prototype/ :
+cle-des-lucioles.plain.pk, manifeste et aperçu de l’introduction.
+Aucune métadonnée d’appareil n’est incluse dans cette archive de travail.
+
+Le runtime utilise le profil Audio B : stéréo 44,1 kHz, 128 kbit/s, ID3/Xing et
+table audio. Une narration propre à chaque scène est relue au début lors d’une
+reprise. La ressource mono de comparaison reste dans le pack mais n’est pas
+sélectionnée par le runtime. Le succès antérieur de B n’établit pas la cause
+exacte du silence initial, plusieurs caractéristiques ayant été modifiées.
+
+## Comportements et sauvegarde
+
+L’inventaire montre la quantité de clés. Le coffre ne donne sa clé qu’une fois.
+L’ouverture consomme cette clé et conserve la porte ouverte. Sans clé, le choix
+est désactivé avec une explication ; le retour vers la clairière reste possible.
+Reprendre et recommencer sont distincts, avec confirmation avant un nouveau départ.
+
+L’état sauvegardé est plat : version, scène, quantité, coffre vidé, porte ouverte.
+Il exclut objets LVGL, fonctions et timers. Il n’écrit pas dans la globale
+firmware state, dont certaines écritures ont provoqué des problèmes de relance
+dans les expériences publiques.
+
+Le seul adaptateur de stockage appelle progression.load/save avec le slot
+lucioles, isolé par le firmware dans l’aventure. Chaque écriture est relue avant
+confirmation. Cette relecture prouve un aller-retour de l’API, pas une résistance
+à une coupure arbitraire pendant l’écriture flash. Les données restaurées sont
+validées ; une sauvegarde inconnue n’est pas silencieusement remplacée.
+
+Le retour bibliothèque laisse un écran actif et conserve le module : le firmware
+ne rappelle pas nécessairement setup. Consulter l’inventaire ne déplace pas le
+point de reprise. Les récompenses ne sont pas liées au rendu ou à la réécoute.
+
+## Contrôles locaux
+
+Le point d’entrée convenu pilote le vrai runtime par la molette et les clics et
+observe les textes affichés. L’hôte fournit seulement LVGL, l’audio et le stockage.
+
+Les parcours couvrent le coffre, l’inventaire, la porte, les clics doublés, les
+revisites, les quantités, la réouverture du même module et une nouvelle instance
+avec sauvegarde conservée avant acquisition, avec clé puis après consommation.
+Ils couvrent aussi la confirmation du nouveau départ, l’annulation, les erreurs
+de lecture, les versions inconnues, les écritures refusées ou sans effet et les
+régressions audio. Un stockage témoin d’une autre aventure reste intact.
+
+Les tests Python utilisent un volume synthétique : intégrité, préservation des
+autres histoires, refus des remplacements et annulation du transfert interrompu.
+Ils ne réimplémentent pas les règles de l’aventure.
 
 ## Installer et retirer
 
-L’application officielle doit être fermée pendant le transfert. Utiliser le point
-de montage de la FLAM ; aucun montage automatique n’est effectué.
+Fermer l’application officielle pendant le transfert. Aucun montage automatique
+ni changement de firmware n’est effectué.
 
 ```sh
 python scripts/prototypes/flam-native/prototype.py install --device /chemin/FLAM
 python scripts/prototypes/flam-native/prototype.py remove --device /chemin/FLAM
 ```
 
-L’installateur est limité à ce prototype et aux métadonnées des firmwares 2.4.1 et
-2.4.2. L’UUID est fixe et propre à cette expérience. Une installation existante
-est refusée. Les scripts et `info` sont chiffrés en mémoire ; les clés ne sont
-jamais affichées ni enregistrées dans le dépôt. L’installateur relit chaque
-fichier publié et vérifie le déchiffrement des scripts avant inscription dans la
-liste. La liste et le cache sont sauvegardés dans un répertoire privé sous
-`~/.local/share/com.hugs11.story-studio/flam-prototype/`.
+Ce prototype a un nouvel UUID, différent de celui du premier essai. L’installateur
+reste limité aux métadonnées 2.4.1/2.4.2 et refuse une identité déjà installée.
+Les fichiers autorisés incluent explicitement modules et narrations.
+Liste et cache sont sauvegardés dans un répertoire privé sous
+~/.local/share/com.hugs11.story-studio/flam-prototype/.
+Les clés sont utilisées en mémoire, jamais affichées ni enregistrées dans le dépôt.
 
-La liste conserve ses entrées existantes et reçoit l’UUID du prototype ; le cache
-est invalidé pour être reconstruit par le firmware. Les autres histoires et les
-métadonnées de l’appareil ne sont pas modifiées. La commande de retrait vérifie
-les empreintes des fichiers du prototype avant suppression et conserve les
-autres entrées de la bibliothèque, même ajoutées après l’installation.
+Le retrait vérifie les fichiers appartenant à ce prototype ; les autres histoires
+et leurs sauvegardes ne sont pas supprimées. Démonter proprement avant déconnexion.
+Après installation, éteindre complètement puis rallumer pour charger le nouveau code.
 
-Après transfert, démonter proprement le volume avant de débrancher l’USB.
+## Parcours matériel à confirmer
 
-## Validation sur l’appareil
+1. Désactiver le Wi-Fi, ouvrir **La clé des lucioles**, commencer et écouter.
+2. Visiter la porte sans clé : ouverture indisponible, retour possible.
+3. Explorer le coffre, prendre la clé, consulter l’inventaire : **Clé : 1**.
+4. Quitter vers la bibliothèque puis reprendre : clé présente et coffre vide.
+5. Éteindre complètement, rallumer, reprendre : même scène et même inventaire.
+6. Ouvrir la porte : clé consommée et porte ouverte.
+7. Éteindre, rallumer et reprendre : porte ouverte et **Clé : 0**.
+8. Revisiter le coffre : aucune nouvelle clé ; traverser pour atteindre la fin.
+9. Recommencer explicitement : inventaire vide, coffre plein et porte fermée.
+10. Vérifier l’accès au premier prototype et aux histoires achetées.
 
-1. Après extinction/rallumage, ouvrir **Le passage des lucioles** et vérifier que
-   l’écran indique **Lucioles - diagnostic 2**.
-2. Laisser **Audio B : stéréo**, cliquer et écouter la narration entière,
-   environ 16 secondes. En cas de silence, noter les valeurs `V`, état, `L`, `E`, `t`.
-3. Tourner la molette et cliquer : vérifier la fin du pont, puis revenir à la bibliothèque.
-4. Relancer : l’écran de départ doit revenir. Cliquer, choisir le sentier et vérifier son autre fin.
-5. Relancer encore et tester le bouton retour.
-6. Comparer avec **Audio A : mono original** depuis l’écran de départ si nécessaire.
-7. Éteindre puis rallumer et refaire une lecture avec le Wi-Fi désactivé.
-
-Un écran noir, un titre illisible, l’absence d’audio ou une relance bloquée ne
-constituent pas une validation : noter l’étape et ce qui est affiché. Aucun
-changement de firmware n’est nécessaire à cet essai.
-
-Le rapport local `exports/flam-native-prototype/validation.json` distingue les
-vérifications de transfert de la lecture réelle confirmée par l’utilisateur.
-Les essais d’inventaire, de dés et de sauvegarde durable ne font pas partie de
-cette validation. Le test spécifique Wi-Fi désactivé n’a pas été confirmé séparément.
+Noter toute erreur avec son libellé et l’étape. Le ticket reste ouvert tant que
+la conservation réelle après extinction n’est pas confirmée. Ce jalon ne valide
+ni dés ni classes et n’intègre pas encore l’éditeur visuel.
 
 ## Sources d’interopérabilité
 
-- [Expériences primaires sur firmware 2.4.2](https://github.com/o-daneel/Flam.RE/issues/1).
-- [Recette de chiffrement figée](https://github.com/Yariminal/flam-re/blob/2fb9033fb6566c010f6b34858242276dec2db7e8/docs/fw2-key-wrap.md).
-- [API hôte et événements molette](https://github.com/scarlaty/flam-player/blob/71385ff7812987e54fe843cd62c952d1246afd89/skills/flam-homebrew/references/lua-api.md).
-- [Format de la table audio](https://github.com/scarlaty/flam-player/blob/71385ff7812987e54fe843cd62c952d1246afd89/src/formats/mp3map_parser.c).
-
-Le comportement observé par ces auteurs en 2.4.2 a servi de piste ; la validation
-de notre prototype en 2.4.1 vient du retour utilisateur sur la version 2 et son
-profil B. Ce code expérimental ne modifie pas le transfert de production, qui
-continue à refuser les écritures FLAM.
+- [Expériences matérielles](https://github.com/o-daneel/Flam.RE/issues/1).
+- [Chiffrement figé](https://github.com/Yariminal/flam-re/blob/2fb9033fb6566c010f6b34858242276dec2db7e8/docs/fw2-key-wrap.md).
+- [API hôte](https://github.com/scarlaty/flam-player/blob/71385ff7812987e54fe843cd62c952d1246afd89/skills/flam-homebrew/references/lua-api.md).
+- [Usage des API de progression](https://github.com/scarlaty/flam-player/blob/71385ff7812987e54fe843cd62c952d1246afd89/skills/flam-homebrew/assets/runtime/script/progressionManager.lua).

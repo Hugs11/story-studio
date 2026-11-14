@@ -1,0 +1,1 @@
+Tu retrouves le coffre près du sentier. S'il contient encore sa clé, tu peux la prendre pour la ranger dans ton inventaire. Si tu l'as déjà récupérée, le coffre reste vide. Tu peux toujours retourner dans la clairière pour continuer ton exploration.

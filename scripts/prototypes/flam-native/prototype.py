@@ -21,10 +21,10 @@ import zipfile
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 SOURCE = Path(__file__).resolve().parent
-OUTPUT = SOURCE.parents[2] / "exports" / "flam-native-prototype"
-STORY = UUID("31e2a6d1-3899-46d8-91cf-9b0c71d845d9")
-TITLE = "Le passage des lucioles"
-PACK = "passage-des-lucioles.plain.pk"
+OUTPUT = SOURCE.parents[2] / "exports" / "flam-inventaire-prototype"
+STORY = UUID("b74aa3e6-2d71-4d16-aad3-c7feab77389f")
+TITLE = "La clé des lucioles"
+PACK = "cle-des-lucioles.plain.pk"
 BACKUPS = Path.home() / ".local/share/com.hugs11.story-studio/flam-prototype"
 
 
@@ -104,12 +104,24 @@ def build(output, piper, voice, audio_source=None):
             "version": b"1",
             "main.lua": (SOURCE / "main.lua").read_bytes(),
             "script/passage.lua": (SOURCE / "passage.lua").read_bytes(),
+            "script/scenes.lua": (SOURCE / "scenes.lua").read_bytes(),
+            "script/savegame.lua": (SOURCE / "savegame.lua").read_bytes(),
             "sounds/intro.mp3": mp3.read_bytes(),
             "sounds/intro.mp3map": audio_map(mp3),
             "sounds/intro-stereo.mp3": stereo.read_bytes(),
             "sounds/intro-stereo.mp3map": audio_map(stereo),
             "uuid.bin": STORY.bytes,
         }
+        for name in ("coffre", "porte", "fin"):
+            clip_wav = Path(temporary) / f"{name}.wav"
+            clip_mp3 = Path(temporary) / f"{name}-stereo.mp3"
+            run(str(piper), "--model", str(voice), "--input-file", str(SOURCE / f"{name}.txt"),
+                "--output-file", str(clip_wav))
+            run("ffmpeg", "-v", "error", "-i", str(clip_wav), "-ac", "2", "-ar", "44100",
+                "-codec:a", "libmp3lame", "-b:a", "128k", "-id3v2_version", "3",
+                "-map_metadata", "-1", str(clip_mp3))
+            files[f"sounds/{name}-stereo.mp3"] = clip_mp3.read_bytes()
+            files[f"sounds/{name}-stereo.mp3map"] = audio_map(clip_mp3)
         with zipfile.ZipFile(output / PACK, "w", zipfile.ZIP_STORED) as archive:
             for name, data in files.items():
                 archive.writestr(name, data)
@@ -162,8 +174,11 @@ def read_pack(output):
     if manifest["uuid"] != str(STORY):
         raise ValueError("Identite du prototype incorrecte.")
     expected = {"info.plain", "version", "main.lua", "script/passage.lua",
+                "script/scenes.lua", "script/savegame.lua",
                 "sounds/intro.mp3", "sounds/intro.mp3map", "sounds/intro-stereo.mp3",
                 "sounds/intro-stereo.mp3map", "uuid.bin"}
+    expected.update(f"sounds/{name}-stereo.{suffix}" for name in ("coffre", "porte", "fin")
+                    for suffix in ("mp3", "mp3map"))
     with zipfile.ZipFile(output / PACK) as archive:
         if len(archive.namelist()) != len(expected) or set(archive.namelist()) != expected:
             raise ValueError("Le pack contient des fichiers inattendus.")
