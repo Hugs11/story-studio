@@ -4,6 +4,15 @@ Vocabulaire du domaine, précisé au fil de la conception des aventures personne
 
 ## Langage
 
+**Bibliothèque FLAM** :
+Ensemble des histoires présentes sur un appareil FLAM connecté.
+
+**Bibliothèque locale** :
+Ensemble des histoires conservées sur l’ordinateur, consultables même lorsque l’appareil FLAM est déconnecté.
+
+**Import depuis FLAM** :
+Création dans la bibliothèque locale d’une copie indépendante d’une ou de plusieurs histoires de la bibliothèque FLAM, sans modifier les histoires sur l’appareil.
+
 **Aventure personnelle** :
 Livre audio interactif dont l’auteur crée le scénario, les dialogues et les règles, destiné à être joué sur FLAM. Les aventures achetées peuvent servir de référence pour l’expérience de jeu recherchée.
 _Éviter_ : Copie d’une aventure achetée.
