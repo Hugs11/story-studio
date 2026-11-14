@@ -4,6 +4,20 @@ import { createLuniiDevices, luniiRows, luniiWriteRefusal } from '../src/store/c
 import { KEYS } from '../src/store/persistentSettings.js';
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
+
+test('FLAM refuses every Lunii action, including retrieval, while allowing browsing', async () => {
+  const flam = { id: 'flam', name: 'FLAM', family: 'flam', state: 'readOnly', stories: [{ key: 'story', title: 'Une aventure' }], orphans: [], banner: ['readOnly'], readOnlyReason: 'flam' };
+  for (const method of ['send', 'remove', 'reorder', 'hide', 'rename', 'repair', 'restore', 'repatriateMany']) {
+    assert.equal(luniiWriteRefusal(flam, method), 'STORYTELLER_FLAM_READ_ONLY');
+  }
+  const { store } = fixture({ inspect: async () => flam });
+  store.reconcile([{ id: 'flam', state: 'ready' }]);
+  await tick();
+  const shown = store.getSnapshot().luniiDevices[0];
+  assert.equal(shown.family, 'flam');
+  assert.equal(shown.stories[0].title, 'Une aventure');
+  assert.equal(shown.state, 'readOnly');
+});
 function fixture(overrides = {}, values = new Map()) {
   const calls = [];
   const timers = new Map();

@@ -938,5 +938,8 @@
   "operation.moreNames_one": "and {{count}} other",
   "operation.moreNames_other": "and {{count}} others",
   "toolbar.sort.current": "Sort by {{criterion}}",
-  "sources.repatriated.managed": "Managed by Story Studio: packs retrieved from the Lunii"
+  "sources.repatriated.managed": "Managed by Story Studio: packs retrieved from the Lunii",
+  "lunii.flamReadOnlyTitle": "FLAM · read-only",
+  "lunii.flamReadOnly": "You can browse the stories on this FLAM. Transfers, retrieval and changes are not supported yet. Titles come from the device cache when available.",
+  "lunii.flamPlaylistUnavailable": "This FLAM is recognized, but its story list is unreadable or incomplete. Story Studio does not change any files. Transfers and changes are not supported yet."
 }

@@ -18382,5 +18382,16 @@
       "sourceHash": "54d6dd8ae18b",
       "status": "ai-reviewed"
     }
+  },
+  "STORYTELLER_FLAM_READ_ONLY": {
+    "context": "Panneau appareil FLAM ; prise en charge en lecture seule, sans transfert ni réparation Lunii.",
+    "en": {
+      "sourceHash": "2adefce3d09a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2adefce3d09a",
+      "status": "ai-reviewed"
+    }
   }
 }

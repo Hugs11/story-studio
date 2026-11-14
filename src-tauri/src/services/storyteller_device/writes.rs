@@ -124,6 +124,10 @@ impl Device {
     pub(crate) fn open(root: &Path, app_data: &Path) -> Result<Self> {
         let _guard = platform::access_guard();
         safe(root, true)?;
+        // FLAM has its own layout. No Lunii mutation or sidecar sync may reach it.
+        if flam::is_device(root) {
+            return Err(Error::FlamReadOnly);
+        }
         if !app_data.is_absolute() {
             return Err(Error::UnsafePath);
         }

@@ -1,6 +1,7 @@
 //! Mounted storyteller management, from specification-conteuse §§1,2,3,5,7.
 //! No transport crypto, imports, IPC or automatic orphan repair.
 pub(crate) mod cards;
+pub(crate) mod flam;
 mod install;
 mod orphans;
 pub(crate) use orphans::Identity;
@@ -33,6 +34,7 @@ pub(crate) enum Error {
         missing_bytes: u64,
     },
     ReadOnly,
+    FlamReadOnly,
     Busy,
     Cancelled,
     InvalidName,
@@ -102,6 +104,7 @@ impl From<Error> for crate::support::user_message::UserMessage {
             Error::InvalidOrder => codes::STORYTELLER_INVALID_ORDER,
             Error::Disconnected => codes::STORYTELLER_SEND_DISCONNECTED,
             Error::ReadOnly => codes::STORYTELLER_VOLUME_READ_ONLY,
+            Error::FlamReadOnly => codes::STORYTELLER_FLAM_READ_ONLY,
             Error::UnknownFormat | Error::InvalidMetadata | Error::MetadataSize => {
                 codes::STORYTELLER_READ_ONLY
             }
@@ -240,7 +243,7 @@ pub(crate) fn detect(volumes: &impl Volumes) -> Result<Vec<PathBuf>> {
     let mut roots = Vec::new();
     for root in volumes.mounted_removable()? {
         if root.is_absolute()
-            && root.join(".md").symlink_metadata().is_ok()
+            && (root.join(".md").symlink_metadata().is_ok() || flam::is_device(&root))
             && safe(&root, true).is_ok()
         {
             if let Ok(root) = root.canonicalize() {
@@ -422,6 +425,7 @@ pub(crate) fn device_fault(code: &str, stage: &str) -> bool {
         | codes::STORYTELLER_CIPHER_METADATA_REFUSED
         | codes::STORYTELLER_STORY_PARKING_FAILED
         | codes::STORYTELLER_VOLUME_READ_ONLY
+        | codes::STORYTELLER_FLAM_READ_ONLY
         | codes::STORYTELLER_BACKUP_FAILED
         | codes::STORYTELLER_PLAYLIST_RECOVERY_REQUIRED
         | codes::STORYTELLER_PLAYLIST_DAMAGED

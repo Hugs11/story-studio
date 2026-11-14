@@ -1622,5 +1622,6 @@
   "STORYTELLER_PROJECT_IDENTITY_SAVE_FAILED": "Unable to save the identifier in the project. Sending to the Lunii has not started.",
   "STORYTELLER_PROJECT_OPEN_ID_REQUIRED": "This project is open: save it (Ctrl+S) to give it its identifier, then send it again.",
   "STORYTELLER_PROJECT_LEGACY_SAVE_REQUIRED": "Open this project once and save it before sending it.",
-  "STORYTELLER_PROJECT_ID_RECHECK_FAILED": "The identifier was saved, but the project could not be checked again. Try sending it to the Lunii again."
+  "STORYTELLER_PROJECT_ID_RECHECK_FAILED": "The identifier was saved, but the project could not be checked again. Try sending it to the Lunii again.",
+  "STORYTELLER_FLAM_READ_ONLY": "This FLAM is read-only in Story Studio. Transfers, retrieval and changes are not supported yet."
 }

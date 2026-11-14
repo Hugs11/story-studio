@@ -1912,6 +1912,7 @@ fn lunii_device_fault_classifies_every_diagnostic_code_and_write_stage() {
         codes::STORYTELLER_DEVICE_CHANGED,
         codes::STORYTELLER_PLAYLIST_TOO_LARGE,
         codes::STORYTELLER_READ_ONLY,
+        codes::STORYTELLER_FLAM_READ_ONLY,
     ];
     for code in fault_codes {
         for stage in ["preparing", "copying", "device"] {

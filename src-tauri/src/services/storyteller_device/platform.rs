@@ -200,7 +200,7 @@ fn parse_capacity(out: &str) -> Option<(u64, u64)> {
 mod native {
     use super::*;
     // mountinfo is kernel-provided and does not depend on lsblk or udev.
-    // Restrict probing to FAT-family mounts, then use the shared .md filter.
+    // Restrict probing to FAT-family mounts, then use the shared device filter.
     pub(super) fn parse(text: &str) -> Result<Vec<PathBuf>> {
         use std::os::unix::ffi::OsStringExt;
         let mut paths = Vec::new();
@@ -892,7 +892,7 @@ pub(crate) struct Volume {
     pub root: Option<PathBuf>,
 }
 /// Detection does not mount or inspect story payloads. Linux's volume label is
-/// a candidate only; opening validates .md through the shared driver.
+/// a candidate only; opening validates the device marker through the driver.
 pub(crate) fn discover() -> Result<Vec<Volume>> {
     #[cfg(target_os = "linux")]
     {
@@ -933,7 +933,7 @@ fn parse_lsblk_with_mounts(text: &str, mounted: &[PathBuf]) -> Result<Vec<Volume
             .is_some_and(|p| mounted.iter().any(|root| root == Path::new(p)))
             || value["label"]
                 .as_str()
-                .is_some_and(|s| s.eq_ignore_ascii_case("LUNII"))
+                .is_some_and(|s| s.eq_ignore_ascii_case("LUNII") || s.eq_ignore_ascii_case("FLAM"))
         {
             if let Some(name) = value["name"]
                 .as_str()
@@ -967,7 +967,7 @@ fn mounted_root(volume: &Volume) -> Option<PathBuf> {
     volume
         .root
         .as_ref()
-        .filter(|root| safe(&root.join(".md"), false).is_ok())
+        .filter(|root| safe(&root.join(".md"), false).is_ok() || flam::is_device(root))
         .cloned()
 }
 pub(crate) fn mount(volume: &Volume) -> Result<PathBuf> {
@@ -1100,6 +1100,19 @@ fn linux_discovery_merges_label_and_mountinfo_candidates() {
     assert_eq!(volumes[1].root.as_deref(), Some(Path::new("/fake/renamed")));
 }
 
+#[cfg(all(test, target_os = "linux"))]
+#[test]
+fn linux_discovers_flam_before_mount_without_treating_other_labels_as_devices() {
+    let volumes = parse_lsblk(r#"{"blockdevices":[{"name":"/dev/fake1","label":"flam","mountpoint":null},{"name":"/dev/fake2","label":"OTHER","mountpoint":null}]}"#).unwrap();
+    assert_eq!(
+        volumes,
+        vec![Volume {
+            native_id: "/dev/fake1".into(),
+            root: None
+        }]
+    );
+}
+
 #[cfg(test)]
 #[test]
 fn cached_mount_is_reused_only_while_device_marker_is_present() {
@@ -1116,6 +1129,9 @@ fn cached_mount_is_reused_only_while_device_marker_is_present() {
     assert_eq!(mounted_root(&volume), Some(root.clone()));
     fs::remove_file(root.join(".md")).unwrap();
     assert_eq!(mounted_root(&volume), None);
+    fs::write(root.join(".mdf"), []).unwrap();
+    assert_eq!(mounted_root(&volume), Some(root.clone()));
+    fs::remove_file(root.join(".mdf")).unwrap();
     fs::remove_dir(root).unwrap();
 }
 

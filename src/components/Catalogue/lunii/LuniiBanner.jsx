@@ -21,7 +21,10 @@ export function LuniiBanner({ kind, device, gestures, repairWaiting = false, mar
   } else if (kind === 'readOnly') {
     // The engine names the cause; the firmware version is never one.
     const reason = device.readOnlyReason ?? (![6, 7].includes(device.metadataVersion) || !device.firmware ? 'metadata' : null);
-    if (reason === 'volume') {
+    if (reason === 'flam') {
+      Icon = Lock; tone = 'neutral'; title = t('catalogue:lunii.flamReadOnlyTitle');
+      description = device.playlistUnavailable ? t('catalogue:lunii.flamPlaylistUnavailable') : t('catalogue:lunii.flamReadOnly');
+    } else if (reason === 'volume') {
       Icon = TriangleAlert; tone = 'warning'; title = t('catalogue:lunii.readOnlyVolumeTitle'); description = t('catalogue:lunii.readOnlyVolume');
     } else if (reason === 'unavailable') {
       Icon = TriangleAlert; tone = 'warning'; title = t('catalogue:lunii.readOnlyUnavailableTitle'); description = t('catalogue:lunii.readOnlyUnavailable');

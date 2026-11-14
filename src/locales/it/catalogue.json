@@ -990,5 +990,8 @@
   "operation.moreNames_many": "e {{count}} altri",
   "operation.moreNames_other": "e {{count}} altri",
   "toolbar.sort.current": "Ordina per {{criterion}}",
-  "sources.repatriated.managed": "Gestito da Story Studio: pacchetti recuperati dalla Lunii"
+  "sources.repatriated.managed": "Gestito da Story Studio: pacchetti recuperati dalla Lunii",
+  "lunii.flamReadOnlyTitle": "FLAM · sola lettura",
+  "lunii.flamReadOnly": "Puoi consultare le storie di questo FLAM. Trasferimenti, recupero e modifiche non sono ancora supportati. I titoli provengono dalla cache del dispositivo, quando disponibile.",
+  "lunii.flamPlaylistUnavailable": "Questo FLAM viene riconosciuto, ma il suo elenco di storie è illeggibile o incompleto. Story Studio non modifica alcun file. Trasferimenti e modifiche non sono ancora supportati."
 }

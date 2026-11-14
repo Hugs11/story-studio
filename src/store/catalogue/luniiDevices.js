@@ -497,6 +497,7 @@ export function createLuniiDevices(api, settings = { read, write }, timers = glo
 export function luniiWriteRefusal(device, method) {
   if (!device || ['disconnected', 'ejected'].includes(device.state)) return 'STORYTELLER_DEVICE_GONE';
   if ((device.busy && !device.queueActive) || device.state === 'opening') return 'STORYTELLER_DEVICE_BUSY';
+  if (device.family === 'flam') return 'STORYTELLER_FLAM_READ_ONLY';
   if (method === 'repatriateMany') return null;
   if (device.readOnlyReason === 'volume') return 'STORYTELLER_VOLUME_READ_ONLY';
   if (device.state === 'readOnly' || device.banner?.includes('readOnly')) return 'STORYTELLER_READ_ONLY';

@@ -11005,5 +11005,38 @@
       "sourceHash": "438f88e797e4",
       "status": "ai-reviewed"
     }
+  },
+  "lunii.flamReadOnlyTitle": {
+    "context": "Panneau appareil FLAM ; prise en charge en lecture seule, sans transfert ni réparation Lunii.",
+    "en": {
+      "sourceHash": "12b1082ad9f5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "12b1082ad9f5",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.flamReadOnly": {
+    "context": "Panneau appareil FLAM ; prise en charge en lecture seule, sans transfert ni réparation Lunii.",
+    "en": {
+      "sourceHash": "3c977fc25b70",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3c977fc25b70",
+      "status": "ai-reviewed"
+    }
+  },
+  "lunii.flamPlaylistUnavailable": {
+    "context": "Panneau appareil FLAM ; prise en charge en lecture seule, sans transfert ni réparation Lunii.",
+    "en": {
+      "sourceHash": "3ac49af2ada9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3ac49af2ada9",
+      "status": "ai-reviewed"
+    }
   }
 }

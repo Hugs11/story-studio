@@ -243,6 +243,13 @@ fn inspect_mode(
     id: &str,
     read_only: bool,
 ) -> Result<Value> {
+    let volume = entry(app, id)?.volume;
+    let root = volume.root.as_deref().ok_or_else(gone)?;
+    if driver::flam::is_device(root) {
+        let mut detail = flam_detail(id, root, &NativeVolumes)?;
+        detail["busy"] = json!(entry(app, id)?.busy);
+        return Ok(detail);
+    }
     let store: &Store = shared;
     let device = device(app, id)?;
     let inventory =
@@ -414,6 +421,33 @@ fn inspect_mode(
         "stories": stories, "orphans": orphans, "listLost": list_lost, "busy": entry(app, id)?.busy,
         "repairPreview": repair_preview, "repairPreviewError": repair_preview_error,
         "recognitionDegraded": inventory.recognition_degraded, "cardSyncFailures": sync_failures
+    }))
+}
+/// FLAM never goes through Device::open, card synchronization or Lunii repair.
+fn flam_detail(id: &str, root: &std::path::Path, volumes: &impl Volumes) -> Result<Value> {
+    let inventory = driver::flam::inspect(root, volumes).map_err(UserMessage::from)?;
+    let stories: Vec<_> = inventory
+        .stories
+        .iter()
+        .map(|story| {
+            json!({
+                "key": story.uuid, "knownUuid": story.uuid,
+                "title": story.title, "kind": "unknown", "hidden": story.hidden,
+                "complete": story.complete, "directoryPresent": story.directory_present,
+                "sizeBytes": null, "durationSec": null, "coverPath": null,
+                "parkingPending": false, "parked": false, "duplicateOfListed": false
+            })
+        })
+        .collect();
+    Ok(json!({
+        "id": id, "name": "FLAM", "family": "flam", "serial": null,
+        "firmware": inventory.firmware, "metadataVersion": null,
+        "state": "readOnly", "readOnlyReason": "flam", "banner": ["readOnly"],
+        "freeBytes": inventory.free_bytes, "totalBytes": inventory.total_bytes,
+        "stories": stories, "orphans": [], "busy": false, "listLost": false,
+        "playlistUnavailable": inventory.playlist_error,
+        "repairPreview": null, "repairPreviewError": null,
+        "recognitionDegraded": false, "cardSyncFailures": 0
     }))
 }
 /// No preview of a repair that will be refused: the typed refusal is shown instead.
@@ -840,6 +874,32 @@ fn official_cover(store: &Store, id: Uuid) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn flam_inventory_uses_the_panel_contract_and_never_opens_the_lunii_writer() {
+        let root = std::env::temp_dir()
+            .canonicalize()
+            .unwrap()
+            .join(format!("flam-ipc-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(root.join("etc/library")).unwrap();
+        let mut md = vec![0; 126];
+        md[0] = 1;
+        md[2..7].copy_from_slice(b"2.4.1");
+        std::fs::write(root.join(".mdf"), md).unwrap();
+        let uuid = Uuid::new_v4();
+        std::fs::write(root.join("etc/library/list"), format!("{uuid}\n")).unwrap();
+        let detail = flam_detail("opaque-device", &root, &NativeVolumes).unwrap();
+        assert_eq!(detail["family"], "flam");
+        assert_eq!(detail["state"], "readOnly");
+        assert_eq!(detail["readOnlyReason"], "flam");
+        assert_eq!(detail["firmware"], "2.4.1");
+        assert_eq!(detail["stories"][0]["key"], uuid.to_string());
+        assert_eq!(detail["stories"][0]["directoryPresent"], false);
+        assert_eq!(detail["stories"][0]["complete"], false);
+        assert_eq!(detail["orphans"], json!([]));
+        assert!(!detail.to_string().contains(root.to_str().unwrap()));
+        assert!(!root.join(".storystudio").exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
     #[test]
     fn lunii_send_setup_io_failure_is_a_device_fault() {
         let error = classify_send_setup_error(driver::Error::Io.into());

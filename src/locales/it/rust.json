@@ -1695,5 +1695,6 @@
   "STORYTELLER_PROJECT_IDENTITY_SAVE_FAILED": "Impossibile salvare l’identificativo nel progetto. L’invio alla Lunii non è iniziato.",
   "STORYTELLER_PROJECT_OPEN_ID_REQUIRED": "Questo progetto è aperto: salvalo (Ctrl+S) per assegnargli il suo identificativo, poi invialo di nuovo.",
   "STORYTELLER_PROJECT_LEGACY_SAVE_REQUIRED": "Apri questo progetto una volta e salvalo prima di inviarlo.",
-  "STORYTELLER_PROJECT_ID_RECHECK_FAILED": "L’identificativo è stato salvato, ma non è stato possibile ricontrollare il progetto. Riprova a inviarlo alla Lunii."
+  "STORYTELLER_PROJECT_ID_RECHECK_FAILED": "L’identificativo è stato salvato, ma non è stato possibile ricontrollare il progetto. Riprova a inviarlo alla Lunii.",
+  "STORYTELLER_FLAM_READ_ONLY": "Questo FLAM è in sola lettura in Story Studio. Trasferimenti, recupero e modifiche non sono ancora supportati."
 }

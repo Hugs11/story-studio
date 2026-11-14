@@ -98,6 +98,10 @@
     "params": []
   },
   {
+    "code": "STORYTELLER_FLAM_READ_ONLY",
+    "params": []
+  },
+  {
     "code": "STORYTELLER_VOLUME_READ_ONLY",
     "params": []
   },

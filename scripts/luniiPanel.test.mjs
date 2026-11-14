@@ -31,6 +31,16 @@ const text = node => typeof node === 'string' || typeof node === 'number' ? Stri
 const render = (Component, props) => { const app = runner(() => Component(props)); try { return app.render(); } finally { app.unmount(); } };
 const device = { id: 'd', state: 'ready', stories: [], orphans: [], banner: [], metadataVersion: 6, firmware: '2.22.0', totalBytes: 1000, freeBytes: 400 };
 
+test('FLAM explains browsing support without suggesting Lunii repairs', () => {
+  const flam = { ...device, family: 'flam', name: 'FLAM', state: 'readOnly', readOnlyReason: 'flam' };
+  const tree = render(LuniiBanner, { kind: 'readOnly', device: flam });
+  assert.match(text(tree), /FLAM/);
+  assert.match(text(tree), /transferts/);
+  assert.doesNotMatch(text(tree), /fsck|abîmées|firmware inconnu/);
+  assert.equal(elements(tree).filter(e => e.type === Button).length, 0);
+  assert.match(text(render(LuniiBanner, { kind: 'readOnly', device: { ...flam, playlistUnavailable: true } })), /liste.*illisible/);
+});
+
 test('damaged banners distinguish startup failure from a missing choice, with inactive repair', () => {
   for (const [kind, expected, excluded] of [['damagedTruncated', /ne démarre plus/, /quand l’enfant/], ['damagedMissingStories', /error.*quand l’enfant/, /ne démarre plus/]]) {
     const tree = render(LuniiBanner, { kind, device });

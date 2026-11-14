@@ -62,6 +62,11 @@ GitHub issues.
 
 Writing to the device (sending, deleting, reordering and retrieving audiobooks) has been tested on a **Lunii V3 with firmware 3.1.5 and 3.3.4**, on Windows, Linux and macOS. Other models and firmware versions have not been verified on a real device, and a firmware update may change how the device stores audiobooks.
 
+Initial **FLAM support is read-only**: Story Studio detects mounted devices and
+shows their story list, cached titles, firmware and storage capacity. Transfers,
+retrieval, editing and repair are not supported for FLAM. See
+[FLAM support](docs/flam-support.md) for implementation and validation details.
+
 - Back up your Lunii before writing to it for the first time, and keep copies of your packs.
 - Official Lunii audiobooks are never copied back to your computer.
 - Story Studio is provided "as is", without warranty of any kind (see [LICENSE](LICENSE)). **You use it with your device at your own risk**: the authors cannot be held responsible for data loss or a device malfunction.

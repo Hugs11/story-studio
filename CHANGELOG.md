@@ -8,6 +8,14 @@ public version; this file stays as the concise project history.
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Initial read-only FLAM support: detect mounted devices, browse their ordered
+  story lists and cached titles, show firmware and storage capacity, and eject.
+  Transfers, retrieval, editing and repair are not yet supported for FLAM.
+
 ## [0.9.11] - 2026-11-08
 
 Story Studio 0.9.11 is mostly about reliability. Lunii operations now wait

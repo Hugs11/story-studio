@@ -1695,5 +1695,6 @@
   "STORYTELLER_PROJECT_IDENTITY_SAVE_FAILED": "Impossible d’enregistrer l’identifiant dans le projet. L’envoi à la Lunii n’a pas démarré.",
   "STORYTELLER_PROJECT_OPEN_ID_REQUIRED": "Ce projet est ouvert : enregistre-le (Ctrl+S) pour lui donner son identifiant, puis renvoie-le.",
   "STORYTELLER_PROJECT_LEGACY_SAVE_REQUIRED": "Ouvre ce projet une fois et enregistre-le avant de l’envoyer.",
-  "STORYTELLER_PROJECT_ID_RECHECK_FAILED": "L’identifiant a été enregistré, mais le projet n’a pas pu être revérifié. Réessaie l’envoi à la Lunii."
+  "STORYTELLER_PROJECT_ID_RECHECK_FAILED": "L’identifiant a été enregistré, mais le projet n’a pas pu être revérifié. Réessaie l’envoi à la Lunii.",
+  "STORYTELLER_FLAM_READ_ONLY": "Ce FLAM est en lecture seule dans Story Studio. Les transferts, la récupération et les modifications ne sont pas encore pris en charge."
 }
