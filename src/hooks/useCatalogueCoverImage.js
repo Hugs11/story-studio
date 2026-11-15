@@ -1,11 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createCoverLoading, initialCoverState, coverAttemptAddress } from '../store/catalogue/coverLoading.js';
 import { cachedCoverBlob, coverBlobMode, loadCoverBlob } from '../store/catalogue/coverDisplay.js';
+import { catalogueApi } from '../store/catalogue/catalogueApi.js';
 
 // Keep the last ready image only for this fiche while a new fingerprint loads.
 // `blob`: the page cannot put the address in <img> directly (coverDisplay.js);
 // the image then receives a blob URL once its bytes are fetched.
-export function useCatalogueCoverImage(address, ficheId = address, { blob = coverBlobMode(), load = loadCoverBlob } = {}) {
+export function useCatalogueCoverImage(address, ficheId = address, { blob = coverBlobMode(), load = loadCoverBlob, api = catalogueApi() } = {}) {
   const [, setBlobs] = useState(0);
   const image = useRef(null);
   const loading = useRef(null);
@@ -24,8 +25,9 @@ export function useCatalogueCoverImage(address, ficheId = address, { blob = cove
     const current = createCoverLoading({ address, changed });
     loading.current = { address, current };
     current.start(image.current);
-    return () => { current.dispose(); loading.current = null; };
-  }, [address, ficheId]);
+    const unsubscribe = api.subscribeCoverRetries(() => current.retryTransient());
+    return () => { unsubscribe(); current.dispose(); loading.current = null; };
+  }, [address, ficheId, api]);
   const current = () => loading.current?.address === address ? loading.current.current : null;
   const src = ['waiting', 'loading', 'ready'].includes(state.phase) ? coverAttemptAddress(address, state.attempt) : null;
   const pendingBlob = blob && src && !cachedCoverBlob(src) ? src : null;

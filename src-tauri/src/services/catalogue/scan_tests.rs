@@ -21,7 +21,7 @@ impl Fixture {
     fn open(&self) -> Arc<store::Store> {
         let store =
             Arc::new(store::Store::open(&self.0.join("data"), &self.0.join("cache")).unwrap());
-        store.add_source(&self.root(), 0, false).unwrap();
+        store.add_source(&self.root(), 0).unwrap();
         store
     }
     fn scan(&self, store: &Arc<store::Store>) -> events::Progress {
@@ -55,6 +55,43 @@ fn wait(store: &store::Store, id: &str) -> events::Progress {
     }
 }
 const ID: &str = "bda17862-0d71-41f6-974a-111111111111";
+
+#[test]
+fn entry_page_reads_one_thousand_cards_in_one_snapshot() {
+    let f = Fixture::new();
+    let store = f.open();
+    store
+        .write(|tx| {
+            for i in 0..1000 {
+                tx.execute(
+                    "INSERT INTO fiche VALUES (?1,0,0,0)",
+                    [format!("card-{i:04}")],
+                )
+                .map_err(store::error)?;
+            }
+            Ok(())
+        })
+        .unwrap();
+    let page = store.query_entries(1000, None, true).unwrap();
+    assert_eq!(page.items.len(), 1000);
+    assert_eq!(page.total_matching, 1000);
+    assert!(page.cursor.is_none());
+    store
+        .write(|tx| {
+            tx.execute("INSERT INTO fiche VALUES ('card-1000',0,0,0)", [])
+                .map_err(store::error)?;
+            Ok(())
+        })
+        .unwrap();
+    let page = store.query_entries(1001, None, true).unwrap();
+    assert_eq!(page.items.len(), 1000, "the engine caps each page at 1000");
+    let next = store
+        .query_entries(1001, page.cursor.as_deref(), true)
+        .unwrap();
+    assert_eq!(next.items.len(), 1);
+    assert!(next.cursor.is_none());
+}
+
 fn studio(id: Option<&str>) -> Value {
     json!({"title":"Même titre","stageNodes":[{"uuid":id,"squareOne":true}]})
 }
@@ -197,8 +234,799 @@ fn multipack_modified_unknown_child_creates_new_card() {
         1
     );
 }
+// A sink gate pauses the worker after it owns heavy and has captured its roots.
+// Heartbeats never block behind the gate.
+fn held_scan(
+    f: &Fixture,
+    store: &Arc<store::Store>,
+    ids: Option<Vec<String>>,
+) -> (
+    scan::Receipt,
+    std::sync::mpsc::Sender<()>,
+    std::sync::mpsc::Receiver<events::Progress>,
+) {
+    let (entered, running) = std::sync::mpsc::channel();
+    let (release, held) = std::sync::mpsc::channel();
+    let held = std::sync::Mutex::new(Some(held));
+    let (finished, done) = std::sync::mpsc::channel();
+    let receipt = store
+        .start_scan(
+            ids,
+            uuid::Uuid::new_v4().to_string(),
+            store.sources_revision().unwrap(),
+            f.0.join("cache"),
+            f.0.join("data"),
+            Arc::new(move |event, p| {
+                if event == "catalogue-operation-finished" {
+                    let _ = finished.send(p.clone());
+                } else if p.status == "running" {
+                    let receiver = held.lock().unwrap().take();
+                    if let Some(receiver) = receiver {
+                        entered.send(()).unwrap();
+                        receiver
+                            .recv_timeout(crate::test_support::timeout())
+                            .unwrap();
+                    }
+                }
+            }),
+        )
+        .unwrap();
+    running
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
+    (receipt, release, done)
+}
+fn request_scan(
+    f: &Fixture,
+    store: &Arc<store::Store>,
+    ids: Option<Vec<String>>,
+    name: &str,
+) -> scan::Receipt {
+    store
+        .start_scan(
+            ids,
+            name.into(),
+            store.sources_revision().unwrap(),
+            f.0.join("cache"),
+            f.0.join("data"),
+            Arc::new(|_, _| {}),
+        )
+        .unwrap()
+}
+
+fn scan_test_gate(
+    store: &store::Store,
+    stage: &'static str,
+    panic_after_release: bool,
+) -> (std::sync::mpsc::Receiver<()>, std::sync::mpsc::Sender<()>) {
+    let (entered, ready) = std::sync::mpsc::channel();
+    let (release, held) = std::sync::mpsc::channel();
+    let held = std::sync::Mutex::new(Some(held));
+    *store.scans.test_hook.lock().unwrap() = Some(Arc::new(move |point| {
+        if point != stage {
+            return;
+        }
+        let receiver = held.lock().unwrap().take();
+        if let Some(receiver) = receiver {
+            entered.send(()).unwrap();
+            receiver
+                .recv_timeout(crate::test_support::timeout())
+                .unwrap();
+            assert!(!panic_after_release, "simulated analysis panic");
+        }
+    }));
+    (ready, release)
+}
+
 #[test]
-fn stale_scan_is_rejected_and_queued_cancellation_has_exact_counters() {
+fn analysis_panic_finishes_without_failed_health_and_releases_next_scan() {
+    let f = Fixture::new();
+    let store = f.open();
+    write_json(&f.root().join("pack.mbah"), &json!({"name":"pack"}));
+    assert_eq!(f.scan(&store).status, "success");
+    let (ready, release) = scan_test_gate(&store, "analysis", true);
+    let (finished, done) = std::sync::mpsc::channel();
+    let weak = Arc::downgrade(&store);
+    let first = store
+        .start_scan(
+            None,
+            "panic".into(),
+            store.sources_revision().unwrap(),
+            f.0.join("cache"),
+            f.0.join("data"),
+            Arc::new(move |event, p| {
+                if event == "catalogue-operation-finished" {
+                    let health = weak.upgrade().unwrap().list_sources().unwrap().items[0]
+                        .last_scan_status
+                        .clone();
+                    finished.send((p.clone(), health)).unwrap();
+                }
+            }),
+        )
+        .unwrap();
+    ready.recv_timeout(crate::test_support::timeout()).unwrap();
+    let next = request_scan(&f, &store, None, "after-panic");
+    release.send(()).unwrap();
+    let (failed, health) = done.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(failed.operation_id, first.operation_id);
+    assert_eq!(failed.status, "failed");
+    assert_eq!(health.as_deref(), Some("success"));
+    assert!(!failed.scan_complete);
+    assert_eq!(wait(&store, &next.operation_id).status, "success");
+    assert!(!store.scans.heavy.is_poisoned());
+}
+
+#[test]
+fn cancellation_after_heavy_acquisition_never_emits_running_or_scans() {
+    let f = Fixture::new();
+    let store = f.open();
+    write_json(&f.root().join("pack.mbah"), &json!({"name":"pack"}));
+    let (ready, release) = scan_test_gate(&store, "acquired", false);
+    let running = Arc::new(AtomicBool::new(false));
+    let observed = Arc::clone(&running);
+    let receipt = store
+        .start_scan(
+            None,
+            "cancel-at-start".into(),
+            store.sources_revision().unwrap(),
+            f.0.join("cache"),
+            f.0.join("data"),
+            Arc::new(move |_, p| {
+                if p.status == "running" {
+                    observed.store(true, std::sync::atomic::Ordering::SeqCst);
+                }
+            }),
+        )
+        .unwrap();
+    ready.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(
+        store
+            .cancel_operation(&receipt.operation_id)
+            .unwrap()
+            .status,
+        "cancelling"
+    );
+    release.send(()).unwrap();
+    let p = wait(&store, &receipt.operation_id);
+    assert_eq!(p.status, "cancelled");
+    assert_eq!(p.candidates.processed, 0);
+    assert_eq!(
+        store
+            .activity
+            .full_scans
+            .load(std::sync::atomic::Ordering::Relaxed),
+        0
+    );
+    assert!(!running.load(std::sync::atomic::Ordering::SeqCst));
+}
+
+#[test]
+fn merged_retries_discard_removed_source_paths_at_startup() {
+    for keep_second in [false, true] {
+        let f = Fixture::new();
+        let store = f.open();
+        let first_id = store.list_sources().unwrap().items[0].id.clone();
+        let second_root = f.0.join("second");
+        std::fs::create_dir(&second_root).unwrap();
+        let second_id = store
+            .add_source(&second_root, store.sources_revision().unwrap())
+            .unwrap()
+            .source_id;
+        let first_path = f.root().join("one.mbah");
+        let second_path = second_root.join("two.mbah");
+        write_json(&first_path, &json!({"name":"one"}));
+        write_json(&second_path, &json!({"name":"two"}));
+        let heavy = store.scans.heavy.lock().unwrap();
+        let front = request_scan(&f, &store, Some(vec![]), "reserve");
+        let retry = |id: String, path: &Path, request: &str| {
+            store
+                .start_scan_paths(
+                    Some(vec![id]),
+                    Some(vec![path.to_str().unwrap().into()]),
+                    request.into(),
+                    store.sources_revision().unwrap(),
+                    f.0.join("cache"),
+                    f.0.join("data"),
+                    Arc::new(|_, _| {}),
+                )
+                .unwrap()
+        };
+        let pending = retry(first_id.clone(), &first_path, "one");
+        if keep_second {
+            assert_eq!(
+                retry(second_id, &second_path, "two").operation_id,
+                pending.operation_id
+            );
+        }
+        store
+            .remove_source(&first_id, store.sources_revision().unwrap())
+            .unwrap();
+        drop(heavy);
+        assert_eq!(wait(&store, &front.operation_id).status, "success");
+        let p = wait(&store, &pending.operation_id);
+        assert_eq!(p.status, if keep_second { "success" } else { "failed" });
+        assert_eq!(p.candidates.processed, u64::from(keep_second));
+        assert!(!p.report.iter().any(|r| r.path.ends_with("one.mbah")));
+        if keep_second {
+            assert!(p.report.iter().any(|r| r.path.ends_with("two.mbah")));
+        } else {
+            assert!(p
+                .error
+                .unwrap()
+                .to_string()
+                .contains("CATALOG_SOURCE_UNAVAILABLE"));
+        }
+    }
+}
+
+#[test]
+fn superseded_scans_resume_active_sources_and_keep_targeted_paths() {
+    for targeted in [false, true] {
+        for merge in [false, true] {
+            let f = Fixture::new();
+            let store = f.open();
+            let removed = store.list_sources().unwrap().items[0].id.clone();
+            let other = f.0.join("other");
+            std::fs::create_dir(&other).unwrap();
+            let kept = store
+                .add_source(&other, store.sources_revision().unwrap())
+                .unwrap()
+                .source_id;
+            let one = f.root().join("one.mbah");
+            let two = other.join("two.mbah");
+            write_json(&one, &json!({"name":"one"}));
+            write_json(&two, &json!({"name":"two"}));
+            write_json(
+                &other.join("unrequested.mbah"),
+                &json!({"name":"unrequested"}),
+            );
+            let (ready, release) = scan_test_gate(&store, "analysis", false);
+            let (finished, done) = std::sync::mpsc::channel();
+            let first = store
+                .start_scan_paths(
+                    Some(vec![removed.clone(), kept.clone()]),
+                    targeted
+                        .then(|| vec![one.to_str().unwrap().into(), two.to_str().unwrap().into()]),
+                    "replaced".into(),
+                    store.sources_revision().unwrap(),
+                    f.0.join("cache"),
+                    f.0.join("data"),
+                    Arc::new(move |event, p| {
+                        if event == "catalogue-operation-finished" {
+                            let _ = finished.send(p.clone());
+                        }
+                    }),
+                )
+                .unwrap();
+            ready.recv_timeout(crate::test_support::timeout()).unwrap();
+            let pending = merge.then(|| {
+                if targeted {
+                    store
+                        .start_scan_paths(
+                            Some(vec![kept.clone()]),
+                            Some(vec![two.to_str().unwrap().into()]),
+                            "pending".into(),
+                            store.sources_revision().unwrap(),
+                            f.0.join("cache"),
+                            f.0.join("data"),
+                            Arc::new(|_, _| {}),
+                        )
+                        .unwrap()
+                } else {
+                    request_scan(&f, &store, Some(vec![]), "pending")
+                }
+            });
+            store
+                .remove_source(&removed, store.sources_revision().unwrap())
+                .unwrap();
+            release.send(()).unwrap();
+            let stale = done.recv_timeout(crate::test_support::timeout()).unwrap();
+            assert_eq!(stale.operation_id, first.operation_id);
+            assert_eq!(stale.error.unwrap().code, "CATALOG_SCAN_SUPERSEDED");
+            let next = if let Some(pending) = pending {
+                wait(&store, &pending.operation_id)
+            } else {
+                done.recv_timeout(crate::test_support::timeout()).unwrap()
+            };
+            assert_eq!(next.status, "success");
+            assert_eq!(next.roots.total, 1);
+            assert_eq!(next.candidates.processed, if targeted { 1 } else { 2 });
+            if !targeted {
+                let deadline = Instant::now();
+                loop {
+                    if store
+                        .list_sources()
+                        .unwrap()
+                        .items
+                        .iter()
+                        .any(|s| s.id == kept && s.last_scan_status.as_deref() == Some("success"))
+                    {
+                        break;
+                    }
+                    assert!(deadline.elapsed() < crate::test_support::timeout());
+                    std::thread::sleep(Duration::from_millis(5));
+                }
+            }
+            assert!(store
+                .list_sources()
+                .unwrap()
+                .items
+                .iter()
+                .all(|s| s.id != removed || s.status != "active"));
+        }
+    }
+}
+
+#[test]
+fn overlapping_workspace_registration_restarts_scan_without_user_request() {
+    let f = Fixture::new();
+    let store = f.open();
+    write_json(&f.root().join("pack.mbah"), &json!({"name":"pack"}));
+    let (first, release, done) = held_scan(&f, &store, None);
+    store
+        .remember_workspace(Some(f.root().to_str().unwrap()))
+        .unwrap();
+    release.send(()).unwrap();
+    let stale = done.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(stale.operation_id, first.operation_id);
+    assert_eq!(stale.error.unwrap().code, "CATALOG_SCAN_SUPERSEDED");
+    let next = done.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_ne!(next.operation_id, first.operation_id);
+    assert_eq!(next.status, "success");
+    assert_eq!(next.candidates.processed, 1);
+}
+
+#[test]
+fn unrelated_workspace_registration_restarts_scan_without_health_or_user_request() {
+    let f = Fixture::new();
+    let store = f.open();
+    let known = f.0.join("known-workspace");
+    let workspace = f.0.join("elsewhere");
+    std::fs::create_dir(&known).unwrap();
+    std::fs::create_dir(&workspace).unwrap();
+    // Seed role sources first: the new registration changes only workspaces.
+    store
+        .remember_workspace(Some(known.to_str().unwrap()))
+        .unwrap();
+    let source = store
+        .list_sources()
+        .unwrap()
+        .items
+        .into_iter()
+        .find(|s| s.native_path == f.root())
+        .unwrap()
+        .id;
+    write_json(&f.root().join("pack.mbah"), &json!({"name":"pack"}));
+    let (first, release, done) = held_scan(&f, &store, Some(vec![source]));
+    let (resumed, resume_release) = scan_test_gate(&store, "acquired", false);
+    let revision = store.sources_revision().unwrap();
+    store
+        .remember_workspace(Some(workspace.to_str().unwrap()))
+        .unwrap();
+    assert_eq!(store.sources_revision().unwrap(), revision);
+    release.send(()).unwrap();
+    let stale = done.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(stale.operation_id, first.operation_id);
+    assert_eq!(stale.status, "failed");
+    assert_eq!(stale.error.unwrap().code, "CATALOG_SCAN_SUPERSEDED");
+    resumed
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
+    assert_eq!(
+        store
+            .read(
+                |c| c.query_row("SELECT count(*) FROM source_health WHERE last_scan_at IS NOT NULL OR last_scan_status IS NOT NULL", [], |r| r
+                    .get::<_, i64>(0))
+            )
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        store
+            .read(|c| c.query_row("SELECT count(*) FROM exemplar", [], |r| r.get::<_, i64>(0)))
+            .unwrap(),
+        0
+    );
+    resume_release.send(()).unwrap();
+    let next = done.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_ne!(next.operation_id, first.operation_id);
+    assert_eq!(next.status, "success");
+    assert_eq!(next.candidates.processed, 1);
+    drop(store.scans.heavy.lock().unwrap());
+}
+
+#[test]
+fn known_workspace_registration_does_not_replace_scan() {
+    let f = Fixture::new();
+    let store = f.open();
+    let workspace = f.0.join("elsewhere");
+    std::fs::create_dir(&workspace).unwrap();
+    store
+        .remember_workspace(Some(workspace.to_str().unwrap()))
+        .unwrap();
+    // Force an older timestamp so registration demonstrably changes it.
+    store
+        .write(|tx| {
+            tx.execute("UPDATE workspace_root SET last_current_at=0", [])
+                .map_err(store::error)?;
+            Ok(())
+        })
+        .unwrap();
+    write_json(&f.root().join("pack.mbah"), &json!({"name":"pack"}));
+    let source = store
+        .list_sources()
+        .unwrap()
+        .items
+        .into_iter()
+        .find(|s| s.native_path == f.root())
+        .unwrap()
+        .id;
+    let (first, release, done) = held_scan(&f, &store, Some(vec![source]));
+    store
+        .remember_workspace(Some(workspace.to_str().unwrap()))
+        .unwrap();
+    assert!(
+        store
+            .read(
+                |c| c.query_row("SELECT last_current_at FROM workspace_root", [], |r| r
+                    .get::<_, i64>(0))
+            )
+            .unwrap()
+            > 0
+    );
+    release.send(()).unwrap();
+    let p = done.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(p.operation_id, first.operation_id);
+    assert_eq!(p.status, "success");
+    assert_eq!(p.candidates.processed, 1);
+    assert_eq!(store.list_operations(20).unwrap().items.len(), 1);
+    drop(store.scans.heavy.lock().unwrap());
+}
+
+#[test]
+fn automatic_resume_stops_after_three_admission_conflicts() {
+    let f = Fixture::new();
+    let store = f.open();
+    write_json(&f.root().join("pack.mbah"), &json!({"name":"pack"}));
+    let (_, release, done) = held_scan(&f, &store, None);
+    let attempts = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let observed = Arc::clone(&attempts);
+    let weak = Arc::downgrade(&store);
+    *store.scans.test_hook.lock().unwrap() = Some(Arc::new(move |stage| {
+        if stage == "resume-admission" {
+            observed.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            weak.upgrade()
+                .unwrap()
+                .write(|tx| {
+                    tx.execute(
+                        "UPDATE catalogue SET sources_revision=sources_revision+1",
+                        [],
+                    )
+                    .map_err(store::error)?;
+                    Ok(())
+                })
+                .unwrap();
+        }
+    }));
+    std::fs::create_dir(f.root().join("exports")).unwrap();
+    std::fs::create_dir(f.root().join("sauvegardes")).unwrap();
+    store
+        .remember_workspace(Some(f.root().to_str().unwrap()))
+        .unwrap();
+    release.send(()).unwrap();
+    let stale = done.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(stale.error.unwrap().code, "CATALOG_SCAN_SUPERSEDED");
+    assert_eq!(attempts.load(std::sync::atomic::Ordering::SeqCst), 3);
+    assert_eq!(store.list_operations(20).unwrap().items.len(), 1);
+    *store.scans.test_hook.lock().unwrap() = None;
+    assert_eq!(f.scan(&store).status, "success");
+    drop(store.scans.heavy.lock().unwrap());
+}
+
+#[test]
+fn automatically_resumed_scan_can_be_superseded_again_without_reviving_removed_sources() {
+    let f = Fixture::new();
+    let store = f.open();
+    let first_id = store.list_sources().unwrap().items[0].id.clone();
+    let mut ids = vec![first_id.clone()];
+    write_json(&f.root().join("one.mbah"), &json!({"name":"one"}));
+    for name in ["two", "three"] {
+        let path = f.0.join(name);
+        std::fs::create_dir(&path).unwrap();
+        write_json(&path.join("pack.mbah"), &json!({"name":name}));
+        ids.push(
+            store
+                .add_source(&path, store.sources_revision().unwrap())
+                .unwrap()
+                .source_id,
+        );
+    }
+    let second_id = ids[1].clone();
+    let kept_id = ids[2].clone();
+    let (_, release, done) = held_scan(&f, &store, Some(ids));
+    // The first worker has already passed acquisition. Gate the automatic
+    // successor during analysis, after it has captured the remaining sources.
+    let (ready, next_release) = scan_test_gate(&store, "analysis", false);
+    // Avoid stopping the first worker at that same analysis gate.
+    let hook = store.scans.test_hook.lock().unwrap().take().unwrap();
+    let first_finished = Arc::new(AtomicBool::new(false));
+    let permitted = Arc::clone(&first_finished);
+    *store.scans.test_hook.lock().unwrap() = Some(Arc::new(move |stage| {
+        if stage == "acquired" {
+            permitted.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+        if permitted.load(std::sync::atomic::Ordering::SeqCst) {
+            hook(stage);
+        }
+    }));
+    store
+        .remove_source(&first_id, store.sources_revision().unwrap())
+        .unwrap();
+    release.send(()).unwrap();
+    assert_eq!(
+        done.recv_timeout(crate::test_support::timeout())
+            .unwrap()
+            .error
+            .unwrap()
+            .code,
+        "CATALOG_SCAN_SUPERSEDED"
+    );
+    ready.recv_timeout(crate::test_support::timeout()).unwrap();
+    store
+        .remove_source(&second_id, store.sources_revision().unwrap())
+        .unwrap();
+    next_release.send(()).unwrap();
+    assert_eq!(
+        done.recv_timeout(crate::test_support::timeout())
+            .unwrap()
+            .error
+            .unwrap()
+            .code,
+        "CATALOG_SCAN_SUPERSEDED"
+    );
+    let final_scan = done.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(final_scan.status, "success");
+    assert_eq!(final_scan.roots.total, 1);
+    assert_eq!(final_scan.candidates.processed, 1);
+    let sources = store.list_sources().unwrap();
+    assert!(sources
+        .items
+        .iter()
+        .filter(|s| s.status == "active")
+        .all(|s| s.id == kept_id));
+    assert_eq!(
+        sources
+            .items
+            .iter()
+            .find(|s| s.id == kept_id)
+            .unwrap()
+            .last_scan_status
+            .as_deref(),
+        Some("success")
+    );
+}
+
+#[test]
+fn three_folder_additions_share_one_pending_scan_and_all_succeed() {
+    for all in [false, true] {
+        let f = Fixture::new();
+        let store = f.open();
+        write_json(&f.root().join("one.mbah"), &json!({"name":"one"}));
+        let first_id = store.list_sources().unwrap().items[0].id.clone();
+        let (first, release, done) = held_scan(&f, &store, Some(vec![first_id]));
+        let mut pending = None;
+        for name in ["two", "three"] {
+            let path = f.0.join(name);
+            std::fs::create_dir(&path).unwrap();
+            write_json(&path.join("pack.mbah"), &json!({"name":name}));
+            let source = store
+                .add_source(&path, store.sources_revision().unwrap())
+                .unwrap();
+            let receipt = request_scan(&f, &store, Some(vec![source.source_id]), name);
+            if let Some(id) = &pending {
+                assert_eq!(&receipt.operation_id, id);
+            }
+            pending = Some(receipt.operation_id);
+        }
+        if all {
+            let receipt = request_scan(&f, &store, None, "all");
+            assert_eq!(Some(&receipt.operation_id), pending.as_ref());
+            // A source added after the request must be included at startup.
+            let path = f.0.join("four");
+            std::fs::create_dir(&path).unwrap();
+            write_json(&path.join("pack.mbah"), &json!({"name":"four"}));
+            store
+                .add_source(&path, store.sources_revision().unwrap())
+                .unwrap();
+        }
+        let operations = store.list_operations(20).unwrap();
+        assert_eq!(operations.items.len(), 2);
+        assert_eq!(
+            operations
+                .items
+                .iter()
+                .filter(|p| p.status == "queued")
+                .count(),
+            1
+        );
+        assert_eq!(
+            store.get_operation(&first.operation_id).unwrap().status,
+            "running"
+        );
+        release.send(()).unwrap();
+        assert_eq!(
+            done.recv_timeout(crate::test_support::timeout())
+                .unwrap()
+                .status,
+            "success"
+        );
+        let p = wait(&store, &pending.unwrap());
+        assert_eq!(p.status, "success");
+        assert_eq!(p.roots.total, if all { 4 } else { 2 });
+        // The terminal status precedes health recording; reserve one further turn
+        // to wait for the pending worker's health to settle.
+        let barrier = request_scan(&f, &store, Some(vec![]), "health-barrier");
+        assert_eq!(wait(&store, &barrier.operation_id).status, "success");
+        let sources = store.list_sources().unwrap();
+        assert_eq!(sources.items.len(), if all { 4 } else { 3 });
+        assert!(sources
+            .items
+            .iter()
+            .all(|s| s.last_scan_status.as_deref() == Some("success")));
+        assert_eq!(
+            store
+                .activity
+                .full_scans
+                .load(std::sync::atomic::Ordering::Relaxed),
+            3
+        );
+    }
+}
+
+#[test]
+fn source_removal_exclusion_and_resolution_changes_reject_inflight_publication() {
+    for change in ["remove", "exclude", "resolution", "parent"] {
+        let f = Fixture::new();
+        let store = f.open();
+        let path = if change == "exclude" {
+            let path = f.0.join("workspace").join("voix-generees");
+            std::fs::create_dir_all(&path).unwrap();
+            store
+                .add_source(&path, store.sources_revision().unwrap())
+                .unwrap();
+            path
+        } else {
+            f.root()
+        };
+        write_json(&path.join("pack.mbah"), &json!({"name":"never published"}));
+        let source = store
+            .list_sources()
+            .unwrap()
+            .items
+            .iter()
+            .find(|s| s.native_path == path)
+            .unwrap()
+            .id
+            .clone();
+        let (_, release, done) = held_scan(&f, &store, Some(vec![source.clone()]));
+        // Only the successor reaches acquisition: hold it before publication
+        // so the zero-exemplar oracle observes the replaced worker alone.
+        let (resumed, resume_release) = scan_test_gate(&store, "acquired", false);
+        match change {
+            "remove" => {
+                store
+                    .remove_source(&source, store.sources_revision().unwrap())
+                    .unwrap();
+            }
+            "exclude" => {
+                // Workspace registrations affect exclusions without necessarily
+                // advancing sources_revision (the first workspace seeds roles).
+                store
+                    .remember_workspace(Some(f.0.join("workspace").to_str().unwrap()))
+                    .unwrap();
+            }
+            "resolution" => {
+                store
+                    .write(|tx| {
+                        tx.execute(
+                            "UPDATE source SET resolved_path=?1 WHERE id=?2",
+                            rusqlite::params![sources::bytes(&f.0.join("moved")), source],
+                        )
+                        .map_err(store::error)?;
+                        Ok(())
+                    })
+                    .unwrap();
+            }
+            "parent" => {
+                store
+                    .add_source(&f.0, store.sources_revision().unwrap())
+                    .unwrap();
+            }
+            _ => unreachable!(),
+        }
+        release.send(()).unwrap();
+        let p = done.recv_timeout(crate::test_support::timeout()).unwrap();
+        assert_eq!(p.status, "failed", "{change}");
+        assert_eq!(p.error.unwrap().code, "CATALOG_SCAN_SUPERSEDED", "{change}");
+        assert_eq!(
+            store
+                .read(|c| c.query_row("SELECT count(*) FROM exemplar", [], |r| r.get::<_, i64>(0)))
+                .unwrap(),
+            0,
+            "{change}"
+        );
+        assert!(store
+            .list_sources()
+            .unwrap()
+            .items
+            .iter()
+            .all(|s| s.last_scan_status.as_deref() != Some("failed")));
+        if matches!(change, "exclude" | "resolution" | "parent") {
+            resumed
+                .recv_timeout(crate::test_support::timeout())
+                .unwrap();
+            resume_release.send(()).unwrap();
+            assert_eq!(
+                done.recv_timeout(crate::test_support::timeout())
+                    .unwrap()
+                    .status,
+                "success"
+            );
+        }
+        // Drain the turn before the fixture removes its files.
+        drop(store.scans.heavy.lock().unwrap());
+    }
+}
+
+#[test]
+fn repeated_requests_do_not_starve_reserved_turns() {
+    let f = Fixture::new();
+    let store = f.open();
+    write_json(&f.root().join("pack.mbah"), &json!({"name":"test"}));
+    for round in 0..4 {
+        let (_, release, done) = held_scan(&f, &store, None);
+        let pending = request_scan(&f, &store, None, &format!("next-{round}"));
+        for n in 0..30 {
+            let receipt = request_scan(&f, &store, None, &format!("round-{round}-{n}"));
+            assert_eq!(receipt.operation_id, pending.operation_id);
+        }
+        release.send(()).unwrap();
+        assert_eq!(
+            done.recv_timeout(crate::test_support::timeout())
+                .unwrap()
+                .status,
+            "success"
+        );
+        assert_eq!(wait(&store, &pending.operation_id).status, "success");
+    }
+}
+
+#[test]
+fn queued_scan_reads_files_after_a_file_operation_publication() {
+    let f = Fixture::new();
+    let store = f.open();
+    let path = f.root().join("before.mbah");
+    write_json(&path, &json!({"name":"before"}));
+    let heavy = store.scans.heavy.lock().unwrap();
+    let first = request_scan(&f, &store, None, "before-files");
+    let queued = request_scan(&f, &store, None, "after-files");
+    // Match the file worker's exclusion interval and generation bump. Neither
+    // waiting request may retain roots or file observations from its request.
+    store
+        .scans
+        .generation
+        .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    std::fs::rename(path, f.root().join("after.mbah")).unwrap();
+    drop(heavy);
+    assert_eq!(wait(&store, &first.operation_id).status, "success");
+    let p = wait(&store, &queued.operation_id);
+    assert_eq!(p.status, "success");
+    assert!(p.report.iter().any(|r| r.path.ends_with("after.mbah")));
+    assert!(!p.report.iter().any(|r| r.path.ends_with("before.mbah")));
+}
+
+#[test]
+fn consecutive_scans_finish_and_queued_cancellation_has_exact_counters() {
     let f = Fixture::new();
     write_json(&f.root().join("pack.mbah"), &json!({"name":"test"}));
     let store = f.open();
@@ -218,9 +1046,7 @@ fn stale_scan_is_rejected_and_queued_cancellation_has_exact_counters() {
     let a = start("A");
     let b = start("B");
     drop(guard);
-    let stale = wait(&store, &a.operation_id);
-    assert_eq!(stale.status, "failed");
-    assert_eq!(stale.error.unwrap().code, "CATALOG_SCAN_SUPERSEDED");
+    assert_eq!(wait(&store, &a.operation_id).status, "success");
     assert_eq!(wait(&store, &b.operation_id).status, "success");
     let guard = store.scans.heavy.lock().unwrap();
     let c = start("C");
@@ -232,6 +1058,313 @@ fn stale_scan_is_rejected_and_queued_cancellation_has_exact_counters() {
     assert_eq!(p.outcomes.not_processed, p.candidates.discovered);
     assert!(!p.scan_complete);
 }
+#[test]
+fn superseded_scan_preserves_source_health_before_its_successor_finishes() {
+    for overlap in [false, true] {
+        let f = Fixture::new();
+        let store = f.open();
+        let existing = store.list_sources().unwrap().items[0].id.clone();
+        for name in ["never", "other"] {
+            let path = f.0.join(name);
+            std::fs::create_dir(&path).unwrap();
+            let revision = store.sources_revision().unwrap();
+            store.add_source(&path, revision).unwrap();
+        }
+        let sources = store.list_sources().unwrap();
+        let id_for = |name: &str| {
+            sources
+                .items
+                .iter()
+                .find(|s| s.native_path == f.0.join(name))
+                .unwrap()
+                .id
+                .clone()
+        };
+        let never = id_for("never");
+        let other = id_for("other");
+        store.write(|tx| {
+            // Also cover catalogues where an unattempted source has no row yet.
+            tx.execute("DELETE FROM source_health", []).map_err(store::error)?;
+            tx.execute("INSERT INTO source_health(source_id,last_scan_at,last_scan_status,availability) VALUES (?1,123,'partial','unavailable')", [&existing]).map_err(store::error)?;
+            Ok(())
+        }).unwrap();
+        let health = || {
+            store.read(|c| {
+                c.prepare("SELECT source_id,last_scan_at,last_scan_status,availability FROM source_health ORDER BY source_id")?
+                    .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, Option<i64>>(1)?, r.get::<_, Option<String>>(2)?, r.get::<_, String>(3)?)))?
+                    .collect::<rusqlite::Result<Vec<_>>>()
+            }).unwrap()
+        };
+        let before = health();
+        assert_eq!(
+            before.len(),
+            1,
+            "the never-attempted source has no health row"
+        );
+        let (entered, running) = std::sync::mpsc::channel();
+        let (release, held) = std::sync::mpsc::channel();
+        let held = std::sync::Mutex::new(held);
+        let (beat_entered, beating) = std::sync::mpsc::channel();
+        let (beat_release, beat_held) = std::sync::mpsc::channel();
+        let beat_held = std::sync::Mutex::new(beat_held);
+        let (finished, done) = std::sync::mpsc::channel();
+        let emissions = std::sync::atomic::AtomicUsize::new(0);
+        let old = store
+            .start_scan(
+                Some(vec![existing.clone(), never.clone()]),
+                "old".into(),
+                sources.sources_revision,
+                f.0.join("cache"),
+                f.0.join("data"),
+                Arc::new(move |event, p| {
+                    if event == "catalogue-operation-finished" {
+                        finished.send(p.clone()).unwrap();
+                    } else if p.status == "running" {
+                        match emissions.fetch_add(1, std::sync::atomic::Ordering::SeqCst) {
+                            0 => {
+                                entered.send(()).unwrap();
+                                held.lock()
+                                    .unwrap()
+                                    .recv_timeout(crate::test_support::timeout())
+                                    .unwrap();
+                            }
+                            1 => {
+                                beat_entered.send(()).unwrap();
+                                beat_held
+                                    .lock()
+                                    .unwrap()
+                                    .recv_timeout(crate::test_support::timeout())
+                                    .unwrap();
+                            }
+                            _ => {}
+                        }
+                    }
+                }),
+            )
+            .unwrap();
+        running
+            .recv_timeout(crate::test_support::timeout())
+            .unwrap();
+        // Hold the heartbeat too: the old worker releases heavy before join(),
+        // but its successor must wait until the old health is settled.
+        beating
+            .recv_timeout(crate::test_support::timeout())
+            .unwrap();
+        // A real source identity change, rather than a new scan request,
+        // invalidates the old attempt. Keep the health regression oracles.
+        store
+            .write(|tx| {
+                tx.execute(
+                    "UPDATE source SET revision=revision+1 WHERE id=?1",
+                    [&existing],
+                )
+                .map_err(store::error)?;
+                tx.execute(
+                    "UPDATE catalogue SET sources_revision=sources_revision+1",
+                    [],
+                )
+                .map_err(store::error)?;
+                Ok(())
+            })
+            .unwrap();
+        let (next_finished, next_done) = std::sync::mpsc::channel();
+        store
+            .start_scan(
+                Some(if overlap {
+                    vec![existing, never]
+                } else {
+                    vec![other]
+                }),
+                "new".into(),
+                store.sources_revision().unwrap(),
+                f.0.join("cache"),
+                f.0.join("data"),
+                Arc::new(move |event, p| {
+                    if event == "catalogue-operation-finished" {
+                        next_finished.send(p.clone()).unwrap();
+                    }
+                }),
+            )
+            .unwrap();
+        release.send(()).unwrap();
+        // The queue settles the old health before handing over its turn.
+        beat_release.send(()).unwrap();
+        let stale = done.recv_timeout(crate::test_support::timeout()).unwrap();
+        assert_eq!(stale.operation_id, old.operation_id);
+        assert_eq!(stale.status, "failed");
+        assert_eq!(stale.error.unwrap().code, "CATALOG_SCAN_SUPERSEDED");
+        assert!(stale.reasons.iter().any(|r| r.reason == "scanSuperseded"));
+        assert_eq!(
+            next_done
+                .recv_timeout(crate::test_support::timeout())
+                .unwrap()
+                .status,
+            "success"
+        );
+        let after_successor = health();
+        if !overlap {
+            assert!(
+                after_successor.contains(&before[0]),
+                "prior health is preserved"
+            );
+            assert_eq!(
+                after_successor.len(),
+                2,
+                "never-attempted health stays absent"
+            );
+        } else {
+            assert!(after_successor
+                .iter()
+                .all(|row| row.2.as_deref() == Some("success")));
+        }
+        assert_eq!(
+            health(),
+            after_successor,
+            "the old worker cannot overwrite newer health"
+        );
+    }
+}
+
+#[test]
+fn successful_scan_records_source_health_after_waiting_file_operation_changes_generation() {
+    let f = Fixture::new();
+    let store = f.open();
+    let before = f.root().join("before.mbah");
+    let after = f.root().join("after.mbah");
+    write_json(&before, &json!({"name":"moving"}));
+    let (entered, running) = std::sync::mpsc::channel();
+    let (release, held) = std::sync::mpsc::channel();
+    let held = std::sync::Mutex::new(held);
+    let (beat_entered, beating) = std::sync::mpsc::channel();
+    let (beat_release, beat_held) = std::sync::mpsc::channel();
+    let beat_held = std::sync::Mutex::new(beat_held);
+    let (finished, done) = std::sync::mpsc::channel();
+    let emissions = std::sync::atomic::AtomicUsize::new(0);
+    store
+        .start_scan(
+            None,
+            "successful-before-file-operation".into(),
+            1,
+            f.0.join("cache"),
+            f.0.join("data"),
+            Arc::new(move |event, p| {
+                if event == "catalogue-operation-finished" {
+                    finished.send(p.clone()).unwrap();
+                } else if p.status == "running" {
+                    match emissions.fetch_add(1, std::sync::atomic::Ordering::SeqCst) {
+                        0 => {
+                            entered.send(()).unwrap();
+                            held.lock()
+                                .unwrap()
+                                .recv_timeout(crate::test_support::timeout())
+                                .unwrap();
+                        }
+                        1 => {
+                            beat_entered.send(()).unwrap();
+                            beat_held
+                                .lock()
+                                .unwrap()
+                                .recv_timeout(crate::test_support::timeout())
+                                .unwrap();
+                        }
+                        _ => {}
+                    }
+                }
+            }),
+        )
+        .unwrap();
+    running
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
+    beating
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
+    let queued = request_scan(&f, &store, None, "queued-after-moving-files");
+    let (waiting, pending) = std::sync::mpsc::channel();
+    let files_store = Arc::clone(&store);
+    let files = std::thread::spawn(move || {
+        assert!(matches!(
+            files_store.scans.heavy.try_lock(),
+            Err(std::sync::TryLockError::WouldBlock)
+        ));
+        waiting.send(()).unwrap();
+        let _heavy = files_store.scans.heavy.lock().unwrap();
+        // Match files/mod.rs: invalidate prior scans only after acquiring heavy,
+        // without taking operations.
+        let previous = files_store
+            .scans
+            .generation
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        std::fs::rename(before, after).unwrap();
+        previous
+    });
+    pending
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
+    release.send(()).unwrap();
+    // run() releases heavy, then joins the held heartbeat. The file operation
+    // changes generation before this scan can attempt its health write.
+    assert_eq!(files.join().unwrap(), 0);
+    beat_release.send(()).unwrap();
+    let p = done.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(p.status, "success");
+    let next = wait(&store, &queued.operation_id);
+    assert_eq!(next.status, "success");
+    assert!(next.report.iter().any(|r| r.path.ends_with("after.mbah")));
+    assert!(!next.report.iter().any(|r| r.path.ends_with("before.mbah")));
+    let health = store
+        .read(|c| {
+            c.query_row(
+                "SELECT last_scan_status,last_scan_at FROM source_health",
+                [],
+                |r| Ok((r.get::<_, Option<String>>(0)?, r.get::<_, Option<i64>>(1)?)),
+            )
+        })
+        .unwrap();
+    assert_eq!(health.0.as_deref(), Some("success"));
+    assert!(health.1.is_some(), "the successful scan records its date");
+}
+
+#[test]
+fn scan_real_failure_still_records_failed_source_health() {
+    let f = Fixture::new();
+    let store = f.open();
+    // A real database failure during finalization, without a newer generation.
+    store.write(|tx| {
+        tx.execute_batch("CREATE TEMP TRIGGER fail_scan BEFORE INSERT ON cache.scan BEGIN SELECT RAISE(ABORT, 'injected scan failure'); END;")
+            .map_err(store::error)?;
+        Ok(())
+    }).unwrap();
+    let (finished, done) = std::sync::mpsc::channel();
+    store
+        .start_scan(
+            None,
+            "failure".into(),
+            1,
+            f.0.join("cache"),
+            f.0.join("data"),
+            Arc::new(move |event, p| {
+                if event == "catalogue-operation-finished" {
+                    finished.send(p.clone()).unwrap();
+                }
+            }),
+        )
+        .unwrap();
+    let p = done.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(p.status, "failed");
+    assert_eq!(p.error.unwrap().code, "CATALOG_OPERATION_FAILED");
+    let health = store
+        .read(|c| {
+            c.query_row(
+                "SELECT last_scan_at,last_scan_status FROM source_health",
+                [],
+                |r| Ok((r.get::<_, Option<i64>>(0)?, r.get::<_, String>(1)?)),
+            )
+        })
+        .unwrap();
+    assert_eq!(health, (None, "failed".into()));
+}
+
 #[test]
 fn missing_root_keeps_reference_and_personal_data() {
     let f = Fixture::new();
@@ -332,8 +1465,8 @@ fn future_cache_rebuild_and_recovery_retention() {
 fn explicit_add_after_older_refusal_remains_active() {
     let f = Fixture::new();
     let store = f.open();
-    store.add_source(&f.root(), 1, true).unwrap();
-    store.add_source(&f.root(), 2, false).unwrap();
+    store.add_declined_source(&f.root(), 1).unwrap();
+    store.add_source(&f.root(), 2).unwrap();
     let list = store.list_sources().unwrap();
     assert_eq!(list.items[0].status, "active");
     assert_eq!(list.sources_revision, 3);
@@ -811,9 +1944,7 @@ fn removing_parent_after_global_scan_keeps_nested_source_entries_immediately() {
     let store = f.open();
     let list = store.list_sources().unwrap();
     let parent = list.items[0].id.clone();
-    let added = store
-        .add_source(&child, list.sources_revision, false)
-        .unwrap();
+    let added = store.add_source(&child, list.sources_revision).unwrap();
     assert_eq!(f.scan(&store).status, "success");
     assert!(store.has_full_scan(&added.source_id).unwrap());
     let before = store.query_entries(100, None, false).unwrap();
@@ -1205,20 +2336,17 @@ fn manual_backup_source_excludes_security_versions_at_any_depth() {
         &json!({"packMetadata":{"uuid":ID}}),
     );
     let store = Arc::new(store::Store::open(&f.0.join("data"), &f.0.join("cache")).unwrap());
-    store.add_source(&root, 0, false).unwrap();
+    store.add_source(&root, 0).unwrap();
     assert_eq!(store.list_sources().unwrap().items[0].origin, "manual");
     let progress = f.scan(&store);
     assert_eq!(progress.status, "success");
     assert_eq!(progress.outcomes.indexed_new, 1);
     let excluded = root.join("versions-securite/nested/y.mbah");
-    let explanation = serde_json::to_value(
-        store
-            .explain_path(&excluded, &f.0.join("cache"), &f.0.join("data"))
-            .unwrap(),
-    )
-    .unwrap();
+    let rules = store
+        .exclusions_raw(&f.0.join("cache"), &f.0.join("data"))
+        .unwrap();
     assert_eq!(
-        explanation["excluded"]["role"],
+        rules.reason_for_resolved(&excluded, None).unwrap().role,
         "sauvegardes/versions-securite"
     );
     let rules = store
@@ -1288,17 +2416,16 @@ fn unregistered_workspace_structure_excludes_only_its_internal_directories() {
     .to_vec();
     expected.sort();
     assert_eq!(paths, expected);
-    let explanation = serde_json::to_value(
-        store
-            .explain_path(
-                &f.root().join("voix-generees/pack.mbah"),
-                &f.0.join("cache"),
-                &f.0.join("data"),
-            )
-            .unwrap(),
-    )
-    .unwrap();
-    assert_eq!(explanation["excluded"]["role"], "voix-generees");
+    let rules = store
+        .exclusions_raw(&f.0.join("cache"), &f.0.join("data"))
+        .unwrap();
+    assert_eq!(
+        rules
+            .reason_for_resolved(&f.root().join("voix-generees/pack.mbah"), None)
+            .unwrap()
+            .role,
+        "voix-generees"
+    );
 }
 
 #[test]
@@ -2037,6 +3164,117 @@ fn measured_solid_archive(f: &Fixture) -> PathBuf {
         .status
         .success());
     archive
+}
+#[test]
+fn official_zip_cover_is_retained_while_solid_listening_is_blocked() {
+    let f = Fixture::new();
+    measured_solid_archive(&f);
+    std::fs::write(f.root().join("official.zip"), zip_bytes(&studio(Some(ID)))).unwrap();
+    let store = f.open();
+    store.set_lunii_permission(true).unwrap();
+    store.lunii_locale("fr").unwrap();
+    let reference = f.0.join("official.json");
+    write_json(
+        &reference,
+        &json!({"pack": {"uuid": ID, "localized_infos": {
+            "fr_FR": {"title": "Official", "image": {"image_url": "/public/images/packs/test.png"}}
+        }}}),
+    );
+    store.load_lunii_fixture(&reference).unwrap();
+    let mut png = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::new_rgb8(24, 24)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .unwrap();
+    store.lunii_cover_test_response(png.into_inner());
+    let (listening_tx, listening_rx) = std::sync::mpsc::channel();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    let gate = std::sync::Mutex::new(Some(release_rx));
+    let (cover_tx, cover_rx) = std::sync::mpsc::channel();
+    let receipt = store
+        .start_scan(
+            None,
+            "cover-before-listening-end".into(),
+            store.list_sources().unwrap().sources_revision,
+            f.0.join("cache"),
+            f.0.join("data"),
+            Arc::new(move |event, p| {
+                if event == "catalogue-operation-progress" && p.phase == "listening" {
+                    if let Some(release) = gate.lock().unwrap().take() {
+                        listening_tx.send(()).unwrap();
+                        let _ = release.recv_timeout(crate::test_support::timeout() * 2);
+                    }
+                }
+                if event == "catalogue-operation-finished" && p.request_id == "lunii-auto-images" {
+                    let _ = cover_tx.send(());
+                }
+            }),
+        )
+        .unwrap();
+    listening_rx
+        .recv_timeout(crate::test_support::timeout())
+        .unwrap();
+    let retained = cover_rx.recv_timeout(crate::test_support::timeout());
+    let passes = store
+        .activity
+        .solid_passes
+        .load(std::sync::atomic::Ordering::Relaxed);
+    let retained_images: i64 = store
+        .read(|c| {
+            c.query_row(
+        "SELECT count(*) FROM reference_value WHERE field='cover' AND image_sha256 IS NOT NULL",
+        [], |r| r.get(0),
+    )
+        })
+        .unwrap();
+    // Always release the scan, including when reproducing the original bug.
+    release_tx.send(()).unwrap();
+    assert!(
+        retained.is_ok(),
+        "official cover must be retained before listening can finish"
+    );
+    assert_eq!(store.lunii_cover_test_requests(), 1);
+    assert_eq!(passes, 0);
+    assert_eq!(retained_images, 1);
+    assert_eq!(wait(&store, &receipt.operation_id).status, "success");
+}
+
+#[test]
+fn solid_archive_publishes_listening_phase_before_extraction() {
+    let f = Fixture::new();
+    let archive = measured_solid_archive(&f);
+    let store = f.open();
+    let (tx, rx) = std::sync::mpsc::channel();
+    let observed_store = Arc::clone(&store);
+    let receipt = store
+        .start_scan(
+            None,
+            "listening-phase".into(),
+            store.list_sources().unwrap().sources_revision,
+            f.0.join("cache"),
+            f.0.join("data"),
+            Arc::new(move |event, p| {
+                if event == "catalogue-operation-progress" && p.phase == "listening" {
+                    tx.send((
+                        p.clone(),
+                        observed_store
+                            .activity
+                            .solid_passes
+                            .load(std::sync::atomic::Ordering::Relaxed),
+                    ))
+                    .unwrap();
+                }
+            }),
+        )
+        .unwrap();
+    assert_eq!(wait(&store, &receipt.operation_id).status, "success");
+    let (phase, passes) = rx.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(
+        passes, 0,
+        "the phase is emitted before decompression starts"
+    );
+    assert_eq!(phase.candidates.processed, phase.candidates.total.unwrap());
+    let (current, _) = rx.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(current.current_directory.as_deref(), archive.to_str());
 }
 #[test]
 fn stable_solid_archive_is_reanalysed_but_never_extracted_again() {
@@ -2826,4 +4064,500 @@ fn a_damaged_picture_is_published_per_exemplar_and_measured_again_after_a_versio
     std::fs::write(pack.join("assets/cut.bmp"), good.into_inner()).unwrap();
     assert_eq!(f.scan(&store).status, "success");
     assert_eq!(field(&store), Value::Null);
+}
+
+// L22: old dates avoid the deliberate coarse-filesystem ambiguity window.
+fn age_for_analysis(path: &Path) {
+    std::fs::File::options()
+        .write(true)
+        .open(path)
+        .unwrap()
+        .set_modified(std::time::UNIX_EPOCH + Duration::from_secs(1_600_000_000))
+        .unwrap();
+}
+#[test]
+fn l22_reuses_complete_observations_and_force_measures_everything() {
+    let f = Fixture::new();
+    let path = f.root().join("stable.zip");
+    std::fs::write(&path, zip_bytes(&studio(Some(ID)))).unwrap();
+    age_for_analysis(&path);
+    let store = f.open();
+    assert_eq!(f.scan(&store).status, "success");
+    let before = store.activity.snapshot();
+    let measurements = store
+        .activity
+        .measurements
+        .load(std::sync::atomic::Ordering::Relaxed);
+    let rows = store.query_entries(20, None, false).unwrap().items;
+    assert_eq!(f.scan(&store).outcomes.unchanged, 1);
+    assert_eq!(store.activity.snapshot().analyses, before.analyses);
+    assert_eq!(store.query_entries(20, None, false).unwrap().items, rows);
+    let receipt = store
+        .start_scan_forced(
+            None,
+            None,
+            None,
+            uuid::Uuid::new_v4().to_string(),
+            store.sources_revision().unwrap(),
+            f.0.join("cache"),
+            f.0.join("data"),
+            Arc::new(|_, _| {}),
+        )
+        .unwrap();
+    assert_eq!(wait(&store, &receipt.operation_id).status, "success");
+    assert_eq!(store.activity.snapshot().analyses, before.analyses + 1);
+    assert_eq!(
+        store
+            .activity
+            .measurements
+            .load(std::sync::atomic::Ordering::Relaxed),
+        measurements + 1
+    );
+    let mut forced_rows = store.query_entries(20, None, false).unwrap().items;
+    let mut metadata_rows = rows.clone();
+    // A forced analysis refreshes its private evidence, while every other
+    // published field (including the listening values) must remain identical.
+    for rows in [&mut forced_rows, &mut metadata_rows] {
+        for row in rows {
+            for exemplar in row["exemplars"].as_array_mut().unwrap() {
+                exemplar["observation"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("analysisFingerprint");
+            }
+        }
+    }
+    assert_eq!(forced_rows, metadata_rows);
+    let deadline = Instant::now();
+    while Arc::strong_count(&store) > 1 {
+        assert!(deadline.elapsed() < crate::test_support::timeout());
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    drop(store);
+    let store = Arc::new(store::Store::open(&f.0.join("data"), &f.0.join("cache")).unwrap());
+    f.scan(&store);
+    assert_eq!(store.activity.snapshot().analyses, 0, "persisted analysis");
+}
+#[test]
+fn l22_invalid_analysis_evidence_is_never_reused() {
+    for change in [
+        "version",
+        "pending",
+        "unstable",
+        "error",
+        "missing",
+        "unversioned",
+    ] {
+        let f = Fixture::new();
+        let path = f.root().join("stable.zip");
+        std::fs::write(&path, zip_bytes(&studio(Some(ID)))).unwrap();
+        age_for_analysis(&path);
+        let store = f.open();
+        f.scan(&store);
+        store.write(|tx| {
+            let sql = match change {
+                "version" => "UPDATE cache.observation SET raw_observation_json=json_set(raw_observation_json,'$.analysisFingerprint.version',0)",
+                "pending" => "UPDATE cache.observation SET raw_observation_json=json_set(raw_observation_json,'$.listeningPending',json('true'))",
+                "unstable" => "UPDATE cache.observation SET state='fileUnstable'",
+                "error" => "UPDATE cache.observation SET state='accessDenied'",
+                "missing" => "DELETE FROM cache.coverage; DELETE FROM cache.extracted_value; DELETE FROM cache.observation",
+                _ => "UPDATE cache.observation SET raw_observation_json=json_remove(raw_observation_json,'$.analysisFingerprint')",
+            };
+            tx.execute_batch(sql).map_err(store::error)
+        }).unwrap();
+        let before = store.activity.snapshot().analyses;
+        f.scan(&store);
+        assert_eq!(store.activity.snapshot().analyses, before + 1, "{change}");
+    }
+}
+#[test]
+fn l22_recent_dates_and_changed_files_are_reanalysed() {
+    let f = Fixture::new();
+    let path = f.root().join("stable.zip");
+    let bytes = zip_bytes(&studio(Some(ID)));
+    std::fs::write(&path, &bytes).unwrap();
+    let store = f.open();
+    f.scan(&store);
+    f.scan(&store);
+    assert_eq!(
+        store.activity.snapshot().analyses,
+        2,
+        "recent date is ambiguous"
+    );
+    age_for_analysis(&path);
+    f.scan(&store);
+    f.scan(&store);
+    assert_eq!(store.activity.snapshot().analyses, 3);
+    std::fs::File::options()
+        .write(true)
+        .open(&path)
+        .unwrap()
+        .set_modified(std::time::UNIX_EPOCH + Duration::from_secs(1_600_000_100))
+        .unwrap();
+    f.scan(&store);
+    assert_eq!(store.activity.snapshot().analyses, 4, "date changed");
+    let replacement = f.0.join("replacement.zip");
+    std::fs::write(&replacement, &bytes).unwrap();
+    let date = std::fs::metadata(&path).unwrap().modified().unwrap();
+    std::fs::File::options()
+        .write(true)
+        .open(&replacement)
+        .unwrap()
+        .set_modified(date)
+        .unwrap();
+    std::fs::remove_file(&path).unwrap();
+    std::fs::rename(replacement, &path).unwrap();
+    f.scan(&store);
+    assert_eq!(
+        store.activity.snapshot().analyses,
+        5,
+        "file identity changed"
+    );
+    std::fs::write(&path, zip_bytes(&json!({"title":"changed size and metadata", "stageNodes":[{"uuid":ID,"squareOne":true}]}))).unwrap();
+    f.scan(&store);
+    assert_eq!(store.activity.snapshot().analyses, 6, "size changed");
+}
+#[test]
+fn l22_internal_pack_file_and_all_archive_members_are_tracked() {
+    let f = Fixture::new();
+    let dir = f.root().join("folder");
+    std::fs::create_dir_all(&dir).unwrap();
+    write_json(&dir.join("story.json"), &studio(Some(ID)));
+    age_for_analysis(&dir.join("story.json"));
+    std::thread::sleep(Duration::from_millis(4100));
+    let store = f.open();
+    f.scan(&store);
+    f.scan(&store);
+    assert_eq!(store.activity.snapshot().analyses, 1);
+    write_json(&dir.join("story.json"), &studio(None));
+    f.scan(&store);
+    assert_eq!(store.activity.snapshot().analyses, 2);
+    for nested in [false, true] {
+        let f = Fixture::new();
+        let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        for name in ["one", "two"] {
+            w.start_file(
+                if nested {
+                    format!("{name}.zip")
+                } else {
+                    format!("{name}/story.json")
+                },
+                zip::write::SimpleFileOptions::default(),
+            )
+            .unwrap();
+            if nested {
+                w.write_all(&zip_bytes(&studio(Some(ID)))).unwrap();
+            } else {
+                w.write_all(studio(Some(ID)).to_string().as_bytes())
+                    .unwrap();
+            }
+        }
+        let path = f.root().join("multi.zip");
+        let bytes = w.finish().unwrap().into_inner();
+        std::fs::write(&path, &bytes).unwrap();
+        age_for_analysis(&path);
+        let store = f.open();
+        assert_eq!(f.scan(&store).candidates.processed, 2);
+        let rows = store.query_entries(20, None, false).unwrap().items;
+        assert_eq!(f.scan(&store).outcomes.unchanged, 2);
+        assert_eq!(store.activity.snapshot().analyses, 1);
+        assert_eq!(store.query_entries(20, None, false).unwrap().items, rows);
+        std::fs::write(&path, &bytes).unwrap();
+        assert_eq!(f.scan(&store).candidates.processed, 2);
+        assert_eq!(store.activity.snapshot().analyses, 2);
+    }
+}
+
+#[test]
+fn l22_queued_force_stays_scoped_when_normal_requests_merge() {
+    let f = Fixture::new();
+    let other = f.0.join("other");
+    std::fs::create_dir_all(&other).unwrap();
+    for root in [f.root(), other.clone()] {
+        let path = root.join("pack.zip");
+        std::fs::write(&path, zip_bytes(&studio(Some(ID)))).unwrap();
+        age_for_analysis(&path);
+    }
+    let store = f.open();
+    let source = store
+        .add_source(&other, store.sources_revision().unwrap())
+        .unwrap()
+        .source_id;
+    f.scan(&store);
+    let before = store.activity.snapshot();
+    let measurements = store
+        .activity
+        .measurements
+        .load(std::sync::atomic::Ordering::Relaxed);
+    let heavy = store.scans.heavy.lock().unwrap();
+    let submit = |ids: Option<Vec<String>>, force: Option<Vec<String>>| {
+        store
+            .start_scan_forced(
+                ids,
+                None,
+                force,
+                uuid::Uuid::new_v4().to_string(),
+                store.sources_revision().unwrap(),
+                f.0.join("cache"),
+                f.0.join("data"),
+                Arc::new(|_, _| {}),
+            )
+            .unwrap()
+    };
+    let first = submit(None, Some(vec![]));
+    let pending = submit(Some(vec![source.clone()]), Some(vec![source]));
+    let merged = submit(None, Some(vec![]));
+    assert_eq!(pending.operation_id, merged.operation_id);
+    drop(heavy);
+    assert_eq!(wait(&store, &first.operation_id).status, "success");
+    assert_eq!(wait(&store, &pending.operation_id).status, "success");
+    assert_eq!(store.activity.snapshot().analyses, before.analyses + 1);
+    assert_eq!(
+        store
+            .activity
+            .measurements
+            .load(std::sync::atomic::Ordering::Relaxed),
+        measurements + 1
+    );
+    let heavy = store.scans.heavy.lock().unwrap();
+    let first = submit(None, Some(vec![]));
+    let pending = submit(None, None);
+    let merged = submit(None, Some(vec![]));
+    assert_eq!(pending.operation_id, merged.operation_id);
+    drop(heavy);
+    wait(&store, &first.operation_id);
+    wait(&store, &pending.operation_id);
+    assert_eq!(
+        store.activity.snapshot().analyses,
+        before.analyses + 3,
+        "all-source force survives merge"
+    );
+}
+
+#[test]
+fn l22_solid_archive_reuses_metadata_and_listening_without_extraction() {
+    let f = Fixture::new();
+    let path = measured_solid_archive(&f);
+    age_for_analysis(&path);
+    let store = f.open();
+    assert_eq!(f.scan(&store).status, "success");
+    let before = store.activity.snapshot().analyses;
+    let passes = store
+        .activity
+        .solid_passes
+        .load(std::sync::atomic::Ordering::Relaxed);
+    let rows = store.query_entries(20, None, false).unwrap().items;
+    assert_eq!(f.scan(&store).outcomes.unchanged, 1);
+    assert_eq!(store.activity.snapshot().analyses, before);
+    assert_eq!(
+        store
+            .activity
+            .solid_passes
+            .load(std::sync::atomic::Ordering::Relaxed),
+        passes
+    );
+    assert_eq!(store.query_entries(20, None, false).unwrap().items, rows);
+}
+#[test]
+fn l22_superseded_force_survives_automatic_resume() {
+    let f = Fixture::new();
+    let path = f.root().join("stable.zip");
+    std::fs::write(&path, zip_bytes(&studio(Some(ID)))).unwrap();
+    age_for_analysis(&path);
+    let store = f.open();
+    f.scan(&store);
+    let before = store.activity.snapshot().analyses;
+    let measurements = store
+        .activity
+        .measurements
+        .load(std::sync::atomic::Ordering::Relaxed);
+    let other = f.0.join("other");
+    std::fs::create_dir(&other).unwrap();
+    let other_id = store
+        .add_source(&other, store.sources_revision().unwrap())
+        .unwrap()
+        .source_id;
+    let (ready, release) = scan_test_gate(&store, "analysis", false);
+    let (finished, done) = std::sync::mpsc::channel();
+    store
+        .start_scan_forced(
+            None,
+            None,
+            None,
+            uuid::Uuid::new_v4().to_string(),
+            store.sources_revision().unwrap(),
+            f.0.join("cache"),
+            f.0.join("data"),
+            Arc::new(move |event, p| {
+                if event == "catalogue-operation-finished" {
+                    let _ = finished.send(p.clone());
+                }
+            }),
+        )
+        .unwrap();
+    ready.recv_timeout(crate::test_support::timeout()).unwrap();
+    store
+        .remove_source(&other_id, store.sources_revision().unwrap())
+        .unwrap();
+    release.send(()).unwrap();
+    let stale = done.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(stale.error.unwrap().code, "CATALOG_SCAN_SUPERSEDED");
+    let next = done.recv_timeout(crate::test_support::timeout()).unwrap();
+    assert_eq!(next.status, "success");
+    assert_eq!(store.activity.snapshot().analyses, before + 2);
+    assert_eq!(
+        store
+            .activity
+            .measurements
+            .load(std::sync::atomic::Ordering::Relaxed),
+        measurements + 2
+    );
+}
+
+// L22-2: files read outside the token are reuse evidence.
+fn age_tree(dir: &Path) {
+    for entry in std::fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            age_tree(&path);
+        } else {
+            age_for_analysis(&path);
+        }
+    }
+}
+fn first_cover(store: &Arc<store::Store>) -> Value {
+    store.query_entries(20, None, false).unwrap().items[0]["exemplars"][0]["observation"]["cover"]
+        .clone()
+}
+#[test]
+fn l22_project_cover_beside_the_file_is_reuse_evidence() {
+    let f = Fixture::new();
+    let project = f.root().join("projet.mbah");
+    write_json(
+        &project,
+        &json!({"name":"Projet","thumbnailImage":"cover.png"}),
+    );
+    age_for_analysis(&project);
+    let cover = f.root().join("cover.png");
+    let store = f.open();
+    let analyses = || store.activity.snapshot().analyses;
+    f.scan(&store);
+    assert_eq!(first_cover(&store)["available"], json!(false));
+    assert_eq!(f.scan(&store).outcomes.unchanged, 1);
+    assert_eq!(analyses(), 1, "absent cover unchanged: reused");
+    std::fs::write(&cover, bmp(8, 8)).unwrap();
+    age_for_analysis(&cover);
+    f.scan(&store);
+    assert_eq!(analyses(), 2, "cover appeared");
+    assert_eq!(first_cover(&store)["available"], json!(true));
+    f.scan(&store);
+    assert_eq!(analyses(), 2, "present cover unchanged: reused");
+    assert_eq!(first_cover(&store)["available"], json!(true));
+    std::fs::remove_file(&cover).unwrap();
+    f.scan(&store);
+    assert_eq!(analyses(), 3, "cover removed");
+    assert_eq!(first_cover(&store)["available"], json!(false));
+}
+#[test]
+fn l22_device_pack_cover_in_rf_is_reuse_evidence() {
+    let f = Fixture::new();
+    let pack = f.root().join("pack");
+    crate::support::fs_pack_reader::fs_fixtures::write_encrypted_cover_pack(&pack, &bmp(8, 8));
+    let image = pack.join("rf/000/IMAGE001");
+    let bytes = std::fs::read(&image).unwrap();
+    std::fs::remove_file(&image).unwrap();
+    age_tree(&pack);
+    // The folder's own date belongs to its token and must leave the window.
+    std::thread::sleep(Duration::from_millis(4100));
+    let store = f.open();
+    let analyses = || store.activity.snapshot().analyses;
+    f.scan(&store);
+    assert_eq!(first_cover(&store), Value::Null);
+    f.scan(&store);
+    assert_eq!(analyses(), 1, "absent cover unchanged: reused");
+    std::fs::write(&image, &bytes).unwrap();
+    age_for_analysis(&image);
+    f.scan(&store);
+    assert_eq!(analyses(), 2, "cover appeared");
+    assert!(first_cover(&store).is_string());
+    f.scan(&store);
+    assert_eq!(analyses(), 2, "present cover unchanged: reused");
+    std::fs::remove_file(&image).unwrap();
+    f.scan(&store);
+    assert_eq!(analyses(), 3, "cover removed");
+    assert_eq!(first_cover(&store), Value::Null);
+}
+#[test]
+fn l22_upper_case_device_pack_indexes_are_reuse_evidence() {
+    let f = Fixture::new();
+    let pack = f.root().join("pack");
+    crate::support::fs_pack_reader::fs_fixtures::write_cleartext_pack(&pack, false);
+    for name in ["ni", "ri", "si", "li"] {
+        let upper = name.to_ascii_uppercase();
+        std::fs::rename(pack.join(name), pack.join(&upper)).unwrap();
+    }
+    age_tree(&pack);
+    std::thread::sleep(Duration::from_millis(4100));
+    let store = f.open();
+    let measurements = || {
+        store
+            .activity
+            .measurements
+            .load(std::sync::atomic::Ordering::Relaxed)
+    };
+    f.scan(&store);
+    assert_eq!(
+        store.query_entries(20, None, false).unwrap().items[0]["exemplars"][0]["observation"]
+            ["state"],
+        json!("available")
+    );
+    f.scan(&store);
+    assert_eq!(store.activity.snapshot().analyses, 1, "unchanged: reused");
+    let measured = measurements();
+    // An in-place rewrite of an index leaves the folder's date untouched.
+    std::fs::File::options()
+        .write(true)
+        .open(pack.join("NI"))
+        .unwrap()
+        .set_modified(std::time::UNIX_EPOCH + Duration::from_secs(1_600_000_500))
+        .unwrap();
+    f.scan(&store);
+    assert_eq!(
+        store.activity.snapshot().analyses,
+        2,
+        "upper-case index changed"
+    );
+    assert_eq!(measurements(), measured + 1, "listening measured again");
+    f.scan(&store);
+    assert_eq!(
+        store.activity.snapshot().analyses,
+        2,
+        "unchanged again: reused"
+    );
+}
+
+#[test]
+fn project_cover_replaced_changes_cover_signature() {
+    let f = Fixture::new();
+    let project = f.root().join("projet.mbah");
+    write_json(
+        &project,
+        &json!({"name":"Projet","thumbnailImage":"cover.png"}),
+    );
+    age_for_analysis(&project);
+    let cover = f.root().join("cover.png");
+    std::fs::write(&cover, bmp(8, 8)).unwrap();
+    age_for_analysis(&cover);
+    let store = f.open();
+    let sig = |s: &Arc<store::Store>| {
+        s.query_entries(20, None, false).unwrap().items[0]["coverSignature"].clone()
+    };
+    f.scan(&store);
+    let before = sig(&store);
+    let analyses = store.activity.snapshot().analyses;
+    std::fs::write(&cover, bmp(16, 16)).unwrap();
+    age_for_analysis(&cover);
+    f.scan(&store);
+    assert!(store.activity.snapshot().analyses > analyses, "reanalysed");
+    assert_ne!(sig(&store), before, "coverSignature must change");
 }

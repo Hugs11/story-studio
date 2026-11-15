@@ -860,29 +860,33 @@
   "verdict.listen.title_one": {
     "context": "Rapport du vérificateur (écran et export HTML) > verdict quand des fichiers restent à écouter ; count = nombre de fichiers (au moins 1).",
     "en": {
-      "sourceHash": "6509ffe9d5d5",
+      "sourceHash": "4ee8ff3c04ef",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "6509ffe9d5d5",
+      "sourceHash": "4ee8ff3c04ef",
       "status": "ai-reviewed"
     }
   },
   "verdict.listen.title_many": {
     "context": "Rapport du vérificateur (écran et export HTML) > verdict quand des fichiers restent à écouter ; count = nombre de fichiers (au moins 1).",
     "it": {
-      "sourceHash": "fa6f6749c5af",
+      "sourceHash": "4ee8ff3c04ef",
+      "status": "ai-reviewed"
+    },
+    "en": {
+      "sourceHash": "4ee8ff3c04ef",
       "status": "ai-reviewed"
     }
   },
   "verdict.listen.title_other": {
     "context": "Rapport du vérificateur (écran et export HTML) > verdict quand des fichiers restent à écouter ; count = nombre de fichiers (au moins 1).",
     "en": {
-      "sourceHash": "fa6f6749c5af",
+      "sourceHash": "4ee8ff3c04ef",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "fa6f6749c5af",
+      "sourceHash": "4ee8ff3c04ef",
       "status": "ai-reviewed"
     }
   },
@@ -900,29 +904,33 @@
   "verdict.optional.title_one": {
     "context": "Rapport du vérificateur (écran et export HTML) > verdict quand seules des suggestions facultatives existent ; count = nombre de suggestions.",
     "en": {
-      "sourceHash": "6e39e325d40c",
+      "sourceHash": "a2170af624d4",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "6e39e325d40c",
+      "sourceHash": "a2170af624d4",
       "status": "ai-reviewed"
     }
   },
   "verdict.optional.title_many": {
     "context": "Rapport du vérificateur (écran et export HTML) > verdict quand seules des suggestions facultatives existent ; count = nombre de suggestions.",
     "it": {
-      "sourceHash": "c8e70000aff6",
+      "sourceHash": "a2170af624d4",
+      "status": "ai-reviewed"
+    },
+    "en": {
+      "sourceHash": "a2170af624d4",
       "status": "ai-reviewed"
     }
   },
   "verdict.optional.title_other": {
     "context": "Rapport du vérificateur (écran et export HTML) > verdict quand seules des suggestions facultatives existent ; count = nombre de suggestions.",
     "en": {
-      "sourceHash": "c8e70000aff6",
+      "sourceHash": "a2170af624d4",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "c8e70000aff6",
+      "sourceHash": "a2170af624d4",
       "status": "ai-reviewed"
     }
   },
@@ -3205,6 +3213,17 @@
       "status": "ai-reviewed"
     }
   },
+  "metadata.age.requiredForCorrection": {
+    "context": "Fiche des métadonnées du vérificateur > aide sous le champ Âge, visible tant que l’âge minimum manque et bloque le ZIP corrigé.",
+    "en": {
+      "sourceHash": "7d54bef80341",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7d54bef80341",
+      "status": "ai-reviewed"
+    }
+  },
   "metadata.age.other": {
     "context": "Fiche des métadonnées > placeholder du champ d’âge libre, à côté des pastilles 2+…12+. Court.",
     "maxLength": 10,
@@ -4354,6 +4373,149 @@
     },
     "it": {
       "sourceHash": "8b3e35234cda",
+      "status": "ai-reviewed"
+    }
+  },
+  "detail.finding.title": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "3f9a7909a114",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3f9a7909a114",
+      "status": "ai-reviewed"
+    }
+  },
+  "structure.graphEditor": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "feb841fe7477",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "feb841fe7477",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.review.title": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "811f53f66115",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "811f53f66115",
+      "status": "ai-reviewed"
+    }
+  },
+  "verdict.review.subtitle": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "cfd723f0bd6f",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cfd723f0bd6f",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.count.points_one": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "251fecd592e5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "251fecd592e5",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.review_one": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "9c24cba5762b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9c24cba5762b",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.assisted_one": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "82f229e61ca8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "82f229e61ca8",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.count.points_many": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "c54a061dfcc1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c54a061dfcc1",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.review_many": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "9c24cba5762b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9c24cba5762b",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.assisted_many": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "6e14ed0b036c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6e14ed0b036c",
+      "status": "ai-reviewed"
+    }
+  },
+  "group.count.points_other": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "c54a061dfcc1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c54a061dfcc1",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.review_other": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "9c24cba5762b",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9c24cba5762b",
+      "status": "ai-reviewed"
+    }
+  },
+  "report.callout.assisted_other": {
+    "context": "Vérificateur : présentation du rapport, écran et export.",
+    "en": {
+      "sourceHash": "6e14ed0b036c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6e14ed0b036c",
       "status": "ai-reviewed"
     }
   }

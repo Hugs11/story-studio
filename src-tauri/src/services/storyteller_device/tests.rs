@@ -1896,6 +1896,7 @@ mod orphan_tests;
 fn lunii_device_fault_classifies_every_diagnostic_code_and_write_stage() {
     use crate::support::user_message::{codes, UserMessage};
     let fault_codes = [
+        codes::STORYTELLER_DEVICE_WRITE_FAILED,
         codes::STORYTELLER_NO_SPACE,
         codes::STORYTELLER_NO_SPACE_UNKNOWN,
         codes::STORYTELLER_SEND_DISCONNECTED,
@@ -2006,4 +2007,119 @@ fn lunii_device_fault_classifies_every_diagnostic_code_and_write_stage() {
         .iter()
         .all(|code| !no_fault_codes.contains(code)));
     assert!(!device_fault("UNKNOWN", "device"));
+}
+
+#[test]
+fn repair_preview_of_a_healthy_list_is_refused_like_the_repair() {
+    let f = Fixture::new();
+    assert_eq!(f.inventory().playlist_state, PlaylistState::Readable);
+    assert_eq!(
+        f.device().apply(Action::RepairPlaylist),
+        Err(Error::NoRepairRequired)
+    );
+    assert_eq!(
+        f.device().repair_preview(),
+        Err(Error::NoRepairRequired),
+        "the preview announces a repair keeping everything and removing nothing"
+    );
+}
+
+#[test]
+fn removal_completes_when_device_memory_is_truncated() {
+    let f = Fixture::new();
+    fs::create_dir(f.root.join(super::cards::DIRECTORY)).unwrap();
+    fs::write(
+        f.root.join(super::cards::DIRECTORY).join("device.json"),
+        br#"{"version":1,"state":{"name":"Lunii de la cham"#,
+    )
+    .unwrap();
+    let dir = f.root.join(".content").join(folder(B));
+    let removed = f.device().apply(Action::Remove(B));
+    let listed = read::playlist(&f.root).unwrap();
+    let left = dir.exists();
+    let leftover = if left {
+        Some(f.device().apply(Action::DeleteOrphan(folder(B))))
+    } else {
+        None
+    };
+    assert_eq!(listed, vec![A], "the list no longer names the story");
+    assert_eq!(
+        (removed, left, leftover, dir.exists()),
+        (Ok(Outcome::Complete), false, None, false),
+        "(removal, folder left, deletion of the leftover, folder still there)"
+    );
+}
+
+#[test]
+fn device_memory_with_a_readable_future_version_is_not_overwritten() {
+    let f = Fixture::new();
+    let directory = f.root.join(super::cards::DIRECTORY);
+    fs::create_dir(&directory).unwrap();
+    let path = directory.join("device.json");
+    let bytes = br#"{"version":2,"state":{"name":"Future Lunii"}}"#;
+    fs::write(&path, bytes).unwrap();
+    assert_eq!(
+        state::save(&f.root, &state::State::default()),
+        Err(Error::FutureCard)
+    );
+    assert_eq!(fs::read(path).unwrap(), bytes);
+}
+
+#[test]
+fn device_memory_containing_garbage_is_set_aside_before_rewriting() {
+    let f = Fixture::new();
+    fs::create_dir(f.root.join(super::cards::DIRECTORY)).unwrap();
+    fs::write(
+        f.root.join(super::cards::DIRECTORY).join("device.json"),
+        b"garbage",
+    )
+    .unwrap();
+    let device = f.device();
+    assert_eq!(device.apply(Action::Remove(B)), Ok(Outcome::Complete));
+    assert!(!f.root.join(".content").join(folder(B)).exists());
+    let record: serde_json::Value = serde_json::from_slice(
+        &fs::read(f.root.join(super::cards::DIRECTORY).join("device.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(record["version"], 1);
+    assert_eq!(
+        fs::read(f.root.join(".storystudio/device.json.unreadable")).unwrap(),
+        b"garbage"
+    );
+}
+
+#[test]
+fn device_memory_is_preserved_when_setting_it_aside_is_impossible() {
+    let f = Fixture::new();
+    let directory = f.root.join(super::cards::DIRECTORY);
+    fs::create_dir(&directory).unwrap();
+    let path = directory.join("device.json");
+    fs::write(&path, b"broken").unwrap();
+    // A directory occupying the backup name prevents a safe rename on all OSes.
+    fs::create_dir(directory.join("device.json.unreadable")).unwrap();
+    assert_eq!(f.device().rename("new".into()), Err(Error::UnsafePath));
+    assert_eq!(fs::read(&path).unwrap(), b"broken");
+    assert_eq!(read::playlist(&f.root).unwrap(), vec![A, B]);
+    assert_eq!(
+        f.device().apply(Action::Remove(B)),
+        Ok(Outcome::StateWarning)
+    );
+    assert_eq!(fs::read(path).unwrap(), b"broken");
+    assert!(f.root.join(".content").join(folder(B)).is_dir());
+}
+
+#[test]
+fn untyped_device_gesture_failure_has_a_distinct_code_from_send() {
+    use crate::support::user_message::{codes, UserMessage};
+    let f = Fixture::new();
+    let device = f.device();
+    fs::remove_file(f.root.join(".pi")).unwrap();
+    let error = device.apply(Action::Remove(B)).unwrap_err();
+    assert_eq!(error, Error::Io);
+    let gesture = classify_error(UserMessage::from(error), "device");
+    assert_eq!(gesture.code, codes::STORYTELLER_DEVICE_WRITE_FAILED);
+    assert_eq!(gesture.device_fault, Some(true));
+    let send = classify_device_error(error, "finalizing");
+    assert_eq!(send.code, codes::STORYTELLER_WRITE_FAILED);
+    assert_eq!(send.device_fault, Some(true));
 }

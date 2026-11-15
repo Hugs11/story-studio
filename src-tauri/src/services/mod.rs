@@ -16,6 +16,6 @@ pub mod youtube;
 #[allow(dead_code)]
 pub(crate) mod storyteller;
 
-// Headless mounted-volume driver; wired to IPC in a later lot.
+// Headless mounted-volume driver; shared by the device commands.
 #[allow(dead_code)]
 pub(crate) mod storyteller_device;

@@ -16,9 +16,9 @@ use crate::native_pack::NativeGenerationWarning;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum Transformation {
-    /// Octets conservés, nom déjà cohérent avec leur format réel.
+    /// Contenu conservé sans ré-encodage (audio : tags ID3 retirés), nom cohérent.
     Verbatim,
-    /// Octets conservés, nom d'archive recalculé sur le format réel.
+    /// Même conservation, nom d'archive recalculé sur le format réel.
     Renamed,
     /// Ré-encodé sans changer les dimensions.
     Reencoded,
@@ -62,7 +62,7 @@ pub(crate) struct PreparedDestination {
     pub(crate) output_sha256: String,
 }
 
-/// Le livrable du lot : des fichiers prêts, et de quoi prouver leur place.
+/// La préparation produit des fichiers prêts, et de quoi prouver leur place.
 ///
 /// Rien n'y désigne le projet d'auteur : la préparation lit un document et des
 /// liaisons, elle n'écrit ni dans l'un ni dans les autres.

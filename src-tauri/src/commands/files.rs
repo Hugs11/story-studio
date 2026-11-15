@@ -316,6 +316,7 @@ pub async fn preview_audio_edit(
             project_files::preview_audio_edit(
                 project_files::AudioEditRequest {
                     input_path: &input_path,
+                    preserve_input: false,
                     save_path: save_path.as_deref(),
                     workspace_dir: workspace_dir.as_deref(),
                     project_destination: project_destination.as_ref(),
@@ -355,6 +356,7 @@ pub async fn preview_audio_edit(
 #[allow(clippy::too_many_arguments)]
 pub async fn apply_audio_edit(
     input_path: String,
+    preserve_input: bool,
     mode: String,
     start_sec: f64,
     end_sec: f64,
@@ -374,6 +376,7 @@ pub async fn apply_audio_edit(
         tauri::async_runtime::spawn_blocking(move || {
             project_files::apply_audio_edit(project_files::AudioEditRequest {
                 input_path: &input_path,
+                preserve_input,
                 save_path: save_path.as_deref(),
                 workspace_dir: workspace_dir.as_deref(),
                 project_destination: project_destination.as_ref(),
@@ -408,6 +411,7 @@ pub async fn apply_audio_edit(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn commit_audio_preview(
     app: tauri::AppHandle,
     input_path: String,
@@ -415,6 +419,7 @@ pub async fn commit_audio_preview(
     save_path: Option<String>,
     workspace_dir: Option<String>,
     project_destination: Option<project_files::ProjectMediaDestination>,
+    preserve_input: bool,
 ) -> Result<project_files::TrimAudioResult, UserMessage> {
     let result: Result<_, String> = async {
         let preview_root =
@@ -430,6 +435,7 @@ pub async fn commit_audio_preview(
                 workspace_dir.as_deref(),
                 &preview_root,
                 project_destination.as_ref(),
+                preserve_input,
             )
             .inspect_err(|err| {
                 log::error!(target: "files",
@@ -492,13 +498,14 @@ pub async fn discard_audio_preview(
 #[tauri::command]
 pub async fn restore_audio_original(
     input_path: String,
+    preserve_input: bool,
     save_path: Option<String>,
     workspace_dir: Option<String>,
 ) -> Result<project_files::TrimAudioResult, UserMessage> {
     let result: Result<_, String> = async {
     log::info!(target: "files", "restore_audio_original: '{}'", input_path);
     tauri::async_runtime::spawn_blocking(move || {
-        project_files::restore_audio_original(&input_path, save_path.as_deref(), workspace_dir.as_deref())
+        project_files::restore_audio_original(&input_path, save_path.as_deref(), workspace_dir.as_deref(), preserve_input)
             .inspect_err(|err| log::error!(target: "files", "restore_audio_original failed for '{}': {}", input_path, err))
     })
     .await
@@ -727,9 +734,14 @@ pub fn resolve_project_folder(
     folder: String,
     work_id: String,
     create: bool,
+    category: Option<String>,
 ) -> Result<String, UserMessage> {
-    let result: Result<_, String> =
-        project_files::resolve_project_folder(&root, &folder, &work_id, create);
+    let result: Result<_, String> = match category {
+        Some(category) => {
+            project_files::resolve_project_media_folder(&root, &folder, &work_id, &category, create)
+        }
+        _ => project_files::resolve_project_folder(&root, &folder, &work_id, create),
+    };
     result.map_err(UserMessage::from)
 }
 
@@ -739,9 +751,14 @@ pub fn rename_project_folder(
     old: String,
     new: String,
     work_id: String,
+    original_folders: Option<std::collections::HashMap<String, String>>,
 ) -> Result<Vec<project_files::ProjectFolderMove>, UserMessage> {
-    let result: Result<_, String> =
-        project_files::rename_project_folder(&root, &old, &new, &work_id);
+    let result: Result<_, String> = match original_folders {
+        Some(folders) => {
+            project_files::restore_project_folder(&root, &old, &new, &work_id, &folders)
+        }
+        None => project_files::rename_project_folder(&root, &old, &new, &work_id),
+    };
     result.map_err(UserMessage::from)
 }
 

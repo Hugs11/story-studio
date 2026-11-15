@@ -120,7 +120,7 @@ export function useLuniiSend({ lunii, operations, cards, revision, chooseExempla
           return { context };
         }
         latest.current.operations.retain?.(requestId);
-        const receipt = await api.send({ deviceId, selection: entries.map(e => e.selection), position: index == null ? null : startIndex, requestId });
+        const receipt = await api.send({ deviceId, selection: entries.map(e => ({ ...e.selection, expectedRevision: latest.current.revision })), position: index == null ? null : startIndex, requestId });
         context = { ...sendContext({ operationId: receipt.operationId, device: currentDevice, startIndex, cards: picked, entries, skipped, official, damaged }), requestId, queueOwned: true, queueEntryId };
         setContexts(list => [...list, context]);
         try { await latest.current.operations.open(receipt.operationId); }

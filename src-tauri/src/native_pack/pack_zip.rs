@@ -30,6 +30,9 @@ pub(super) struct ArchiveAsset<'a> {
 /// Le contenu exact d'une archive, avant écriture.
 pub(super) struct ArchiveContents<'a> {
     pub(super) identity: &'a super::output_identity::OutputIdentity,
+    /// Recette (`recipe::FILE_NAME`), écrite après `story.json` sans le modifier.
+    /// `None` : éditeur graphe, pack agrégé ou adaptateur refusé.
+    pub(super) recipe_json: Option<Vec<u8>>,
     pub(super) story_json: &'a str,
     pub(super) assets: Vec<ArchiveAsset<'a>>,
     /// Couverture déjà encodée en PNG. `None` quand l'écran d'entrée n'a pas
@@ -116,6 +119,16 @@ pub(super) fn write_pack_zip(
     add_entry(&mut out_zip, opts, zip_path, "story.json", |writer| {
         writer.write_all(contents.story_json.as_bytes())
     })?;
+
+    if let Some(recipe) = &contents.recipe_json {
+        add_entry(
+            &mut out_zip,
+            opts,
+            zip_path,
+            super::recipe::FILE_NAME,
+            |writer| writer.write_all(recipe),
+        )?;
+    }
 
     let mut written = HashSet::new();
     for asset in &contents.assets {

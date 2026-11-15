@@ -35,6 +35,16 @@ impl<'a> StoryBuilder<'a> {
         // force_autoplay garantit que le firmware déclenche okTransition automatiquement.
         // Requis avec returnAfterPlay, et aussi quand l'histoire est dans un menu imbriqué
         // sans contrôles de navigation explicites ; sinon l'audio boucle.
+        // Une histoire importée (`native_stage_id`) garde ses réglages d'origine : un pack
+        // importé non retouché est regénéré à l'identique (fidélité d'import).
+        let imported_native_story = story
+            .native_stage_id
+            .as_deref()
+            .is_some_and(|stage_id| !stage_id.trim().is_empty());
+        // Le message de fin personnel (invite ou séquence) part seul, comme le message global.
+        let has_local_end_message = !imported_native_story
+            && (!story.after_playback_sequence.is_empty()
+                || story.after_playback_prompt_audio.is_some());
         let force_autoplay = auto_next_active
             || story
                 .return_after_play
@@ -42,6 +52,7 @@ impl<'a> StoryBuilder<'a> {
                 .map(|r| !r.trim().is_empty())
                 .unwrap_or(false)
             || has_effective_night_mode
+            || has_local_end_message
             || (simple_leaf_playback && !story.ok && !story.autoplay);
         let play_controls = ControlSettings::authored(
             story.wheel,

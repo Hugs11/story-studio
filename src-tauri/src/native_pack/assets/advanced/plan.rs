@@ -25,9 +25,9 @@ use crate::support::audio_norm::{
     EdgeSilenceFilters, HarmonizationNotice, LoudnessAction, EDGE_SILENCE_SEC,
 };
 
-use super::super::audio::{audio_filter_chain_for, loudness_measure_filters};
+use super::super::audio::{audio_filter_chain_for, loudness_measure_filters, mp3_without_id3};
 use super::format::MpegFrameHeader;
-use super::probe::{classify, run_tool, StdoutHandling, ToolOperation};
+use super::probe::{classify, run_measurement, ToolOperation};
 use super::MediaCause;
 
 /// Options d'harmonisation et de silences, reçues en **paramètres d'appel**.
@@ -102,7 +102,7 @@ impl PlanStep {
 /// Ce que l'exécuteur fera de l'instantané, entièrement arrêté.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum ConversionPlan {
-    /// Octets conservés : le média est déjà conforme et rien n'est demandé.
+    /// Trames audio conservées ; seuls les tags ID3 sont retirés.
     AudioVerbatim,
     AudioEncode {
         silent: bool,
@@ -159,7 +159,7 @@ impl ConversionPlan {
     /// peuvent donc pas produire le même encodage.
     fn encode(&self) -> String {
         match self {
-            ConversionPlan::AudioVerbatim => "audio:verbatim".to_string(),
+            ConversionPlan::AudioVerbatim => "audio:verbatim-without-id3-v1".to_string(),
             ConversionPlan::AudioEncode { filters, .. } => {
                 format!("audio:mp3-mono-44100-q5:af={filters}")
             }
@@ -231,10 +231,16 @@ pub(crate) fn plan_audio(
     deadline: Duration,
 ) -> Result<ConversionPlan, PlanFailure> {
     if options.is_neutral() && header.is_some_and(|header| header.is_studio_conform()) {
+        let bytes = std::fs::read(snapshot).map_err(|error| PlanFailure {
+            cause: MediaCause::ReadDenied,
+            detail: error.to_string(),
+        })?;
         // Aucune option, format réel conforme : rien à mesurer, rien à faire.
         // Les bords ne sont même pas regardés — un silence voulu par l'auteur
         // n'a pas à devenir un refus.
-        return Ok(ConversionPlan::AudioVerbatim);
+        if mp3_without_id3(&bytes).is_some() {
+            return Ok(ConversionPlan::AudioVerbatim);
+        }
     }
 
     // Les bords servent à la sortie en mode `Normalize`, et à la mesure de
@@ -318,12 +324,7 @@ fn measure_edges(
     snapshot: &Path,
     deadline: Duration,
 ) -> Result<EdgeMeasure, PlanFailure> {
-    let run = run_tool(
-        ffmpeg,
-        &edge_envelope_args(snapshot),
-        deadline,
-        StdoutHandling::Discard,
-    );
+    let run = run_measurement(ffmpeg, &edge_envelope_args(snapshot), deadline);
     if let Some(cause) = classify(ToolOperation::Conversion, &run.outcome, run.produced_data()) {
         return Err(PlanFailure {
             cause,
@@ -339,12 +340,7 @@ fn measure_loudness(
     pre_filters: &[String],
     deadline: Duration,
 ) -> Result<(LoudnessAction, Option<HarmonizationNotice>, bool), PlanFailure> {
-    let run = run_tool(
-        ffmpeg,
-        &ebur128_args(snapshot, pre_filters),
-        deadline,
-        StdoutHandling::Discard,
-    );
+    let run = run_measurement(ffmpeg, &ebur128_args(snapshot, pre_filters), deadline);
     if let Some(cause) = classify(ToolOperation::Conversion, &run.outcome, run.produced_data()) {
         return Err(PlanFailure {
             cause,

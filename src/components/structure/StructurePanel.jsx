@@ -61,8 +61,8 @@ export function StructurePanel({
     onAddEndNode, onRemoveEndNode, onOpenMediaAudioTool,
   } = useProjectActions();
   const handleRenameNode = useCallback((nodeId, nodeType, fields) => {
-    if (nodeType === 'menu') onUpdateMenu(fields, nodeId);
-    else if (nodeType === 'story') onUpdateItem(fields, nodeId);
+    if (nodeType === 'menu') onUpdateMenu(fields, nodeId, { historyGroup: null });
+    else if (nodeType === 'story') onUpdateItem(fields, nodeId, { historyGroup: null });
   }, [onUpdateItem, onUpdateMenu]);
   const handleSetNodeColor = useStructureNodeColor();
   const [treeDisplayOpen, setTreeDisplayOpen] = useState(false);

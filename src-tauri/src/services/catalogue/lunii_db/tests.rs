@@ -246,7 +246,7 @@ fn incremental_scan_recalculates_names_and_card_matches_listing() {
     let first = root.join("3+] Premier.mbah");
     let raw = json!({"packMetadata":{"uuid":"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"}}).to_string();
     std::fs::write(&first, &raw).unwrap();
-    s.add_source(&root, 0, false).unwrap();
+    s.add_source(&root, 0).unwrap();
     let scan = || {
         let receipt = s
             .start_scan(
@@ -733,7 +733,7 @@ fn unknown_uuid_never_downloads_again_with_local_server() {
         json!({"packMetadata":{"uuid":"99999999-2222-4333-8444-555555555555"}}).to_string(),
     )
     .unwrap();
-    s.add_source(&root, 0, false).unwrap();
+    s.add_source(&root, 0).unwrap();
     for _ in 0..2 {
         let receipt = s
             .start_scan(
@@ -1116,7 +1116,7 @@ fn available_base_fills_at_import_and_unchanged_rescan_keeps_values_and_revision
     let path = root.join("Fallback.mbah");
     let raw = json!({"packMetadata":{"uuid":"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee","title":"Pack title"}}).to_string();
     std::fs::write(&path, &raw).unwrap();
-    s.add_source(&root, 0, false).unwrap();
+    s.add_source(&root, 0).unwrap();
     let scan = || {
         let receipt = s
             .start_scan(
@@ -1236,7 +1236,7 @@ fn first_cover_notifies_while_the_next_http_response_is_still_pending() {
     );
     assert_eq!(
         serde_json::to_value(s.lunii_thumbnail("second-cover").unwrap().unwrap()).unwrap()["state"],
-        "absent"
+        "officialPending"
     );
     assert!(matches!(
         changed_rx.try_recv(),
@@ -1338,6 +1338,90 @@ fn automatic_cover_is_shared_with_waiting_preparation_consumers() {
     assert_eq!(s.lunii_cover_test_requests(), 1);
     s.lunii_cover_bytes("shared", &key).unwrap();
     assert_eq!(s.lunii_cover_test_requests(), 1);
+}
+
+#[test]
+fn automatic_covers_coalesce_signals_and_publish_the_final_revision() {
+    use std::{io::Write, net::TcpListener};
+    let _network = bounded::test_network();
+    let (_temp, s) = store();
+    let mut raw = json!({});
+    for i in 0..20 {
+        let id = format!("cover-{i:02}");
+        let uuid = uuid::Uuid::new_v4().to_string();
+        s.write(|tx| {
+            tx.execute("INSERT INTO fiche VALUES (?1,0,0,0)", [&id])
+                .map_err(error)?;
+            tx.execute(
+                "INSERT INTO pack_identity VALUES (?1,?2,'{}')",
+                [&uuid, &id],
+            )
+            .map_err(error)?;
+            Ok(())
+        })
+        .unwrap();
+        let mut entry = fixture()["arbitrary-key"].clone();
+        entry["uuid"] = json!(uuid);
+        raw[id] = entry;
+    }
+    s.publish_lunii(
+        &parse::parse(raw.to_string().as_bytes()).unwrap(),
+        "import",
+        &AtomicBool::new(false),
+    )
+    .unwrap();
+    let before = s.list_sources().unwrap().catalogue_revision;
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = crate::test_support::spawn(move || {
+        let body = png();
+        for _ in 0..20 {
+            let (mut socket, _) = accept_local(&listener);
+            assert!(bounded::read_request(&mut socket)
+                .starts_with("GET /public/images/packs/test.png "));
+            write!(
+                socket,
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            )
+            .unwrap();
+            socket.write_all(&body).unwrap();
+        }
+    });
+    let (tx, rx) = std::sync::mpsc::channel();
+    s.download_lunii_covers_with_interval(
+        Arc::new(move |event, p| {
+            assert_eq!(event, "catalogue-operation-finished");
+            assert!(p.catalogue_changed);
+            tx.send(p.catalogue_revision).unwrap();
+        }),
+        format!("http://{address}"),
+        // Disable intermediate emissions regardless of machine speed; the
+        // initial and final notifications must still be sent.
+        Duration::MAX,
+    );
+    // The channel closes when the worker drops its sink: inspect every signal,
+    // including the final one, with a local HTTP double and no Internet access.
+    let mut revisions = Vec::new();
+    loop {
+        match rx.recv_timeout(crate::test_support::timeout()) {
+            Ok(revision) => revisions.push(revision),
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+            Err(reason) => panic!("cover worker did not finish: {reason}"),
+        }
+    }
+    assert_eq!(
+        revisions.len(),
+        2,
+        "one initial signal and one final signal for 20 covers"
+    );
+    assert_eq!(revisions[0], before + 1);
+    assert_eq!(*revisions.last().unwrap(), before + 20);
+    assert_eq!(
+        *revisions.last().unwrap(),
+        s.list_sources().unwrap().catalogue_revision
+    );
+    crate::test_support::join(server);
 }
 
 #[test]
@@ -1714,7 +1798,7 @@ fn device_zip_is_filled_from_lunii_by_directory_uuid() {
         false,
     );
     std::fs::write(&path, &bytes).unwrap();
-    s.add_source(&root, 0, false).unwrap();
+    s.add_source(&root, 0).unwrap();
     let receipt = s
         .start_scan(
             None,
@@ -1889,7 +1973,7 @@ fn luh_disabling_preserves_copied_values_and_retained_cover() {
 }
 
 #[test]
-fn revd2_cover_notifications_advance_catalogue_without_changing_cards() {
+fn cover_notifications_advance_catalogue_without_changing_cards() {
     let _network = bounded::test_network();
     let (_temp, s) = store();
     let mut raw = fixture();

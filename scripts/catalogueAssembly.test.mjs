@@ -66,12 +66,19 @@ test('running assembly exposes real counters without dispatch after closing', as
 });
 
 test('context assembly uses the same availability as the selection bar', async () => {
-  const { assemblyAction, assemblyMenuEntries } = await import('../src/store/catalogue/assemblySelection.js');
-  for (const count of [0,2]) for (const phase of ['idle','preparing','ready']) {
-    if (count > 1) assert.deepEqual(assemblyMenuEntries([], {kind:'card'}, count, phase)[0].action, assemblyAction(count,phase));
-    else assert.deepEqual(assemblyMenuEntries([], {kind:'card'}, count, phase), [], 'FICHEB: single-card context has a fixed menu');
-    assert.deepEqual(assemblyMenuEntries([], {kind:'card',step:{action:'edit'}},count,phase), []);
-    assert.deepEqual(assemblyMenuEntries([], {kind:'exemplar'},count,phase), []);
+  const { selectionMenuEntries, selectionMenuKind, selectionPanelActions } = await import('../src/store/catalogue/selectionActions.js');
+  const { cardMenuActions } = await import('../src/store/catalogue/cardActions.js');
+  for (const count of [0, 1, 2]) for (const phase of ['idle', 'preparing', 'ready']) {
+    const targets = Array.from({ length: count }, (_, id) => ({ id: String(id) }));
+    const card = targets[0] ?? { id: 'outside' };
+    const kind = selectionMenuKind(card, targets);
+    assert.equal(kind, count > 1 ? 'selection' : 'card');
+    if (kind === 'selection') {
+      const actions = selectionPanelActions(targets, [], phase);
+      assert.deepEqual(selectionMenuEntries(actions).map(entry => entry.action), actions);
+      assert.equal(actions.find(action => action.id === 'assemble').enabled, phase === 'idle');
+    }
+    assert.ok(!cardMenuActions(card, []).some(action => action.id === 'assemble'), 'a card menu never assembles the selection');
   }
 });
 

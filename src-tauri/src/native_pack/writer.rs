@@ -57,17 +57,24 @@ pub(crate) fn generate_with_identity(
     libre_pack_identity(&project.pack_uuid)?;
     let asset_report = prepare_native_pack_assets_report_with_cancel(project, emit, should_cancel)?;
 
+    // Recette jointe au ZIP (#67). Un refus de l'adaptateur donne un pack sans
+    // recette, jamais une erreur de génération.
+    let recipe_json = super::recipe::adapt(project, &asset_report.project)
+        .ok()
+        .and_then(|recipe| serde_json::to_vec(&recipe).ok());
+
     let result = (|| {
         check_cancelled(should_cancel)?;
         let story = build_story_document(&asset_report)?;
         check_cancelled(should_cancel)?;
         let local_output_dir = PathBuf::from(&asset_report.stage_dir).join("pack-export");
         emit(&UserMessage::new(codes::GENERATION_ZIP_CACHE_ASSEMBLY).into_transport());
-        let written = write_native_pack_archive_authorized(
+        let written = write_native_pack_archive_with_recipe(
             &asset_report,
             &story,
             &local_output_dir,
             identity,
+            recipe_json,
         )?;
         check_cancelled(should_cancel)?;
 
@@ -246,11 +253,22 @@ pub(crate) fn write_native_pack_archive(
     write_native_pack_archive_authorized(asset_report, story, output_dir, &identity)
 }
 
+#[cfg(test)]
 pub(super) fn write_native_pack_archive_authorized(
     asset_report: &NativeAssetPreparationReport,
     story: &StoryDocument,
     output_dir: &Path,
     identity: &super::output_identity::OutputIdentity,
+) -> Result<WrittenNativePack, String> {
+    write_native_pack_archive_with_recipe(asset_report, story, output_dir, identity, None)
+}
+
+pub(super) fn write_native_pack_archive_with_recipe(
+    asset_report: &NativeAssetPreparationReport,
+    story: &StoryDocument,
+    output_dir: &Path,
+    identity: &super::output_identity::OutputIdentity,
+    recipe_json: Option<Vec<u8>>,
 ) -> Result<WrittenNativePack, String> {
     let story_json = identity.serialize(&serialize_story_with_pack_uuid(
         story,
@@ -283,6 +301,7 @@ pub(super) fn write_native_pack_archive_authorized(
             story_json: &story_json,
             assets,
             thumbnail_png,
+            recipe_json,
         },
         &zip_path,
     )

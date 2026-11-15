@@ -116,7 +116,8 @@ test('suggestion-only reports stay visibly conforming', () => {
     issues: [report.issues[1]],
   };
   const html = formatHtmlReport(suggestionOnly);
-  assert.match(html, /Pack conforme, avec 1 ajustement facultatif/);
+  assert.match(html, /Pack conforme/);
+  assert.match(html, /<strong>1<\/strong> facultative/);
   assert.match(html, /class="measure measure--info"/);
   assert.doesNotMatch(html, /class="measure measure--bad"/);
   assert.deepEqual(categoryConformanceStats(suggestionOnly.audioSummary), {
@@ -151,4 +152,21 @@ test('near-mute audio is classified as an automatic volume correction', () => {
     autoFixAvailable: true,
     fixDisposition: 'automatic',
   }), true);
+});
+
+test('HTML structure uses the three stories classified by Rust', () => {
+  const html = formatHtmlReport({
+    ...report,
+    structureSummary: { ...report.structureSummary, luniiCompatible: true, storyCount: 3 },
+  });
+  assert.match(html, /Histoires<\/span>\s*<strong>3<\/strong>/);
+});
+
+test('unknown story count stays unknown in HTML and readable exports', () => {
+  const unknown = {
+    ...report,
+    structureSummary: { ...report.structureSummary, luniiCompatible: true, storyCount: null },
+  };
+  assert.match(formatHtmlReport(unknown), /Histoires<\/span>\s*<strong>—<\/strong>/);
+  assert.match(formatReadableReport(unknown), /Histoires : —/);
 });

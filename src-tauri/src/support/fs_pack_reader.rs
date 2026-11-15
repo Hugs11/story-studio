@@ -80,12 +80,25 @@ fn index_names_readable(index: &[u8]) -> Option<bool> {
     let zone = &index[..index.len().min(512)];
     let mut records = zone.chunks_exact(12).peekable();
     records.peek()?;
-    Some(records.all(|record| {
+    let mut has_name = false;
+    let mut padding = false;
+    let readable = records.all(|record| {
+        // Short indexes are padded to 16 bytes, which can leave complete
+        // zero records. Padding may only follow a nonempty list of names.
+        if record.iter().all(|&byte| byte == 0) {
+            padding = true;
+            return has_name;
+        }
+        if padding {
+            return false;
+        }
         std::str::from_utf8(record).is_ok_and(|name| {
             let name = name.trim_matches('\0');
-            !name.is_empty() && !name.chars().any(|c| c.is_control())
+            has_name = !name.is_empty() && !name.chars().any(|c| c.is_control());
+            has_name
         })
-    }))
+    });
+    Some(readable)
 }
 
 /// Shared rule deciding how the indexes of a structurally detected pack are
@@ -475,8 +488,9 @@ fn read_asset(
     Ok(variant.decode(&raw))
 }
 
-fn resolve_asset_path(
-    asset_folder: &Path,
+/// Validated asset name relative to its asset folder, with the extension a
+/// `Plain` pack omits from its index. Shared by the read and its observers.
+fn asset_relative(
     name: &str,
     variant: FsPackVariant,
     plain_extension: &str,
@@ -503,6 +517,16 @@ fn resolve_asset_path(
     if variant == FsPackVariant::Plain && relative.extension().is_none() {
         relative.set_extension(plain_extension);
     }
+    Ok(relative)
+}
+
+fn resolve_asset_path(
+    asset_folder: &Path,
+    name: &str,
+    variant: FsPackVariant,
+    plain_extension: &str,
+) -> Result<PathBuf, String> {
+    let relative = asset_relative(name, variant, plain_extension)?;
     let path = resolve_fs_path(asset_folder, relative);
 
     let metadata = std::fs::symlink_metadata(&path).map_err(|e| {
@@ -1338,11 +1362,24 @@ impl From<std::io::Error> for FsPreviewError {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn read_fs_pack_preview(pack_dir: &Path) -> Result<serde_json::Value, FsPreviewError> {
+    read_fs_pack_preview_observed(pack_dir, |_| {})
+}
+
 /// Catalogue metadata only: index header and first image locator, never media
 /// conversion. The common index decoder and path confinement remain authoritative.
-pub(crate) fn read_fs_pack_preview(pack_dir: &Path) -> Result<serde_json::Value, FsPreviewError> {
+/// `before_read` receives the path (relative to `pack_dir`, `/`-separated) of
+/// each index or asset just before it is looked up, so a cache can stamp what
+/// the preview depended on.
+pub(crate) fn read_fs_pack_preview_observed(
+    pack_dir: &Path,
+    before_read: impl FnMut(&str),
+) -> Result<serde_json::Value, FsPreviewError> {
     use std::io::Read;
+    let before_read = std::cell::RefCell::new(before_read);
     let variant = detect_fs_pack_variant(pack_dir).ok_or(FsPreviewError::InvalidStructure)?;
+    (before_read.borrow_mut())("ni");
     let file = std::fs::File::open(resolve_fs_path(pack_dir, "ni"))?;
     let byte_size = file.metadata()?.len();
     let mut ni = Vec::new();
@@ -1353,6 +1390,7 @@ pub(crate) fn read_fs_pack_preview(pack_dir: &Path) -> Result<serde_json::Value,
         &ni,
         byte_size,
         |name, limit| {
+            (before_read.borrow_mut())(name);
             let mut bytes = Vec::new();
             std::fs::File::open(resolve_fs_path(pack_dir, name))?
                 .take(limit + 1)
@@ -1360,6 +1398,9 @@ pub(crate) fn read_fs_pack_preview(pack_dir: &Path) -> Result<serde_json::Value,
             Ok(bytes)
         },
         |name, variant| {
+            if let Ok(relative) = asset_relative(name, variant, "bmp") {
+                (before_read.borrow_mut())(&format!("rf/{}", relative.to_string_lossy()));
+            }
             resolve_asset_path(&resolve_fs_path(pack_dir, "rf"), name, variant, "bmp")
                 .ok()
                 .map(|p| p.to_string_lossy().into_owned())
@@ -1832,6 +1873,99 @@ mod tests {
             }
         }
         assets
+    }
+
+    #[test]
+    fn index_variant_accepts_a_complete_zero_padding_record() {
+        // Layout covered by storyteller::tests::media_index_padding_boundaries_and_hex_names
+        // and three_padded_media_records_reread_with_exact_counts_and_targets.
+        let index = b"000\\00000000000\\00000001000\\00000002\0\0\0\0\0\0\0\0\0\0\0\0";
+        assert_eq!(index.len(), 48);
+        assert_eq!(index_names_readable(index), Some(true));
+        assert_eq!(index_names_readable(&[]), None);
+        for marker in [false, true] {
+            assert_eq!(
+                resolve_fs_pack_index_variant(FsPackVariant::Encrypted, marker, &[index]),
+                Ok(FsPackVariant::Cleartext)
+            );
+            let encrypted = fs_fixtures::encipher_common_key(index);
+            assert_eq!(
+                resolve_fs_pack_index_variant(FsPackVariant::Encrypted, marker, &[&encrypted]),
+                Ok(FsPackVariant::Encrypted)
+            );
+        }
+    }
+
+    #[test]
+    fn index_variant_rejects_an_all_zero_index() {
+        let index = [0; 48];
+        assert_eq!(index_names_readable(&index), Some(false));
+        for marker in [false, true] {
+            assert_eq!(
+                resolve_fs_pack_index_variant(FsPackVariant::Encrypted, marker, &[&index]),
+                Err(FsPackUnknownKey)
+            );
+        }
+    }
+
+    #[test]
+    fn index_variant_rejects_zero_records_before_names() {
+        // Handwritten records: a hole between names, or an empty first record.
+        let indexes: [&[u8]; 2] = [
+            b"000\\00000000\0\0\0\0\0\0\0\0\0\0\0\x00000\\00000002",
+            b"\0\0\0\0\0\0\0\0\0\0\0\x00000\\00000001",
+        ];
+        for index in indexes {
+            assert_eq!(index_names_readable(index), Some(false));
+            let encrypted = fs_fixtures::encipher_common_key(index);
+            for marker in [false, true] {
+                for sample in [index, encrypted.as_slice()] {
+                    assert_eq!(
+                        resolve_fs_pack_index_variant(FsPackVariant::Encrypted, marker, &[sample]),
+                        Err(FsPackUnknownKey)
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn index_variant_accepts_seven_names_and_trailing_padding() {
+        // Seven handwritten 12-byte names, then 12 bytes of padding to 96 bytes.
+        let index = b"000\\00000000000\\00000001000\\00000002000\\00000003000\\00000004000\\00000005000\\00000006\0\0\0\0\0\0\0\0\0\0\0\0";
+        assert_eq!(index.len(), 96);
+        assert_eq!(index_names_readable(index), Some(true));
+        let encrypted = fs_fixtures::encipher_common_key(index);
+        for marker in [false, true] {
+            assert_eq!(
+                resolve_fs_pack_index_variant(FsPackVariant::Encrypted, marker, &[index]),
+                Ok(FsPackVariant::Cleartext)
+            );
+            assert_eq!(
+                resolve_fs_pack_index_variant(FsPackVariant::Encrypted, marker, &[&encrypted]),
+                Ok(FsPackVariant::Encrypted)
+            );
+        }
+    }
+
+    #[test]
+    fn index_variant_still_rejects_corrupted_records() {
+        let mut index = *b"000\\00000000000\\00000001000\\00000002\0\0\0\0\0\0\0\0\0\0\0\0";
+        index[12] = 0xff;
+        assert_eq!(index_names_readable(&index), Some(false));
+        let encrypted = fs_fixtures::encipher_common_key(&index);
+        for marker in [false, true] {
+            assert_eq!(
+                resolve_fs_pack_index_variant(FsPackVariant::Encrypted, marker, &[&index]),
+                Err(FsPackUnknownKey)
+            );
+            assert_eq!(
+                resolve_fs_pack_index_variant(FsPackVariant::Encrypted, marker, &[&encrypted]),
+                Err(FsPackUnknownKey)
+            );
+        }
+        index[12] = b'\n';
+        assert_eq!(index_names_readable(&index), Some(false));
     }
 
     #[test]

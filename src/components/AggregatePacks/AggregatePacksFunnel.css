@@ -5,6 +5,22 @@
   gap: 14px;
 }
 
+/* Keep the embedded sheet's actions visible; only its fields scroll. */
+.aggregate-metadata-step {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.aggregate-metadata-step > .funnel-section-head {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+.aggregate-metadata-step > .pack-meta-modal--embedded {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
 .aggregate-tool-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -259,27 +275,26 @@
   }
 }
 
-.aggregate-destination {
-  display: grid;
-  gap: var(--space-3);
-  min-width: 0;
-  margin-bottom: var(--space-4);
-  border: 1px solid var(--border);
+
+.aggregate-pack-handle {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
 }
 
-.aggregate-destination label {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  overflow-wrap: anywhere;
+.aggregate-pack-row.is-dragging {
+  position: relative;
+  z-index: 1;
+  background: var(--bg2);
 }
 
-.aggregate-review {
-  overflow-wrap: anywhere;
-}
-
-.aggregate-destination input:focus-visible,
-.aggregate-review button:focus-visible {
-  outline: 2px solid var(--accent);
+.aggregate-pack-handle:focus-visible {
+  outline: 2px solid var(--accent-2);
   outline-offset: 3px;
+}
+
+.funnel-foot:has(.funnel-btn-secondary) {
+  flex-wrap: wrap;
 }

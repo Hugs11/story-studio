@@ -58,6 +58,7 @@
   "loading.state.stale": "Aggiornamento non riuscito: le schede mostrate potrebbero non essere aggiornate.",
   "progress.status.queued": "In attesa…",
   "progress.status.cancelling": "Annullamento in corso…",
+  "progress.phase.listening": "Lettura degli archivi 7z…",
   "progress.phase.finalization": "Pubblicazione dell’indice…",
   "progress.discovery.directories_one": "{{count}} cartella esplorata — ricerca in corso",
   "progress.discovery.directories_many": "{{count}} cartelle esplorate — ricerca in corso",
@@ -265,6 +266,7 @@
   "filter.additions.label": "Aggiunte di questa scansione (criteri sospesi)",
   "summary.additions.show": "Mostra queste aggiunte",
   "cover.loading.label": "Caricamento della copertina",
+  "cover.officialPending.label": "Recupero copertina…",
   "cover.unreadable.label": "Copertina illeggibile",
   "cover.tooLarge.label": "Copertina troppo grande",
   "selection.hidden.removedNamed_one": "{{count}} scheda nascosta rimossa dalla selezione. Tra le schede interessate: {{titles}}.",
@@ -390,7 +392,7 @@
   "assembly.cancel": "Annulla",
   "assembly.generateFirst": "Da generare prima",
   "assembly.unavailable": "Sorgente non disponibile",
-  "assembly.effectiveValues": "Nomi e immagini provengono dal catalogo. Puoi modificarli qui senza cambiare i file sorgente.",
+  "assembly.effectiveValues": "I nomi provengono dal catalogo. Puoi modificarli per nominare i nodi nell’editor. Sulla Lunii, ogni pack conserva la sua copertina originale.",
   "backupExport.title": "Esporta i dati del catalogo",
   "backupExport.description": "Un unico file contiene i tuoi dati personali e le immagini conservate. I pack e la cache sono esclusi.",
   "backupExport.destination": "File di backup",
@@ -495,7 +497,8 @@
   "sources.remove.withRemainingOne_other": "{{count}} pacchetti verranno rimossi dal catalogo, con preferiti, correzioni ed etichette. {{remaining}} altro rimane disponibile in un’altra cartella.",
   "sources.remove.withRemainingOther_other": "{{count}} pacchetti verranno rimossi dal catalogo, con preferiti, correzioni ed etichette. {{remaining}} altri rimangono disponibili in un’altra cartella.",
   "preferences.sources.label": "Cartelle del catalogo",
-  "preferences.location.label": "Posizione del catalogo",
+  "preferences.location.label": "Cartella dei dati del catalogo",
+  "preferences.location.description": "Questa cartella contiene il database e le immagini del catalogo. I pacchetti restano nelle cartelle di lavoro.",
   "preferences.location.open": "Apri cartella",
   "preferences.lunii.permission": "Recupera titoli e copertine dei pacchetti ufficiali (connessione ai server Lunii)",
   "preferences.export.label": "Esporta catalogo",
@@ -990,5 +993,7 @@
   "operation.moreNames_many": "e {{count}} altri",
   "operation.moreNames_other": "e {{count}} altri",
   "toolbar.sort.current": "Ordina per {{criterion}}",
-  "sources.repatriated.managed": "Gestito da Story Studio: pacchetti recuperati dalla Lunii"
+  "sources.repatriated.managed": "Gestito da Story Studio: pacchetti recuperati dalla Lunii",
+  "preferences.reanalyze.action": "Forza la nuova analisi di tutti i pacchetti",
+  "preferences.reanalyze.description": "Riapre ogni pacchetto, anche se invariato. Da usare se una scheda non rispecchia il contenuto del pacchetto. Richiede più tempo."
 }

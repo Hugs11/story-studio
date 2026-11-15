@@ -1,4 +1,4 @@
-// Listes natives de l'éditeur graphe avancé, migrées vers le composant Select (lot select B).
+// Listes natives de l'éditeur graphe avancé, migrées vers le composant Select.
 //
 // Les surfaces historiques (`i18nGraph*SourceFixture.mjs`) viennent de la source d'origine (git show BASE) rendue
 // avec des <select> natifs : toutes les <option> y figurent. Le composant Select est fermé par défaut, seule l'option
@@ -6,7 +6,7 @@
 // dans l'ordre, option choisie suffixée de « * ») ; il sert à deux choses :
 //  - ramener la surface historique à l'option choisie (`collapseSurface`, `collapseSegments`), en exigeant que la liste
 //    complète y figure bien, dans l'ordre ;
-//  - être comparé, liste ouverte, aux options réelles du Select monté (scripts/selectMigrationLotB.test.mjs).
+//  - être comparé, liste ouverte, aux options réelles du Select monté (scripts/selectMigrationGraphLists.test.mjs).
 // Les libellés ci-dessous sont lus dans les fixtures de BASE, jamais dans le code qu'ils vérifient.
 import assert from 'node:assert/strict';
 

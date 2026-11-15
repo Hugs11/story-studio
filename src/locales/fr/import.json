@@ -30,6 +30,7 @@
   "edit.childPreparation.progress": "Préparation du pack choisi…",
   "edit.editorChoice.title": "Choisir l’éditeur",
   "edit.editorChoice.message": "Ce pack peut être modifié avec les deux éditeurs.",
+  "edit.simpleEditor.action": "Éditeur simplifié",
   "edit.menuEditor.action": "Éditeur par menus",
   "edit.graphEditor.action": "Éditeur graphe",
   "edit.simulator.progress": "Préparation du simulateur…",
@@ -268,5 +269,6 @@
   "media.follow.alreadyPaused": "Déjà suivi (suspendu) pour ce projet",
   "media.follow.manage": "Préférences → Suivis des médias",
   "media.follow.manageButton": "Gérer les suivis des médias dans les préférences",
-  "media.follow.sources": "Sources suivies pour ce projet"
+  "media.follow.sources": "Sources suivies pour ce projet",
+  "media.import.projectChanged": "L’import a été interrompu car le projet a changé."
 }

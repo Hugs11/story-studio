@@ -15,7 +15,7 @@
 // candidates, il reste indéterminé et personne ne l'affiche : une accessibilité
 // mesurée depuis un départ arbitraire serait une erreur fabriquée.
 
-// Les carrefours mis en avant sous 3 % de zoom (handoff, planche 3b).
+// Les carrefours mis en avant sous 3 % de zoom (repères de navigation).
 const HUB_COUNT = 5;
 // Le moins de liens qu'un carrefour porte. Un nœud de passage en a deux, un
 // qui arrive et un qui repart : il ne croise rien. Sans ce plancher, un petit

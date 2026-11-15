@@ -27,9 +27,9 @@ const CHOICE_TITLES = Object.freeze({
 export function CardContextMenu({ menu, card, entries, dispatch, onActivate, onBack, tagMenu }) {
   const { t, cell } = useCatalogueTranslation();
   const title = (card.displayTitle ?? card.title) ?? t('catalogue:card.untitled');
-  const label = menu.step ? t(CHOICE_TITLES[menu.step.action] ?? 'catalogue:menu.card.label', { title }) : t('catalogue:menu.card.label', { title });
+  const label = menu.kind === 'selection' ? t('catalogue:fiche.panel.selected', { count: tagMenu.targets.length }) : menu.step ? t(CHOICE_TITLES[menu.step.action] ?? 'catalogue:menu.card.label', { title }) : t('catalogue:menu.card.label', { title });
   const decorated = entries.map((entry) => {
-    if (entry.action.id === 'tags') return { ...entry, label: t('catalogue:tags.contextMenu'), submenu: true };
+    if (entry.action.id === 'tags') return { ...entry, label: menu.kind === 'selection' ? t('catalogue:tags.title') : t('catalogue:tags.contextMenu'), submenu: true };
     if (!menu.step || entry.back || !entry.exemplar) return entry;
     const row = exemplarRow(entry.exemplar);
     return {

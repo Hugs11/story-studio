@@ -35,7 +35,7 @@ export function fromProjectRelativeMediaPath(path, directory) {
 // clone. Une liaison avancée est atteinte par sa seule clé `path`.
 export function mapProjectMediaPaths(project, transform) {
   const cloned = structuredClone(project);
-  for (const ref of walkProjectMediaReferences(cloned)) {
+  for (const ref of walkProjectMediaReferences(cloned, { includeRelativeZipCovers: true })) {
     ref.obj[ref.key] = transform(ref.path);
   }
   return cloned;

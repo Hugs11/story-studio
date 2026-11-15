@@ -30,7 +30,8 @@ function readCase(entry) {
 for (const entry of fixture.cases) {
   test(`références déclarées : ${entry.name}`, () => {
     const found = new Set();
-    for (const ref of walkProjectMediaReferences(readCase(entry))) {
+    // Comme le chargeur disque, inclure les jaquettes relatives du .mbah.
+    for (const ref of walkProjectMediaReferences(readCase(entry), { includeRelativeZipCovers: true })) {
       if (typeof ref.path !== 'string' || !ref.path.trim()) continue;
       found.add(lexical(fromProjectRelativeMediaPath(ref.path, fixture.projectFolder)));
     }

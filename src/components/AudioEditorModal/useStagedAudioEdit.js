@@ -16,6 +16,7 @@ export function useStagedAudioEdit({
   savePath,
   workspaceDir,
   mediaStorage,
+  isAudioShared,
   onConfirm,
   wsRef,
   durationRef,
@@ -321,6 +322,7 @@ export function useStagedAudioEdit({
     try {
       const result = await invoke('restore_audio_original', {
         inputPath: filePath,
+        preserveInput: isAudioShared?.(filePath) ?? false,
         savePath: savePath ?? null,
         workspaceDir: workspaceDir ?? null,
       });
@@ -381,17 +383,20 @@ export function useStagedAudioEdit({
     setError(null);
     try {
       const currentPreviewPath = previewPathRef.current;
+      const preserveInput = isAudioShared?.(filePath) ?? false;
       const result = await withProjectMediaOutput(mediaStorage ?? { root: workspaceDir, ephemeral: true }, async (output) => {
         const args = await output.arguments();
         return hasChainedPreview && currentPreviewPath
           ? await invoke('commit_audio_preview', {
               inputPath: filePath,
+              preserveInput,
               previewPath: currentPreviewPath,
               savePath: savePath ?? null,
               ...args,
             })
           : await invoke('apply_audio_edit', {
               inputPath: filePath,
+              preserveInput,
               mode: stagedEdit.mode,
               startSec: stagedEdit.startSec,
               endSec: stagedEdit.endSec,

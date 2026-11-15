@@ -10,7 +10,7 @@ import { editingHarness, openedEditingSources } from './i18nGraphEditingHarness.
 import { assertTranslatedSurface } from './i18nGraphEditingSurface.mjs';
 import { GRAPH_NEUTRAL_KEYS } from './check-i18n.mjs';
 import { originalEditingSurfaces, originalOpenedEditingSurfaces, originalOpenedEditingSegments, originalGraphKeyNames } from './i18nGraphEditingSourceFixture.mjs';
-import { applyLot413Deep, LOT_413_GRAPH } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrectionsDeep, FRENCH_GRAPH_REPLACEMENTS } from './i18nFrenchSourceCorrections.mjs';
 import { collapseSurface, collapseSegments } from './selectMigrationGraphLists.mjs';
 import { commandKeyLabel } from '../src/utils/platformKeys.js';
 import { installMountedDom, click } from './treeMountedDom.mjs';
@@ -26,7 +26,7 @@ function platformUndoSurface(value) {
 test('édition graphe : FR indépendant de git show BASE, attributs accessibles compris', async () => {
   const current = await editingHarness();
   try {
-    for (const name of Object.keys(current.cases)) assert.deepEqual(graphVisibleSurface(current.render(name)), platformUndoSurface(applyLot413Deep(collapseSurface('editing', name, originalEditingSurfaces[name]), LOT_413_GRAPH)), name);
+    for (const name of Object.keys(current.cases)) assert.deepEqual(graphVisibleSurface(current.render(name)), platformUndoSurface(applyFrenchSourceCorrectionsDeep(collapseSurface('editing', name, originalEditingSurfaces[name]), FRENCH_GRAPH_REPLACEMENTS)), name);
   } finally { await current.close(); }
 });
 test('édition graphe : surface pseudo réellement rendue et mutation FR détectée', async () => {
@@ -289,7 +289,7 @@ test('messages locaux, menus et diagnostics précréés : présentation chaude, 
 test('formulaires et progressions ouverts en SSR : FR de BASE et chacun des segments/attributs traduit', async () => {
   const h = await editingHarness(openedEditingSources());
   try {
-    for (const name of Object.keys(h.cases)) assert.deepEqual(graphVisibleSurface(h.render(name)), platformUndoSurface(applyLot413Deep(collapseSurface('opened', name, originalOpenedEditingSurfaces[name]), LOT_413_GRAPH)), name);
+    for (const name of Object.keys(h.cases)) assert.deepEqual(graphVisibleSurface(h.render(name)), platformUndoSurface(applyFrenchSourceCorrectionsDeep(collapseSurface('opened', name, originalOpenedEditingSurfaces[name]), FRENCH_GRAPH_REPLACEMENTS)), name);
     for (const language of ['en', 'it', 'pseudo']) {
       await h.engine.changeLanguage(language);
       for (const name of Object.keys(h.cases)) assertTranslatedSurface(h, name, collapseSegments('opened', name, originalOpenedEditingSegments[name]));

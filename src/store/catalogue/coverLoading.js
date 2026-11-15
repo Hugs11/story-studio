@@ -4,7 +4,7 @@ export const COVER_LOADING_DELAY = 1000;
 // Three image attempts in total, including any immediate HEAD-ready retry.
 export const COVER_MAX_ATTEMPTS = 3;
 const HEAD_TIMEOUT = 5000;
-// Fingerprinted addresses remain valid for the whole session, including failures.
+// Only conclusive failures remain valid for the whole session.
 const terminalStates = new Map();
 
 export function coverRetryDelay(value, attempt, now = Date.now()) {
@@ -27,6 +27,7 @@ export function createCoverLoading({ address, changed, request = fetch,
   schedule = setTimeout, cancel = clearTimeout, now = Date.now }) {
   let state = initialCoverState(address);
   let disposed = false, settled = state.phase !== 'waiting', diagnosing = false, retriedReady = false;
+  let retryable = false;
   let loadingTimer, retryTimer, headTimer, controller;
   const publish = patch => {
     if (disposed) return;
@@ -37,20 +38,27 @@ export function createCoverLoading({ address, changed, request = fetch,
     cancel(loadingTimer); cancel(retryTimer); cancel(headTimer);
     controller?.abort();
   };
-  const finish = (phase, fade = false) => {
+  const finish = (phase, fade = false, conclusive = true) => {
     settled = true;
-    if (address && ['absent', 'unreadable', 'tooLarge', 'offline'].includes(phase)) terminalStates.set(address, phase);
+    retryable = !conclusive;
+    if (address && conclusive && ['absent', 'unreadable', 'tooLarge'].includes(phase)) terminalStates.set(address, phase);
     stopTimers();
     publish({ phase, fade });
   };
   const retry = retryAfter => {
-    if (state.attempt + 1 >= COVER_MAX_ATTEMPTS) { finish('unreadable'); return; }
+    if (state.attempt + 1 >= COVER_MAX_ATTEMPTS) { finish('unreadable', false, false); return; }
     retryTimer = schedule(() => {
       retryTimer = null;
       if (!disposed && !settled) publish({ attempt: state.attempt + 1 });
     }, coverRetryDelay(retryAfter, state.attempt, now()));
   };
   return {
+    retryTransient() {
+      if (disposed || !settled || !retryable) return;
+      settled = false; retryable = false; retriedReady = false;
+      publish({ phase: 'waiting', attempt: 0, fade: false });
+      this.start();
+    },
     start(image) {
       if (settled || disposed) return;
       // A cached image must be visible on the first paint, without a fade.
@@ -75,10 +83,11 @@ export function createCoverLoading({ address, changed, request = fetch,
         ]);
         if (disposed || settled) return;
         const kind = response.headers.get('x-cover-state');
-        if (kind === 'offline') finish('offline');
+        if (kind === 'officialPending') finish('officialPending', false, false);
+        else if (kind === 'offline') finish('offline', false, false);
         else if (kind === 'ready' && response.status === 200) {
           // HEAD may have produced the image after the GET encountered busy.
-          if (retriedReady || state.attempt + 1 >= COVER_MAX_ATTEMPTS) finish('unreadable');
+          if (retriedReady || state.attempt + 1 >= COVER_MAX_ATTEMPTS) finish('unreadable', false, retriedReady);
           else { retriedReady = true; publish({ attempt: state.attempt + 1 }); }
         }
         else if (kind === 'busy') retry(response.headers.get('Retry-After'));
@@ -86,7 +95,9 @@ export function createCoverLoading({ address, changed, request = fetch,
         else if (kind === 'absent' || response.status === 204 || response.status === 404) finish('absent');
         else if (kind === 'tooLarge' || response.status === 413) finish('tooLarge');
         else if (response.status === 503) retry(response.headers.get('Retry-After'));
-        else finish('unreadable');
+        else if (kind === 'unreadable' || response.status === 422) finish('unreadable');
+        else if (response.status >= 500) retry(null);
+        else finish('unreadable', false, false);
       } catch {
         if (!disposed && !settled) retry(null);
       } finally {

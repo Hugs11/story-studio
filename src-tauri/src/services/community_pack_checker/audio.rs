@@ -5,9 +5,9 @@ use std::process::{Command, Stdio};
 
 use crate::support::audio_norm::{
     build_edge_silence_filters, build_loudness_filters, build_selected_edge_silence_filters,
-    loudness_in_validation_window, measure_edge_silence, measure_loudness_ebur128,
-    plan_loudness_fix, EdgeMeasure, EdgeSilenceSelection, LoudnessAction, EDGE_SILENCE_SEC,
-    EXPECTED_FINAL_TRUE_PEAK_DBTP, MAX_LIMITING_DB, NEAR_MUTE_LUFS, TARGET_LUFS,
+    edges_after_gain, edges_from_envelope, loudness_in_validation_window, measure_edge_envelope,
+    measure_loudness_ebur128, plan_loudness_fix, EdgeMeasure, EdgeSilenceSelection, LoudnessAction,
+    EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP, MAX_LIMITING_DB, NEAR_MUTE_LUFS, TARGET_LUFS,
     VALIDATION_WINDOW_LUFS,
 };
 
@@ -84,6 +84,9 @@ pub(crate) fn classify_edge_silence(measured: Option<f64>) -> EdgeSilenceClassif
 
 #[derive(Debug, Clone, Default)]
 struct AudioProbe {
+    loudness_stays_quiet: bool,
+    predicted_lufs: Option<f64>,
+    edges_after_gain: Option<(f64, f64)>,
     duration_secs: Option<f64>,
     codec: Option<String>,
     sample_rate: Option<u32>,
@@ -127,23 +130,18 @@ pub(crate) fn automatic_fix_plan(
         return AudioFixPlan::default();
     }
 
-    let extension_is_mp3 = Path::new(&item.file_path)
-        .extension()
-        .and_then(|value| value.to_str())
-        .is_some_and(|value| value.eq_ignore_ascii_case("mp3"));
-    let codec_is_mp3 = item
-        .codec
-        .as_deref()
-        .is_some_and(|value| value.to_ascii_lowercase().contains("mp3"));
-    let format_invalid = !extension_is_mp3
-        || !codec_is_mp3
-        || item.sample_rate != Some(44_100)
-        || !item
-            .channels
-            .as_deref()
-            .is_some_and(|value| value.eq_ignore_ascii_case("mono"));
+    let format_invalid = audio_format_invalid(
+        Path::new(&item.file_path),
+        item.codec.as_deref(),
+        item.sample_rate,
+        item.channels.as_deref(),
+    );
+    let changes_signal = format_invalid
+        || [item.leading_silence_secs, item.trailing_silence_secs]
+            .into_iter()
+            .any(|edge| classify_edge_silence(edge) == EdgeSilenceClassification::TooShort);
     let loudness_is_correctable = match (item.integrated_lufs, item.true_peak_db) {
-        (Some(lufs), Some(peak)) if !loudness_in_validation_window(lufs) => {
+        (Some(lufs), Some(peak)) if needs_loudness_fix(lufs, changes_signal) => {
             plan_loudness_fix(lufs, peak).is_correctable()
         }
         _ => false,
@@ -154,11 +152,45 @@ pub(crate) fn automatic_fix_plan(
         fix_loudness: loudness_is_correctable,
         rebuild_leading_silence: automatic_issues
             .iter()
-            .any(|issue| issue.code.as_deref() == Some("audioLeadingSilenceTooShort")),
+            .any(|issue| issue.code.as_deref() == Some("audioLeadingSilenceTooShort"))
+            || (loudness_is_correctable
+                && item.edges_after_gain.is_some_and(|(leading, _)| {
+                    classify_edge_silence(Some(leading)) == EdgeSilenceClassification::TooShort
+                })),
         rebuild_trailing_silence: automatic_issues
             .iter()
-            .any(|issue| issue.code.as_deref() == Some("audioTrailingSilenceTooShort")),
+            .any(|issue| issue.code.as_deref() == Some("audioTrailingSilenceTooShort"))
+            || (loudness_is_correctable
+                && item.edges_after_gain.is_some_and(|(_, trailing)| {
+                    classify_edge_silence(Some(trailing)) == EdgeSilenceClassification::TooShort
+                })),
     }
+}
+
+fn audio_format_invalid(
+    path: &Path,
+    codec: Option<&str>,
+    sample_rate: Option<u32>,
+    channels: Option<&str>,
+) -> bool {
+    let extension_is_mp3 = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .is_some_and(|value| value.eq_ignore_ascii_case("mp3"));
+    let codec_is_mp3 = codec.is_some_and(|value| value.to_ascii_lowercase().contains("mp3"));
+    !extension_is_mp3
+        || !codec_is_mp3
+        || sample_rate != Some(44_100)
+        || !channels.is_some_and(|value| value.eq_ignore_ascii_case("mono"))
+}
+
+// Leave half a LU of margin when another correction changes the signal.
+// Padding, resampling and MP3 encoding must not move a boundary source outside
+// the unchanged validation window on the next analysis.
+fn needs_loudness_fix(lufs: f64, changes_signal: bool) -> bool {
+    !loudness_in_validation_window(lufs)
+        || (changes_signal
+            && !(VALIDATION_WINDOW_LUFS.0 + 0.5..=VALIDATION_WINDOW_LUFS.1 - 0.5).contains(&lufs))
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -186,6 +218,15 @@ pub(crate) fn analyze_audio_file(
     item_type: &str,
 ) -> (AudioValidationItem, Vec<PackValidationIssue>) {
     let probe = probe_audio(ffmpeg, input).unwrap_or_default();
+    analyze_audio_probe(probe, asset_name, label, item_type)
+}
+
+fn analyze_audio_probe(
+    probe: AudioProbe,
+    asset_name: &str,
+    label: &str,
+    item_type: &str,
+) -> (AudioValidationItem, Vec<PackValidationIssue>) {
     let mut issues = Vec::new();
     let mut fix_parts = Vec::new();
     let mut status = PackValidationSeverity::Ok;
@@ -212,7 +253,7 @@ pub(crate) fn analyze_audio_file(
     if ext != "mp3" || !codec_is_mp3 {
         push_audio_issue(
             &mut issues,
-            PackValidationSeverity::Error,
+            PackValidationSeverity::Warning,
             target.with_code(codes::CHECKER_AUDIO_FORMAT),
             codes::CHECKER_AUDIO_FORMAT_TRANSPORT,
             Some({
@@ -249,14 +290,14 @@ pub(crate) fn analyze_audio_file(
                     .into_transport(),
             ),
         );
-        status = PackValidationSeverity::Error;
+        status = PackValidationSeverity::Warning;
         fix_parts.push(codes::CHECKER_MP3_CONVERSION_DESCRIPTION_TRANSPORT);
     }
 
     if probe.sample_rate != Some(44_100) {
         push_audio_issue(
             &mut issues,
-            PackValidationSeverity::Error,
+            PackValidationSeverity::Warning,
             target.with_code(codes::CHECKER_AUDIO_SAMPLE_RATE),
             codes::CHECKER_AUDIO_SAMPLE_RATE_TRANSPORT,
             Some({
@@ -282,7 +323,7 @@ pub(crate) fn analyze_audio_file(
                     .into_transport(),
             ),
         );
-        status = PackValidationSeverity::Error;
+        status = PackValidationSeverity::Warning;
         fix_parts.push(codes::CHECKER_SAMPLERATE_CONVERT_DESCRIPTION_TRANSPORT);
     }
 
@@ -294,7 +335,7 @@ pub(crate) fn analyze_audio_file(
     if !is_mono {
         push_audio_issue(
             &mut issues,
-            PackValidationSeverity::Error,
+            PackValidationSeverity::Warning,
             target.with_code(codes::CHECKER_AUDIO_CHANNELS),
             codes::CHECKER_AUDIO_CHANNELS_TRANSPORT,
             Some({
@@ -320,7 +361,7 @@ pub(crate) fn analyze_audio_file(
                     .into_transport(),
             ),
         );
-        status = PackValidationSeverity::Error;
+        status = PackValidationSeverity::Warning;
         fix_parts.push(codes::CHECKER_MONO_CONVERSION_DESCRIPTION_TRANSPORT);
     }
 
@@ -427,9 +468,12 @@ pub(crate) fn analyze_audio_file(
                 }),
                 can_normalize,
                 can_normalize.then(|| {
-                    user_message::UserMessage::new(codes::CHECKER_VOLUME_BOOST_NORMALIZE)
-                        .with_detail("Amplifier et normaliser le volume.".to_string())
-                        .into_transport()
+                    user_message::UserMessage::new(if probe.loudness_stays_quiet {
+                        codes::CHECKER_VOLUME_BEST_EFFORT
+                    } else {
+                        codes::CHECKER_VOLUME_BOOST_NORMALIZE
+                    })
+                    .into_transport()
                 }),
             );
             if status != PackValidationSeverity::Error {
@@ -564,9 +608,12 @@ pub(crate) fn analyze_audio_file(
                 Some(details),
                 can_normalize,
                 can_normalize.then(|| {
-                    user_message::UserMessage::new(codes::CHECKER_VOLUME_NORMALIZATION_DESCRIPTION)
-                        .with_detail("Normaliser le volume.".to_string())
-                        .into_transport()
+                    user_message::UserMessage::new(if probe.loudness_stays_quiet {
+                        codes::CHECKER_VOLUME_BEST_EFFORT
+                    } else {
+                        codes::CHECKER_VOLUME_NORMALIZATION_DESCRIPTION
+                    })
+                    .into_transport()
                 }),
             );
             if status != PackValidationSeverity::Error {
@@ -649,6 +696,80 @@ pub(crate) fn analyze_audio_file(
         }
     }
 
+    // A boundary level can be valid in the source yet need gain as a dependent
+    // operation of format/silence correction. Include it in the proposed work.
+    let has_signal_correction = issues
+        .iter()
+        .any(|issue| issue.fix_disposition == FixDisposition::Automatic);
+    if probe.integrated_lufs.is_some_and(|lufs| {
+        loudness_in_validation_window(lufs) && needs_loudness_fix(lufs, has_signal_correction)
+    }) {
+        fix_parts.push(codes::CHECKER_VOLUME_NORMALIZATION_TITLE_TRANSPORT);
+        if let Some(issue) = issues
+            .iter_mut()
+            .find(|issue| issue.fix_disposition == FixDisposition::Automatic)
+        {
+            let mut descriptions: Vec<String> =
+                issue.auto_fix_description.take().into_iter().collect();
+            descriptions.push(
+                user_message::UserMessage::new(if probe.loudness_stays_quiet {
+                    codes::CHECKER_VOLUME_BEST_EFFORT
+                } else {
+                    codes::CHECKER_VOLUME_NORMALIZATION_DESCRIPTION
+                })
+                .into_transport(),
+            );
+            issue.auto_fix_description = Some(user_message::compose_messages(&descriptions, " "));
+        }
+    }
+
+    if let Some((leading, trailing)) = probe.edges_after_gain {
+        let descriptions: Vec<String> = [
+            (AudioEdge::Leading, leading),
+            (AudioEdge::Trailing, trailing),
+        ]
+        .into_iter()
+        .filter(|(edge, measured)| {
+            classify_edge_silence(Some(*measured)) == EdgeSilenceClassification::TooShort
+                && !issues
+                    .iter()
+                    .any(|issue| issue.code.as_deref() == Some(edge.short_code()))
+        })
+        .map(|(edge, _)| {
+            user_message::UserMessage::new(codes::CHECKER_SILENCE_PADDING_DESCRIPTION)
+                .param(
+                    "side",
+                    user_message::transport_param(edge.label().to_string()),
+                )
+                .param("targetSilenceSeconds", format!("{EDGE_SILENCE_SEC:.2}"))
+                .into_transport()
+        })
+        .collect();
+        if !descriptions.is_empty() {
+            fix_parts.push(codes::CHECKER_SILENCE_ADJUSTMENT_TITLE_TRANSPORT);
+            // These are dependent operations of the volume correction, not
+            // errors in the source. Show both selected edges in its existing
+            // correction details (screen and exported reports).
+            let volume_index = issues.iter().position(|issue| {
+                issue.fix_disposition == FixDisposition::Automatic
+                    && matches!(
+                        issue.code.as_deref(),
+                        Some(codes::CHECKER_AUDIO_VOLUME | codes::CHECKER_AUDIO_NEAR_MUTE)
+                    )
+            });
+            let target_index = volume_index.or_else(|| {
+                issues
+                    .iter()
+                    .position(|issue| issue.fix_disposition == FixDisposition::Automatic)
+            });
+            if let Some(issue) = target_index.map(|index| &mut issues[index]) {
+                let mut parts: Vec<String> =
+                    issue.auto_fix_description.take().into_iter().collect();
+                parts.extend(descriptions.iter().cloned());
+                issue.auto_fix_description = Some(user_message::compose_messages(&parts, " "));
+            }
+        }
+    }
     let auto_fix_available = !manual_block && !fix_parts.is_empty();
     if manual_block {
         for issue in &mut issues {
@@ -665,6 +786,7 @@ pub(crate) fn analyze_audio_file(
 
     (
         AudioValidationItem {
+            edges_after_gain: probe.edges_after_gain,
             file_path,
             label: label.to_string(),
             item_type: item_type.to_string(),
@@ -675,14 +797,11 @@ pub(crate) fn analyze_audio_file(
             codec: probe.codec,
             sample_rate: probe.sample_rate,
             channels: probe.channels,
-            leading_silence_secs: probe.leading_silence_secs.map(round_secs),
-            trailing_silence_secs: probe.trailing_silence_secs.map(round_secs),
-            integrated_lufs: probe
-                .integrated_lufs
-                .map(|value| (value * 10.0).round() / 10.0),
-            true_peak_db: probe
-                .true_peak_db
-                .map(|value| (value * 10.0).round() / 10.0),
+            // Keep decision data unrounded; presentation formats the values.
+            leading_silence_secs: probe.leading_silence_secs,
+            trailing_silence_secs: probe.trailing_silence_secs,
+            integrated_lufs: probe.integrated_lufs,
+            true_peak_db: probe.true_peak_db,
         },
         issues,
     )
@@ -712,8 +831,16 @@ pub(crate) fn fix_audio_file(
     }
     let rebuild_leading = plan.rebuild_leading_silence;
     let rebuild_trailing = plan.rebuild_trailing_silence;
-    let trim_start = item.leading_silence_secs.unwrap_or(0.0);
-    let trim_trailing = item.trailing_silence_secs.unwrap_or(0.0);
+    // A fade may cease to be silence after gain: trim only the predicted quiet
+    // part, preserving the newly audible content before adding clean padding.
+    let trim_start = item
+        .edges_after_gain
+        .map(|edges| edges.0)
+        .unwrap_or_else(|| item.leading_silence_secs.unwrap_or(0.0));
+    let trim_trailing = item
+        .edges_after_gain
+        .map(|edges| edges.1)
+        .unwrap_or_else(|| item.trailing_silence_secs.unwrap_or(0.0));
 
     let selected_trim = if rebuild_leading { trim_start } else { 0.0 }
         + if rebuild_trailing { trim_trailing } else { 0.0 };
@@ -773,9 +900,10 @@ pub(crate) fn fix_audio_file(
     output_filters.push("aformat=channel_layouts=mono".to_string());
 
     if plan.fix_loudness {
-        let mut measurement_filters =
-            build_edge_silence_filters(trim_start, trim_trailing, EDGE_SILENCE_SEC).pre_filters;
-        measurement_filters.push("aformat=channel_layouts=mono".to_string());
+        // Measure the selected trim, mono conversion AND added silence. The
+        // integrated level changes when padding moves the EBU analysis blocks.
+        let mut measurement_filters = output_filters.clone();
+        measurement_filters.extend(edge_filters.post_filters.iter().cloned());
         let measure =
             measure_loudness_ebur128(ffmpeg, input, &measurement_filters).map_err(|e| {
                 {
@@ -885,7 +1013,39 @@ pub(crate) fn fix_audio_file(
     Ok(())
 }
 
-fn probe_audio(ffmpeg: &Path, input: &Path) -> Result<AudioProbe, String> {
+fn measure_output_preview(ffmpeg: &Path, input: &Path, filters: &[String]) -> Option<f64> {
+    // Materialize the output chain without lossy encoding so that the analysis
+    // can detect its actual edges (including fades affected by the limiter).
+    let preview = super::unique_pack_workspace("audio_preview").with_extension("wav");
+    let measured = (|| {
+        let mut command = Command::new(ffmpeg);
+        apply_no_window(&mut command);
+        let output = command
+            .args(["-y", "-i"])
+            .arg(input)
+            .args(["-vn", "-map", "0:a:0", "-af"])
+            .arg(filters.join(","))
+            .args(["-c:a", "pcm_f32le"])
+            .arg(&preview)
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        // Exactly the same measurement as reanalysis, without recursively
+        // forecasting another correction or measuring clipping.
+        probe_audio_signal(ffmpeg, &preview).ok()?.0.integrated_lufs
+    })();
+    let _ = std::fs::remove_file(preview);
+    measured
+}
+
+fn probe_audio_signal(
+    ffmpeg: &Path,
+    input: &Path,
+) -> Result<(AudioProbe, Vec<(f64, f64)>), String> {
     let mut probe = AudioProbe::default();
     let metadata = run_ffmpeg(ffmpeg, input, &["-hide_banner", "-i"])?;
     probe.duration_secs = parse_duration(&metadata);
@@ -894,17 +1054,16 @@ fn probe_audio(ffmpeg: &Path, input: &Path) -> Result<AudioProbe, String> {
     probe.sample_rate = sample_rate;
     probe.channels = channels;
 
-    if let Ok(edge_measure) = measure_edge_silence(ffmpeg, input) {
-        match edge_measure {
-            EdgeMeasure::Measured { leading, trailing } => {
-                probe.leading_silence_secs = Some(leading);
-                probe.trailing_silence_secs = Some(trailing);
-            }
-            EdgeMeasure::AllSilence => {
-                probe.audio_is_silent = true;
-            }
-            EdgeMeasure::Unreadable => {}
+    let envelope = measure_edge_envelope(ffmpeg, input).unwrap_or_default();
+    match edges_from_envelope(&envelope) {
+        EdgeMeasure::Measured { leading, trailing } => {
+            probe.leading_silence_secs = Some(leading);
+            probe.trailing_silence_secs = Some(trailing);
         }
+        EdgeMeasure::AllSilence => {
+            probe.audio_is_silent = true;
+        }
+        EdgeMeasure::Unreadable => {}
     }
 
     let mut loudness_filters = edge_trim_filters(
@@ -916,6 +1075,81 @@ fn probe_audio(ffmpeg: &Path, input: &Path) -> Result<AudioProbe, String> {
     if let Ok(measure) = measure_loudness_ebur128(ffmpeg, input, &loudness_filters) {
         probe.integrated_lufs = Some(measure.integrated_lufs);
         probe.true_peak_db = Some(measure.true_peak_db);
+    }
+    Ok((probe, envelope))
+}
+
+fn probe_audio(ffmpeg: &Path, input: &Path) -> Result<AudioProbe, String> {
+    let (mut probe, envelope) = probe_audio_signal(ffmpeg, input)?;
+    if let (Some(lufs), Some(peak)) = (probe.integrated_lufs, probe.true_peak_db) {
+        let changes_signal = audio_format_invalid(
+            input,
+            probe.codec.as_deref(),
+            probe.sample_rate,
+            probe.channels.as_deref(),
+        ) || [probe.leading_silence_secs, probe.trailing_silence_secs]
+            .into_iter()
+            .any(|edge| classify_edge_silence(edge) == EdgeSilenceClassification::TooShort);
+        if needs_loudness_fix(lufs, changes_signal) {
+            let action = plan_loudness_fix(lufs, peak);
+            let gain_db = match action {
+                LoudnessAction::Gain { gain_db } | LoudnessAction::GainLimit { gain_db, .. } => {
+                    gain_db
+                }
+                _ => 0.0,
+            };
+            if gain_db > 0.0 {
+                if let EdgeMeasure::Measured { leading, trailing } =
+                    edges_after_gain(&envelope, gain_db)
+                {
+                    probe.edges_after_gain = Some((leading, trailing));
+                }
+            }
+            if action.is_correctable() {
+                // Select the same edges and measure the same padding as correction:
+                // EBU block alignment can change which shared plan branch applies.
+                let short =
+                    |edge| classify_edge_silence(edge) == EdgeSilenceClassification::TooShort;
+                let (trim_start, trim_end) = probe.edges_after_gain.unwrap_or((
+                    probe.leading_silence_secs.unwrap_or(0.0),
+                    probe.trailing_silence_secs.unwrap_or(0.0),
+                ));
+                let edge_filters = build_selected_edge_silence_filters(
+                    trim_start,
+                    trim_end,
+                    EDGE_SILENCE_SEC,
+                    EdgeSilenceSelection {
+                        leading: short(probe.leading_silence_secs)
+                            || short(probe.edges_after_gain.map(|edges| edges.0)),
+                        trailing: short(probe.trailing_silence_secs)
+                            || short(probe.edges_after_gain.map(|edges| edges.1)),
+                    },
+                );
+                let mut output_filters = edge_filters.pre_filters;
+                output_filters.push("aformat=channel_layouts=mono".to_string());
+                let mut correction_measure_filters = output_filters.clone();
+                correction_measure_filters.extend(edge_filters.post_filters.iter().cloned());
+                if let Ok(correction_measure) =
+                    measure_loudness_ebur128(ffmpeg, input, &correction_measure_filters)
+                {
+                    let action = plan_loudness_fix(
+                        correction_measure.integrated_lufs,
+                        correction_measure.true_peak_db,
+                    );
+                    // Same chain as fix_audio_file: selected trim, mono, shared
+                    // gain/limiter, then padding. No arithmetic fallback can
+                    // predict limiting or the EBU block alignment faithfully.
+                    output_filters.extend(build_loudness_filters(&action));
+                    output_filters.extend(edge_filters.post_filters);
+                    // fix_audio_file requests this output rate after its filters.
+                    output_filters.push("aresample=44100".to_string());
+                    probe.predicted_lufs = measure_output_preview(ffmpeg, input, &output_filters);
+                    probe.loudness_stays_quiet = probe
+                        .predicted_lufs
+                        .is_some_and(|predicted| predicted < VALIDATION_WINDOW_LUFS.0);
+                }
+            }
+        }
     }
 
     if let Some((clipped, total)) = measure_clip_stats(ffmpeg, input) {
@@ -929,10 +1163,11 @@ fn probe_audio(ffmpeg: &Path, input: &Path) -> Result<AudioProbe, String> {
 /// Compte les échantillons écrêtés **en décodant comme la boîte** : `aformat=s16`
 /// sature les dépassements de plein-échelle (que le décodage flottant laisserait
 /// passer en sur-1.0), puis `astats` reporte le nombre d'échantillons au pic et le
-/// total. Renvoie `(écrêtés, total)`.
+/// total. Peak count counts the FILE maximum, so Peak level must also be
+/// at full scale. Renvoie `(écrêtés, total)`.
 fn measure_clip_stats(ffmpeg: &Path, input: &Path) -> Option<(u64, u64)> {
     let filter = "aformat=sample_fmts=s16:channel_layouts=mono,\
-astats=metadata=0:measure_perchannel=none:measure_overall=Peak_count+Number_of_samples";
+astats=metadata=0:measure_perchannel=none:measure_overall=Peak_level+Peak_count+Number_of_samples";
     let stderr = run_ffmpeg(
         ffmpeg,
         input,
@@ -951,7 +1186,20 @@ astats=metadata=0:measure_perchannel=none:measure_overall=Peak_count+Number_of_s
         ],
     )
     .ok()?;
-    let clipped = parse_count_field(&stderr, "Peak count:")?;
+    let peak = stderr
+        .split("Peak level dB:")
+        .nth(1)?
+        .split_whitespace()
+        .next()?
+        .parse::<f64>()
+        .ok()?;
+    // s16 full scale is within 0.001 dB of zero. Lower file maxima (notably
+    // quantized near-mute audio) are not samples clipped at full scale.
+    let clipped = if peak >= -0.01 {
+        parse_count_field(&stderr, "Peak count:")?
+    } else {
+        0
+    };
     let total = parse_count_field(&stderr, "Number of samples:")?;
     Some((clipped, total))
 }
@@ -1023,10 +1271,10 @@ fn run_ffmpeg(ffmpeg: &Path, input: &Path, args: &[&str]) -> Result<String, Stri
 }
 
 fn parse_duration(stderr: &str) -> Option<f64> {
-    let marker = "Duration: ";
-    let start = stderr.find(marker)? + marker.len();
-    let end = start + stderr[start..].find(',')?;
-    let ts = stderr[start..end].trim();
+    let duration = stderr
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("Duration: "))?;
+    let ts = duration.split(',').next()?.trim();
     let mut parts = ts.splitn(3, ':');
     let h: f64 = parts.next()?.trim().parse().ok()?;
     let m: f64 = parts.next()?.trim().parse().ok()?;
@@ -1035,11 +1283,14 @@ fn parse_duration(stderr: &str) -> Option<f64> {
 }
 
 fn parse_audio_stream(stderr: &str) -> (Option<String>, Option<u32>, Option<String>) {
-    let Some(start) = stderr.find("Audio: ").map(|index| index + "Audio: ".len()) else {
+    let Some(line) = stderr
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("Stream #"))
+        .find_map(|line| line.split_once(": Audio: ").map(|(_, audio)| audio))
+    else {
         return (None, None, None);
     };
-    let rest = &stderr[start..];
-    let line = rest.lines().next().unwrap_or(rest);
     let parts: Vec<&str> = line.split(',').map(str::trim).collect();
     let codec = parts
         .first()
@@ -1104,7 +1355,7 @@ fn add_silence_issue(
         EdgeSilenceClassification::TooShort => {
             let measured = measured.unwrap_or_default();
             let mut entry = make_audio_issue(
-                PackValidationSeverity::Error,
+                PackValidationSeverity::Warning,
                 target,
                 {
                     let _msg_side = (side).to_string();
@@ -1172,7 +1423,7 @@ fn add_silence_issue(
             entry.code = Some(edge.short_code().to_string());
             entry.fix_disposition = FixDisposition::Automatic;
             issues.push(entry);
-            raise_status(status, PackValidationSeverity::Error);
+            raise_status(status, PackValidationSeverity::Warning);
             fix_parts.push(codes::CHECKER_SILENCE_ADJUSTMENT_TITLE_TRANSPORT);
         }
         EdgeSilenceClassification::LongSuggestion => {
@@ -1344,6 +1595,400 @@ mod tests {
     use super::*;
 
     #[test]
+    fn real_mp3_edge_below_minimum_rounds_to_minimum() {
+        let ffmpeg = crate::support::ffmpeg::get_ffmpeg_path().unwrap();
+        let dir = super::super::unique_pack_workspace("raw_edge_boundary");
+        std::fs::create_dir_all(&dir).unwrap();
+        let input = dir.join("boundary.mp3");
+        let mut command = Command::new(&ffmpeg);
+        apply_no_window(&mut command);
+        let result = command
+            .args(["-y", "-f", "lavfi", "-i"])
+            .arg("aevalsrc=0.16*sin(2*PI*440*t)*between(t\\,0.36\\,4.5):s=44100:d=5")
+            .args(["-ac", "1", "-c:a", "libmp3lame", "-q:a", "5"])
+            .arg(&input)
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let probe = probe_audio(&ffmpeg, &input).unwrap();
+        let leading = probe.leading_silence_secs.unwrap();
+        eprintln!(
+            "MP3 boundary raw={leading:?} displayed={} lufs={:?}",
+            round_secs(leading),
+            probe.integrated_lufs
+        );
+        assert!((0.345..0.35).contains(&leading));
+        assert!((-20.0..-19.5).contains(&probe.integrated_lufs.unwrap()));
+        let (item, issues) = analyze_audio_probe(probe, "boundary.mp3", "Boundary", "story");
+        let plan = automatic_fix_plan(&item, &issues);
+        assert!(
+            plan.fix_loudness && plan.rebuild_leading_silence,
+            "{plan:?}"
+        );
+        let output = dir.join("fixed.mp3");
+        fix_audio_file(&ffmpeg, &input, &output, &item, plan).unwrap();
+        let (_, after) = analyze_audio_file(&ffmpeg, &output, "fixed.mp3", "Boundary", "story");
+        assert!(
+            !after
+                .iter()
+                .any(|issue| issue.fix_disposition == FixDisposition::Automatic),
+            "{after:?}"
+        );
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn raw_edge_rounding_keeps_analysis_and_plan_in_agreement() {
+        // Ordinary 44.1 kHz envelope: 15 windows = 0.348299 s, displayed 0.35.
+        for leading in [true, false] {
+            let short = 15.0 * 1024.0 / 44_100.0;
+            assert!((0.345..0.35).contains(&short));
+            assert_eq!(round_secs(short), 0.35);
+            let (item, issues) = analyze_audio_probe(
+                AudioProbe {
+                    codec: Some("mp3".into()),
+                    sample_rate: Some(44_100),
+                    channels: Some("mono".into()),
+                    duration_secs: Some(10.0),
+                    leading_silence_secs: Some(if leading { short } else { 0.4 }),
+                    trailing_silence_secs: Some(if leading { 0.4 } else { short }),
+                    integrated_lufs: Some(-19.7),
+                    true_peak_db: Some(-10.0),
+                    ..Default::default()
+                },
+                "boundary.mp3",
+                "Boundary",
+                "story",
+            );
+            assert!(issues
+                .iter()
+                .filter_map(|issue| issue.auto_fix_description.as_deref())
+                .any(|text| text.contains(codes::CHECKER_VOLUME_NORMALIZATION_DESCRIPTION)));
+            let plan = automatic_fix_plan(&item, &issues);
+            assert!(
+                plan.fix_loudness,
+                "announced normalization missing: {plan:?}"
+            );
+            assert_eq!(plan.rebuild_leading_silence, leading);
+            assert_eq!(plan.rebuild_trailing_silence, !leading);
+        }
+    }
+
+    #[test]
+    fn near_mute_best_effort_description_has_no_normalization_fallback() {
+        let (_, issues) = analyze_audio_probe(
+            AudioProbe {
+                codec: Some("mp3".into()),
+                sample_rate: Some(44_100),
+                channels: Some("mono".into()),
+                duration_secs: Some(10.0),
+                leading_silence_secs: Some(0.4),
+                trailing_silence_secs: Some(0.4),
+                integrated_lufs: Some(-55.0),
+                true_peak_db: Some(-10.0),
+                loudness_stays_quiet: true,
+                ..Default::default()
+            },
+            "quiet.mp3",
+            "Quiet",
+            "story",
+        );
+        let description = issues
+            .iter()
+            .find(|issue| issue.code.as_deref() == Some(codes::CHECKER_AUDIO_NEAR_MUTE))
+            .unwrap()
+            .auto_fix_description
+            .as_ref()
+            .unwrap();
+        assert!(description.contains(codes::CHECKER_VOLUME_BEST_EFFORT));
+        assert!(
+            !description.contains("Amplifier et normaliser"),
+            "{description}"
+        );
+    }
+
+    #[test]
+    fn analysis_and_plan_keep_raw_loudness_at_rounding_boundaries() {
+        for (name, lufs) in [("boundary.wav", -19.54), ("boundary.mp3", -20.04)] {
+            let probe = AudioProbe {
+                codec: Some("mp3".into()),
+                sample_rate: Some(44_100),
+                channels: Some("mono".into()),
+                duration_secs: Some(10.0),
+                leading_silence_secs: Some(0.4),
+                trailing_silence_secs: Some(0.4),
+                integrated_lufs: Some(lufs),
+                true_peak_db: Some(-10.04),
+                ..Default::default()
+            };
+            let (item, issues) = analyze_audio_probe(probe, name, "Boundary", "story");
+            assert_eq!(item.integrated_lufs, Some(lufs));
+            assert_eq!(item.true_peak_db, Some(-10.04));
+            assert!(issues
+                .iter()
+                .filter_map(|issue| issue.auto_fix_description.as_deref())
+                .any(|text| text.contains(codes::CHECKER_VOLUME_NORMALIZATION_DESCRIPTION)));
+            assert!(
+                automatic_fix_plan(&item, &issues).fix_loudness,
+                "{name} {lufs}"
+            );
+        }
+    }
+
+    #[test]
+    fn real_long_fades_preview_matches_written_boundary() {
+        let ffmpeg = crate::support::ffmpeg::get_ffmpeg_path().unwrap();
+        let dir = super::super::unique_pack_workspace("long_fades_forecast");
+        std::fs::create_dir_all(&dir).unwrap();
+        // Four-second fades must remain in the output, including at -20.0:
+        // the inclusive validation boundary must not produce an announcement.
+        for (amplitude, expected) in [(0.121, -20.0), (0.123, -19.9)] {
+            let input = dir.join("fade.wav");
+            let mut command = Command::new(&ffmpeg);
+            apply_no_window(&mut command);
+            let result = command.args(["-y", "-f", "lavfi", "-i"])
+                .arg(format!("aevalsrc=({amplitude}+0.9*lt(mod(t\\,0.5)\\,0.001))*sin(2*PI*1000*t):s=44100:d=10"))
+                .args(["-af", "afade=t=in:d=4,afade=t=out:st=6:d=4", "-c:a", "pcm_f32le"])
+                .arg(&input).output().unwrap();
+            assert!(result.status.success());
+            let probe = probe_audio(&ffmpeg, &input).unwrap();
+            let (item, issues) = analyze_audio_file(&ffmpeg, &input, "fade.wav", "Fade", "story");
+            let plan = automatic_fix_plan(&item, &issues);
+            assert!(plan.fix_loudness);
+            assert!(!plan.rebuild_leading_silence && !plan.rebuild_trailing_silence);
+            let output = dir.join("fade.mp3");
+            fix_audio_file(&ffmpeg, &input, &output, &item, plan).unwrap();
+            let written = measure_loudness_ebur128(&ffmpeg, &output, &[])
+                .unwrap()
+                .integrated_lufs;
+            let predicted = probe.predicted_lufs.unwrap();
+            let checked = probe_audio(&ffmpeg, &output)
+                .unwrap()
+                .integrated_lufs
+                .unwrap();
+            eprintln!("FADE amplitude={amplitude} source={:?} plan={plan:?} predicted={predicted} written={written} checker={checked}", probe.integrated_lufs);
+            assert_eq!(predicted, expected);
+            assert_eq!(written, expected);
+            assert_eq!(checked, expected);
+            assert!((predicted - checked).abs() <= 0.1);
+            assert_eq!(
+                probe.loudness_stays_quiet,
+                checked < VALIDATION_WINDOW_LUFS.0
+            );
+        }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    /// External corpus, deliberately kept out of the repository. Outputs stay
+    /// in a temporary directory; the original archives are only read.
+    #[test]
+    #[ignore = "requires SS_CHECK_PACKS (archive paths separated by |) and bundled FFmpeg"]
+    fn real_pack_corrections_converge() {
+        let packs = std::env::var("SS_CHECK_PACKS").expect("SS_CHECK_PACKS");
+        let ffmpeg = crate::support::ffmpeg::get_ffmpeg_path().unwrap();
+        let dir = super::super::unique_pack_workspace("audio_convergence");
+        std::fs::create_dir_all(&dir).unwrap();
+        for path in packs.split('|') {
+            let source = Path::new(path);
+            let before = super::super::analyze_pack(source);
+            assert!(!before.audio_items.is_empty(), "no audio: {path}");
+            let fixed =
+                super::super::create_fixed_pack_with_log(source, Some(&dir), None, None, &|_| {})
+                    .expect("correct real pack");
+            let fixed_path = Path::new(&fixed.fixed_zip_path);
+            let source_entries = super::super::audio_regression_tests::zip_entry_stems(source);
+            let fixed_entries = super::super::audio_regression_tests::zip_entry_stems(fixed_path);
+            assert_eq!(source_entries, fixed_entries, "ZIP entries changed: {path}");
+            let after = super::super::analyze_pack(fixed_path);
+            eprintln!(
+                "{path}: {} audio files, automatic corrections {} -> {}",
+                before.audio_items.len(),
+                before.corrections_available,
+                after.corrections_available
+            );
+            for (original, item) in before.audio_items.iter().zip(&after.audio_items) {
+                let plan = automatic_fix_plan(original, &before.issues);
+                // L76B-6 planned from display-rounded edges. Report every
+                // changed decision, including files that need no operation.
+                let mut rounded = original.clone();
+                rounded.leading_silence_secs = rounded.leading_silence_secs.map(round_secs);
+                rounded.trailing_silence_secs = rounded.trailing_silence_secs.map(round_secs);
+                let previous_plan = automatic_fix_plan(&rounded, &before.issues);
+                if plan != previous_plan {
+                    eprintln!(
+                        "EDGE_DECISION_CHANGED {path} {}: {previous_plan:?} -> {plan:?}",
+                        original.file_path
+                    );
+                }
+                let announced = before.issues.iter().any(|issue| {
+                    issue.file_path.as_deref() == Some(&original.file_path)
+                        && issue
+                            .auto_fix_description
+                            .as_deref()
+                            .is_some_and(|text| text.contains(codes::CHECKER_VOLUME_BEST_EFFORT))
+                });
+                let remains_quiet = item
+                    .integrated_lufs
+                    .is_some_and(|lufs| lufs < VALIDATION_WINDOW_LUFS.0);
+                if plan.has_operations() {
+                    let input = dir.join(Path::new(&original.file_path).file_name().unwrap());
+                    std::fs::write(
+                        &input,
+                        super::super::zip_doc::read_zip_entry_bytes(source, &original.file_path)
+                            .unwrap(),
+                    )
+                    .unwrap();
+                    let predicted = if plan.fix_loudness {
+                        probe_audio(&ffmpeg, &input)
+                            .unwrap()
+                            .predicted_lufs
+                            .expect("preview must be measurable on the corpus")
+                    } else {
+                        let edges = build_selected_edge_silence_filters(
+                            original.leading_silence_secs.unwrap_or(0.0),
+                            original.trailing_silence_secs.unwrap_or(0.0),
+                            EDGE_SILENCE_SEC,
+                            EdgeSilenceSelection {
+                                leading: plan.rebuild_leading_silence,
+                                trailing: plan.rebuild_trailing_silence,
+                            },
+                        );
+                        let mut filters = edges.pre_filters;
+                        filters.push("aformat=channel_layouts=mono".to_string());
+                        filters.extend(edges.post_filters);
+                        filters.push("aresample=44100".to_string());
+                        measure_output_preview(&ffmpeg, &input, &filters).unwrap()
+                    };
+                    let output = dir.join("written.mp3");
+                    std::fs::write(
+                        &output,
+                        super::super::zip_doc::read_zip_entry_bytes(fixed_path, &item.file_path)
+                            .unwrap(),
+                    )
+                    .unwrap();
+                    let written = measure_loudness_ebur128(&ffmpeg, &output, &[])
+                        .unwrap()
+                        .integrated_lufs;
+                    assert!(
+                        (predicted - item.integrated_lufs.unwrap()).abs() <= 0.100_001,
+                        "preview/reanalysis mismatch: {path} {}: {predicted} -> {:?}",
+                        original.file_path,
+                        item.integrated_lufs
+                    );
+                    if plan.fix_loudness {
+                        // The announcement must anticipate the verifier's measured
+                        // reanalysis, including its measurement-only edge trim.
+                        assert_eq!(
+                            announced, remains_quiet,
+                            "announcement/reanalysis mismatch: {path} {}",
+                            original.file_path
+                        );
+                    }
+                    let texts: Vec<_> = before
+                        .issues
+                        .iter()
+                        .filter(|issue| issue.file_path.as_deref() == Some(&original.file_path))
+                        .filter_map(|issue| issue.auto_fix_description.as_deref())
+                        .collect();
+                    eprintln!(
+                        "CORRECTED {}",
+                        serde_json::json!({
+                            "pack": source.file_name().unwrap().to_string_lossy(),
+                            "file": original.file_path, "before": original.integrated_lufs,
+                            "after": item.integrated_lufs, "predicted": predicted, "written": written,
+                            "delta": item.integrated_lufs.unwrap() - predicted, "fixLoudness": plan.fix_loudness,
+                            "announced": announced, "texts": texts
+                        })
+                    );
+                }
+                for issue in after.issues.iter().filter(|issue| {
+                    issue.file_path.as_deref() == Some(&item.file_path)
+                        && issue.fix_disposition == FixDisposition::Automatic
+                }) {
+                    assert!(
+                        announced
+                            && remains_quiet
+                            && issue.code.as_deref() == Some(codes::CHECKER_AUDIO_VOLUME),
+                        "unexpected remaining correction: {path} {issue:?}"
+                    );
+                }
+            }
+            assert!(
+                after
+                    .issues
+                    .iter()
+                    .filter(|issue| issue.fix_disposition == FixDisposition::Automatic)
+                    .all(|issue| issue.code.as_deref() == Some(codes::CHECKER_AUDIO_VOLUME)),
+                "remaining non-volume correction: {path}"
+            );
+        }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    #[ignore = "requires SS_QUIET_PACK and bundled FFmpeg"]
+    fn real_near_mute_source_is_not_clipped() {
+        let path = std::env::var("SS_QUIET_PACK").expect("SS_QUIET_PACK");
+        let report = super::super::analyze_pack(Path::new(&path));
+        let quiet = report
+            .audio_items
+            .iter()
+            .find(|item| {
+                item.integrated_lufs
+                    .is_some_and(|lufs| lufs < NEAR_MUTE_LUFS)
+            })
+            .expect("near-mute corpus audio");
+        assert!(quiet.true_peak_db.unwrap() < -40.0);
+        assert!(
+            !report.issues.iter().any(|issue| {
+                issue.file_path.as_deref() == Some(&quiet.file_path)
+                    && issue.code.as_deref() == Some(codes::CHECKER_AUDIO_CLIPPED)
+            }),
+            "quiet source falsely reported as clipped"
+        );
+    }
+
+    #[test]
+    fn real_ffmpeg_distinguishes_quiet_maxima_from_full_scale_clipping() {
+        let ffmpeg = crate::support::ffmpeg::get_ffmpeg_path().expect("real FFmpeg required");
+        let dir = super::super::unique_pack_workspace("clip_full_scale");
+        std::fs::create_dir_all(&dir).unwrap();
+        for (name, amplitude, expected) in [("quiet", 0.002, false), ("clipped", 2.0, true)] {
+            let input = dir.join(format!("{name}.wav"));
+            let mut command = Command::new(&ffmpeg);
+            apply_no_window(&mut command);
+            let output = command
+                .args(["-y", "-f", "lavfi", "-i"])
+                .arg(format!("aevalsrc={amplitude}*sin(2*PI*440*t):s=44100:d=3"))
+                .args(["-c:a", "pcm_s16le"])
+                .arg(&input)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let (clipped, total) = measure_clip_stats(&ffmpeg, &input).unwrap();
+            assert_eq!(audio_is_clipped(clipped, total), expected, "{name}");
+        }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn boundary_levels_need_margin_only_when_the_signal_changes() {
+        assert!(!needs_loudness_fix(-20.0, false));
+        assert!(!needs_loudness_fix(-10.0, false));
+        assert!(needs_loudness_fix(-20.0, true));
+        assert!(needs_loudness_fix(-10.0, true));
+        assert!(!needs_loudness_fix(-14.0, true));
+    }
+
+    #[test]
     fn edge_silence_classification_respects_contract_boundaries() {
         assert_eq!(
             classify_edge_silence(Some(0.34)),
@@ -1399,13 +2044,13 @@ mod tests {
             Some(1.01),
         );
 
-        assert_eq!(status, PackValidationSeverity::Error);
+        assert_eq!(status, PackValidationSeverity::Warning);
         assert_eq!(
             issues[0].code.as_deref(),
             Some("audioLeadingSilenceTooShort")
         );
         assert_eq!(issues[0].fix_disposition, FixDisposition::Automatic);
-        assert_eq!(issues[0].severity, PackValidationSeverity::Error);
+        assert_eq!(issues[0].severity, PackValidationSeverity::Warning);
         assert_eq!(issues[1].code.as_deref(), Some("audioTrailingSilenceLong"));
         assert_eq!(issues[1].fix_disposition, FixDisposition::Optional);
         assert_eq!(issues[1].severity, PackValidationSeverity::Info);

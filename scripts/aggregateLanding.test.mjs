@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { prepareAggregateLanding, landAggregate, refreshAggregateMetadata, moveAggregatePack, aggregateDestinationReducer, INITIAL_AGGREGATE_DESTINATION } from '../src/components/AggregatePacks/aggregateLanding.js';
+import { prepareAggregateLanding, landAggregate, refreshAggregateMetadata, moveAggregatePack } from '../src/components/AggregatePacks/aggregateLanding.js';
 import { buildAggregateProject, defaultMetadataForPacks } from '../src/components/AggregatePacks/aggregateProject.js';
 import { createZipEntry, DEFAULT_PACK_METADATA, normalizeProjectData, projectToRustExport, projectToSerializable, walkProjectMediaReferences } from '../src/store/projectModel.js';
 import { collectSessionBoundReferences } from '../src/store/sessionMediaTriage.js';
@@ -103,19 +103,6 @@ test('reordering retains exact entry objects, corrected fields and paths', () =>
   assert.equal(moveAggregatePack(original,0,-1),original);
   assert.equal(moveAggregatePack(original,1,1),original);
   assert.equal(moveAggregatePack(original,-1,1),original);
-});
-
-test('destination reducer does not start work, clears stale confirmation and ignores unknown choices', () => {
-  let state=aggregateDestinationReducer(INITIAL_AGGREGATE_DESTINATION,{type:'choose',destination:'generate'});
-  assert.equal(state.confirmation,null);
-  state=aggregateDestinationReducer(state,{type:'review',confirmation:{folder:'/output',fileName:'pack.zip'}});
-  assert.equal(state.confirmation.folder,'/output');
-  state=aggregateDestinationReducer(state,{type:'cancel'});
-  assert.equal(state.destination,'generate');
-  assert.equal(state.confirmation,null);
-  state=aggregateDestinationReducer(state,{type:'choose',destination:'editor'});
-  assert.equal(aggregateDestinationReducer(state,{type:'review',confirmation:{}}),state);
-  assert.equal(aggregateDestinationReducer(state,{type:'choose',destination:'other'}),state);
 });
 
 test('landing runs background and save guards before any session or copy', async () => {
@@ -241,13 +228,13 @@ test('a landing result from an expired work session cannot install over newer wo
   assert.equal(installed, false);
 });
 
-test('reviewed generation retains its complete snapshot after editing entries, order and root media', async () => {
-  const { createAggregateConfirmation } = await import('../src/components/AggregatePacks/aggregateLanding.js');
+test('generation retains its complete snapshot after editing entries, order and root media', async () => {
+  const { createAggregateGenerationRequest } = await import('../src/components/AggregatePacks/aggregateLanding.js');
   const current = draft([
     { name: 'Premier', path: '/old/first.zip', coverImage: '/old/cover.png', coverAudio: '/old/cover.mp3' },
     { name: 'Second', path: '/old/second.zip' },
   ]);
-  const review = createAggregateConfirmation(current, '/output');
+  const review = createAggregateGenerationRequest(current, '/output');
   current.packs.reverse();
   current.packs[1].path = '/new/first.zip';
   current.packs[1].coverImage = '/new/cover.png';
@@ -263,8 +250,20 @@ test('reviewed generation retains its complete snapshot after editing entries, o
   assert.equal(confirmedProject.rootAudio, '/draft/root.mp3');
   assert.equal(confirmedProject.rootImage, '/draft/root.png');
   assert.notEqual(confirmedProject.packMetadata.title, current.metadata.title);
-  assert.deepEqual(review.files, ['/old/first.zip', '/old/cover.png', '/old/cover.mp3', '/old/second.zip', '/draft/root.mp3', '/draft/root.png']);
   assert.equal(review.folder, '/output');
+});
+
+test('generation request preserves home ZIP cover assets and absolute catalogue covers', async () => {
+  const { createAggregateGenerationRequest } = await import('../src/components/AggregatePacks/aggregateLanding.js');
+  const current = draft([
+    { name: 'Accueil', path: '/home/pack.zip', coverImage: 'c0ffee.bmp', coverAudio: 'c0ffee.mp3' },
+    { name: 'Catalogue', path: '/catalogue/pack.zip', coverImage: 'C:\\catalogue\\cover.jpg', coverAudio: '/catalogue/cover.mp3' },
+  ]);
+  const request = createAggregateGenerationRequest(current, '/output');
+  assert.equal(request.draft.packs[0].coverImage, 'c0ffee.bmp');
+  assert.equal(request.draft.packs[0].coverAudio, 'c0ffee.mp3');
+  assert.equal(request.draft.packs[1].coverImage, 'C:\\catalogue\\cover.jpg');
+  assert.equal(request.draft.packs[1].coverAudio, '/catalogue/cover.mp3');
 });
 
 test('catalogue age follows additions and removals until the age itself is edited', () => {

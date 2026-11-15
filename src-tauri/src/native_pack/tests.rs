@@ -12,6 +12,7 @@ fn simple_story_controls() -> ControlSettings {
 
 fn sample_options() -> GlobalOptions {
     GlobalOptions {
+        end_node: false,
         harmonize_loudness: true,
         add_silence: false,
         silence_mode: None,
@@ -171,6 +172,7 @@ fn resolve_night_return_stage<'a>(
 }
 
 mod after_playback_next_story;
+mod aggregated_choices;
 mod aggregated_groups;
 mod auto_next_reopen;
 mod combined_story;
@@ -181,6 +183,7 @@ mod fidelity;
 mod graph_copy;
 mod inactive_fields;
 mod l07_campaign;
+mod local_end_message;
 mod menu_endings;
 mod names_and_assets;
 mod night_mode;
@@ -192,3 +195,6 @@ mod readiness;
 mod release_corpus;
 mod root_and_imports;
 mod roundtrip;
+mod simple_end_message;
+
+mod recipe;

@@ -15,6 +15,7 @@ mod calibration;
 mod cancellation;
 mod conversion;
 mod inventory;
+mod long_audio;
 mod loudness_parity;
 mod naming;
 mod oracle;

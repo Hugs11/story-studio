@@ -26,7 +26,7 @@ import { searchGraph, SEARCH_SCOPES } from '../src/store/advancedGraphView/graph
 const { mountSurface } = await import('./chromeBench.mjs');
 const { GraphGroupOverlays, GraphNodeOverlays } = await import('../src/components/AdvancedGraphCanvas/GraphNodeOverlays.jsx');
 
-test('les quatre régimes visuels changent aux trois seuils du handoff', () => {
+test('les quatre régimes visuels changent aux trois seuils de la maquette', () => {
   assert.equal(graphRenderTier(1), GRAPH_RENDER_TIERS.FULL);
   assert.equal(graphRenderTier(0.30), GRAPH_RENDER_TIERS.FULL);
   assert.equal(graphRenderTier(0.299), GRAPH_RENDER_TIERS.NO_LABELS);

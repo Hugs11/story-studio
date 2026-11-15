@@ -163,7 +163,8 @@ export function selectStaleAutosaveBackups(entries, baseName, keep) {
   const keepCount = Math.max(0, Number(keep) || 0);
   const candidates = (entries ?? [])
     .filter((entry) => entry?.isFile && typeof entry.name === 'string')
-    .filter((entry) => entry.name.startsWith(`${baseName}.`) && entry.name.endsWith('.mbah'))
+    .filter((entry) => entry.name.startsWith(`${baseName}.`)
+      && /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.mbah$/.test(entry.name.slice(baseName.length + 1)))
     .map((entry) => entry.name)
     .sort()
     .reverse();

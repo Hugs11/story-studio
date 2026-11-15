@@ -42,7 +42,7 @@ export async function prepareProjectStorageSave({ project, root, path = '', sile
     const desired = sanitizeProjectFolder(!isFallbackProjectName(project.projectName) ? project.projectName : basenameNoExt(path));
     folder = await invokeCommand('resolve_project_folder', { root, folder: desired, workId, create: false });
     if (!ephemeral) {
-      old = await invokeCommand('resolve_project_folder', { root, folder: project.storage.folder, workId, create: false });
+      old = project.storage.folder;
       moves = await invokeCommand('rename_project_folder', { root, old, new: folder, workId });
     }
     const storage = { ...project.storage, folder: desired, provisional: false };
@@ -50,7 +50,14 @@ export async function prepareProjectStorageSave({ project, root, path = '', sile
       project: relocateStorageProject(project, moves, storage), storage, moves, finalized: true, deferred: false,
       mediaContext: { root, storage, ephemeral: false, saveToken: release.token },
       commit() { publishProjectMediaStorage(storage); },
-      async rollback() { if (moves.length) await invokeCommand('rename_project_folder', { root, old: folder, new: old, workId }); },
+      async rollback() {
+        if (!moves.length) return;
+        const originalFolders = Object.fromEntries(moves.map(({ from }) => {
+          const source = stripWindowsLongPathPrefix(from).replace(/\\/g, '/').split('/');
+          return [source.at(-2), source.at(-1)];
+        }));
+        await invokeCommand('rename_project_folder', { root, old: folder, new: old, workId, originalFolders });
+      },
       release,
     };
   } catch (error) { release(); throw error; }

@@ -289,6 +289,10 @@ pub fn cleanup_orphan_session_workspaces(root: &Path, max_age: std::time::Durati
         if !name.starts_with(SESSION_WORKSPACE_PREFIX) {
             continue;
         }
+        // Recoverable work stays available until the user resumes or discards it.
+        if path.join(SESSION_RECOVERY_FILE).is_file() {
+            continue;
+        }
         let Ok(meta) = entry.metadata() else {
             continue;
         };
@@ -462,5 +466,135 @@ mod tests {
         let err = cleanup_session_workspace(&root, &dir.to_string_lossy()).unwrap_err();
         assert!(err.contains_any_code(&[codes::FILES_SESSION_DELETE_OUTSIDE]));
         fs::remove_dir_all(root).expect("manual cleanup");
+    }
+
+    // H9 : la purge de démarrage (24 h) ne distingue pas un dossier de session
+    // vide d'un dossier qui porte encore une reprise jamais proposée à l'auteur.
+    #[test]
+    fn startup_purge_keeps_a_session_that_still_offers_a_recovery() {
+        let root = test_session_root("h9-purge");
+        // Session d'un processus précédent (plantage) : absente du registre vivant.
+        let session = root.join(format!("{SESSION_WORKSPACE_PREFIX}4242_1_0"));
+        fs::create_dir_all(session.join("fichiers-importes")).expect("create crashed session");
+        fs::write(
+            session.join("fichiers-importes").join("histoire.mp3"),
+            b"audio",
+        )
+        .expect("write session media");
+        fs::write(session.join(SESSION_RECOVERY_FILE), b"{}").expect("write recovery snapshot");
+        std::thread::sleep(std::time::Duration::from_millis(50));
+
+        // Même appel que `cleanup_application_cache` au lancement, l'âge limite
+        // ramené à zéro pour tenir lieu des 24 h écoulées.
+        cleanup_orphan_session_workspaces(&root, std::time::Duration::ZERO);
+
+        let recoveries = list_session_recoveries(&root);
+        let survived = session.join(SESSION_RECOVERY_FILE).is_file();
+        let _ = fs::remove_dir_all(&root);
+        assert!(
+            survived,
+            "le dossier de session et sa reprise ont été supprimés sans avoir été proposés"
+        );
+        assert_eq!(
+            recoveries.len(),
+            1,
+            "la reprise doit rester proposée à l'accueil"
+        );
+    }
+
+    // Témoin : une session orpheline sans reprise est bien purgée.
+    #[test]
+    fn startup_purge_still_removes_an_orphan_session_without_recovery() {
+        let root = test_session_root("h9-purge-witness");
+        let session = root.join(format!("{SESSION_WORKSPACE_PREFIX}4242_2_0"));
+        fs::create_dir_all(session.join("fichiers-importes")).expect("create orphan session");
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        cleanup_orphan_session_workspaces(&root, std::time::Duration::ZERO);
+        let removed = !session.exists();
+        let _ = fs::remove_dir_all(&root);
+        assert!(removed);
+    }
+
+    struct CacheFixtureRoot(PathBuf);
+    impl Drop for CacheFixtureRoot {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn check_project_cache_dependency(kind: &str) {
+        let root = CacheFixtureRoot(std::env::temp_dir().join(format!(
+            "project_cache_{kind}_{}_{}",
+            std::process::id(),
+            uuid::Uuid::new_v4()
+        )));
+        fs::create_dir_all(&root.0).unwrap();
+        let output = std::process::Command::new("node")
+            .arg(
+                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("../scripts/projectMediaCacheFixture.mjs"),
+            )
+            .arg(&root.0)
+            .arg(kind)
+            .output()
+            .expect("run offline JS fixture");
+        assert!(
+            output.status.success(),
+            "fixture failed: {}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let fixture: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        let cache = PathBuf::from(fixture["cache"].as_str().unwrap());
+        let path = PathBuf::from(fixture["path"].as_str().unwrap());
+        let cache_media = PathBuf::from(fixture["media"].as_str().unwrap());
+        let media = PathBuf::from(fixture["durableMedia"].as_str().unwrap());
+        // Même limite de 24 h qu'au lancement ; aucun raccourcissement de la purge.
+        let old = SystemTime::now() - std::time::Duration::from_secs(3 * 24 * 3600);
+        fs::File::options()
+            .write(true)
+            .open(&cache_media)
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_modified(old))
+            .unwrap();
+        fs::File::options()
+            .write(true)
+            .open(&media)
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_modified(old))
+            .unwrap();
+        if kind == "recovery" {
+            assert_eq!(
+                crate::support::temp::list_session_recoveries(&cache.join("sessions")).len(),
+                1
+            );
+        }
+        crate::cleanup_application_cache(&cache);
+        assert!(
+            !cache_media.exists(),
+            "le cache abandonné est toujours purgé"
+        );
+        assert!(path.is_file(), "le fichier projet/reprise a survécu");
+        if kind == "recovery" {
+            assert_eq!(
+                crate::support::temp::list_session_recoveries(&cache.join("sessions")).len(),
+                1,
+                "#45 garde bien la reprise proposée"
+            );
+        }
+        assert!(
+            media.is_file(),
+            "{kind}: média référencé perdu après la purge de démarrage"
+        );
+    }
+
+    #[test]
+    fn recovery_keeps_its_embedded_cover_after_a_weekend() {
+        check_project_cache_dependency("recovery");
+    }
+
+    #[test]
+    fn saved_download_survives_startup_after_a_copy_failure() {
+        check_project_cache_dependency("saved-download");
     }
 }

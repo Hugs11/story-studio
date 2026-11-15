@@ -165,8 +165,7 @@ async function runSuite(ctx, variantId, opener, { archiveName = null } = {}) {
 
     // Raccord, depuis l'Inspecteur de l'Action (formulaires : « raccorder à la
     // souris » exigerait un clic par coordonnées sur des prises de port dessinées
-    // par le canvas — jugé trop coûteux à fiabiliser pour ce lot, cf. tête de
-    // fichier ; documenté ici comme demandé).
+    // par le canvas ; le chemin direct est décrit en tête de fichier).
     const selectedAction1 = await selectGraphNode(page, 'Liste 1', 'action');
     check('sélection de Liste 1 (liste des nœuds)', selectedAction1);
     if (selectedAction1) {
@@ -278,7 +277,7 @@ async function runSuite(ctx, variantId, opener, { archiveName = null } = {}) {
     // le moteur résolve le nœud sous le pointeur) — substitué par le sélecteur de
     // fichier de l’Inspecteur (`MediaSlotEditor` → `AudioField`/`ImageField`,
     // même dialogue `open` shimmé), qui pose le même geste d’auteur
-    // (`setStageMedia`). Documenté comme demandé par la consigne du lot.
+    // (`setStageMedia`). Le parcours passe par ce sélecteur de fichier simulé pour fixer le média.
     let mediaDropOk = null;
     const selectedStage1ForMedia = await selectGraphNode(page, 'Écran 1', 'stage');
     if (selectedStage1ForMedia) {

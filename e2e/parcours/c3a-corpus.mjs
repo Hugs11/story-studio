@@ -123,7 +123,7 @@ async function openPackWithVerdict(page, archivePath, editor) {
   await dropFiles(page, '[data-funnel-drop]', [archivePath]);
   const verdict = await pollOpenVerdict(page, loc, Date.now());
   if (verdict === 'choix-editeur') {
-    const name = editor === 'graphe' ? 'Éditeur graphe' : 'Éditeur par menus';
+    const name = editor === 'graphe' ? 'Éditeur graphe' : /^Éditeur (par menus|simplifié)$/;
     const button = loc.chooser.getByRole('button', { name, exact: true });
     if (!(await button.count())) {
       await loc.chooser.getByRole('button', { name: 'Annuler', exact: true }).click().catch(() => {});

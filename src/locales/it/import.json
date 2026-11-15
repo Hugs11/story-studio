@@ -30,6 +30,7 @@
   "edit.childPreparation.progress": "Preparazione dell’audiolibro scelto…",
   "edit.editorChoice.title": "Scegli l’editor",
   "edit.editorChoice.message": "Questo audiolibro può essere modificato con entrambi gli editor.",
+  "edit.simpleEditor.action": "Editor semplificato",
   "edit.menuEditor.action": "Editor a menu",
   "edit.graphEditor.action": "Editor a grafo",
   "edit.simulator.progress": "Preparazione del simulatore…",
@@ -268,5 +269,6 @@
   "media.follow.alreadyPaused": "Già seguito (in pausa) per questo progetto",
   "media.follow.manage": "Preferenze → Fonti multimediali seguite",
   "media.follow.manageButton": "Gestisci le fonti multimediali seguite nelle preferenze",
-  "media.follow.sources": "Fonti seguite per questo progetto"
+  "media.follow.sources": "Fonti seguite per questo progetto",
+  "media.import.projectChanged": "L’importazione è stata interrotta perché il progetto è cambiato."
 }

@@ -324,7 +324,7 @@ test('following a source with no selected episodes does not download its cover i
     persistProjectSnapshot: async () => {},
     workspaceDirRef: { current: null },
     importedPackPendingMetaRef: { current: false },
-    runFunnelLanding: async (_mode, run) => run(),
+    runFunnelLanding: async (_mode, run) => run(''),
     onRevealImportedMedia: () => {},
     setImportNotice: () => {},
     setActiveDropZone: () => {},

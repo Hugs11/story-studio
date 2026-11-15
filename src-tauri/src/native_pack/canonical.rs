@@ -211,7 +211,7 @@ pub(crate) fn find_next_story_id(
     children: &[CanonicalEntry],
     current_index: usize,
 ) -> Option<&str> {
-    children[(current_index + 1)..].iter().find_map(|e| {
+    children.iter().skip(current_index + 1).find_map(|e| {
         if let CanonicalEntry::Story(s) = e {
             Some(s.id.as_str())
         } else {
@@ -255,15 +255,23 @@ pub(crate) fn end_home_step_is_active(auto_next: bool, sequence_len: usize, home
     !auto_next && sequence_len >= 2 && home
 }
 
+/// Forme combinée de nuit : titre et lecture sur le même audio, molette active.
+pub(crate) fn has_combined_night_story_shape(story: &CanonicalStory) -> bool {
+    story.title_control_settings.is_none()
+        && story.item_audio == story.audio
+        && story.wheel
+        && story.autoplay
+}
+
 /// L'histoire emprunte le message de fin global (pont de nuit de
-/// `build_story_branch`) : ni séquence ni prompt local, et pas l'écran combiné
-/// qui enchaîne directement sur son retour.
+/// `build_story_branch`) : ni séquence ni prompt local. Seule la forme combinée
+/// de nuit (titre et lecture sur le même audio, molette active) garde son retour
+/// direct d'origine ; un écran direct importé peut recevoir un message global.
 pub(crate) fn story_reaches_global_end_message(story: &CanonicalStory, auto_next: bool) -> bool {
     !auto_next
         && story.after_playback_sequence.is_empty()
         && story.after_playback_prompt_audio.is_none()
-        && !(super::builder::transitions::should_emit_combined_story_stage(story, true)
-            && story.return_after_play.is_some())
+        && !(has_combined_night_story_shape(story) && story.return_after_play.is_some())
 }
 
 /// Au moins une histoire construite emprunte le message de fin global (l'histoire

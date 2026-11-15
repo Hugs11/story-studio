@@ -64,7 +64,7 @@ impl Fixture {
             w.finish().unwrap();
         }
         let store = Arc::new(Store::open(&root.join("data"), &root.join("cache")).unwrap());
-        store.add_source(&packs, 0, false).unwrap();
+        store.add_source(&packs, 0).unwrap();
         let sources = store.list_sources().unwrap();
         store
             .refresh_paths(
@@ -937,7 +937,7 @@ fn assembly_official_cover_wins_over_an_imported_retained_reference() {
 }
 
 #[test]
-fn revd2_reservations_match_only_card_identifiers_and_use_pending_indexes() {
+fn reservations_match_only_card_identifiers_and_use_pending_indexes() {
     let f = Fixture::new(false);
     f.store.write(|tx| {
         tx.execute("INSERT INTO file_journal VALUES ('pending',?1)",[json!({"stage":"prepared","target":{"identityTargetFicheId":"busy"}}).to_string()]).unwrap();
@@ -971,7 +971,7 @@ fn finz_mutation_designates_cards_by_variant() {
 
 #[test]
 #[ignore = "explicit synthetic 10000-card before/after timing"]
-fn revd2_reservation_benchmark_10000_cards() {
+fn reservation_benchmark_10000_cards() {
     let f = Fixture::new(false);
     let ids: Vec<String> = (0..10000).map(|i| format!("card-{i}")).collect();
     f.store.write(|tx| {
@@ -984,7 +984,7 @@ fn revd2_reservation_benchmark_10000_cards() {
         let payload=Mutation::ForgetUnreferencedCards{request_key:"measure".into(),fiche_ids:ids.clone(),expected_fiche_revisions:Default::default()};
         tx.execute_batch("DROP INDEX file_journal_pending; DROP INDEX project_metadata_pending;").unwrap();
         let before=Instant::now();
-        // SQL and per-string traversal from HEAD before REVd2 (completed journal history).
+        // Previous SQL and per-string traversal over completed journal history.
         for id in ["forgetUnreferencedCards","measure"].into_iter().chain(ids.iter().map(String::as_str)) {
             let busy:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM file_journal WHERE json_extract(CASE WHEN json_valid(evidence_json) THEN evidence_json ELSE '{}' END,'$.stage') NOT IN ('complete','failed','rolledBack') AND (json_extract(CASE WHEN json_valid(evidence_json) THEN evidence_json ELSE '{}' END,'$.target.ficheId')=?1 OR json_extract(CASE WHEN json_valid(evidence_json) THEN evidence_json ELSE '{}' END,'$.target.identityTargetFicheId')=?1)) OR EXISTS(SELECT 1 FROM project_metadata_operation WHERE state IN ('saving','publishing','published') AND (json_extract(CASE WHEN json_valid(evidence_json) THEN evidence_json ELSE '{}' END,'$.target.ficheId')=?1 OR json_extract(CASE WHEN json_valid(evidence_json) THEN evidence_json ELSE '{}' END,'$.target.identityTargetFicheId')=?1))",[id],|r|r.get(0)).unwrap();
             assert!(!busy);
@@ -993,13 +993,13 @@ fn revd2_reservation_benchmark_10000_cards() {
         tx.execute_batch("CREATE INDEX file_journal_pending ON file_journal(id) WHERE json_extract(CASE WHEN json_valid(evidence_json) THEN evidence_json ELSE '{}' END,'$.stage') NOT IN ('complete','failed','rolledBack'); CREATE INDEX project_metadata_pending ON project_metadata_operation(id) WHERE state IN ('saving','publishing','published');").unwrap();
         let after=Instant::now();
         require_mutation_available(tx,&payload)?;
-        eprintln!("REVd2 10000 cards, 1000 completed rows per journal: before={old:?}, after={:?}",after.elapsed());
+        eprintln!("Reservation benchmark: 10000 cards, 1000 completed rows per journal: before={old:?}, after={:?}",after.elapsed());
         Ok(())
     }).unwrap();
 }
 
 #[test]
-fn revd2_assembly_survives_selected_official_cover_retention() {
+fn assembly_survives_selected_official_cover_retention() {
     let f = official_cover_fixture();
     let id = f.card["ficheId"].as_str().unwrap();
     let card = f.store.get_card(id).unwrap();
@@ -1133,7 +1133,7 @@ fn compl3_empty_mount_does_not_prove_cover_unreadable_and_remount_reads_it() {
         assert!(f.source.parent().unwrap().is_dir());
         assert_eq!(
             f.store.get_thumbnail(None, Some(id), None).unwrap().state,
-            "unreadable"
+            "busy"
         );
         assert_eq!(f.store.get_card(id).unwrap(), before);
         f.store.read(|c| {

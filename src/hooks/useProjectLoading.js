@@ -25,6 +25,7 @@ export function useProjectLoading({
   autoSaveSnapshotRef,
   setAutoSavedPath,
   confirmSaveBeforeLeaveCurrent,
+  confirmBackgroundWork = async () => true,
   handleSaveProject,
   showErrorDialog,
   onProjectLoaded = null,
@@ -90,6 +91,7 @@ export function useProjectLoading({
   ]);
 
   const handleLoad = useCallback(async () => {
+    if (!await confirmBackgroundWork()) return;
     const canContinue = await confirmSaveBeforeLeaveCurrent(handleSaveProject);
     if (!canContinue) return;
     let claimed = null;
@@ -98,7 +100,7 @@ export function useProjectLoading({
       claimed = result?.accessToken;
       if (result && await routeLoadedProject?.(result)) { await releaseProjectAccess(result.accessToken); return; }
       if (result) {
-        await onBeforeProjectReplaced?.();
+        await onBeforeProjectReplaced?.(result.path);
         await applyLoadedProject(result);
       }
     } catch (error) {
@@ -111,6 +113,7 @@ export function useProjectLoading({
     }
   }, [
     applyLoadedProject,
+    confirmBackgroundWork,
     confirmSaveBeforeLeaveCurrent,
     handleSaveProject,
     onBeforeProjectReplaced,
@@ -119,13 +122,14 @@ export function useProjectLoading({
   ]);
 
   const openProjectFromPath = useCallback(async (path, { forgetOnFailure = false } = {}) => {
+    if (!await confirmBackgroundWork()) return false;
     const canContinue = await confirmSaveBeforeLeaveCurrent(handleSaveProject);
     if (!canContinue) return false;
     let claimed = null;
     try {
       const result = await loadProjectFromPath(path, { editorAccess: true });
       claimed = result.accessToken;
-      await onBeforeProjectReplaced?.();
+      await onBeforeProjectReplaced?.(result.path);
       await applyLoadedProject(result);
       return true;
     } catch (e) {
@@ -140,6 +144,7 @@ export function useProjectLoading({
     }
   }, [
     applyLoadedProject,
+    confirmBackgroundWork,
     confirmSaveBeforeLeaveCurrent,
     handleSaveProject,
     onBeforeProjectReplaced,

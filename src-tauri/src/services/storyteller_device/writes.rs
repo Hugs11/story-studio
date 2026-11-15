@@ -280,12 +280,7 @@ impl Device {
             return Err(Error::PlaylistDamaged);
         }
         let (mut next, removed) = if let Some(bytes) = &original_bytes {
-            let (next, removed) = self.repair_plan(bytes)?;
-            let serialized: Vec<_> = next.iter().flat_map(|id| *id.as_bytes()).collect();
-            if serialized == *bytes {
-                return Err(Error::NoRepairRequired);
-            }
-            (next, removed)
+            self.repair_plan(bytes)?
         } else {
             (old.clone(), Vec::new())
         };
@@ -746,6 +741,10 @@ impl Device {
             } else {
                 removed.push(id);
             }
+        }
+        let serialized: Vec<_> = next.iter().flat_map(|id| *id.as_bytes()).collect();
+        if serialized == bytes {
+            return Err(Error::NoRepairRequired);
         }
         Ok((next, removed))
     }

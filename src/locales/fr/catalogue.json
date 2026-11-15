@@ -58,6 +58,7 @@
   "loading.state.stale": "Actualisation impossible : les fiches affichées peuvent être anciennes.",
   "progress.status.queued": "En attente…",
   "progress.status.cancelling": "Annulation en cours…",
+  "progress.phase.listening": "Lecture des archives 7z…",
   "progress.phase.finalization": "Publication de l’index…",
   "progress.discovery.directories_one": "{{count}} dossier parcouru — découverte en cours",
   "progress.discovery.directories_many": "{{count}} dossiers parcourus — découverte en cours",
@@ -265,6 +266,7 @@
   "filter.additions.label": "Ajouts de ce scan (critères suspendus)",
   "summary.additions.show": "Voir ces ajouts",
   "cover.loading.label": "Chargement de la jaquette",
+  "cover.officialPending.label": "Jaquette en cours de récupération…",
   "cover.unreadable.label": "Jaquette illisible",
   "cover.tooLarge.label": "Jaquette trop volumineuse",
   "selection.hidden.removedNamed_one": "{{count}} fiche masquée retirée de la sélection. Parmi les fiches concernées : {{titles}}.",
@@ -390,7 +392,7 @@
   "assembly.cancel": "Annuler",
   "assembly.generateFirst": "À générer d’abord",
   "assembly.unavailable": "Source indisponible",
-  "assembly.effectiveValues": "Les noms et les images proviennent du catalogue. Tu peux les modifier ici sans changer les fichiers sources.",
+  "assembly.effectiveValues": "Les noms proviennent du catalogue. Tu peux les modifier pour nommer les nœuds dans l’éditeur. Sur la Lunii, chaque pack garde sa couverture d’origine.",
   "backupExport.title": "Exporter les données du catalogue",
   "backupExport.description": "Un fichier unique contient tes données personnelles et les images retenues. Les packs et les caches sont exclus.",
   "backupExport.destination": "Fichier de sauvegarde",
@@ -495,7 +497,8 @@
   "sources.remove.withRemainingOne_other": "{{count}} packs seront retirés du catalogue, avec leurs favoris, corrections et étiquettes. {{remaining}} autre reste disponible dans un autre dossier.",
   "sources.remove.withRemainingOther_other": "{{count}} packs seront retirés du catalogue, avec leurs favoris, corrections et étiquettes. {{remaining}} autres restent disponibles dans un autre dossier.",
   "preferences.sources.label": "Dossiers du catalogue",
-  "preferences.location.label": "Emplacement du catalogue",
+  "preferences.location.label": "Dossier des données du catalogue",
+  "preferences.location.description": "Ce dossier contient la base de données et les images du catalogue. Les packs restent dans tes dossiers de travail.",
   "preferences.location.open": "Ouvrir le dossier",
   "preferences.lunii.permission": "Récupérer titres et jaquettes des packs officiels (connexion aux serveurs Lunii)",
   "preferences.export.label": "Exporter le catalogue",
@@ -990,5 +993,7 @@
   "operation.moreNames_many": "et {{count}} autres",
   "operation.moreNames_other": "et {{count}} autres",
   "toolbar.sort.current": "Trier par {{criterion}}",
-  "sources.repatriated.managed": "Géré par Story Studio : packs rapatriés de la Lunii"
+  "sources.repatriated.managed": "Géré par Story Studio : packs rapatriés de la Lunii",
+  "preferences.reanalyze.action": "Forcer la ré-analyse de tous les packs",
+  "preferences.reanalyze.description": "Rouvre chaque pack, même inchangé. À utiliser si une fiche ne reflète pas le contenu de son pack. Plus long."
 }

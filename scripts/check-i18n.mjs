@@ -5,20 +5,20 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'espree';
 import { PUBLIC_LANGUAGES } from '../src/i18n/language.js';
 
-// Lot 4.3b : ZIP = format ; deux modèles aria ne contiennent que paramètres et ponctuation.
+// ZIP = format ; deux modèles aria ne contiennent que paramètres et ponctuation.
 // Codes de présence/transition, occurrence technique et séparateurs de compte : neutres.
 // Formes neutres nominatives : bouton physique OK, templates ne contenant que données/ponctuation,
 // et mots identiques dans les langues cibles (image, audio, position, occurrence, images).
 // Aides : modèle de ponctuation et mots identiques nominatifs.
 export const HELP_NEUTRAL_KEYS = { en: new Set(['keyboard.tooltip.withShortcut', 'credits.documentation.label', 'shortcut.audioShuttleStop.label']), it: new Set(['keyboard.tooltip.withShortcut', 'keyboard.key.click']) };
-export const GRAPH_NEUTRAL_KEYS = new Set(["inspector.audio.label","inspector.image.label","inspector.transitions.label","inspector.position.label","surface.structure.label","inspector.identifier.occurrence","inspector.media.usageLabel","search.identifier.occurrence","exit.ok.label","remove.stage.references","remove.reference.row","remove.selection.row","selection.counts.list","selection.images.busy","stage.id.occurrence","stage.media.image","stage.layout.position","action.arrivals.caption","diagnostics.media.image","diagnostics.media.audio","diagnostics.opaque.member","diagnostics.opaque.occurrence","inspector.absent.label","inspector.null.label","inspector.home.label","search.summary.counts"]);
+export const GRAPH_NEUTRAL_KEYS = new Set(["surface.structure.label","search.identifier.occurrence","exit.ok.label","remove.stage.references","remove.reference.row","remove.selection.row","selection.counts.list","selection.images.busy","stage.id.occurrence","stage.media.image","stage.layout.position","action.arrivals.caption","diagnostics.media.image","diagnostics.media.audio","diagnostics.opaque.member","diagnostics.opaque.occurrence","search.summary.counts"]);
 // Filtres natifs : termes identiques et nom officiel du workflow ComfyUI.
-const HOME_NEUTRAL_KEYS = new Set(['modeSelector.documentation.label', 'aggregate.step.audio', 'aggregate.step.image', 'packName.description.annotation', 'packName.bonus.label', 'packName.version.label', 'packName.description.label']);
+const HOME_NEUTRAL_KEYS = new Set(['modeSelector.documentation.label', 'aggregate.step.audio', 'aggregate.step.image','packName.description.annotation', 'packName.bonus.label', 'packName.version.label', 'packName.description.label']);
 const IMPORT_NATIVE_NEUTRAL_KEYS = new Set(['native:file.image.filterLabel', 'native:file.audio.filterLabel', 'native:file.comfyApi.filterLabel', 'import:podcast.default.title', 'import:youtube.audio.step', 'import:youtube.url.placeholder', 'import:youtube.page.label', 'import:youtube.failure.known', 'import:format.value.supportedVersion', 'import:format.value.absent']);
 const TREE_NEUTRAL_KEYS = new Set(["color.orange.label","diagram.focus.short","nodeType.zip", "display.option.aria", "context.disabled.aria","control.ok.short","root.image.badge","nativeGraph.counts.summary","nativeGraph.stage.name","endPlayback.mixed.summary", "media.image.label", "navigation.destination.label", "multi.image.progress", "media.native.audio", "media.native.image"]);
-// Lot 4.13 : mots identiques dans une seule langue cible (IT « l’audio », EN « Pause », « OK »).
+// mots identiques dans une seule langue cible (IT « l’audio », EN « Pause », « OK »).
 const TREE_LANGUAGE_NEUTRAL_KEYS = { en: new Set(["nativeGraph.control.pause", "nativeGraph.control.ok"]), it: new Set(["context.file.audio", "nativeGraph.control.ok"]) };
-// Lot 4.5 : mots et gabarits identiques en EN/IT (termes techniques, marques,
+// mots et gabarits identiques en EN/IT (termes techniques, marques,
 // gabarits sans prose) ; liste nominative, pas d’exemption par motif.
 const MEDIA_NEUTRAL_KEYS = new Set([
   'explorer.kind.image', 'explorer.kind.archive', 'explorer.column.usage', 'explorer.column.dimensions',
@@ -31,7 +31,7 @@ const MEDIA_NEUTRAL_KEYS = new Set([
   'subscriptions.source.fallback', 'subscriptions.notifications.title',
   'usage.field.audio', 'usage.field.image', 'usage.label.homeStep',
 ]);
-// Lot 4.12 — exemples : gabarits ne contenant que des paramètres et de la
+// exemples : gabarits ne contenant que des paramètres et de la
 // ponctuation (comptes déjà traduits). Liste nominative, aucune exemption par motif.
 export const EXAMPLES_NEUTRAL_KEYS = { en: new Set(['menu.item.counts', 'dialog.result.media']), it: new Set(['menu.item.counts', 'dialog.result.media']) };
 export const LANGUAGES = ['fr', 'en', 'it'];
@@ -49,7 +49,7 @@ export const AI_NEUTRAL_KEYS = {
   en: new Set(["image.workflow.label", "image.prompt.label", "image.prompt.placeholder", "image.negative.placeholder", "image.seed.label", "image.steps.label", "image.cfg.label", "image.lora.label", "queue.kind.image", "queue.kind.audio", "queue.column.type", "queue.column.target", "queue.column.usage", "queue.column.date", "voice.language.en"]),
   it: new Set(["image.workflow.label", "image.prompt.label", "image.prompt.placeholder", "image.negative.placeholder", "image.seed.label", "image.steps.label", "image.cfg.label", "image.lora.label", "queue.kind.audio", "queue.audio.name", "voice.language.it"])
 };
-// Lot 4.9 — vérificateur et rapports : mots identiques et corrects dans la langue
+// vérificateur et rapports : mots identiques et corrects dans la langue
 // cible (unités, marques, termes techniques, ponctuation sans prose). Clés de base,
 // pluriels compris ; liste nominative, aucune exemption par motif.
 export const CHECKER_NEUTRAL_KEYS = {
@@ -72,7 +72,7 @@ const TABLE_CALLS = {
   "src/components/Catalogue/fiche/ExemplarOpenActions.jsx:command.reasonKey": ["catalogue:actions.reason.noExemplar", "catalogue:reason.action.fileUnavailable", "catalogue:reason.action.unsupportedFormat", "catalogue:reason.action.unreadable", "catalogue:reason.action.noSuitableExemplar", "catalogue:reason.action.archiveCorrupt", "catalogue:reason.action.archiveProtected", "catalogue:reason.action.encryptedUnknownKey", "catalogue:reason.action.invalidPack", "catalogue:reason.action.fileUnstable"],
   "src/components/Catalogue/fiche/SelectionPanel.jsx:favoriteState.labelKey": ["catalogue:selection.panel.unfavorite", "catalogue:selection.panel.favorite"],
   "src/store/catalogue/selectionPresentation.js:all ? 'catalogue:selection.panel.unfavorite' : 'catalogue:selection.panel.favorite'": ["catalogue:selection.panel.unfavorite", "catalogue:selection.panel.favorite"],
-  "src/components/Catalogue/fiche/SelectionPanel.jsx:action.labelKey": ["catalogue:data.favorite", "catalogue:data.unfavorite", "catalogue:tags.title", "catalogue:assembly.title"],
+  "src/components/Catalogue/fiche/SelectionPanel.jsx:action.labelKey": ["catalogue:data.favorite", "catalogue:data.unfavorite", "catalogue:tags.title", "catalogue:assembly.title", "catalogue:actions.removeFromCatalogue.label"],
   // Closed reasons of the collective favorite action (dataActions.js).
   "src/components/Catalogue/fiche/SelectionPanel.jsx:favorite.reasonKey": ["catalogue:data.busy", "catalogue:data.noTarget"],
   "src/components/Catalogue/fiche/SelectionPanel.jsx:action.reasonKey": ["catalogue:data.busy", "catalogue:data.noTarget", "catalogue:assembly.preparing"],
@@ -200,7 +200,6 @@ const TABLE_CALLS = {
   "src/components/AdvancedGraphCanvas/GraphCanvasStage.jsx:linkNotice": ["graph:canvas.link.entryRefused","graph:canvas.link.stageNeedsList","graph:canvas.link.listNeedsStage"],
   // Tables fermées de la surface graphe : seules ces clés sont admissibles.
   "src/components/AdvancedGraphCanvas/GraphCanvasStage.jsx:NOTICE_TEXT[notice.kind]": ["graph:canvas.savedCameraPositionCannotBeUsedViewFittedAgain.label","graph:canvas.anchors.ignoredCount","graph:canvas.previousViewCannotBeReadViewRebuilt.label","graph:canvas.cache.armed"],
-  "src/components/AdvancedGraphCanvas/GraphInspector.jsx:PRESENCE_LABELS[field?.presence ?? 'absent']": ["graph:inspector.absent.label","graph:inspector.null.label","graph:inspector.valeur.label"],
   "src/components/AdvancedGraphCanvas/GraphSurfaceControls.jsx:failure": ["graph:arrangement.arrangementWasRefusedNothingWasChanged.label"],
   "src/components/AdvancedWorkspace/CreateConstructionDialog.jsx:label": ["graph:construction.scene.label","graph:construction.kind.choice","graph:construction.sequence.label","graph:construction.kind.random"],
   "src/hooks/graphCopyFlow.js:GRAPH_COPY_TITLE_KEY": ["graph:copy.continueInTheGraphEditor.label"],
@@ -215,7 +214,7 @@ const TABLE_CALLS = {
   'src/components/diagram/flowDiagramLayout.js:TYPE_LABEL_KEYS[type]': ['tree:navigation.root.short','tree:menu.card.title','tree:story.type.label','tree:nodeType.zip','common:status.end.fallback'],
   'src/components/tree/nodeColorFilter.js:key': ['tree:color.red.label','tree:color.orange.label','tree:color.yellow.label','tree:color.green.label','tree:color.blue.label','tree:color.purple.label','tree:color.pink.label'],
   "src/components/editors/MenuEditor.jsx:label": ["tree:control.wheel.selection","tree:control.autoplay.label","tree:control.pause.title"],
-  // Lot 4.5 : tables fermées du domaine Médias, clés littérales déclarées dans leurs fichiers.
+  // tables fermées du domaine Médias, clés littérales déclarées dans leurs fichiers.
   'src/components/AudioEditorModal/AudioEditorFadeOverlays.jsx:config.labelKey': ['media:audioEditor.fade.in', 'media:audioEditor.fade.out', 'media:audioEditor.fade.cut'],
   'src/components/MediaExplorer/MediaExplorerContent.jsx:col.labelKey': ['media:explorer.column.name', 'media:explorer.column.usage', 'media:explorer.column.size', 'media:explorer.column.dimensions', 'media:explorer.column.duration', 'media:explorer.column.format', 'media:explorer.column.date', 'media:explorer.column.path', 'media:explorer.column.tags'],
   'src/components/MediaExplorer/MediaExplorerImpl.jsx:col.labelKey': ['media:explorer.column.name', 'media:explorer.column.usage', 'media:explorer.column.size', 'media:explorer.column.dimensions', 'media:explorer.column.duration', 'media:explorer.column.format', 'media:explorer.column.date', 'media:explorer.column.path', 'media:explorer.column.tags'],
@@ -242,17 +241,29 @@ const TABLE_CALLS = {
   'src/components/AggregatePacks/AggregatePacksFunnel.jsx:step.labelKey': ['home:aggregate.step.packs', 'home:aggregate.step.audio', 'home:aggregate.step.image', 'home:aggregate.step.metadata'],
   // Tables fermées du shell ; clés explicites validées même avant leur rendu.
   'src/components/common/ReleaseNotesModal.jsx:title': [
-    'common:releaseNotes.current.queue.title',
-    'common:releaseNotes.current.sound.title',
-    'common:releaseNotes.current.updates.title',
-    'common:releaseNotes.current.episodes.title',
+    'common:releaseNotes.current.recipe.title',
+    'common:releaseNotes.current.imports.title',
+    'common:releaseNotes.current.assembly.title',
+    'common:releaseNotes.current.catalogue.title',
+    'common:releaseNotes.current.checker.title',
+    'common:releaseNotes.current.endings.title',
+    'common:releaseNotes.current.lunii.title',
+    'common:releaseNotes.current.media.title',
+    'common:releaseNotes.current.editors.title',
+    'common:releaseNotes.current.recovery.title',
     'common:releaseNotes.current.fixes.label',
   ],
   'src/components/common/ReleaseNotesModal.jsx:detail': [
-    'common:releaseNotes.current.queue.detail',
-    'common:releaseNotes.current.sound.detail',
-    'common:releaseNotes.current.updates.detail',
-    'common:releaseNotes.current.episodes.detail',
+    'common:releaseNotes.current.recipe.detail',
+    'common:releaseNotes.current.imports.detail',
+    'common:releaseNotes.current.assembly.detail',
+    'common:releaseNotes.current.catalogue.detail',
+    'common:releaseNotes.current.checker.detail',
+    'common:releaseNotes.current.endings.detail',
+    'common:releaseNotes.current.lunii.detail',
+    'common:releaseNotes.current.media.detail',
+    'common:releaseNotes.current.editors.detail',
+    'common:releaseNotes.current.recovery.detail',
   ],
   'src/store/toolbarModel.js:labelKey': [
     'common:project.home.label',
@@ -280,7 +291,7 @@ const TABLE_CALLS = {
     'common:toolbar.generate.checking',
     'common:toolbar.document.loading',
   ],
-  // Lot 4.9 : tables fermées du vérificateur et des rapports, clés littérales déclarées dans leurs fichiers.
+  // tables fermées du vérificateur et des rapports, clés littérales déclarées dans leurs fichiers.
   "src/components/CommunityPackChecker/CommunityPackChecker.jsx:group.titleKey": ["checker:issue.saturated.title", "checker:issue.listen.title", "checker:issue.silence.title", "checker:issue.optionalSilence.title", "checker:issue.volume.title", "checker:issue.audioFormat.title", "checker:issue.imageCorrection.title", "checker:issue.packName.title", "checker:issue.structure.title"],
   "src/components/CommunityPackChecker/CommunityPackChecker.jsx:group.badgeKey": ["checker:issue.badge.source", "checker:issue.badge.manual", "checker:issue.badge.auto", "checker:issue.badge.optional", "checker:issue.badge.assisted"],
   "src/components/CommunityPackChecker/CommunityPackChecker.jsx:key": ["checker:issue.saturated.explanation", "checker:issue.listen.explanation", "checker:issue.silence.explanation", "checker:issue.optionalSilence.explanation", "checker:issue.volume.explanation", "checker:issue.audioFormat.explanation", "checker:issue.image.explanation", "checker:issue.packName.explanation", "checker:issue.structure.explanation", "checker:issue.saturated.action", "checker:issue.listen.action", "checker:issue.silence.action", "checker:issue.optionalSilence.action", "checker:issue.volume.action", "checker:issue.audioFormat.action", "checker:issue.image.action", "checker:issue.packName.action", "checker:issue.structure.action"],
@@ -297,7 +308,7 @@ const TABLE_CALLS = {
   "src/store/advancedExport/exportOutcome.js:table[value]": ["checker:refusal.title.decode", "checker:refusal.title.preparation", "checker:refusal.title.media", "checker:refusal.title.collision", "checker:refusal.title.oracle", "checker:refusal.title.cancelled", "checker:refusal.title.write", "checker:refusal.title.untyped", "checker:refusal.title.request", "checker:refusal.preparation.integrity", "checker:refusal.preparation.author", "checker:refusal.preparation.identity", "checker:refusal.preparation.readiness", "checker:refusal.preparation.serialization", "checker:media.cause.bindingAbsent", "checker:media.cause.pathNull", "checker:media.cause.notFound", "checker:media.cause.notRegular", "checker:media.cause.readDenied", "checker:media.cause.empty", "checker:media.cause.undecodable", "checker:media.cause.validationFailed", "checker:media.cause.toolUnavailable", "checker:media.cause.toolInterrupted", "checker:media.cause.processingFailed", "checker:media.transformation.verbatim", "checker:media.transformation.renamed", "checker:media.transformation.reencoded", "checker:media.transformation.resized", "checker:media.field.image", "checker:media.field.audio"],
   "src/store/advancedExport/exportReadiness.js:table[value]": ["checker:readiness.qualification.untested", "checker:readiness.qualification.prepared", "checker:readiness.qualification.supported", "checker:readiness.source.decode", "checker:readiness.source.integrity", "checker:readiness.source.authoring", "checker:readiness.source.readiness", "checker:readiness.level.info", "checker:readiness.level.warning", "checker:readiness.level.action", "checker:readiness.level.error"],
   "src/store/advancedExport/exportReadiness.js:QUALIFICATION_LABELS.UNTESTED": ["checker:readiness.qualification.untested"],
-  // Lot 4.12 : tables fermées des exemples (titres et descriptions des cinq exemples, langue parlée).
+  // tables fermées des exemples (titres et descriptions des cinq exemples, langue parlée).
   'src/components/AdvancedWorkspace/ExamplesMenu.jsx:example.titleKey': ['examples:garden.example.title', 'examples:castle.example.title', 'examples:rabbit.example.title', 'examples:lighthouse.example.title', 'examples:train.example.title'],
   'src/components/AdvancedWorkspace/ExamplesMenu.jsx:example.descriptionKey': ['examples:garden.example.description', 'examples:castle.example.description', 'examples:rabbit.example.description', 'examples:lighthouse.example.description', 'examples:train.example.description'],
   'src/components/AdvancedWorkspace/ExampleDialog.jsx:state.example.titleKey': ['examples:garden.example.title', 'examples:castle.example.title', 'examples:rabbit.example.title', 'examples:lighthouse.example.title', 'examples:train.example.title'],
@@ -579,7 +590,7 @@ export async function checkProject(root = resolve('.'), { publicLanguages = PUBL
   try { rustMessages = JSON.parse(await readFile(resolve(root, 'src/locales/_generated/rust-messages.json'), 'utf8')); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   let messageFixtures = [];
-  try { messageFixtures = JSON.parse(await readFile(resolve(root, 'scripts/fixtures/rust-p1-fr.json'), 'utf8')); }
+  try { messageFixtures = JSON.parse(await readFile(resolve(root, 'scripts/fixtures/rust-core-fr.json'), 'utf8')); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   const result = checkCatalogues(resources, metadata, rustMessages, messageFixtures, { publicLanguages });
   result.statusCounts = checkPublicLanguageCoverage(resources, metadata, publicLanguages).counts;

@@ -19,6 +19,7 @@ import {
 import {
   getGeneratedMenuControls,
   getGeneratedStoryPlayControls,
+  hasGeneratedLocalEndMessage,
 } from '../src/store/generatedPlayback.js';
 
 function story(id, fields = {}) {
@@ -41,6 +42,25 @@ function project(rootEntries, fields = {}) {
     ...fields,
   };
 }
+
+test('folder destinations advance default stories and preserve explicit playback controls', () => {
+  for (const destination of ['next_story', 'root']) {
+    const children = [story('a'), story('b'), story('c')];
+    const menu = { id: 'm', type: 'menu', returnAfterPlay: destination, children };
+    const p = project([menu, story('z')]);
+    for (const [index, entry] of children.entries()) {
+      const behavior = getEffectiveEndBehavior(entry, menu, p, p.rootEntries);
+      assert.equal(behavior.generatedPlayControls.autoplay, true);
+      assert.equal(behavior.autoContinuation, true);
+      assert.equal(behavior.finalTargetId, destination === 'root' ? 'root' : ['story:b', 'story:c', 'm'][index]);
+      assert.equal(behavior.navigation.storyHome.isConfigured, false);
+    }
+    const stay = story('stay', { controlSettings: { ok: true, autoplay: false } });
+    assert.equal(getGeneratedStoryPlayControls(stay, menu, p).autoplay, false);
+    const auto = story('auto', { controlSettings: { ok: false, autoplay: true } });
+    assert.equal(getGeneratedStoryPlayControls(auto, menu, p).forceAutoplay, false);
+  }
+});
 
 test('direct returnAfterPlay is exposed when no end node is generated', () => {
   const a = story('a', { returnAfterPlay: 'root' });
@@ -853,4 +873,23 @@ test('end node global return without setting is marked contextual, not root', ()
   assert.equal(nav.isExplicit, false);
   assert.equal(nav.isContextual, true);
   assert.equal(nav.isDefaultContextual, true);
+});
+
+test('la bascule Enchaîner/Rester est masquée avec une fin personnelle, présente sans', () => {
+  const prompt = { afterPlaybackPromptAudio: 'fin.mp3' };
+  const sequence = { afterPlaybackSequence: [{ id: 's1' }] };
+  assert.equal(hasGeneratedLocalEndMessage(prompt, false), true);
+  assert.equal(hasGeneratedLocalEndMessage(sequence, false), true);
+  assert.equal(hasGeneratedLocalEndMessage({}, false), false);
+  assert.equal(hasGeneratedLocalEndMessage({ afterPlaybackPromptAudio: '  ' }, false), false);
+  assert.equal(hasGeneratedLocalEndMessage(prompt, true), false);
+  assert.equal(hasGeneratedLocalEndMessage({ ...prompt, nativeStageId: 'n1' }, false), false);
+});
+
+test('une fin personnelle force la lecture automatique, sauf histoire importée', () => {
+  const project = { globalOptions: {} };
+  const entry = { afterPlaybackPromptAudio: 'fin.mp3', controlSettings: { autoplay: false, ok: true } };
+  assert.equal(getGeneratedStoryPlayControls(entry, null, project).forceAutoplay, true);
+  const imported = { ...entry, nativeStageId: 'n1' };
+  assert.equal(getGeneratedStoryPlayControls(imported, null, project).autoplay, false);
 });

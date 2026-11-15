@@ -77,6 +77,93 @@ fn folder(id: &str, children: Value) -> Value {
            "children": children})
 }
 
+fn landing<'a>(document: &'a StoryDocument, transition: Option<&Transition>) -> Option<&'a str> {
+    let transition = transition?;
+    let action = document
+        .action_nodes
+        .iter()
+        .find(|a| a.id == transition.action_node)?;
+    let id = action.option_target(transition.selection.fixed_index()?)?;
+    document
+        .stage_nodes
+        .iter()
+        .find(|s| s.uuid == id)
+        .map(StageNode::label)
+}
+
+fn folder_destination(destination: &str) {
+    let mut menu = folder("m", json!([story("a"), story("b"), story("c")]));
+    menu["returnAfterPlay"] = json!(destination);
+    let document = build(pack(json!([menu, story("z")]))).expect("pack généré");
+    for (id, next) in [("a", "Titre - b"), ("b", "Titre - c"), ("c", "m")] {
+        let play = document
+            .stage_nodes
+            .iter()
+            .find(|s| s.label() == format!("Histoire - {id}"))
+            .unwrap();
+        assert!(
+            play.control_settings.autoplay(),
+            "{destination}/{id}: lecture auto requise"
+        );
+        // Comme une destination propre à l'histoire : autoplay déclenche la
+        // transition OK sans modifier le bouton OK configuré.
+        assert!(!play.control_settings.ok());
+        assert_eq!(
+            landing(&document, play.ok_transition.value()),
+            Some(if destination == "root" { "m" } else { next })
+        );
+        assert_eq!(
+            landing(&document, play.home_transition.value()),
+            Some("m"),
+            "Accueil garde le retour par défaut sur le dossier"
+        );
+    }
+    assert!(crate::native_pack::port_rules::port_violations(&document).is_empty());
+}
+
+#[test]
+fn folder_destination_next_story_advances_default_stories() {
+    folder_destination("next_story");
+}
+
+#[test]
+fn folder_destination_root_advances_default_stories() {
+    folder_destination("root");
+}
+
+#[test]
+fn folder_destination_preserves_explicit_story_settings() {
+    let mut stay = end_mode(story("a"), false);
+    stay["returnOnHome"] = json!("story:c");
+    let auto = end_mode(story("b"), true);
+    let mut own = story("c");
+    own["returnAfterPlay"] = json!("story:a");
+    let mut menu = folder("m", json!([stay, auto, own]));
+    menu["returnAfterPlay"] = json!("next_story");
+    let document = build(pack(json!([menu, story("z")]))).expect("pack généré");
+    for (id, autoplay, ok_target, home_target) in [
+        ("a", false, "Titre - b", "Titre - c"),
+        ("b", true, "Titre - c", "Titre - c"),
+        ("c", true, "Titre - a", "m"),
+    ] {
+        let play = document
+            .stage_nodes
+            .iter()
+            .find(|s| s.label() == format!("Histoire - {id}"))
+            .unwrap();
+        assert_eq!(play.control_settings.autoplay(), autoplay);
+        assert_eq!(play.control_settings.ok(), id == "a");
+        assert_eq!(
+            landing(&document, play.ok_transition.value()),
+            Some(ok_target)
+        );
+        assert_eq!(
+            landing(&document, play.home_transition.value()),
+            Some(home_target)
+        );
+    }
+}
+
 #[test]
 fn a_root_story_without_home_and_without_end_mode_is_refused() {
     // Réglages de fin par défaut (ni OK ni lecture automatique) : sans Accueil,
@@ -92,18 +179,17 @@ fn a_root_story_without_home_and_without_end_mode_is_refused() {
 }
 
 #[test]
-fn a_folder_story_without_home_is_refused_only_when_its_folder_sets_a_return() {
+fn a_folder_story_without_home_uses_its_folder_return() {
     // Sans destination de dossier, le générateur force la lecture automatique.
     assert!(build(pack(json!([folder(
         "m",
         json!([without_home(story("a")), story("b")])
     )])))
     .is_ok());
-    // Un dossier qui porte une destination des histoires (projet importé) ne
-    // la force plus : sans Accueil, l'histoire n'a plus de sortie.
+    // Une destination de dossier donne aussi une sortie automatique sans Accueil.
     let mut with_return = folder("m", json!([without_home(story("a")), story("b")]));
     with_return["returnAfterPlay"] = json!("root");
-    refused_without_exit(pack(json!([with_return.clone(), story("c")])));
+    assert!(build(pack(json!([with_return.clone(), story("c")]))).is_ok());
     with_return["children"][0] = end_mode(with_return["children"][0].clone(), false);
     assert!(build(pack(json!([with_return, story("c")]))).is_ok());
 }

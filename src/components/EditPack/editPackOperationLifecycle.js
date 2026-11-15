@@ -79,13 +79,6 @@ export function createEditPackOperationLifecycle() {
   };
 }
 
-/// Qui répond à « quel éditeur ? » quand un pack convient aux deux. Ouvert
-/// depuis le graphe, le parcours a déjà sa réponse : le graphe, sans question.
-/// Depuis l'accueil ou l'éditeur par menus, l'auteur choisit.
-export function editorChooserFor({ openedFromGraph, askEditor }) {
-  return openedFromGraph ? async () => 'advanced' : askEditor;
-}
-
 /// Le tronc commun à tous les atterrissages : une fois le ZIP d'un pack connu,
 /// la suite ne dépend plus de la manière dont il a été obtenu. Un enfant
 /// d'enveloppe et un pack déposé directement passent donc exactement ici.

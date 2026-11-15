@@ -102,7 +102,9 @@ function FicheExemplarRow({ idPrefix, card, exemplar, identicalCopy, highlight, 
   if (removed) return null;
   return <li id={`${idPrefix}-copy-${exemplar.id}`} tabIndex={0} aria-disabled={busy || undefined} aria-busy={busy || undefined}
     className={`catalogue-fiche-exemplar-row ${highlight === exemplar.format ? 'catalogue-fiche-copy--highlight' : ''} ${finished ? 'catalogue-fiche-copy--removed' : ''}`}>
-    <span className="catalogue-fiche-copy-identity"><CompactExemplar exemplar={exemplar} identicalCopy={identicalCopy} showState showName /></span>
+    <span className="catalogue-fiche-copy-identity"><CompactExemplar exemplar={exemplar} identicalCopy={identicalCopy} showState showName />
+      {lost && <span className="catalogue-fiche-copy-location">{t('catalogue:offline.missing.help', { path: exemplar.containerPath ?? exemplar.path })}</span>}
+    </span>
     <div className="catalogue-fiche-copy-actions">
       <ExemplarOpenActions idPrefix={idPrefix} card={card} exemplar={exemplar} busy={busy} beforeAction={beforeAction} onEdit={onEdit} onSimulate={onSimulate} />
       {lost && card.exemplars.length > 1 && <ExemplarRemoveButton idPrefix={idPrefix} card={card} exemplar={exemplar} onBusy={value => { setBusy(value); onTrashActivity?.(value); }}

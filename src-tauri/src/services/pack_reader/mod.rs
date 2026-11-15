@@ -8,6 +8,7 @@ mod graph_import;
 mod navigation_targets;
 mod night_mode;
 mod projection;
+mod recipe;
 mod sequence_menus;
 mod stage;
 mod story_entry;
@@ -16,6 +17,7 @@ mod validation;
 
 pub use bundle::{inspect_pack_archive, PackArchiveInspection};
 pub(crate) use extraction::import_pack_as_advanced_document_with_catalogue;
+pub(crate) use extraction::resolve_zip_asset_name;
 pub use extraction::{
     check_pack_editability, classify_pack_editability, get_pack_asset, load_pack_zip,
     load_pack_zip_for_simulation, unpack_zip_to_entries, unpack_zip_to_entries_named,

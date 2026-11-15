@@ -159,6 +159,7 @@ fn format_only_fix_plan_does_not_rebuild_measured_edges() {
 
 fn test_audio_item(file_path: &str) -> models::AudioValidationItem {
     models::AudioValidationItem {
+        edges_after_gain: None,
         file_path: file_path.to_string(),
         label: "Audio".to_string(),
         item_type: "story".to_string(),
@@ -709,6 +710,7 @@ fn metadata_fix_uses_convention_name_for_output_zip() {
             bonus: None,
             uuid: Some("11111111-2222-4333-8444-555555555555".to_string()),
             naming_mode: Some("convention".to_string()),
+            export_name: None,
         }),
     )
     .expect("create fixed pack");
@@ -749,7 +751,7 @@ fn unsupported_image_format_is_flagged_and_converted_to_png() {
 }
 
 #[test]
-fn play_stage_audio_uses_visible_title_label_in_report_refs() {
+fn play_stage_audio_uses_its_own_screen_label_in_report_refs() {
     let dir = temp_dir("visible_title_label");
     fs::create_dir_all(&dir).expect("create temp dir");
     let zip_path = dir.join("pack-label.zip");
@@ -758,7 +760,7 @@ fn play_stage_audio_uses_visible_title_label_in_report_refs() {
     let doc = zip_doc::read_pack_doc(&zip_path).expect("read pack doc");
     assert_eq!(doc.audio_refs.len(), 1);
     assert_eq!(doc.audio_refs[0].stage_id, "play");
-    assert_eq!(doc.audio_refs[0].stage_name, "Stage visible");
+    assert_eq!(doc.audio_refs[0].stage_name, "Stage caché");
 
     fs::remove_dir_all(dir).expect("cleanup temp dir");
 }
@@ -1171,6 +1173,7 @@ fn naming_metadata_names_the_file_but_never_enters_the_pack() {
         producer: Some("producteur".to_string()),
         bonus: Some("40 épisodes".to_string()),
         naming_mode: Some("convention".to_string()),
+        export_name: Some("2+]producteur-titre[by_auteur".to_string()),
         ..Default::default()
     };
     apply_metadata_patch(&mut story, &patch).expect("métadonnées appliquées");

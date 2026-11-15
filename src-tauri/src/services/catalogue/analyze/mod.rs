@@ -12,6 +12,13 @@ mod seven_zip_listening;
 #[cfg(test)]
 pub(crate) use images::is_damaged as image_is_damaged;
 pub(super) use listening::LISTENING_VERSION;
+/// Version of a complete cached analysis (`scan::AnalysisFingerprint`).
+/// Increment it with any change to what an analysis extracts or observes
+/// (fields, identity, cover, diagnostics, recorded external reads), including
+/// changes in `support::fs_pack_reader` or `native_pack` code the analysis
+/// calls: otherwise an unchanged file keeps the previous extraction forever.
+/// The application version is deliberately not part of the fingerprint.
+pub(super) const ANALYSIS_VERSION: u32 = 2;
 pub(super) use seven_zip_listening::{enrich as enrich_7z, ListeningFailure};
 mod stream_zip;
 mod studio;
@@ -94,6 +101,11 @@ fn capabilities(read_metadata: Value) -> Value {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Observation {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub analysis_fingerprint: Option<super::scan::AnalysisFingerprint>,
+    /// Files read outside the unit's token; moved into the fingerprint.
+    #[serde(skip)]
+    pub external_reads: Vec<evidence::ExternalRead>,
     #[serde(default)]
     pub listening_version: u8,
     /// A measurement interrupted or raced by a changing sound: its values
@@ -123,8 +135,23 @@ pub struct Observation {
     pub chain: Vec<member::Segment>,
 }
 impl Observation {
+    /// Cache validity evidence does not change published metadata or identity.
+    pub(super) fn matches_raw(&self, raw: Option<&str>) -> bool {
+        let Some(mut previous) = raw.and_then(|s| serde_json::from_str::<Value>(s).ok()) else {
+            return false;
+        };
+        let mut current = serde_json::to_value(self).expect("serializable observation");
+        for value in [&mut previous, &mut current] {
+            if let Some(object) = value.as_object_mut() {
+                object.remove("analysisFingerprint");
+            }
+        }
+        previous == current
+    }
     pub fn new(format: &str) -> Self {
         Self {
+            analysis_fingerprint: None,
+            external_reads: Vec::new(),
             conversion_provenance: None,
             listening_version: LISTENING_VERSION,
             listening_incomplete: false,
@@ -327,6 +354,7 @@ pub fn analyze_with(
 }
 
 mod cover;
+pub(super) mod evidence;
 pub use cover::{read_cover, CoverReadError};
 pub(crate) use member::validate_names as validate_member_names;
 pub(crate) use pack_count::archive_pack_count;

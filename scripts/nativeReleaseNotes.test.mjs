@@ -38,7 +38,8 @@ test('fenêtre réelle : version courante traduite ; notes antérieures à 0.9.1
     const html = render(RELEASE_NOTES.version);
     assert.ok(html.includes(i18next.t('common:releaseNotes.header.title', { version: RELEASE_NOTES.version })));
     assert.ok(!html.includes('release-notes-letter'), 'le bloc personnel est retiré');
-    assert.equal((html.match(/release-notes-badge--fix/g) ?? []).length, 1, 'une seule ligne globale de correctifs');
+    assert.equal((html.match(/release-notes-badge--fix/g) ?? []).length, RELEASE_NOTES.fixes.length, 'une ligne FIX par entrée de correctifs');
+    assert.equal((html.match(/release-notes-badge--new/g) ?? []).length, RELEASE_NOTES.highlights.length, 'une ligne NEW par nouveauté');
     for (const key of [...RELEASE_NOTES.highlights.flat(), ...RELEASE_NOTES.fixes.flat(), ...RELEASE_NOTES.chores.flat()]) {
       assert.ok(html.includes(i18next.t(key)), `${language} ${key}`);
     }
@@ -46,7 +47,7 @@ test('fenêtre réelle : version courante traduite ; notes antérieures à 0.9.1
     assert.equal(render('0.9.9'), '');
     assert.equal(render('0.9.10-beta.1'), '');
     const historical = render('0.9.9', HistoricalReleaseNotesModal);
-    if (language === 'fr') assert.ok(historical.includes(i18next.t(RELEASE_NOTES.highlights[0][0])));
+    if (language === 'fr') assert.ok(historical.includes(i18next.t(RELEASE_NOTES.fixes[0][0])));
     else assert.equal(historical, '');
   }
 });

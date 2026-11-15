@@ -90,6 +90,7 @@ export function ImageField({
   compact = false,
   align = 'center',
   fieldId = null,
+  mediaTarget = null,
   formatHint,
   badge = null,
 }) {
@@ -195,13 +196,13 @@ export function ImageField({
     setCtxMenu({ x: e.clientX, y: e.clientY });
   }
 
-  function pasteClipboardImage() {
+  async function pasteClipboardImage() {
     const clip = imageClipboard.getEntry();
     if (!clip?.path || !onPick) return;
+    await onPick(clip.path);
     if (clip.mode === 'cut') {
-      notifyCutPaste({ path: clip.path, kind: 'image' });
+      notifyCutPaste({ path: clip.path, source: clip.source, target: mediaTarget });
     }
-    onPick(clip.path);
     if (clip.mode === 'cut') imageClipboard.clear();
   }
 
@@ -357,7 +358,7 @@ export function ImageField({
             ...(file ? [
               { icon: <Copy />, label: t("tree:media.clipboard.copy"), fn: () => imageClipboard.set(file) },
               // eslint-disable-next-line i18next/no-literal-string -- enum du presse-papiers
-              { icon: <Scissors />, label: t("tree:media.clipboard.cut"), fn: () => imageClipboard.set(file, { mode: 'cut' }) },
+              { icon: <Scissors />, label: t("tree:media.clipboard.cut"), fn: () => imageClipboard.set(file, { mode: 'cut', source: mediaTarget ?? { clear: onClear } }) },
               { icon: <FolderOpen />, label: t("tree:media.file.reveal"), fn: () => revealItemInDir(file) },
             ] : []),
             ...(imageClipboard.get() && onPick ? [

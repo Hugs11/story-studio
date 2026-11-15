@@ -6,6 +6,7 @@ import { prepareProjectStorageSave, remapStoragePath, relocateStorageProject, re
 import { useCallback, useRef, useState } from 'react';
 import {
   discardMediaCopies,
+  discardProjectAutosave,
   ensureWorkspaceDir,
   rememberRecentProject,
   saveProject,
@@ -49,7 +50,9 @@ export function useSaveProgress({
   autoSaveEnabled,
   autoSaveBackupLimit,
   savedSnapshotRef,
+  autoSavePathRef = null,
   autoSaveSnapshotRef,
+  setAutoSavedPath = null,
   captureWorkSession = null,
   isWorkSessionCurrent = null,
   isSavingRef,
@@ -208,6 +211,14 @@ export function useSaveProgress({
       savedSnapshotRef,
       autoSaveSnapshotRef,
     });
+    if (decision !== SAVE_PUBLICATION.REPLACED && result.path && autoSavePathRef?.current) {
+      const autoSavePath = autoSavePathRef.current;
+      await discardProjectAutosave(autoSavePath, result.path).catch(error => logger.warn('autosave:cleanup-error', error));
+      if (autoSavePathRef.current === autoSavePath) {
+        autoSavePathRef.current = null;
+        setAutoSavedPath?.(null);
+      }
+    }
     if (decision !== SAVE_PUBLICATION.CURRENT) {
       logger.warn(`${logLabel}:not-published decision=${decision} path='${result.path}'${markSaved ? '' : ' deferred=true'}`);
     }
@@ -216,7 +227,7 @@ export function useSaveProgress({
       showErrorDialog?.({ message: presentUserMessage(accessError).message, technicalDetail: presentUserMessage(accessError).technicalDetail });
     }
     return { decision, savedSnapshot };
-  }, [autoSaveSnapshotRef, mediaLibraryPathsRef, savedSnapshotRef, setMediaLibraryPaths, showErrorDialog]);
+  }, [autoSavePathRef, autoSaveSnapshotRef, mediaLibraryPathsRef, savedSnapshotRef, setAutoSavedPath, setMediaLibraryPaths, showErrorDialog]);
 
   const commitStorageResult = useCallback((transaction, result, projectAtStart, libraryAtStart, epoch, replacementEntries = []) => {
     if (!transaction?.finalized && (!replacementEntries.length || !result.project.storage)) return { projectAtStart, mediaLibraryPathsAtStart: libraryAtStart };

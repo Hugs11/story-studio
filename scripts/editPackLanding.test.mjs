@@ -138,6 +138,19 @@ async function land(c) {
   c.render();
 }
 
+test('le mode nuit du pack est adopté sans son global de fin', async () => {
+  const result = { ...unpackResult(), nightMode: true, nightModeAudio: null };
+  const c = mount(filledProject(), result);
+  try {
+    await land(c);
+    assert.equal(c.store.project.globalOptions.nightMode, true);
+    assert.equal(c.store.project.nightModeAudio, null);
+    assert.equal(c.store.project.globalOptions.autoNext, false);
+  } finally {
+    c.restore();
+  }
+});
+
 test('depuis un projet par menus rempli, le pack remplace entièrement l’ancien projet', async () => {
   const c = mount(filledProject());
   try {

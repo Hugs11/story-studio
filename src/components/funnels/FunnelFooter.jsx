@@ -17,6 +17,9 @@ import { ChevronLeft, ChevronRight } from '../icons/LucideLocal';
  * @param {Function} props.onPrimary
  * @param {string}   [props.primaryLabel='Continuer']
  * @param {React.ReactNode} [props.primaryIcon]   Icône custom (défaut : chevron »).
+ * @param {Function} [props.onSecondary] Action secondaire optionnelle.
+ * @param {string} [props.secondaryLabel]
+ * @param {boolean} [props.secondaryDisabled=false]
  * @param {boolean}  [props.primaryDisabled=false]
  */
 export function FunnelFooter({
@@ -27,6 +30,9 @@ export function FunnelFooter({
   primaryLabel,
   primaryIcon,
   primaryDisabled = false,
+  onSecondary,
+  secondaryLabel,
+  secondaryDisabled = false,
 }) {
   const { t } = useHomeTranslation();
   return (
@@ -40,6 +46,13 @@ export function FunnelFooter({
         <ChevronLeft strokeWidth={2.2} />{t('home:funnel.footer.back')}</button>
 
       <span className="funnel-foot-label">{stepLabel}</span>
+
+      {onSecondary && (
+        <button type="button" className="funnel-btn funnel-btn-back funnel-btn-secondary"
+          onClick={onSecondary} disabled={secondaryDisabled}>
+          {secondaryLabel}
+        </button>
+      )}
 
       <button
         type="button"

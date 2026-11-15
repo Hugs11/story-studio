@@ -1,4 +1,9 @@
 {
+  "CHECKER_ROLE_ROOT": "Root",
+  "CHECKER_ROLE_STORY": "Story",
+  "CHECKER_ROLE_END_MESSAGE": "End message",
+  "CHECKER_ROLE_TITLE": "Title",
+  "CHECKER_ROLE_NAVIGATION": "Navigation",
   "ACTION_ID_EMPTY": "A choice list has no ID: the “id” field is empty.",
   "ACTION_NOT_EMPTY": "The choice list “{{action_node}}” already has one or more choices.",
   "ACTION_STILL_TARGETED_one": "{{count}} transition still points to this choice list. Explicitly choose whether to remove it or redirect it.",
@@ -707,7 +712,7 @@
   "CHECKER_SILENCE_PADDING_DESCRIPTION": "Add silence at the {{side}} to reach {{targetSilenceSeconds}} s.",
   "CHECKER_SILENCE_ADJUSTMENT_TITLE": "adjust the silences",
   "CHECKER_SILENCE_EXCESS_MEASUREMENTS": "Detected: {{measured}} s. Above {{maxEdgeSilenceSeconds}} s, Story Studio offers to shorten this silence to {{targetSilenceSeconds}} s (optional).",
-  "CHECKER_SILENCE_REDUCTION_DESCRIPTION": "Optional: shorten the silence at the {{side}} to {{targetSilenceSeconds}} s.",
+  "CHECKER_SILENCE_REDUCTION_DESCRIPTION": "Optionally shorten the silence at the {{side}} to {{targetSilenceSeconds}} s.",
   "CHECKER_FFMPEG_ERROR_UNKNOWN": "Unknown FFmpeg error.",
   "CHECKER_CORRECTION_NOT_REQUIRED": "no fix needed",
   "CHECKER_IMAGE_FORMAT_UNKNOWN": "unknown format",
@@ -785,7 +790,7 @@
   "CHECKER_AUTHORING_EDITABLE_LOG_one": "[OK] This structure can be edited in Story Studio: {{projectedEntryCount}} entry, nativeGraph={{hasNativeGraph}}",
   "CHECKER_AUTHORING_EDITABLE_LOG_other": "[OK] This structure can be edited in Story Studio: {{projectedEntryCount}} entries, nativeGraph={{hasNativeGraph}}",
   "CHECKER_AUTHORING_EDITING_LABEL": "Editing in Story Studio",
-  "CHECKER_AUTHORING_CLASSIFICATION_REFUSED": "This structure may work on the Lunii, but Story Studio can’t edit it.",
+  "CHECKER_AUTHORING_CLASSIFICATION_REFUSED": "This pack will open in the graph editor.",
   "CHECKER_AUTHORING_REFUSAL_LOG_one": "[WARN] Can’t edit in Story Studio: {{reason}} ({{projectedEntryCount}} entry, roundTripFaithful={{roundTripFaithful}}, usesGraphProjection={{usesGraphProjection}}, nativeGraph={{hasNativeGraph}}, differences={{differenceCount}})",
   "CHECKER_AUTHORING_REFUSAL_LOG_other": "[WARN] Can’t edit in Story Studio: {{reason}} ({{projectedEntryCount}} entries, roundTripFaithful={{roundTripFaithful}}, usesGraphProjection={{usesGraphProjection}}, nativeGraph={{hasNativeGraph}}, differences={{differenceCount}})",
   "CHECKER_AUTHORING_EDITING_REFUSED": "This structure may work on the Lunii, but it can’t be edited in Story Studio.",
@@ -1573,6 +1578,7 @@
   "OFFICIAL_CONTENT_OUTPUT_REFUSED": "Export impossible: this project contains a Lunii story. It can only be exported on its own, under its original identifier.",
   "STORYTELLER_OFFICIAL_REFUSED": "Lunii story: install it with the Lunii application.",
   "STORYTELLER_WRITE_FAILED": "Couldn't prepare this story for your Lunii. Try again.",
+  "STORYTELLER_DEVICE_WRITE_FAILED": "Your Lunii couldn't be modified. Try again.",
   "STORYTELLER_ENTRY_IMAGE_REQUIRED": "Add an image to this story’s entry screen before sending it to your Lunii.",
   "STORYTELLER_IMAGE_UNREADABLE": "Unreadable image on the “{{screen}}” screen: the file is damaged. Replace it before sending this story.",
   "STORYTELLER_IMAGE_UNREADABLE_UNNAMED": "An image in this story is unreadable: the file is damaged. Replace it before sending the story.",
@@ -1620,7 +1626,8 @@
   "GENERATION_AUDIO_UNTITLED_MENU_LABEL": "Untitled menu",
   "STORYTELLER_PROJECT_SAVE_REQUIRED": "Save the open project before sending it to the Lunii.",
   "STORYTELLER_PROJECT_IDENTITY_SAVE_FAILED": "Unable to save the identifier in the project. Sending to the Lunii has not started.",
-  "STORYTELLER_PROJECT_OPEN_ID_REQUIRED": "This project is open: save it (Ctrl+S) to give it its identifier, then send it again.",
+  "STORYTELLER_PROJECT_OPEN_ID_REQUIRED": "This project is open: save it in the editor to give it an identifier, then try sending it again.",
   "STORYTELLER_PROJECT_LEGACY_SAVE_REQUIRED": "Open this project once and save it before sending it.",
-  "STORYTELLER_PROJECT_ID_RECHECK_FAILED": "The identifier was saved, but the project could not be checked again. Try sending it to the Lunii again."
+  "STORYTELLER_PROJECT_ID_RECHECK_FAILED": "The identifier was saved, but the project could not be checked again. Try sending it to the Lunii again.",
+  "CHECKER_VOLUME_BEST_EFFORT": "Will be adjusted as much as possible, but will remain a little quiet."
 }

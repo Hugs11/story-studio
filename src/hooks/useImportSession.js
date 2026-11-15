@@ -33,6 +33,22 @@ import { logger } from '../utils/logger';
 import { errorMessage, isYoutubeBlocked, youtubeErrorCode } from '../utils/youtubeErrors.js';
 import { isFreeEditorRefusal } from '../components/EditPack/importErrorPresentation';
 
+// Recipe names retain author intent; only labels restored from the pack use
+// the existing import name sanitizer, including sequence and Home steps.
+function sanitizeRestoredPackNames(entries, restoredIds = []) {
+  const ids = new Set(restoredIds);
+  function visit(entry, nameId = entry.id) {
+    return {
+      ...entry,
+      ...(ids.has(nameId) ? { name: sanitizeImportedName(entry.name) } : {}),
+      ...(entry.children ? { children: entry.children.map(child => visit(child)) } : {}),
+      ...(entry.afterPlaybackSequence ? { afterPlaybackSequence: entry.afterPlaybackSequence.map(step => visit(step, `${entry.id}/${step.id}`)) } : {}),
+      ...(entry.afterPlaybackHomeStep ? { afterPlaybackHomeStep: visit(entry.afterPlaybackHomeStep, `${entry.id}/${entry.afterPlaybackHomeStep.id}`) } : {}),
+    };
+  }
+  return entries.map(entry => visit(entry));
+}
+
 /**
  * Construit le projet résultant d'une extraction de ZIP à partir du résultat
  * Rust (`unpack_zip_to_entries`). Pur (aucune I/O, aucun store) : applique la
@@ -57,7 +73,7 @@ function projectFromUnpackResult({
   // Une histoire seule sans nom prend toujours le titre du pack ; la fiche du
   // catalogue n'y contribue que lorsque le pack devient le projet.
   const namingResult = promoting ? result : { ...result, catalogueMetadata: null };
-  const entries = sanitizeImportedEntries(singleUntitledStory
+  const entries = result?.recipeReopened ? sanitizeRestoredPackNames(rawEntries, result.restoredPackNameIds) : sanitizeImportedEntries(singleUntitledStory
     ? [{ ...rawEntries[0], name: getUnpackedPackDetails({ result: namingResult, zipPath, zipName }).packMetadata.title }]
     : rawEntries);
   if (!entries.length) return null;
@@ -87,7 +103,7 @@ function projectFromUnpackResult({
       ...unresolvedTransitions.map(({ userMessage: _userMessage, ...warning }) => warning),
     ],
   };
-  if (unpacked.promoted && result?.autoNext) {
+  if (unpacked.promoted && !result?.recipeReopened && result?.autoNext) {
     nextProject = {
       ...nextProject,
       globalOptions: { ...nextProject.globalOptions, autoNext: true, nightMode: false },
@@ -95,12 +111,15 @@ function projectFromUnpackResult({
   }
   // Le message de fin partagé est repris même sans mode nuit : l'original le
   // joue après chaque histoire. `nightMode` reste ce que le pack déclare.
+  // Ce drapeau reste utile quand toutes les histoires ont une fin personnelle
+  // et qu'aucun écran ne joue le son global.
   // Réglage global : il n'est repris que lorsque le pack devient le projet
   // (promotion d'un projet vierge). Extrait dans un parent non vierge, il
   // s'appliquerait aussi aux histoires du parent, qui n'en ont jamais eu.
   if (
     unpacked.promoted
-    && result?.nightModeAudio
+    && !result?.recipeReopened
+    && (result?.nightModeAudio || result?.nightMode)
     && !result?.autoNext
     && !nextProject.globalOptions?.nightMode
     && !nextProject.nightModeAudio
@@ -240,7 +259,7 @@ export function useImportSession({
             total: files.length,
             get phase() { return t('import:audio.analysis.progress'); },
           });
-          const embeddedImage = await extractAudioEmbeddedImage(file);
+          const embeddedImage = await extractAudioEmbeddedImage(file, request.copies);
           if (!request.isCurrent()) break;
           const storyId = store.addStory(menuId, file);
           if (embeddedImage && storyId) store.updateItem(storyId, { itemImage: embeddedImage });
@@ -335,7 +354,7 @@ export function useImportSession({
       counter.value += 1;
       setImporting({ name: node.name, index: counter.value, total, get phase() { return t('import:audio.import.progress'); } });
       const copiedPath = await maybeCopyToProject(node.path, request.copies);
-      const embeddedImage = await extractAudioEmbeddedImage(copiedPath);
+      const embeddedImage = await extractAudioEmbeddedImage(copiedPath, request.copies);
       if (!request.isCurrent()) return;
       const storyId = store.addStory(parentMenuId, copiedPath);
       if (embeddedImage) store.updateItem(storyId, { itemImage: embeddedImage });
@@ -538,7 +557,7 @@ export function useImportSession({
           files,
           maybeCopyToProject: (path) => maybeCopyToProject(path, request.copies),
           copyGeneratedMediaToProject: (path) => copyGeneratedMediaToProject(path, request.copies),
-          extractAudioEmbeddedImage,
+          extractAudioEmbeddedImage: (path) => extractAudioEmbeddedImage(path, request.copies),
           setImporting,
           getImportDisplayName: (path) => basename(path) || path,
         });
@@ -564,7 +583,7 @@ export function useImportSession({
           files,
           maybeCopyToProject: (path) => maybeCopyToProject(path, request.copies),
           copyGeneratedMediaToProject: (path) => copyGeneratedMediaToProject(path, request.copies),
-          extractAudioEmbeddedImage,
+          extractAudioEmbeddedImage: (path) => extractAudioEmbeddedImage(path, request.copies),
           setImporting,
           getImportDisplayName: (path) => basename(path) || path,
         });
@@ -685,7 +704,7 @@ export function useImportSession({
             }
           }
           if (!itemImage) {
-            itemImage = await extractAudioEmbeddedImage(audio);
+            itemImage = await extractAudioEmbeddedImage(audio, request.copies);
           }
 
           if (!request.isCurrent()) {
@@ -703,7 +722,9 @@ export function useImportSession({
             addPathsToMediaLibrary(plan.paths);
             importedPaths.push(...plan.paths);
           } else {
-            const storyId = store.addStory(plan.menuId, plan.audioPath);
+            const storyId = store.addStory(plan.menuId, plan.audioPath, {
+              name: sanitizeImportedName(episode.title),
+            });
             if (plan.imagePath) store.updateItem(storyId, { itemImage: plan.imagePath });
           }
           importedEpisodeIds.push(episode.id);

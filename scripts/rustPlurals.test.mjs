@@ -5,8 +5,8 @@ import registry from '../src/locales/_generated/rust-messages.json' with { type:
 import fr from '../src/locales/fr/rust.json' with { type: 'json' };
 import en from '../src/locales/en/rust.json' with { type: 'json' };
 import it from '../src/locales/it/rust.json' with { type: 'json' };
-import p1 from './fixtures/rust-p1-fr.json' with { type: 'json' };
-import p23 from './fixtures/rust-p2-p3-fr.json' with { type: 'json' };
+import p1 from './fixtures/rust-core-fr.json' with { type: 'json' };
+import p23 from './fixtures/rust-media-fr.json' with { type: 'json' };
 import { presentUserMessage } from '../src/i18n/userMessage.js';
 import { createTestI18n } from './i18nTestSetup.mjs';
 import { checkCatalogues, sourceHash } from './check-i18n.mjs';

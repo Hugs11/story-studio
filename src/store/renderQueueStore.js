@@ -10,7 +10,8 @@
 // `production/renderQueueWork.js`, sans React : l'ordonnancement et l'annulation
 // s'éprouvent sans monter d'écran.
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { releaseProjectMediaJob } from './projectMediaOutput';
 
 import {
   JOB_STATUS,
@@ -27,28 +28,36 @@ function genId() {
 export function useRenderQueueStore() {
   const [jobs, setJobs] = useState([]);
   const [panelOpen, setPanelOpen] = useState(false);
+  const jobsRef = useRef(jobs);
+  const mutateJobs = useCallback((transform) => {
+    jobsRef.current = transform(jobsRef.current);
+    setJobs(jobsRef.current);
+  }, []);
 
   const addJob = useCallback((descriptor) => {
     const job = newRenderJob({ ...descriptor, id: genId(), createdAt: Date.now() });
-    setJobs(prev => [...prev, job]);
+    mutateJobs(prev => [...prev, job]);
     setPanelOpen(true);
     return job.id;
-  }, []);
+  }, [mutateJobs]);
 
   const updateJob = useCallback((id, fields) => {
-    setJobs(prev => prev.map(j => j.id === id ? { ...j, ...fields } : j));
-  }, []);
+    if (isTerminalStatus(fields.status)) releaseProjectMediaJob(jobsRef.current.find(j => j.id === id));
+    mutateJobs(prev => prev.map(j => j.id === id ? { ...j, ...fields } : j));
+  }, [mutateJobs]);
 
   const appendLog = useCallback((id, line) => {
-    setJobs(prev => prev.map(j => j.id === id ? { ...j, logs: [...j.logs, line] } : j));
-  }, []);
+    mutateJobs(prev => prev.map(j => j.id === id ? { ...j, logs: [...j.logs, line] } : j));
+  }, [mutateJobs]);
 
   const removeJob = useCallback((id) => {
-    setJobs(prev => prev.filter(j => j.id !== id));
-  }, []);
+    mutateJobs(prev => prev.filter(j => j.id !== id));
+  }, [mutateJobs]);
 
   const cancelJob = useCallback((id) => {
-    setJobs(prev => prev.map(j => {
+    const job = jobsRef.current.find(j => j.id === id);
+    if (job?.status === JOB_STATUS.PENDING) releaseProjectMediaJob(job);
+    mutateJobs(prev => prev.map(j => {
       if (j.id !== id) return j;
       // Un travail en attente n'a jamais rien lancé : il passe directement à
       // « annulé », sans rien demander au moteur. C'est vrai des deux natures,
@@ -70,11 +79,11 @@ export function useRenderQueueStore() {
       }
       return j;
     }));
-  }, []);
+  }, [mutateJobs]);
 
   const clearDone = useCallback(() => {
-    setJobs(prev => prev.filter(j => !isTerminalStatus(j.status)));
-  }, []);
+    mutateJobs(prev => prev.filter(j => !isTerminalStatus(j.status)));
+  }, [mutateJobs]);
 
   const activeCount = jobs.filter(j => isActiveStatus(j.status)).length;
   const hasResults = jobs.some(j => j.status === JOB_STATUS.DONE);

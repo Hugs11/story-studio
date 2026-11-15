@@ -32,7 +32,7 @@ impl<'a> StoryBuilder<'a> {
                 story.ok,
                 story.home,
                 story.pause,
-                story.autoplay,
+                story.autoplay || (project.night_mode_audio.is_some() && !auto_next_active),
             )
         };
         let story_ok_transition = if project.night_mode_audio.is_some() && !auto_next_active {

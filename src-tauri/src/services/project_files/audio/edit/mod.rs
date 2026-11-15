@@ -56,6 +56,7 @@ pub struct AudioEditParams<'a> {
 
 pub struct AudioEditRequest<'a> {
     pub input_path: &'a str,
+    pub preserve_input: bool,
     pub save_path: Option<&'a str>,
     pub workspace_dir: Option<&'a str>,
     pub project_destination: Option<&'a crate::services::project_files::ProjectMediaDestination>,

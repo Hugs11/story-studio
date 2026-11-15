@@ -44,6 +44,8 @@ const { usePackGeneration } = await import('../src/hooks/usePackGeneration.js');
 const { loadProjectFromPath, consolidateProject } = await import('../src/store/projectIO.js');
 const { KEYS } = await import('../src/store/persistentSettings.js');
 const { presentProduction } = await import('../src/i18n/productionPresentation.js');
+const { releaseProjectMediaJob, isProjectMediaOutputBusy } = await import('../src/store/projectMediaOutput.js');
+const { createProjectStorage } = await import('../src/store/projectStorage.js');
 
 const PAYLOAD = '{"payloadVersion":1,"document":{"stageNodes":[],"actionNodes":[]},"context":{"documentOrigin":"created","defaultValueOrigin":"authored"}}';
 const graph = (path, status = 'resolved') => ({
@@ -159,6 +161,7 @@ test('une erreur de transport persistante ne se cache pas et refuse comme vérif
   const hook = runner(() => usePackGeneration({
     store: { project: menu, savePath: null },
     pathAudit: { [menu.rootAudio]: null }, pathAuditPending: false,
+    mediaStorageRef: { current: { root: '/media', storage: menu.storage, ephemeral: true } },
     importedPackPendingMetaRef: { current: false }, workspaceDirRef: { current: '' },
     renderQueue: { addJob: (job) => jobs.push(job) },
     showErrorDialog: (dialog) => dialogs.push(dialog),
@@ -281,11 +284,13 @@ test('menus : ancien false et indéterminé sont revérifiés ; un vrai absent g
 test('menus : une revérification positive atteint réellement la file de production', async (t) => {
   const h = await diskFor(t);
   const dialogs = []; const jobs = [];
+  t.after(() => jobs.forEach(releaseProjectMediaJob));
   const menu = menuProject(h.clip);
   h.disk.answerOpen('/output');
   const hook = runner(() => usePackGeneration({
     store: { project: menu, savePath: null },
     pathAudit: { [menu.rootAudio]: false }, pathAuditPending: false,
+    mediaStorageRef: { current: { root: '/media', storage: menu.storage, ephemeral: true } },
     importedPackPendingMetaRef: { current: false }, workspaceDirRef: { current: '' },
     renderQueue: { addJob: (job) => jobs.push(job) },
     showErrorDialog: (dialog) => dialogs.push(dialog),
@@ -294,6 +299,36 @@ test('menus : une revérification positive atteint réellement la file de produc
   await hook.render().handleGenerate(null, { skipMetadata: true });
   assert.deepEqual(dialogs, []);
   assert.equal(jobs.length, 1);
+});
+
+test('menus : un dossier de projet inaccessible affiche un échec et ne lance pas la génération', async (t) => {
+  const failure = new Error('EACCES: workspace inaccessible');
+  let captureArgs;
+  const h = await diskFor(t, { resolve_project_folder: (args) => {
+    captureArgs = args;
+    throw failure;
+  } });
+  const dialogs = []; const jobs = [];
+  const menu = { ...menuProject(h.clip), storage: createProjectStorage({ provisional: false }) };
+  h.disk.answerOpen('/output');
+  const hook = runner(() => usePackGeneration({
+    store: { project: menu, savePath: '/project/menu.mbah' },
+    pathAudit: {}, pathAuditPending: false,
+    mediaStorageRef: { current: { root: h.disk.workspace, storage: menu.storage, ephemeral: false } },
+    importedPackPendingMetaRef: { current: false }, workspaceDirRef: { current: '' },
+    renderQueue: { addJob: (job) => jobs.push(job) },
+    showErrorDialog: (dialog) => dialogs.push(dialog),
+  }));
+  t.after(() => hook.unmount());
+  await hook.render().handleGenerate(null, { skipMetadata: true });
+  assert.deepEqual(captureArgs, {
+    root: h.disk.workspace, folder: menu.storage.folder, workId: menu.storage.workId, create: true,
+  });
+  assert.equal(dialogs.length, 1);
+  assert.equal(presentProduction(dialogs[0].title), 'Impossible de générer');
+  assert.equal(dialogs[0].message, failure);
+  assert.deepEqual(jobs, []);
+  assert.equal(isProjectMediaOutputBusy(menu.storage.workId), false);
 });
 
 test('réouverture projectIO : délai et rejet ne déplacent pas la liaison vers un homonyme du workspace', async (t) => {
@@ -360,7 +395,7 @@ test('le refus de vérification se traduit à chaud en FR/EN/IT sans message int
   assert.equal(new Set(messages).size, 3);
 });
 
-test('P2 reprises : 439 chemins en erreur ont trois reprises espacées puis attendent focus ou projet', async (t) => {
+test('Reprises de lecture : 439 chemins en erreur ont trois reprises espacées puis attendent focus ou projet', async (t) => {
   const h = await diskFor(t);
   t.mock.timers.enable({ apis: ['setTimeout'] });
   h.transport(() => { throw new Error('persistent IPC failure'); });
@@ -404,7 +439,7 @@ test('P2 reprises : 439 chemins en erreur ont trois reprises espacées puis atte
 });
 
 
-test('P2 audit : une observation remplacée pendant le reste du lot ne requalifie aucun média', async (t) => {
+test('Audit des médias : une observation remplacée pendant le reste du lot ne requalifie aucun média', async (t) => {
   const h = await diskFor(t);
   const other = await h.disk.writeFile('project/other.wav', 'synthetic second audio');
   const project = graph(h.clip);
@@ -433,7 +468,7 @@ test('P2 audit : une observation remplacée pendant le reste du lot ne requalifi
 
 
 
-test('revue2 P2 : un réaudit pendant le chargement initial ne laisse pas l’aperçu vide', async (t) => {
+test('Réaudit : un réaudit pendant le chargement initial ne laisse pas l’aperçu vide', async (t) => {
   let finishRead;
   const h = await diskFor(t, { 'plugin:fs|read_file': ({ path }) => {
     if (finishRead) return Array.from(fs.readFileSync(path));
@@ -450,7 +485,7 @@ test('revue2 P2 : un réaudit pendant le chargement initial ne laisse pas l’ap
   assert.match(preview.render() ?? '', /^blob:/, 'l’aperçu rejoint le relevé courant et finit son chargement');
 });
 
-test('revue2 P3 : focus pendant l’audit initial puis erreur ne laisse aucune minuterie au démontage', async (t) => {
+test('Audit initial : focus pendant l’audit initial puis erreur ne laisse aucune minuterie au démontage', async (t) => {
   const h = await diskFor(t);
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const activeTimers = new Set();
@@ -479,7 +514,7 @@ test('revue2 P3 : focus pendant l’audit initial puis erreur ne laisse aucune m
 });
 
 
-test('revue2 partage : deux aperçus montés ensemble mutualisent la vérification initiale', async (t) => {
+test('partage : deux aperçus montés ensemble mutualisent la vérification initiale', async (t) => {
   const h = await diskFor(t);
   let finishExists;
   h.transport(() => new Promise((resolve) => { finishExists = resolve; }));
@@ -496,7 +531,7 @@ test('revue2 partage : deux aperçus montés ensemble mutualisent la vérificati
 
 
 
-test('repli Astra : 1000 chemins réglés ne laissent aucune entrée de lecture retenue', async (t) => {
+test('1000 chemins réglés ne laissent aucune entrée de lecture retenue', async (t) => {
   const h = await diskFor(t);
   h.transport(() => { throw new Error('persistent IPC failure'); });
   const snapshotsBefore = cache.__cacheSizesForTest().snapshots;
@@ -506,7 +541,7 @@ test('repli Astra : 1000 chemins réglés ne laissent aucune entrée de lecture 
   assert.equal(cache.__cacheSizesForTest().reads, 0, 'aucune lecture ni promesse réglée retenue');
 });
 
-test('repli Astra : un aperçu démonté pendant une lecture bloquée peut être remonté avec une nouvelle lecture', async (t) => {
+test('un aperçu démonté pendant une lecture bloquée peut être remonté avec une nouvelle lecture', async (t) => {
   let reads = 0;
   const h = await diskFor(t, { 'plugin:fs|read_file': ({ path }) => {
     reads++;
@@ -523,7 +558,7 @@ test('repli Astra : un aperçu démonté pendant une lecture bloquée peut être
   assert.match(second.render(), /^blob:/);
 });
 
-test('repli Astra : un résultat indéterminé conserve l’aperçu sans reprise automatique', async (t) => {
+test('un résultat indéterminé conserve l’aperçu sans reprise automatique', async (t) => {
   const h = await diskFor(t);
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const preview = runner(() => useLocalFile(h.clip));

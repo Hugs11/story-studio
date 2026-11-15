@@ -4,6 +4,7 @@ import { translateTree as t } from "../../i18n/treePresentation.js";
 import { memo, useEffect, useMemo, useState } from 'react';
 import { AudioField } from './AudioField';
 import { ImageField } from './ImageField';
+import { useProjectContext } from '../../store/ProjectContext';
 const CONTROL_LABELS = {"wheel": "tree:nativeGraph.control.wheel", "autoplay": "tree:nativeGraph.control.autoplay", "pause": "tree:nativeGraph.control.pause", "ok": "tree:nativeGraph.control.ok", "home": "tree:nativeGraph.control.home"};
 import { Toggle } from '../common/Toggle';
 import { basename } from '../../utils/fileUtils';
@@ -62,8 +63,9 @@ function updateStageInGraph(graph, selectedStageId, updater) {
   return next;
 }
 
-export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChange }) {
+export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChange, entryId }) {
   useTreeTranslation();
+  const { mediaStorage } = useProjectContext();
   const stages = graph?.document?.stageNodes ?? [];
   const actions = graph?.document?.actionNodes ?? [];
   const [filter, setFilter] = useState('');
@@ -196,6 +198,7 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
                 <ImageField
                   compact
                   fieldId={`stage:${stageId(selectedStage)}:image`}
+                  mediaTarget={{ kind: 'nativeStage', workId: mediaStorage?.storage?.workId, entryId, stageId: selectedStageId, field: 'image' }}
                   file={selectedStage.image}
                   onPick={(file) => updateSelectedStage({ image: file })}
                   onClear={() => updateSelectedStage({ image: null })}
@@ -205,6 +208,7 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
                 <div className="media-col-header">{t("tree:media.sound.label")}<span className="media-col-subtitle">{t("tree:nativeGraph.audio.label")}</span>
                 </div>
                 <AudioField
+                  mediaTarget={{ kind: 'nativeStage', workId: mediaStorage?.storage?.workId, entryId, stageId: selectedStageId, field: 'audio' }}
                   levelLabel={{ stage: selectedStage.name }}
                   label={t("tree:nativeGraph.audio.label")}
                   labelRef={{ key: "tree:nativeGraph.audio.label" }}

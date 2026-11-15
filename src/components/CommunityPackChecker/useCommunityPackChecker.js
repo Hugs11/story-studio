@@ -128,6 +128,7 @@ export function useCommunityPackChecker(initialEntry = null, preparationLifetime
       setSourceFolder(folder);
       const analyzed = await invoke('analyze_community_pack', {
         zipPath: analysisPath,
+        sourceLabel: folder || null,
         preparationId: initialEntry?.preparationId ?? null,
         expectedContentToken: analysisPath === initialEntry?.zipPath ? initialEntry.contentToken : null,
       });

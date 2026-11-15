@@ -46,8 +46,8 @@ import { logger } from '../utils/logger';
 //
 // Conséquence assumée, faute de geste groupé dans le dialecte : **relier N
 // fichiers produit N pas d'annulation**, pas un seul.
-async function applyAdvancedRelink(project, replacements, advancedAuthoring) {
-  const plan = planAdvancedRelink(project, replacements);
+async function applyAdvancedRelink(project, replacements, advancedAuthoring, referencedAssetRefs) {
+  const plan = planAdvancedRelink(project, replacements, referencedAssetRefs);
   const appliedReplacements = new Map();
   if (plan.length === 0) return { applied: 0, replacements: appliedReplacements, project: null, refusal: null };
   let latest = null;
@@ -72,6 +72,7 @@ async function applyAdvancedRelink(project, replacements, advancedAuthoring) {
 export function useMissingMediaRelink({
   store,
   advancedAuthoring,
+  advancedMediaUsages,
   mediaLibraryPathsRef,
   setMediaLibraryPaths,
   pathAudit,
@@ -85,9 +86,14 @@ export function useMissingMediaRelink({
     setDismissedMissingMediaSignature('');
   }, [store.savePath]);
 
+  // Avant la lecture de la vue, aucune liaison graphe n'est encore proposée.
+  const referencedAssetRefs = useMemo(
+    () => new Set((advancedMediaUsages ?? []).map((media) => media.assetRef)),
+    [advancedMediaUsages],
+  );
   const missingMedia = useMemo(
-    () => collectMissingMedia(store.project, pathAudit),
-    [store.project, pathAudit, language],
+    () => collectMissingMedia(store.project, pathAudit, referencedAssetRefs),
+    [store.project, pathAudit, referencedAssetRefs, language],
   );
   const missingMediaSignature = useMemo(
     () => buildRelinkSignature(missingMedia),
@@ -100,7 +106,7 @@ export function useMissingMediaRelink({
     let appliedReplacements = replacements;
     let partiallyApplied = false;
     if (advanced) {
-      const outcome = await applyAdvancedRelink(store.project, replacements, advancedAuthoring);
+      const outcome = await applyAdvancedRelink(store.project, replacements, advancedAuthoring, referencedAssetRefs);
       // Les gestes ont déjà installé le projet par la session. Un refus au
       // premier pas ne laisse rien : on n'écrit alors ni étiquettes, ni
       // catalogue, ni signature, pour que la proposition se represente.
@@ -135,7 +141,7 @@ export function useMissingMediaRelink({
     store.setMediaTags(nextMediaTags);
     setMediaLibraryPaths(nextMediaLibraryPaths);
     mediaLibraryPathsRef.current = nextMediaLibraryPaths;
-    setDismissedMissingMediaSignature(partiallyApplied ? '' : buildRelinkSignature(collectMissingMedia(nextProject, pathAudit)));
+    setDismissedMissingMediaSignature(partiallyApplied ? '' : buildRelinkSignature(collectMissingMedia(nextProject, pathAudit, referencedAssetRefs)));
     if (saveAfter) {
       await handleSaveProject({
         projectOverride: nextProject,
@@ -148,6 +154,7 @@ export function useMissingMediaRelink({
     handleSaveProject,
     mediaLibraryPathsRef,
     pathAudit,
+    referencedAssetRefs,
     setMediaLibraryPaths,
     store,
   ]);

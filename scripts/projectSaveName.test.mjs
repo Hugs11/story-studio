@@ -58,7 +58,7 @@ function context({ mode = 'pack', projectName = '', graphTitle = 'Nouveau pack' 
         runFunnelLanding: async (type, work) => {
           store.resetProject();
           store.setProjectType(type);
-          await work();
+          await work('C:/fixture');
         },
         onRevealImportedMedia: noop,
         setImportNotice: noop,

@@ -251,6 +251,23 @@ fn load_pack_zip_with_policy(zip_path: &str, for_simulation: bool) -> Result<Str
     Ok(story_json)
 }
 
+/// Préfère le nom exact ; accepte aussi les séparateurs des ZIP PowerShell.
+pub(crate) fn resolve_zip_asset_name<R: std::io::Read + std::io::Seek>(
+    archive: &zip::ZipArchive<R>,
+    asset_name: &str,
+) -> String {
+    archive
+        .file_names()
+        .find(|name| *name == asset_name)
+        .or_else(|| {
+            archive
+                .file_names()
+                .find(|name| name.replace('\\', "/") == asset_name)
+        })
+        .unwrap_or(asset_name)
+        .to_string()
+}
+
 pub fn get_pack_asset(zip_path: &str, asset_name: &str) -> Result<Vec<u8>, String> {
     let zip_path = ensure_studio_pack_zip(zip_path)?.zip_path;
     let asset_name = validate_pack_asset_name(asset_name)?;
@@ -266,6 +283,7 @@ pub fn get_pack_asset(zip_path: &str, asset_name: &str) -> Result<Vec<u8>, Strin
     })?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
     ensure_zip_entry_count(archive.len(), &zip_path)?;
+    let asset_name = resolve_zip_asset_name(&archive, &asset_name);
     let mut entry = archive.by_name(&asset_name).map_err(|_| {
         let _msg_asset_name = (asset_name).to_string();
         user_message::UserMessage::new(codes::IMPORT_ASSET_NOT_FOUND)
@@ -370,7 +388,12 @@ fn unpack_zip_to_entries_unchecked_named(
     let asset_map = extract_all_zip_assets(&zip_path, dest)?;
     let thumbnail_path = extract_zip_thumbnail(&zip_path, dest)?;
 
-    let mut result = walk_story_doc_to_entries_named(doc, &asset_map, proposed_pack_name)?;
+    let mut result = if let Some(mut project) = super::recipe::resolve(&zip_path, doc) {
+        super::recipe::extract_media(&mut project, &asset_map);
+        project
+    } else {
+        walk_story_doc_to_entries_named(doc, &asset_map, proposed_pack_name)?
+    };
     result["importDiagnostics"] =
         serde_json::to_value(&decoded.context.diagnostics).map_err(|error| {
             let _msg_error = (error).to_string();
@@ -399,6 +422,7 @@ fn unpack_zip_to_entries_unchecked_named(
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PackEditabilityReport {
+    pub project_type: Option<String>,
     pub round_trip_faithful: bool,
     pub authoring_editable: bool,
     pub read_only_inspectable: bool,
@@ -423,6 +447,7 @@ impl PackEditabilityReport {
     }
     fn unsupported(reason: String) -> Self {
         Self {
+            project_type: None,
             round_trip_faithful: false,
             authoring_editable: false,
             read_only_inspectable: false,
@@ -569,6 +594,29 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
             import_diagnostics,
         )
         .with_reason_code(codes::IMPORT_MISSING_MEDIA));
+    }
+    if let Some(project) = super::recipe::resolve(&zip_path, &doc) {
+        let entries: Vec<ProjectEntry> =
+            serde_json::from_value(project["entries"].clone()).map_err(|e| e.to_string())?;
+        let count = count_project_entries(&entries);
+        return Ok(PackEditabilityReport {
+            project_type: project["projectType"].as_str().map(str::to_owned),
+            round_trip_faithful: true,
+            authoring_editable: true,
+            read_only_inspectable: false,
+            reason: user_message::UserMessage::new(codes::IMPORT_AUTHORING_CANONICAL_FAITHFUL)
+                .into_transport(),
+            reason_code: None,
+            fidelity: None,
+            projected_entry_count: count,
+            root_entry_count: count,
+            shared_entry_count: 0,
+            has_native_graph: false,
+            uses_graph_projection: false,
+            shared_entry_ratio: 0.0,
+            has_unmodeled_wheel: false,
+            import_diagnostics,
+        });
     }
     let assets = presence_faithful_asset_map(&doc);
     let imported = match walk_story_doc_to_entries(&doc, &assets) {
@@ -724,6 +772,7 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
     };
 
     Ok(PackEditabilityReport {
+        project_type: Some("pack".into()),
         round_trip_faithful,
         authoring_editable,
         read_only_inspectable,
@@ -1176,6 +1225,9 @@ fn project_from_imported_entries(
     }
 
     Ok(Project {
+        root_name: String::new(),
+        end_node_name: String::new(),
+        tree_color: None,
         name: title.to_string(),
         project_type: Some("pack".to_string()),
         root_audio: root_audio.clone(),
@@ -1225,6 +1277,7 @@ fn project_from_imported_entries(
         root_entries: entries,
         shared_entries,
         global_options: GlobalOptions {
+            end_node: false,
             add_silence: false,
             silence_mode: None,
             add_silence_duration_sec: crate::domain::project::AudioEdgeSilenceDuration::uniform(
@@ -4153,3 +4206,9 @@ mod tests {
         fs::remove_dir_all(unpack_dir).expect("cleanup");
     }
 }
+#[cfg(test)]
+#[path = "tests/menu_reopening.rs"]
+mod menu_reopening;
+#[cfg(test)]
+#[path = "tests/recipe_baseline.rs"]
+mod recipe_baseline;

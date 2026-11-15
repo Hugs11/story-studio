@@ -27,6 +27,12 @@ struct Entry {
     last: Instant,
 }
 
+/// A path is ready once its events have been quiet long enough, or once it has
+/// waited the maximum delay since its first event.
+fn entry_ready(entry: &Entry, now: Instant, quiet: Duration, max_delay: Duration) -> bool {
+    now.duration_since(entry.last) >= quiet || now.duration_since(entry.first) >= max_delay
+}
+
 #[derive(Default)]
 struct Queue {
     entries: HashMap<PathBuf, Entry>,
@@ -97,6 +103,18 @@ impl Grouper {
         true
     }
 
+    /// Checks readiness without consuming events or accessing the filesystem.
+    /// Shares `entry_ready` with `take_ready` so both always agree.
+    pub fn has_ready(&self, now: Instant) -> bool {
+        let (quiet, max_delay) = (self.quiet, self.max_delay);
+        self.sources.values().any(|queue| {
+            queue
+                .entries
+                .values()
+                .any(|entry| entry_ready(entry, now, quiet, max_delay))
+        })
+    }
+
     /// Takes every path whose events have settled, per source.
     pub fn take_ready(&mut self, now: Instant) -> Vec<(String, Vec<Pending>)> {
         let (quiet, max_delay) = (self.quiet, self.max_delay);
@@ -105,9 +123,7 @@ impl Grouper {
             let paths: Vec<PathBuf> = queue
                 .entries
                 .iter()
-                .filter(|(_, e)| {
-                    now.duration_since(e.last) >= quiet || now.duration_since(e.first) >= max_delay
-                })
+                .filter(|(_, e)| entry_ready(e, now, quiet, max_delay))
                 .map(|(path, _)| path.clone())
                 .collect();
             if paths.is_empty() {

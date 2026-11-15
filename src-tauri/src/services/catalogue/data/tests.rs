@@ -15,7 +15,7 @@ impl Fixture {
         let root: std::path::PathBuf =
             crate::support::paths::path_for_frontend(root.canonicalize().unwrap()).into();
         let store = Store::open(&root.join("data"), &root.join("cache")).unwrap();
-        store.add_source(&root.join("source"), 0, false).unwrap();
+        store.add_source(&root.join("source"), 0).unwrap();
         let source = store.list_sources().unwrap().items[0].id.clone();
         Self {
             root,
@@ -1444,9 +1444,7 @@ fn removal_cleans_images_preserves_other_staging_and_readding_uuid_starts_fresh(
         .items
         .is_empty());
     assert!(f.store.get_card(&id).is_err());
-    f.store
-        .add_source(&f.root.join("source"), 2, false)
-        .unwrap();
+    f.store.add_source(&f.root.join("source"), 2).unwrap();
     f.store
         .publish_scan(
             "readd",
@@ -1811,7 +1809,7 @@ fn m1_source_removal_counts_shared_cards_and_erases_only_last_copy() {
         .unwrap();
     let other = f.root.join("other");
     std::fs::create_dir_all(&other).unwrap();
-    let added = f.store.add_source(&other, 1, false).unwrap();
+    let added = f.store.add_source(&other, 1).unwrap();
     let mut copy = f.item("two.mbah", Some("One"), None, 2);
     copy.source_id = added.source_id.clone();
     copy.path = other.join("two.zip").to_string_lossy().into();
@@ -1940,7 +1938,7 @@ fn m1_incomplete_scan_missing_and_unavailable_never_erase_and_move_rejoins_uuid(
     );
     let other = f.root.join("other");
     std::fs::create_dir_all(&other).unwrap();
-    let added = f.store.add_source(&other, 1, false).unwrap();
+    let added = f.store.add_source(&other, 1).unwrap();
     let mut moved = first;
     moved.source_id = added.source_id.clone();
     moved.path = other.join("moved.mbah").to_string_lossy().into();
@@ -2631,7 +2629,7 @@ fn compl2_offline_or_unhealthy_source_never_marks_cover_unreadable() {
         let before = f.store.get_card(&id).unwrap();
         assert_eq!(
             f.store.get_thumbnail(Some(eid), None, None).unwrap().state,
-            "unreadable",
+            "busy",
             "{state}"
         );
         assert_eq!(f.store.get_card(&id).unwrap(), before, "{state}");

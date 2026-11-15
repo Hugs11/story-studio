@@ -274,7 +274,7 @@ mod tests {
         /// A store whose fixture folder is an active source.
         fn open_with_source(&self) -> Arc<Store> {
             let store = self.open();
-            store.add_source(&self.source(), 0, false).unwrap();
+            store.add_source(&self.source(), 0).unwrap();
             store
         }
     }
@@ -483,7 +483,7 @@ mod tests {
     fn a_report_parent_replaced_by_a_file_is_never_opened() {
         let f = Fixture::new();
         let store = f.open();
-        store.add_source(&f.source(), 0, false).unwrap();
+        store.add_source(&f.source(), 0).unwrap();
         let parent = f.source().join("packs");
         let target = parent.join("broken.7z");
         std::fs::remove_dir(&parent).unwrap();
@@ -511,7 +511,7 @@ mod tests {
     fn report_paths_are_revealed_only_under_an_active_source() {
         let f = Fixture::new();
         let store = f.open();
-        store.add_source(&f.source(), 0, false).unwrap();
+        store.add_source(&f.source(), 0).unwrap();
         let refused = f.source().join("packs/broken.7z");
         std::fs::write(&refused, b"7z").unwrap();
         let recorder = Recorder::default();
@@ -589,7 +589,7 @@ mod tests {
         std::fs::write(&inside, b"zip").unwrap();
         std::fs::write(&outside, b"zip").unwrap();
         let store = f.open();
-        store.add_source(&source, 0, false).unwrap();
+        store.add_source(&source, 0).unwrap();
         let recorder = Recorder::default();
         let error = store
             .reveal_path_with(&outside, &recorder, TIMEOUT)

@@ -19,7 +19,7 @@
 //   graphe à plat, sans produire d'archive. C'est ce qui permet à Story Studio
 //   de n'avoir qu'un seul simulateur pour ses trois modes d'édition.
 //
-// La forme commune n'est pas une commodité de code : c'est la preuve du lot.
+// La forme commune permet de comparer la simulation du projet à celle de son archive.
 // Deux graphes bâtis dans la même forme se comparent nœud à nœud et référence
 // à référence, ce qu'une seconde implémentation de navigation rendrait
 // impossible à établir.

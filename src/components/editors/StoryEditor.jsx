@@ -171,6 +171,7 @@ export const StoryEditor = memo(function StoryEditor({
             </div>
             <ImageField
               fieldId={`${node.id}:itemImage`}
+              mediaTarget={{ kind: 'story', entryId: node.id, field: 'itemImage' }}
               file={node.itemImage}
               extraActions={[
                 {

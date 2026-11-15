@@ -5,7 +5,18 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { mountSurface } from './chromeBench.mjs';
 import { createElement } from 'react';
+import { registerHooks } from 'node:module';
+// Le fichier EmulatorTab.jsx et son répertoire portent le même nom.
+registerHooks({
+  resolve(specifier, context, next) {
+    if (specifier === '../../tabs/EmulatorTab') {
+      return { url: new URL('../src/tabs/EmulatorTab.jsx', import.meta.url).href, shortCircuit: true };
+    }
+    return next(specifier, context);
+  },
+});
 const { LuniiShell } = await import('../src/tabs/EmulatorTab/LuniiShell.jsx');
+const { FloatingSimulator } = await import('../src/components/FloatingSimulator/FloatingSimulator.jsx');
 
 const source = readFileSync(
   new URL('../src/components/AdvancedWorkspace/DocumentSimulationPanel.jsx', import.meta.url),
@@ -15,6 +26,19 @@ const luniiShellSource = readFileSync(
   new URL('../src/tabs/EmulatorTab/LuniiShell.jsx', import.meta.url),
   'utf8',
 );
+
+test('le simulateur affiche l’avis traduit et branche le bouton Relancer', () => {
+  let restarts = 0;
+  const props = { anchorId: 'root', documentStatus: 'loading', onRestart: () => { restarts += 1; } };
+  const fresh = mountSurface(createElement(FloatingSimulator, props));
+  assert.doesNotMatch(fresh.html, /Le projet a changé|Relancer/);
+  const stale = mountSurface(createElement(FloatingSimulator, { ...props, documentStale: true }));
+  assert.match(stale.html, /Le projet a changé depuis le lancement de l’écoute\./);
+  assert.match(stale.html, />Relancer<\/button>/);
+  const restart = stale.elements.find(element => element.type === 'button' && element.props.children === 'Relancer');
+  restart.props.onClick();
+  assert.equal(restarts, 1);
+});
 
 test('la simulation du graphe ne peint plus de bandeau ni de seconde commande de fermeture', () => {
   assert.doesNotMatch(source, /advanced-review-banner/);

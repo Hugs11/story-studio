@@ -13,7 +13,7 @@ const initialize = () => i18next.init(createTestI18n().options);
 function caught(fn) { try { fn(); } catch (error) { return error; } assert.fail('a refusal is required'); }
 const advanced = () => ({ schemaVersion: 4, authoringMode: 'advanced', projectType: 'advanced', rootEntries: [], authoring: { payload: '{}', mediaBindings: [] } });
 
-test('revue 2 : refus de format, codes et paramètres non vides traduits sans fallback', async () => {
+test('refus de format, codes et paramètres non vides traduits sans fallback', async () => {
   initialize();
   const shape = caught(() => readProjectEnvelope(null, { fileName: 'Auteur.mbah' }));
   const contradictory = caught(() => readProjectEnvelope({ authoringMode: 'free', authoring: {} }));
@@ -63,7 +63,7 @@ test('revue 2 : refus de format, codes et paramètres non vides traduits sans fa
   await i18next.changeLanguage('fr');
 });
 
-test('revue 4 : erreurs locales et causes imbriquées gardent refs/params et refusent les codes étrangers', async () => {
+test('erreurs locales et causes imbriquées gardent refs/params et refusent les codes étrangers', async () => {
   initialize();
   const local = importPresentationError('import:project.file.exists', { name: 'Auteur.mbah' }, { code: 'IMPORT_PROJECT_FILE_EXISTS', detail: 'RAW_FS' });
   const changed = { key: 'import:media.follow.projectChanged', params: {} };
@@ -96,7 +96,7 @@ test('revue 4 : erreurs locales et causes imbriquées gardent refs/params et ref
   await i18next.changeLanguage('fr');
 });
 
-test('revue 3 : mêmes notices, recherche et lignes de sauvegarde relues à chaud', async () => {
+test('mêmes notices, recherche et lignes de sauvegarde relues à chaud', async () => {
   initialize();
   const notice = { parts: [{ key: 'import:pack.transitions.notice' }, { key: 'import:pack.autoNext.notice' }], separator: '\n\n' };
   const search = { key: 'import:youtube.search.progress', params: { page: 3 } };
@@ -116,7 +116,7 @@ test('revue 3 : mêmes notices, recherche et lignes de sauvegarde relues à chau
   await i18next.changeLanguage('fr');
 });
 
-test('revue 2 : liaisons invalides, texte applicatif traduisible et données techniques conservées', async () => {
+test('liaisons invalides, texte applicatif traduisible et données techniques conservées', async () => {
   initialize();
   const raw = advanced();
   raw.authoring.mediaBindings = [{ assetRef: 'a.mp3', path: null, status: 'resolved' }];

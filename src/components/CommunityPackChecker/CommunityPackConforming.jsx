@@ -103,7 +103,7 @@ function buildConformingGroups(report) {
       facts: [
         { key: 'lunii', label: t('checker:conform.fact.lunii'), value: structure.luniiCompatible ? t('checker:fact.value.yes') : t('checker:fact.value.no') },
         { key: 'editable', label: t('checker:conform.fact.editable'), value: structure.storyStudioEditable ? t('checker:fact.value.yes') : t('checker:fact.value.no') },
-        { key: 'stories', label: t('checker:conform.fact.stories'), value: String(structure.storyCount ?? 0) },
+        { key: 'stories', label: t('checker:conform.fact.stories'), value: String(structure.storyCount ?? '—') },
         { key: 'stages', label: t('checker:conform.fact.stages'), value: String(structure.stageCount ?? 0) },
         { key: 'actions', label: t('checker:conform.fact.actions'), value: String(structure.actionCount ?? 0) },
         { key: 'refAudio', label: t('checker:conform.fact.refAudio'), value: String(structure.referencedAudioCount ?? 0) },

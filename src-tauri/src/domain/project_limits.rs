@@ -144,6 +144,9 @@ mod tests {
             };
         }
         Project {
+            root_name: String::new(),
+            end_node_name: String::new(),
+            tree_color: None,
             name: "Profondeur".to_string(),
             project_type: Some("pack".to_string()),
             root_audio: None,
@@ -162,6 +165,7 @@ mod tests {
             root_entries: vec![child],
             shared_entries: Vec::new(),
             global_options: GlobalOptions {
+                end_node: false,
                 add_silence: false,
                 silence_mode: None,
                 add_silence_duration_sec: AudioEdgeSilenceDuration::uniform(0.4),

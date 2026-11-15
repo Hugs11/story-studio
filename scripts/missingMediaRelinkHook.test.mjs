@@ -55,6 +55,7 @@ function harness(t, acceptedSteps, { sharedPath = false, free = false, windowsAl
   let pathAudit = { [oldA]: false, [oldB]: false, [newA]: true, [newB]: true };
   const hook = runner(() => useMissingMediaRelink({
     store, advancedAuthoring, mediaLibraryPathsRef: library,
+    advancedMediaUsages: bindings.map(({ assetRef }) => ({ assetRef })),
     setMediaLibraryPaths: (paths) => { library.current = paths; }, pathAudit,
     handleSaveProject: async (overrides) => { saves.push(overrides); },
   }));

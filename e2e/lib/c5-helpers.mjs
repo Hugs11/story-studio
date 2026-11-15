@@ -166,7 +166,7 @@ export async function runYoutubeImport(page, { videoUrl, followedSourceTitle, ti
   await clickMediaTool(page, 'import-youtube');
   const modal = youtubeFunnelModal(page);
   await modal.waitFor({ timeout: 15_000 });
-  const cguButton = modal.getByRole('button', { name: "J'ai compris, continuer" });
+  const cguButton = modal.getByRole('button', { name: /J['’]ai compris, continuer/ });
   if (await cguButton.count()) await cguButton.click();
 
   const startedAt = Date.now();

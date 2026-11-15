@@ -194,7 +194,7 @@ pub(super) fn validated_directory_tree_cancellable(
 }
 
 /// Arbre d'un dossier de pack Studio, réduit au pack : `story.json`, la vignette
-/// `thumbnail.png` et tout `assets/`. Les autres entrées de la racine (archive
+/// `thumbnail.png`, la recette optionnelle et tout `assets/`. Les autres entrées de la racine (archive
 /// posée à côté, `.DS_Store`, notes…) ne sont ni parcourues, ni comptées, ni
 /// validées : elles n'entrent ni dans l'archive produite ni dans la clé de cache.
 /// Rien n'est filtré à l'intérieur d'`assets/`.
@@ -215,7 +215,12 @@ enum TreeScope {
 /// ASCII : un système de fichiers insensible à la casse peut rendre
 /// `Story.json` là où la détection a vu `story.json`, et le filtre ne doit
 /// jamais retirer ce que l'archive contenait jusqu'ici sous ces noms.
-const STUDIO_PACK_ROOT_ENTRIES: [&str; 3] = ["story.json", "thumbnail.png", "assets"];
+const STUDIO_PACK_ROOT_ENTRIES: [&str; 4] = [
+    "story.json",
+    "thumbnail.png",
+    "assets",
+    crate::native_pack::recipe::FILE_NAME,
+];
 
 fn is_studio_pack_root_entry(name: &std::ffi::OsStr) -> bool {
     name.to_str().is_some_and(|name| {
@@ -308,6 +313,21 @@ fn validated_tree_cancellable(
                 continue;
             }
             let path = entry.path();
+            // The optional recipe must never make an otherwise readable pack
+            // fail conversion. Keep it only when it can be read as a regular
+            // confined file; the reader silently ignores invalid JSON as well.
+            if scope == TreeScope::StudioPack
+                && dir == canonical_root
+                && entry.file_name() == crate::native_pack::recipe::FILE_NAME
+                && !fs::symlink_metadata(&path).is_ok_and(|metadata| {
+                    metadata.is_file()
+                        && !is_link_or_reparse(&metadata)
+                        && metadata.len() <= crate::services::pack_reader::MAX_STORY_JSON_BYTES
+                        && fs::File::open(&path).is_ok()
+                })
+            {
+                continue;
+            }
             let metadata = fs::symlink_metadata(&path).map_err(|e| {
                 let _msg_path = (path.display()).to_string();
                 let _msg_error = (e).to_string();

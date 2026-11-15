@@ -32,7 +32,7 @@ import { productionRef, productionTextFields } from '../../i18n/productionPresen
 // `generate-log` ; la file l'écoute déjà pour le travail en cours, et deux
 // abonnements auraient écrit deux fois la même chose. Elle savait aussi se
 // déclarer « bloquée par un autre travail » ; la file, elle, laisse simplement
-// le travail en attente — c'est la contrainte du lot, et elle vaut dans les deux
+// le travail en attente — cette contrainte vaut dans les deux
 // sens.
 
 import {
@@ -57,7 +57,7 @@ export const ADVANCED_WORK = Object.freeze({
 });
 
 // Présentation de la réponse native : les enums restent ceux du classificateur
-// commun ; ses tableaux français sont hors du lot et ne sont jamais modifiés.
+// commun ; ses tableaux français restent inchangés.
 const NATIVE_TITLE_KEYS = Object.freeze({
   'payload-decode': 'production:native.title.decode',
   preparation: 'production:native.title.preparation',

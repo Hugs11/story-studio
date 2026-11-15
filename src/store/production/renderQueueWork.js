@@ -83,9 +83,11 @@ export function newRenderJob({
   ticketDocument = null,
   readinessSummary = null,
   onGenerated = null,
+  mediaOutput = null,
 } = {}) {
   return {
     ...(typeof onGenerated === 'function' ? { onGenerated } : {}),
+    ...(mediaOutput ? { mediaOutput } : {}),
     id,
     createdAt,
     nature,

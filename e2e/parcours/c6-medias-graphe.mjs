@@ -10,7 +10,7 @@
 // réouverture, « Médias introuvables », « Choisir le dossier » vers le
 // dossier où ils sont. Le retour d'une vraie boîte de dialogue redonne le
 // focus à la fenêtre : le parcours rejoue ce `focus` après la réponse.
-import { existsSync, readdirSync, readFileSync, renameSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, relative } from 'node:path';
 import { launchApp } from '../lib/launch.mjs';
 import { createRun } from '../lib/run-context.mjs';
@@ -155,6 +155,16 @@ export async function run(args = []) {
 
     // ================= Phase B — relink d'un projet enregistré =================
     await app.stop();
+    // Un remplacement laisse son ancienne liaison dans le projet. Ce fichier
+    // inutilisé manque aussi : seuls les deux médias employés doivent entrer
+    // dans la boîte et son plan, avec les mêmes oracles de reliaison ci-dessous.
+    const saved = JSON.parse(readFileSync(projectPath, 'utf8'));
+    saved.authoring.mediaBindings.push({
+      assetRef: 'ancien-media-inutilise.mp3',
+      path: join(projectDir, 'ancien-media-inutilise.mp3'),
+      status: 'missing',
+    });
+    writeFileSync(projectPath, JSON.stringify(saved));
     const { bindings } = readBindings(projectPath);
     const bound = bindings.slice(0, 2).map((binding) => bindingFile(projectDir, binding.path));
     const desk = ctx.dir('bureau');

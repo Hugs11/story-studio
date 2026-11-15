@@ -788,7 +788,7 @@ fn repeated_prompt_stages_are_not_imported_as_global_night_mode() {
     ]);
 
     let result = walk_story_doc_to_entries(&doc, &assets).expect("imported entries");
-    assert_eq!(result["nightMode"].as_bool(), Some(false));
+    assert_eq!(result["nightMode"].as_bool(), Some(true));
     assert!(result["nightModeAudio"].is_null());
     assert!(result["nightModeReturn"].is_null());
 

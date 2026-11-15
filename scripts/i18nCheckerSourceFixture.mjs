@@ -1,4 +1,4 @@
-// Sources du lot 4.9 telles que `git show BASE:<chemin>` les rend (base avant extraction).
+// Sources du catalogue historique, avant extraction.
 // Fixture indépendante du nouveau catalogue : sert aux comparaisons FR du rendu d’origine.
 export const BASE = "97803eaf13d7847aa37ffe75a51ebd838df9b5fc";
 export const sources = {

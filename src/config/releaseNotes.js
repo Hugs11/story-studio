@@ -1,15 +1,20 @@
 import i18next from 'i18next';
 
 export const RELEASE_NOTES = Object.freeze({
-  version: '0.9.11',
-  date: '2026-11-08',
-  highlights: [
-    ['common:releaseNotes.current.queue.title', 'common:releaseNotes.current.queue.detail'],
-    ['common:releaseNotes.current.sound.title', 'common:releaseNotes.current.sound.detail'],
-    ['common:releaseNotes.current.updates.title', 'common:releaseNotes.current.updates.detail'],
-    ['common:releaseNotes.current.episodes.title', 'common:releaseNotes.current.episodes.detail'],
-  ],
+  version: '0.9.12',
+  date: '2026-11-15',
+  highlights: [],
   fixes: [
+    ['common:releaseNotes.current.recipe.title', 'common:releaseNotes.current.recipe.detail'],
+    ['common:releaseNotes.current.imports.title', 'common:releaseNotes.current.imports.detail'],
+    ['common:releaseNotes.current.assembly.title', 'common:releaseNotes.current.assembly.detail'],
+    ['common:releaseNotes.current.catalogue.title', 'common:releaseNotes.current.catalogue.detail'],
+    ['common:releaseNotes.current.checker.title', 'common:releaseNotes.current.checker.detail'],
+    ['common:releaseNotes.current.endings.title', 'common:releaseNotes.current.endings.detail'],
+    ['common:releaseNotes.current.lunii.title', 'common:releaseNotes.current.lunii.detail'],
+    ['common:releaseNotes.current.media.title', 'common:releaseNotes.current.media.detail'],
+    ['common:releaseNotes.current.editors.title', 'common:releaseNotes.current.editors.detail'],
+    ['common:releaseNotes.current.recovery.title', 'common:releaseNotes.current.recovery.detail'],
     ['common:releaseNotes.current.fixes.label'],
   ],
   chores: [],

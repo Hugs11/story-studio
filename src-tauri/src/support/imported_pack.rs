@@ -988,7 +988,7 @@ fn cache_key_for_source_cancellable(path: &Path, cancel: &AtomicBool) -> Result<
 }
 
 /// Clé de cache d'un dossier source. Un pack Studio n'est archivé que pour
-/// `story.json`, `thumbnail.png` et `assets/` : sa clé porte sur ce même
+/// `story.json`, `thumbnail.png`, la recette optionnelle et `assets/` : sa clé porte sur ce même
 /// périmètre. Un pack filesystem garde l'empreinte du dossier entier.
 fn directory_cache_key(
     source: &Path,

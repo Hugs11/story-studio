@@ -1,4 +1,4 @@
-// Lot 4.9 — vérificateur et rapports : catalogue, comparaison FR contre la base
+// vérificateur et rapports : catalogue, comparaison FR contre la base
 // (`git show BASE`), langues à chaud, pseudo-locale sur les surfaces rendues.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,7 +9,7 @@ import { createServer } from './viteTestServer.mjs';
 import react from '@vitejs/plugin-react';
 import { ESLint } from 'eslint';
 import { BASE, sources } from './i18nCheckerSourceFixture.mjs';
-import { applyLot413 } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrections } from './i18nFrenchSourceCorrections.mjs';
 import { checkCatalogues, checkSource, sourceHash, CHECKER_NEUTRAL_KEYS } from './check-i18n.mjs';
 import { createTestI18n } from './i18nTestSetup.mjs';
 import fr from '../src/locales/fr/checker.json' with { type: 'json' };
@@ -23,14 +23,70 @@ import metaNative from '../src/locales/_meta/native.json' with { type: 'json' };
 
 const LANGUAGES = ['fr', 'en', 'it'];
 const resources = { fr: { checker: fr, native: frNative }, en: { checker: en, native: enNative }, it: { checker: it, native: itNative } };
-// Corrections FR nominatives du brief (« ... » → « … » dans la progression).
+// Corrections FR typographiques (« ... » → « … » dans la progression).
 const PROGRESS_FIXES = [['Correction...', 'Correction…'],
   // Un dossier de pack vaut une archive : titre de dépôt élargi et second bouton (ajout volontaire).
   ['Déposer un pack .zip ou .7z', 'Déposer un pack .zip, .7z ou un dossier'],
   ['Choisir un pack</button>', 'Choisir un pack</button><button type="button" class="funnel-btn">Choisir un dossier</button>']];
-const fixed = (html) => applyLot413(PROGRESS_FIXES.reduce((text, [before, after]) => text.replaceAll(before, after), html));
-// Lot 4.13 : mêmes corrections sur une valeur structurée (objets de présentation).
+const fixed = (html) => applyFrenchSourceCorrections(PROGRESS_FIXES.reduce((text, [before, after]) => text.replaceAll(before, after), html));
+// mêmes corrections sur une valeur structurée (objets de présentation).
 const fixedDeep = (value) => (value === undefined ? value : JSON.parse(fixed(JSON.stringify(value))));
+
+// L76C : nouveaux comptes attendus, indépendants du calcul de production.
+// Ordre : écoute, vérification, assisté, automatique, facultatif.
+const PRESENTATION_COUNTS = {
+  conform: [0, 0, 0, 0, 0], blocking: [1, 1, 0, 1, 0],
+  saturated: [1, 0, 0, 0, 0], saturatedFixable: [1, 0, 0, 2, 0],
+  listenOne: [1, 0, 0, 1, 0], listenTwo: [2, 0, 0, 1, 0],
+  optionalOne: [0, 0, 0, 0, 1], optionalTwo: [0, 0, 0, 0, 2],
+  fixable: [0, 0, 1, 9, 1], 'empty-name': [0, 0, 1, 9, 1],
+};
+function expectedPresentation(base, name) {
+  let text = base;
+  const counts = PRESENTATION_COUNTS[name];
+  if (counts) {
+    const [listen, review, assisted, automatic, optional] = counts;
+    const band = `<strong>${listen}</strong> à écouter · <strong>${review}</strong> à vérifier · <strong>${assisted}</strong> assistée · <strong>${automatic}</strong> ${automatic > 1 ? 'automatiques' : 'automatique'} · <strong>${optional}</strong> ${optional > 1 ? 'facultatives' : 'facultative'}`;
+    text = text.replace(/<strong>\d+<\/strong> à écouter · <strong>\d+<\/strong> automatique[s]? · <strong>\d+<\/strong> facultative[s]?/g, band);
+  }
+  text = text.replace(/Pack corrigeable, avec (?:un fichier|\d+ fichiers) à écouter/g, 'Pack avec des sons à écouter')
+    .replace(/Pack conforme, avec \d+ ajustements? facultatifs?/g, 'Pack conforme')
+    .replaceAll('checker-group--listen checker-group--structure', 'checker-group--review checker-group--structure')
+    .replaceAll('group--listen group--structure', 'group--review group--structure')
+    .replaceAll('class="checker-role">title<', 'class="checker-role">Nom du pack<')
+    .replaceAll('class="checker-role">structure<', 'class="checker-role">Structure<')
+    .replace(/>title<\/strong>/g, '>Nom du pack</strong>')
+    .replace(/>structure<\/strong>/g, '>Structure</strong>');
+  text = text.replace(/(class="role">)Fichier(<\/span>\s*<span class="mini-name"[^>]*>_AUTHOR_CHECKER_STRUCTURE_LINK_)/g, '$1Structure$2')
+    .replace(/(class="role">)Fichier(<\/span>\s*<span class="mini-name"[^>]*>_AUTHOR_CHECKER_TITLE_CONVENTION_)/g, '$1Nom du pack$2');
+  text = text.replace(/((?:checker-)?group--(?:title|structure)[\s\S]*?<small>)fichier(s?)(<\/small>)/g, '$1point$2$3');
+  text = text.replace(/(checker-group--review checker-group--structure[\s\S]*?)<div class="checker-group-help">[\s\S]*?<\/div>/g, '$1');
+  text = text.replace(/(class="(?:checker-)?tech-title">)(?:Ce qu’on va faire|Ce qu'on va faire|Ce qui est proposé)(<\/div>\s*<div class="(?:checker-)?tech-action">\s*<svg[^>]*><circle)/g, '$1Constat$2');
+  // L76C-3 : les suggestions sont compt?es comme telles, et les valeurs des
+  // tuiles passent sur deux lignes (CSS HTML attendu ?crit ind?pendamment).
+  text = text.replace(/(checker-group--optional checker-group--optionalSilence[\s\S]*?<small>)fichier(s?)(<\/small>)/g, '$1suggestion$2$3');
+  text = text.replace('      align-items: baseline;\n      justify-content: space-between;\n      gap: 8px;\n      margin-top: 8px;',
+    '      align-items: flex-start;\n      flex-direction: column;\n      gap: 6px;\n      margin-top: 8px;');
+  text = text.replace('      overflow: hidden;\n      font-size: 10px;\n      text-overflow: ellipsis;\n      white-space: nowrap;',
+    '      font-size: 10px;\n      white-space: normal;');
+  text = text.replace('    .empty,', '    .graph-information { display: flex; align-items: center; gap: 8px; margin: 14px 18px 0; color: var(--muted); font-size: 12px; }\n    .empty,');
+  return text;
+}
+function assertPresentation(actual, expected, label) {
+  const index = [...actual].findIndex((char, i) => char !== expected[i]);
+  assert.equal(actual, expected, `${label} (premier écart : ${JSON.stringify(actual.slice(index - 50, index + 120))} / ${JSON.stringify(expected.slice(index - 50, index + 120))})`);
+}
+
+// L76D/D10 : sans âge source, plus de 3+ inventé. Seuls ces écarts sont voulus.
+function metadataWithoutDefaultAge(baseHtml) {
+  return baseHtml
+    .replaceAll('3+]_AUTHOR_TITLE__V3', '_AUTHOR_TITLE__V3')
+    .replace('<em class="is-age">3+]</em>', '')
+    .replace('<button type="button" class="is-active">3+</button>', '<button type="button" class="">3+</button>')
+    // D10 : expliquer explicitement pourquoi la correction attend un âge.
+    .replace('placeholder="Autre" value=""/></div>', 'placeholder="Autre" value=""/></div><span class="checker-meta-age-hint">Choisis l’âge minimum pour créer le ZIP corrigé.</span>')
+    .replace('class="chrome-toolbar-cta checker-correction-cta">', 'class="chrome-toolbar-cta checker-correction-cta" disabled="">');
+}
 
 // Surface pseudo-locale : tout texte et attribut accessible doit venir du catalogue.
 function surface(html) {
@@ -163,7 +219,7 @@ test('Vérificateur : catalogue, métadonnées, règle d’or par mutation, plur
       assert.equal(i18n.t(`checker:${key}`, { count, automatic: '_automatic_', optional: '_optional_', shortcut: '_shortcut_' }), expected, `${lng}:${key}:${count}`);
     }
   }
-  // Repli « Enregistrer sous… » (lot 4.13 : libellé affiché, points de suspension typographiques).
+  // Repli « Enregistrer sous… » (libellé affiché, points de suspension typographiques).
   await i18n.changeLanguage('fr');
   assert.equal(i18n.t('common:project.saveAs.fallbackLabel'), 'Enregistrer sous…');
   assert.throws(() => surface('<span title="Journal technique">Journal technique</span>'), /hors catalogue/);
@@ -208,8 +264,15 @@ test('Vérificateur : rendus FR identiques à BASE, puis EN/IT distincts et pseu
     const frHtml = html(build(now, nowConform, nowModal));
     const baseHtml = html(build(old, oldConform, oldModal));
     // FICHED deliberately replaces the description guidance; BASE stays independent.
-    const expected = fixed(baseHtml).replaceAll('Description ou notes de version…', 'Texte libre : présentation, contenu, notes de version…');
-    assert.equal(frHtml, expected, `FR ${name}`);
+    const correctedBase = fixed(baseHtml).replaceAll('Description ou notes de version…', 'Texte libre : présentation, contenu, notes de version…');
+    let expected = name.startsWith('Metadata:') ? metadataWithoutDefaultAge(correctedBase) : correctedBase;
+    // L76A-3 : compte inconnu volontairement affiché « — », uniquement pour ce scénario.
+    if (name === 'Conforming:2') {
+      const storyCount = 'Histoires</span><strong>0</strong>';
+      assert.equal(expected.split(storyCount).length - 1, 1);
+      expected = expected.replace(storyCount, 'Histoires</span><strong>—</strong>');
+    }
+    assertPresentation(frHtml, expectedPresentation(expected, name.split(':')[1]), `FR ${name}`);
     const seen = [frHtml];
     for (const lng of ['en', 'it', 'pseudo']) {
       await engine.changeLanguage(lng);
@@ -236,7 +299,7 @@ test('Vérificateur : exports HTML/Markdown/journal/JSON identiques à BASE en F
   for (const [name, value] of [...Object.entries(REPORTS), ['empty-name', { ...REPORTS.fixable, packName: '' }]]) {
     await engine.changeLanguage('fr');
     for (const format of ['formatHtmlReport', 'formatReadableReport', 'formatTechnicalLog', 'formatDiagnosticJson']) {
-      assert.equal(dateless(now[format](value)), fixed(dateless(old[format](value))), `${format}:${name}`);
+      assertPresentation(dateless(now[format](value)), format === 'formatHtmlReport' ? expectedPresentation(fixed(dateless(old[format](value))), name) : fixed(dateless(old[format](value))), `${format}:${name}`);
     }
     assert.equal(now.reportBaseName(value), old.reportBaseName(value));
     const seen = [];
@@ -374,7 +437,7 @@ test('Pastille « à corriger », validation et identité : FR identique, issues
   for (const error of errors) {
     const invoke = async () => { throw error; };
     const identityNow = await nowIdentity.packIdentityRefusal('x', invoke), identityOld = await oldIdentity.packIdentityRefusal('x', invoke);
-    // Lot 4.13 : seules les phrases du catalogue UI sont corrigées ; les messages Rust gardent leur typographie.
+    // seules les phrases du catalogue UI sont corrigées ; les messages Rust gardent leur typographie.
     assert.equal(identityNow, identityNow === identityOld ? identityOld : fixed(identityOld));
   }
   const refusal = await nowIdentity.checkPackIdentity('x', async () => { throw errors[0]; });
@@ -400,7 +463,8 @@ test('Parcours du vérificateur : étape 1 identique à BASE, natifs et libellé
     { phase: 'analyzing' }, { phase: 'fixing' }, ...[{ audioFixed: 1, imageFixed: 2, metadataFixed: true }, { imageFixed: 1 }, {}].map((result) => ({ phase: 'done', result: { fixedZipPath: '/_AUTHOR_OUT_.zip', ...result } }))];
   for (const fixture of fixtures) {
     globalThis.__checkerFixture = fixture;
-    assert.equal(html(funnel(now)), fixed(html(funnel(old))), JSON.stringify(fixture));
+    const reportName = Object.entries(REPORTS).find(([, value]) => value === fixture.report)?.[0];
+    assert.equal(html(funnel(now)), expectedPresentation(fixed(html(funnel(old))), reportName), JSON.stringify(fixture));
   }
   const dialog = () => html(React.createElement('div', null, checkerText('checker:metadata.uuidPrompt.title'), presentStoredError(checkerRef('checker:metadata.uuidPrompt.message')), checkerText('checker:metadata.uuidPrompt.confirm'), checkerText('checker:metadata.uuidPrompt.keep')));
   assert.equal(dialog(), `<div>Générer un nouvel UUID ?La correction crée une nouvelle archive. Un nouvel UUID permet de l’identifier comme un pack distinct.Générer un nouvel UUIDConserver l’UUID actuel</div>`);

@@ -656,18 +656,21 @@ fn third_party_hidden_list_uses_same_order_show_and_remove_as_inventory() {
     }
 }
 #[test]
-fn corrupt_device_state_is_preserved_and_committed_playlist_returns_warning() {
+fn corrupt_device_state_is_set_aside_and_removal_completes() {
     let f = Fixture::new();
     f.device().rename("test".into()).unwrap();
     let state_path = f.root.join(".storystudio/device.json");
+    let unreadable = f.root.join(".storystudio/device.json.unreadable");
     fs::write(&state_path, b"broken").unwrap();
-    assert_eq!(f.device().rename("new".into()), Err(Error::InvalidCard));
-    assert_eq!(
-        f.device().apply(Action::Remove(B)),
-        Ok(Outcome::StateWarning)
-    );
+    assert_eq!(f.device().rename("new".into()), Ok(()));
+    assert_eq!(fs::read(&unreadable).unwrap(), b"broken");
+    fs::write(&state_path, b"broken again").unwrap();
+    assert_eq!(f.device().apply(Action::Remove(B)), Ok(Outcome::Complete));
     assert_eq!(read::playlist(&f.root).unwrap(), vec![A]);
-    assert_eq!(fs::read(state_path).unwrap(), b"broken");
+    assert!(!f.root.join(".content").join(folder(B)).exists());
+    assert_eq!(fs::read(unreadable).unwrap(), b"broken again");
+    let record: serde_json::Value = serde_json::from_slice(&fs::read(state_path).unwrap()).unwrap();
+    assert_eq!(record["version"], 1);
 }
 #[test]
 fn residual_install_temporary_is_removed_before_retry() {

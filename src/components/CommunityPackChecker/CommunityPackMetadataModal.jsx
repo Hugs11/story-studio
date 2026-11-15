@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Button } from '../common/Button';
 import { CircleCheck, FilePen, Package, TriangleAlert, X } from '../icons/LucideLocal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { generateConventionName, parseConventionName } from '../../utils/packConvention';
+import { generateConventionName, parseConventionName, splitLeadingAge } from '../../utils/packConvention';
 import { generateUuid } from '../../utils/uuid';
 import { Tooltip } from '../common/Tooltip';
 import { checkPackIdentity, presentIdentityRefusal } from '../../store/packIdentityCheck';
@@ -19,16 +19,23 @@ function normalizeVersion(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
+function withoutArchiveExtension(value) {
+  return String(value || '').trim().replace(/\.(zip|7z)$/i, '');
+}
+
 function normalizeDraft(draft) {
-  const parsedTitle = parseConventionName(draft.title || '');
+  const title = withoutArchiveExtension(draft.title);
+  const parsedTitle = parseConventionName(title);
+  const leading = splitLeadingAge(title);
   return {
-    title: parsedTitle?.title || String(draft.title || '').trim(),
+    title: parsedTitle?.title || leading?.title || title,
     author: parsedTitle?.author || String(draft.author || '').trim(),
     producer: parsedTitle?.producer || String(draft.producer || '').trim(),
     bonus: parsedTitle?.bonus || String(draft.bonus || '').trim(),
     description: String(draft.description || '').trim(),
     uuid: String(draft.uuid || '').trim(),
-    minAge: parsedTitle?.minAge || String(draft.minAge || '3').replace(/\D/g, '') || '3',
+    minAge: parsedTitle?.minAge || leading?.minAge || String(draft.minAge || '').replace(/\D/g, ''),
+    maxAge: parsedTitle?.maxAge || draft.maxAge || '',
     version: Math.max(normalizeVersion(parsedTitle?.version), normalizeVersion(draft.version)),
     namingMode: 'convention',
   };
@@ -42,31 +49,52 @@ function defaultDraft(report) {
     normalizeVersion(parsed.version),
     normalizeVersion(report?.packVersion),
   );
+  const title = withoutArchiveExtension(parsed.title || report?.packTitle || report?.packName);
+  const leading = splitLeadingAge(title);
   return {
-    title: parsed.title || report?.packTitle || report?.packName || '',
+    title: leading?.title || title,
     author: parsed.author || '',
     producer: parsed.producer || '',
     bonus: parsed.bonus || '',
     description: report?.packDescription || parsed.description || '',
     // Un pack sans identité lisible en reçoit une neuve, sans avertissement.
     uuid: report?.packUuid || generateUuid(),
-    minAge: parsed.minAge || '3',
+    minAge: parsed.minAge || leading?.minAge || '',
+    maxAge: parsed.maxAge || '',
     version: currentVersion + 1,
     namingMode: 'convention',
   };
+}
+
+function exportNameForDraft(normalized, report) {
+  // Conserver un nom conforme seulement s'il est stable par filename_token (Rust).
+  // Le séparateur du producteur et la casse de [By_ appartiennent au nom source.
+  const source = [report?.packName, report?.packTitle].find((name) => parseConventionName(name));
+  const parsed = parseConventionName(source);
+  const stem = withoutArchiveExtension(source);
+  // eslint-disable-next-line i18next/no-literal-string -- Noms des champs du modèle, jamais affichés.
+  const fields = ['title', 'minAge', 'maxAge', 'author', 'producer', 'bonus'];
+  if (parsed?.title && !/[\s\p{Cc}<>:"/\\|?*]|^_|_$/u.test(stem)
+    && fields.every((field) => String(parsed[field] || '') === String(normalized[field] || ''))) {
+    const version = stem.match(/[_-][Vv]\d+$/);
+    const suffix = normalized.version > 1 ? `${version?.[0].slice(0, 2) || '_V'}${normalized.version}` : '';
+    return (version ? stem.slice(0, -version[0].length) : stem) + suffix;
+  }
+  // Le générateur encode les espaces ; filename_token réécrit aussi ces caractères.
+  return generateConventionName(normalized).replace(/[\p{Cc}<>:"/\\|?*]/gu, '_');
 }
 
 // Le jeton vide n'a pas de texte : son libellé est résolu au rendu.
 function filenameTokens(exportName) {
   if (!exportName) return [{ kind: 'empty', text: '' }];
   const tokens = [];
-  const ageMatch = exportName.match(/^(\d+\+\])/);
+  const ageMatch = exportName.match(/^((?:\d+(?:-\d+)?|-\d+)\+\])/);
   let rest = exportName;
   if (ageMatch) {
     tokens.push({ kind: 'age', text: ageMatch[1] });
     rest = rest.slice(ageMatch[1].length);
   }
-  const authorIndex = rest.indexOf('[by_');
+  const authorIndex = rest.search(/\[by_/i);
   const body = authorIndex === -1 ? rest : rest.slice(0, authorIndex);
   const author = authorIndex === -1 ? '' : rest.slice(authorIndex);
   if (body) tokens.push({ kind: 'title', text: body });
@@ -95,12 +123,12 @@ export function CommunityPackMetadataModal({
   currentReportRef.current = report;
   const { showConfirmDialog } = useErrorDialog();
   const normalized = useMemo(() => normalizeDraft(draft), [draft]);
-  const exportName = useMemo(() => generateConventionName(normalized), [normalized]);
+  const exportName = useMemo(() => exportNameForDraft(normalized, report), [normalized, report]);
   const tokens = useMemo(() => filenameTokens(exportName), [exportName]);
   const issues = useMemo(() => titleIssues(report), [report]);
-  const currentAge = String(draft.minAge || '3').replace(/\D/g, '') || '3';
+  const currentAge = normalized.minAge;
   const customAge = AGE_CHIPS.includes(currentAge) ? '' : currentAge;
-  const canSubmit = normalized.title.length > 0 && !busy && !uuidPromptOpen;
+  const canSubmit = normalized.title.length > 0 && normalized.minAge.length > 0 && !busy && !uuidPromptOpen;
   useEscapeKey(!busy && !uuidPromptOpen, onCancel);
 
   useEffect(() => {
@@ -146,6 +174,17 @@ export function CommunityPackMetadataModal({
 
   function updateField(field, value) {
     if (field === 'uuid' && report?.identityLocked) return;
+    if (field === 'title') {
+      // Garder les espaces pendant la frappe (« Le » puis « Le prince »).
+      const title = String(value || '').replace(/\.(zip|7z)\s*$/i, '');
+      const leading = splitLeadingAge(title);
+      setDraft((current) => ({
+        ...current,
+        title: leading?.title || title,
+        ...(leading ? { minAge: leading.minAge } : {}),
+      }));
+      return;
+    }
     setDraft((current) => ({
       ...current,
       [field]: field === 'version' ? normalizeVersion(value) : value,
@@ -168,7 +207,7 @@ export function CommunityPackMetadataModal({
     const refusal = await checkPackIdentity(normalized.uuid, invoke, report?.packUuid, report?.officialProvenance);
     setIdentityRefusal(refusal);
     if (refusal) return;
-    onSubmit?.(normalized);
+    onSubmit?.({ ...normalized, exportName });
   }
 
   return (
@@ -250,6 +289,7 @@ export function CommunityPackMetadataModal({
                   placeholder={t('checker:metadata.age.other')}
                 />
               </div>
+              {!currentAge ? <span className="checker-meta-age-hint">{t('checker:metadata.age.requiredForCorrection')}</span> : null}
             </label>
 
             <div className="checker-meta-grid">

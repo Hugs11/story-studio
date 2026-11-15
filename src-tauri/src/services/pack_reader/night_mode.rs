@@ -30,6 +30,7 @@ struct NightBridgeInstance {
     home_stage_id: Option<String>,
     next_story_stage_id: Option<String>,
     expected_next_or_fallback_stage_id: String,
+    fallback_stage_id: String,
     autoplay: bool,
     named_night_bridge: bool,
 }
@@ -77,7 +78,7 @@ fn infer_night_return(
     root_stage_id: &str,
     menu_ids: &HashSet<String>,
     story_stage_map: &HashMap<String, String>,
-) -> Option<(String, Vec<NightFallbackOverride>)> {
+) -> Option<(Option<String>, Vec<NightFallbackOverride>)> {
     if instances
         .iter()
         .any(|instance| instance.return_stage_id.is_none())
@@ -116,7 +117,23 @@ fn infer_night_return(
                 target,
             });
         }
-        return Some(("next_story".to_string(), fallback_overrides));
+        return Some((Some("next_story".to_string()), fallback_overrides));
+    }
+
+    // Sans cible commune ni enchaînement, chaque histoire peut revenir à son
+    // propre titre ou à son dossier parent : c'est le retour par défaut.
+    // Conserver la reconnaissance existante d'une cible commune, qui peut
+    // aussi représenter un retour global explicite.
+    let has_common_return = instances
+        .windows(2)
+        .all(|pair| pair[0].return_stage_id == pair[1].return_stage_id);
+    if !has_common_return
+        && instances.iter().all(|instance| {
+            instance.return_stage_id.as_deref() == Some(instance.story_id.as_str())
+                || instance.return_stage_id.as_deref() == Some(instance.fallback_stage_id.as_str())
+        })
+    {
+        return Some((None, Vec::new()));
     }
 
     infer_night_target(
@@ -126,7 +143,7 @@ fn infer_night_return(
         menu_ids,
         story_stage_map,
     )
-    .map(|target| (target, Vec::new()))
+    .map(|target| (Some(target), Vec::new()))
 }
 
 pub(super) fn apply_night_fallback_overrides(
@@ -217,6 +234,7 @@ pub(super) fn detect_imported_night_mode(
             home_stage_id: transition_target_stage_id(night_stage.get("homeTransition"), actions)
                 .map(str::to_string),
             next_story_stage_id: context.next_story_id.clone(),
+            fallback_stage_id: context.fallback_stage_id.clone(),
             expected_next_or_fallback_stage_id: context
                 .next_story_id
                 .unwrap_or(context.fallback_stage_id),
@@ -235,7 +253,10 @@ pub(super) fn detect_imported_night_mode(
         .collect();
     let (return_target, fallback_overrides) =
         infer_night_return(&instances, root_stage_id, &menu_ids, &story_stage_map)?;
-    if distinct_night_stages.len() > 1 && return_target != "next_story" {
+    if distinct_night_stages.len() > 1
+        && return_target.is_some()
+        && return_target.as_deref() != Some("next_story")
+    {
         return None;
     }
     let home_target = infer_night_target(
@@ -253,10 +274,53 @@ pub(super) fn detect_imported_night_mode(
 
     Some(NightBridgeDetection {
         audio: audio?,
-        return_target: Some(return_target),
+        return_target,
         home_target,
         autoplay,
         stage_ids: distinct_night_stages,
         fallback_overrides,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn instance(story: &str, parent: &str, target: &str) -> NightBridgeInstance {
+        NightBridgeInstance {
+            story_id: story.into(),
+            night_stage_id: format!("end-{story}"),
+            return_stage_id: Some(target.into()),
+            home_stage_id: None,
+            next_story_stage_id: None,
+            expected_next_or_fallback_stage_id: parent.into(),
+            fallback_stage_id: parent.into(),
+            autoplay: false,
+            named_night_bridge: true,
+        }
+    }
+
+    #[test]
+    fn lb_distinct_parent_returns_are_the_default_global_end_return() {
+        let instances = [
+            instance("a", "folder-a", "folder-a"),
+            instance("b", "folder-b", "folder-b"),
+        ];
+        let (target, overrides) =
+            infer_night_return(&instances, "root", &HashSet::new(), &HashMap::new()).unwrap();
+        assert!(target.is_none());
+        assert!(overrides.is_empty());
+    }
+
+    #[test]
+    fn lb_common_explicit_return_takes_precedence_over_default_inference() {
+        let mut first = instance("a", "root", "root");
+        first.next_story_stage_id = Some("b".into());
+        first.expected_next_or_fallback_stage_id = "b".into();
+        let instances = [first, instance("b", "root", "root")];
+        let (target, overrides) =
+            infer_night_return(&instances, "root", &HashSet::new(), &HashMap::new()).unwrap();
+        assert_eq!(target.as_deref(), Some("root"));
+        assert!(overrides.is_empty());
+    }
 }

@@ -6,6 +6,13 @@ export const MAX_SUBSCRIPTION_PAGES = 25;
 export const SUBSCRIPTIONS_SAVED_EVENT = 'story-studio:subscriptions-saved';
 
 const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com']);
+// Routes de service : elles ne sont pas des noms de chaîne personnalisés.
+const YOUTUBE_RESERVED_PATHS = new Set([
+  'watch', 'playlist', 'shorts', 'embed', 'results', 'feed', 'live', 'channel', 'c', 'user',
+  'hashtag', 'premium', 'account', 'about', 'gaming', 'music', 'kids', 't', 'redirect',
+  'clip', 'watch_popup', 'e', 'w', 'browse', 'trending', 'explore', 'search', 'movies', 'shared', 'storefront', 'feeds', 'live_chat',
+  'signin', 'logout', 'upload', 'v', 'attribution_link', 'oembed', 's', 'post', 'podcasts',
+]);
 
 /**
  * Nature suivable d'une URL YouTube : `playlist`, `channel` ou `null`. Une
@@ -24,6 +31,8 @@ export function youtubeSubscriptionKind(sourceUrl) {
     if ((path === '/playlist' || path === '/watch') && list) return 'playlist';
     if (/^\/(channel|user|c)\/[^/]+(?:\/[^/]+)?$/i.test(path)) return 'channel';
     if (/^\/@[^/]+(?:\/[^/]+)?$/i.test(path)) return 'channel';
+    const customChannel = /^\/([^/]+)(?:\/[^/]+)?$/.exec(path);
+    if (customChannel && !YOUTUBE_RESERVED_PATHS.has(customChannel[1].toLowerCase())) return 'channel';
     return null;
   } catch {
     return null;

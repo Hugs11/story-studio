@@ -18,8 +18,9 @@ import { presentStoredError } from '../i18n/userMessage.js';
 // Le générateur **tire de nouveaux identifiants à chaque projection**
 // (`Uuid::new_v4`). Reprojeter pendant l'écoute ne déplacerait donc pas l'auteur
 // d'un Écran à l'autre : cela le téléporterait, parce qu'aucun identifiant ne
-// survivrait. Le graphe est donc un instantané, et l'appelant dit à l'auteur
-// quand il n'est plus à jour.
+// survivrait. Le graphe est donc un instantané ; `stale` compare le projet
+// courant à celui du lancement. Le simulateur flottant affiche alors un avis
+// et propose de relancer explicitement l'écoute sur le projet courant.
 //
 // C'est un changement par rapport au lecteur d'arbre, qui suivait le projet en
 // direct. Relancer l'écoute suffit, et c'est la contrepartie d'entendre ce que
@@ -30,7 +31,7 @@ import { useEffect, useRef, useState } from 'react';
 import { projectToRustExport } from '../store/projectModel/schema.js';
 import { projectedFlatGraph } from '../tabs/EmulatorTab/flatGraph.js';
 
-const IDLE = { status: 'idle', graph: null, error: null };
+const IDLE = { status: 'idle', graph: null, error: null, stale: false };
 
 async function invokeProjection(project) {
   const { invoke } = await import('@tauri-apps/api/core');
@@ -55,8 +56,8 @@ export function useProjectedSimulation({ project, projectEpoch = null, launch, p
       setState(IDLE);
       return undefined;
     }
-    launchOwnerRef.current = { launch, projectEpoch };
     const launchedProject = projectRef.current;
+    launchOwnerRef.current = { launch, projectEpoch, project: launchedProject };
     let cancelled = false;
     setState({ status: 'loading', graph: null, error: null });
     Promise.resolve()
@@ -78,7 +79,11 @@ export function useProjectedSimulation({ project, projectEpoch = null, launch, p
   }, [launch, projectEpoch, projectStory]);
 
   // Ne pas exposer l'ancien graphe pendant le rendu qui précède les effets.
-  return !launch || launchOwnerRef.current?.projectEpoch !== projectEpoch ? IDLE : { ...state, error: state.error ? presentStoredError(state.error) : null };
+  return !launch || launchOwnerRef.current?.projectEpoch !== projectEpoch ? IDLE : {
+    ...state,
+    stale: launchOwnerRef.current.launch === launch && launchOwnerRef.current.project !== project,
+    error: state.error ? presentStoredError(state.error) : null,
+  };
 }
 
 /**

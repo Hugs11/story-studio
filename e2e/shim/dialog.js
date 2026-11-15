@@ -12,7 +12,7 @@
 // filtres), ce qui permet d'affirmer quel dossier l'application propose.
 //
 // File vide : en mode `strict` (défaut), l'appel est annulé (`null` / `false`)
-// et marqué `unanswered` dans le journal, pour qu'un agent ne reste jamais
+// et marqué `unanswered` dans le journal, pour que le pilote de test ne reste jamais
 // bloqué derrière une boîte native. En mode `native`
 // (`window.__E2E_DIALOG_MODE__ = 'native'`), la vraie boîte s'ouvre.
 import * as real from 'e2e-real-plugin-dialog';

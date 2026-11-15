@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { readFileSync } from 'node:fs';
 import { graphSurfaceHarness, graphVisibleSurface, GRAPH_FILES } from './i18nGraphSurfaceHarness.mjs';
 import { originalGraphSurfaces, originalGraphLiteralFixtures } from './i18nGraphSourceFixture.mjs';
-import { applyLot413, applyLot413Deep, LOT_413_GRAPH } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrections, applyFrenchSourceCorrectionsDeep, FRENCH_GRAPH_REPLACEMENTS } from './i18nFrenchSourceCorrections.mjs';
 import { collapseSurface } from './selectMigrationGraphLists.mjs';
 import { installMountedDom } from './treeMountedDom.mjs';
 import { pseudoResources } from '../src/i18n/pseudo.js';
@@ -15,19 +15,19 @@ const catalogue = lang => JSON.parse(readFileSync(new URL(`../src/locales/${lang
 
 test('FR : surfaces comparées au rendu indépendant de la base, attentes historiques intactes', async () => {
   const fr = catalogue('fr');
-  assert.equal(originalGraphLiteralFixtures.length, 193);
-  // Lot 4.13 : corrections FR explicites (i18nLot413Corrections.mjs) appliquées à l’attente d’origine.
-  // Lot 4.13 : formes plurielles corrigées (gabarits sans nombre résolu), écrites en clair.
-  const lot413Plurals = {
+  assert.equal(originalGraphLiteralFixtures.length, 151);
+  // corrections FR explicites (i18nFrenchSourceCorrections.mjs) appliquées à l’attente d’origine.
+  // formes plurielles corrigées (gabarits sans nombre résolu), écrites en clair.
+  const frenchPluralCorrections = {
     'overlay.nodes.zoneCount_one': '{{count}} nœud dans cette zone',
     'canvas.anchors.ignoredCount_one': '{{count}} ancrage mémorisé ne désigne plus rien : ignoré, non supprimé.',
     'canvas.anchors.ignoredCount_many': '{{count}} ancrages mémorisés ne désignent plus rien : ignorés, non supprimés.',
     'canvas.anchors.ignoredCount_other': '{{count}} ancrages mémorisés ne désignent plus rien : ignorés, non supprimés.',
   };
-  for (const fixture of originalGraphLiteralFixtures) assert.equal(fr[fixture.key], lot413Plurals[fixture.key] ?? applyLot413(fixture.expectedFrench, LOT_413_GRAPH), `${fixture.source}:${fixture.line} ${fixture.key}`);
+  for (const fixture of originalGraphLiteralFixtures) assert.equal(fr[fixture.key], frenchPluralCorrections[fixture.key] ?? applyFrenchSourceCorrections(fixture.expectedFrench, FRENCH_GRAPH_REPLACEMENTS), `${fixture.source}:${fixture.line} ${fixture.key}`);
   const h = await graphSurfaceHarness();
   try {
-    for (const [name, expected] of Object.entries(originalGraphSurfaces)) assert.deepEqual(graphVisibleSurface(h.render(name)), applyLot413Deep(collapseSurface('surface', name, expected), LOT_413_GRAPH), name);
+    for (const [name, expected] of Object.entries(originalGraphSurfaces)) assert.deepEqual(graphVisibleSurface(h.render(name)), applyFrenchSourceCorrectionsDeep(collapseSurface('surface', name, expected), FRENCH_GRAPH_REPLACEMENTS), name);
   } finally { await h.close(); }
 });
 
@@ -40,9 +40,9 @@ test('catalogues : parité des paramètres, hashes NFC/LF et détection réelle 
   }
   for (const lang of ['en', 'it']) {
     const mutated = structuredClone(resources);
-    assert.equal(typeof mutated.fr.graph['canvas.unableToRead.label'], 'string');
-    mutated[lang].graph['canvas.unableToRead.label'] = mutated.fr.graph['canvas.unableToRead.label'];
-    assert.ok(checkCatalogues(mutated, metadata).errors.some(e => e.includes(`${lang}/graph:canvas.unableToRead.label règle d’or`)));
+    assert.equal(typeof mutated.fr.graph['canvas.readingGraph.label'], 'string');
+    mutated[lang].graph['canvas.readingGraph.label'] = mutated.fr.graph['canvas.readingGraph.label'];
+    assert.ok(checkCatalogues(mutated, metadata).errors.some(e => e.includes(`${lang}/graph:canvas.readingGraph.label règle d’or`)));
   }
 });
 
@@ -80,7 +80,7 @@ test('React monté : FR → EN → IT à chaud, dialogue existant, table et inde
     const { searchGraph } = await h.load('src/store/advancedGraphView/graphSearch.js');
     function Mounted() {
       store = useProjectStore(); React.useEffect(() => { mounts++; }, []);
-      return React.createElement(React.Fragment, null, ...['dialog', 'defaultsDialog', 'construction', 'controls', 'inspectorList'].map(name => {
+      return React.createElement(React.Fragment, null, ...['dialog', 'defaultsDialog', 'construction', 'controls', 'search'].map(name => {
         const [component, props] = h.scenarios[name]; return React.createElement(component, { ...props, key: name });
       }));
     }
@@ -94,7 +94,7 @@ test('React monté : FR → EN → IT à chaud, dialogue existant, table et inde
     const defaultsDialog = host.querySelectorAll('.advanced-dialog')[1];
     const constructionDialog = host.querySelectorAll('.advanced-dialog')[2];
     const switches = defaultsDialog.querySelectorAll('[role="switch"]').map(n => n.getAttribute('aria-checked'));
-    for (const [lang, inspector, apply, unnamed] of [['fr', 'Inspecteur', 'Appliquer', 'Liste sans nom'], ['en', 'Inspector', 'Apply', 'Unnamed list'], ['it', 'Ispettore', 'Applica', 'Lista senza nome']]) {
+    for (const [lang, apply, unnamed] of [['fr', 'Appliquer', 'Liste sans nom'], ['en', 'Apply', 'Unnamed list'], ['it', 'Applica', 'Lista senza nome']]) {
       await act(async () => { await h.engine.changeLanguage(lang); });
       assert.equal(host.querySelector('.advanced-dialog'), dialog);
       assert.equal(host.querySelectorAll('.advanced-dialog')[1], defaultsDialog);
@@ -103,7 +103,6 @@ test('React monté : FR → EN → IT à chaud, dialogue existant, table et inde
       assert.ok(constructionDialog.textContent.includes(lang === 'fr' ? 'Constructions dérivées' : lang === 'en' ? 'Story structures' : 'Strutture narrative'));
       assert.deepEqual(defaultsDialog.querySelectorAll('[role="switch"]').map(n => n.getAttribute('aria-checked')), switches);
       assert.ok(dialog.textContent.includes(apply));
-      assert.ok(host.querySelectorAll('aside').some(n => n.getAttribute('aria-label') === inspector));
       assert.ok(host.textContent.includes(unnamed));
       assert.equal(h.index, originalIndex);
       assert.equal(searchGraph(h.index, { query: unnamed }).total, 1);
@@ -114,17 +113,17 @@ test('React monté : FR → EN → IT à chaud, dialogue existant, table et inde
   } finally { await act(async () => root.unmount()); await h.close(); dom.restore(); }
 });
 
-test('pseudo-locale : vraie surface SSR et attributs accessibles, capture et frontières de présentation', async () => {
+test('pseudo-locale : vraie surface SSR et attributs accessibles, frontières de présentation', async () => {
   const h = await graphSurfaceHarness();
   try {
     const resources = { graph: catalogue('fr'), common: JSON.parse(readFileSync(new URL('../src/locales/fr/common.json', import.meta.url))), tree: JSON.parse(readFileSync(new URL('../src/locales/fr/tree.json', import.meta.url))) };
     for (const [ns, values] of Object.entries(pseudoResources(resources))) h.engine.addResourceBundle('pseudo', ns, values, true, true);
     await h.engine.changeLanguage('pseudo');
-    for (const name of ['inspectorEmpty', 'inspectorStage', 'inspectorList', 'controls', 'search', 'dialog', 'defaults', 'defaultsDialog', 'construction', 'overlay', 'canvas']) {
+    for (const name of ['controls', 'search', 'dialog', 'defaults', 'defaultsDialog', 'construction', 'overlay', 'canvas']) {
       const visible = graphVisibleSurface(h.render(name)); assert.match(visible.text, /\[/, name);
       for (const [, value] of visible.attributes) {
         if (value === 'OK' || value === 'HOME' || /^_AUTHOR_/.test(value)) continue;
-        // Ces deux attributs viennent de NodePicker, explicitement hors lot 4.4a.
+        // Ces deux attributs viennent de NodePicker, explicitement hors des surfaces couvertes ici.
         if (name === 'construction' && ['Filtrer par nom ou identifiant', 'Filtrer les nœuds proposés'].includes(value)) {
           const picker = readFileSync(new URL('../src/components/AdvancedWorkspace/NodePicker.jsx', import.meta.url), 'utf8');
           assert.ok(picker.includes(value)); assert.ok(!GRAPH_FILES.includes('src/components/AdvancedWorkspace/NodePicker.jsx'));
@@ -134,10 +133,6 @@ test('pseudo-locale : vraie surface SSR et attributs accessibles, capture et fro
       }
       for (const literal of ['Inspecteur', 'Vue d’ensemble', 'Caméra mémorisée inutilisable', 'Liste sans nom', 'Rechercher dans la liste des nœuds', 'Lecture du graphe…']) assert.ok(!visible.text.includes(literal), `${name}: ${literal}`);
     }
-    const { paintOverlay } = await h.load('src/components/AdvancedGraphCanvas/graphSurfaceCapture.js');
-    const painted = []; const context = new Proxy({ measureText: text => ({ width: String(text).length * 4 }), fillText: text => painted.push(text) }, { get: (o, k) => o[k] ?? (() => {}) });
-    paintOverlay(context, { detailLevel: 'full', zoom: 1, nodes: [{ path: '_PATH_', kind: 'stage', label: '_AUTHOR_', isEntry: true, x: 0, y: 0, width: 100, height: 100 }] });
-    assert.ok(painted.some(text => String(text).includes('['))); assert.ok(!painted.includes('ENTRÉE'));
     const { presentGraphLandmarks } = await h.load('src/i18n/graphPresentation.js');
     const marks = presentGraphLandmarks([{ kind: 'hub', node: { label: '_AUTHOR_', degree: 2 }, label: '_AUTHOR_ · 2 liens', title: '_AUTHOR_ · 2 liens', x: 1, y: 2 }]);
     assert.match(marks[0].label, /\[/); assert.ok(!marks[0].label.includes('liens')); assert.equal(marks[0].x, 1);
@@ -211,36 +206,6 @@ test('React monté : recherche sans callback, demande de focus puis fermeture pa
   } finally { await act(async () => root.unmount()); await h.close(); dom.restore(); }
 });
 
-test('capture : langue figée avant export et décodage différés, badges, repères et erreur', async () => {
-  const h = await graphSurfaceHarness();
-  const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
-  try {
-    const { captureGraphSurface } = await h.load('src/components/AdvancedGraphCanvas/graphSurfaceCapture.js');
-    const node = { path: '_PATH_', kind: 'stage', label: '_AUTHOR_', isEntry: true, x: 0, y: 0, width: 100, height: 100 };
-    for (const detailLevel of ['full', 'simplified']) {
-      await h.engine.changeLanguage('fr');
-      const painted = [];
-      const context = new Proxy({ measureText: text => ({ width: String(text).length }), fillText: text => painted.push(text) }, { get: (target, key) => target[key] ?? (() => {}) });
-      const view = { document: { createElement: () => ({ getContext: () => context, toDataURL: () => '_PNG_' }) } };
-      const exported = deferred(), decoded = deferred(), decoding = deferred();
-      const pending = captureGraphSurface({ engine: { exportImage: () => exported.promise }, overlay: { detailLevel, nodes: [node] }, size: { width: 200, height: 200 }, view, container: null,
-        decode: () => { decoding.resolve(); return decoded.promise; } });
-      await h.engine.changeLanguage('en'); exported.resolve('_ENGINE_PNG_'); await decoding.promise;
-      await h.engine.changeLanguage('it'); decoded.resolve({});
-      assert.equal(await pending, '_PNG_');
-      assert.ok(painted.includes('ENTRÉE'), detailLevel);
-      assert.ok(!painted.includes('START') && !painted.includes('INIZIO'), detailLevel);
-      assert.equal(node.label, '_AUTHOR_');
-    }
-    await h.engine.changeLanguage('fr');
-    let image; const decoding = deferred();
-    const context = new Proxy({}, { get: () => () => {} });
-    const view = { Image: class { constructor() { image = this; } set src(_value) { decoding.resolve(); } }, document: { createElement: () => ({ getContext: () => context }) } };
-    const pending = captureGraphSurface({ engine: { exportImage: async () => '_ENGINE_PNG_' }, view, container: null });
-    await decoding.promise; await h.engine.changeLanguage('it'); image.onerror();
-    await assert.rejects(pending, { message: 'Rendu du moteur illisible' });
-  } finally { await h.close(); }
-});
 
 
 test('catalogues plats et présentateur : imbrication et clés erronées détectées, zéro réellement utilisé', () => {
@@ -249,7 +214,7 @@ test('catalogues plats et présentateur : imbrication et clés erronées détect
   for (const lang of ['en', 'it']) {
     assert.ok(Object.values(resources[lang].graph).every(value => typeof value === 'string'));
     const mutated = structuredClone(resources);
-    mutated[lang].graph = { canvas: { unableToRead: { label: resources[lang].graph['canvas.unableToRead.label'] } } };
+    mutated[lang].graph = { canvas: { unableToRead: { label: resources[lang].graph['canvas.readingGraph.label'] } } };
     assert.ok(checkCatalogues(mutated, metadata).errors.some(error => error.includes('catalogue imbriqué')));
   }
   const source = readFileSync(new URL('../src/i18n/graphPresentation.js', import.meta.url), 'utf8');

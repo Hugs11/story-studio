@@ -71,8 +71,8 @@ for (const [kind, status, phase] of [
   assert.equal(options.headers, undefined, 'no preflight-triggering headers');
 });
 
-for (const kind of ['busy', 'network']) test(`${kind} makes three total attempts, then stops; query changes on each attempt`, async () => {
-  const app = setup(async () => { if (kind === 'network') throw new Error('offline'); return response(kind); });
+for (const kind of ['busy', 'network', '503', '500']) test(`${kind} makes three total attempts, then stops; query changes on each attempt`, async () => {
+  const app = setup(async () => { if (kind === 'network') throw new Error('offline'); return response(kind === 'busy' ? kind : null, kind === '500' ? 500 : 503); });
   for (let attempt = 0; attempt < 3; attempt++) {
     await app.loader.failed();
     assert.equal(app.calls.at(-1)[0], coverAttemptAddress(app.address, attempt));
@@ -86,6 +86,60 @@ for (const kind of ['busy', 'network']) test(`${kind} makes three total attempts
   assert.equal(app.state().phase, 'unreadable');
   await app.loader.failed(); app.timers.advance(100000);
   assert.equal(app.calls.length, 3); assert.equal(app.timers.tasks.size, 0);
+  app.loader.dispose();
+  assert.equal(initialCoverState(app.address).phase, 'waiting', 'transient exhaustion is not remembered');
+  const remount = setup(undefined, app.address);
+  remount.loader.loaded();
+  assert.equal(remount.state().phase, 'ready');
+  remount.loader.dispose();
+});
+
+test('operation completion retries only settled transient failures with a fresh attempt budget', async () => {
+  const app = setup(async () => response('busy'));
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await app.loader.failed();
+    app.timers.advance(1000 * 2 ** attempt);
+  }
+  assert.equal(app.state().phase, 'unreadable');
+  app.loader.retryTransient();
+  assert.deepEqual(app.state(), { phase: 'waiting', attempt: 0, fade: false });
+  app.loader.loaded();
+  assert.equal(app.state().phase, 'ready');
+  app.loader.retryTransient();
+  assert.equal(app.state().phase, 'ready');
+  app.loader.dispose();
+  for (const [phase, status] of [['unreadable', 422], ['absent', 204], ['tooLarge', 413]]) {
+    const terminal = setup(async () => response(phase, status));
+    await terminal.loader.failed(); terminal.loader.retryTransient();
+    assert.equal(terminal.state().phase, phase);
+    assert.equal(initialCoverState(terminal.address).phase, phase);
+    terminal.loader.dispose();
+  }
+});
+
+test('offline is retried on remount and operation completion', async () => {
+  const app = setup(async () => response('offline'));
+  await app.loader.failed();
+  assert.equal(app.state().phase, 'offline');
+  assert.equal(initialCoverState(app.address).phase, 'waiting');
+  app.loader.retryTransient(); app.loader.loaded();
+  assert.equal(app.state().phase, 'ready');
+  app.loader.dispose();
+});
+
+test('pending official acquisition stays silent indefinitely and is retried on notification', async () => {
+  const app = setup(async () => response('officialPending'));
+  await app.loader.failed();
+  assert.equal(app.state().phase, 'officialPending');
+  app.timers.advance(60000);
+  assert.equal(app.state().phase, 'officialPending');
+  assert.equal(app.timers.tasks.size, 0);
+  assert.equal(initialCoverState(app.address).phase, 'waiting');
+  app.loader.retryTransient();
+  assert.equal(app.state().phase, 'waiting');
+  app.loader.loaded();
+  assert.equal(app.state().phase, 'ready');
+  app.loader.dispose();
 });
 
 test('Retry-After supports seconds and HTTP dates; a duplicate error does not bypass the delay', async () => {

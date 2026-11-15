@@ -8,7 +8,7 @@ import { runner } from './reactHookDriver.mjs';
 import { createLuniiDevices } from '../src/store/catalogue/luniiDevices.js';
 import {
   buildSelection, sendChoiceAvailability, needsSendChoice, resolveSendChoices, sendableExemplars, dropGauge, dropIndex, estimateBytes, mergeSendingRows, presenceOn, refusalPresentation, screenPosition, sendAttention, sendBilanKind,
-  sendButtonState, sendContext, sendOpenKeys, sendPositions, sendProgress, sendReport, sendRefusal, virtualRows,
+  sendableCards, dropRefusal, sendButtonState, sendContext, sendOpenKeys, sendPositions, sendProgress, sendReport, sendRefusal, virtualRows,
 } from '../src/store/catalogue/luniiSend.js';
 import { luniiRows } from '../src/store/catalogue/luniiDevices.js';
 import { choiceItems } from '../src/store/catalogue/exemplarChoice.js';
@@ -671,7 +671,7 @@ test('a busy or refusing Lunii starts nothing; a rejected start releases the dev
 test('cards without a copy are refused locally, with no engine call, and the device is released', async () => {
   const { app, log } = sendHarness();
   const context = await app.render().sendCards('d', ['n'], null);
-  assert.deepEqual(log.send, []); assert.equal(context.local, true); assert.equal(context.refused[0].reason.code, 'NO_EXEMPLAR');
+  assert.deepEqual(log.send, []); assert.equal(context.local, true); assert.equal(context.refused[0].reason.code, 'FILE_UNAVAILABLE');
   assert.deepEqual(log.end, ['d']);
   assert.equal(app.render().sending.size, 0);
 });
@@ -803,7 +803,7 @@ test('D39 the Lunii name shows the fiche fields pencil on hover and focus, which
   } finally { locked.unmount(); }
 });
 
-// Lot « officiels repérés dans le catalogue ».
+// Packs officiels repérés dans le catalogue.
 const { normalizeEntry } = await import('../src/store/catalogue/entryModel.js');
 const { OfficialBadge } = await import('../src/components/Catalogue/views/OfficialBadge.jsx');
 const { LuniiDragGhost } = await import('../src/components/Catalogue/lunii/LuniiDragGhost.jsx');
@@ -892,7 +892,9 @@ test('official: the selection action and the context menu refuse only when nothi
   const mixed = mk([x, o]);
   assert.equal(mixed.action.enabled, true); mixed.runSelection();
   assert.deepEqual(sent[0], ['d', ['x', 'o'], null], 'the selection leaves whole; sendCards sets the official one aside');
-  assert.equal(mixed.menuEntries([], { kind: 'card', step: null }, o)[0].action.enabled, true, 'the menu of a mixed selection sends the others');
+  assert.equal(mixed.menuEntries([], { kind: 'card', step: null }, o)[0].action.enabled, false, 'the card menu acts on this official card alone; selection sends use the panel action');
+  mixed.onSendCard('x', 'd');
+  assert.deepEqual(sent.at(-1), ['d', ['x'], null], 'a card command keeps an explicit single-card target');
 });
 
 // D41: the user picks the copy; a card with several sendable copies asks, the others leave directly.
@@ -1066,6 +1068,63 @@ test('damaged: the selection action and the menu refuse only when nothing may le
   const entry = only.menuEntries([], { kind: 'card', step: null }, hurt('h'))[0];
   assert.equal(entry.action.enabled, false); assert.match(entry.detail, /La girafe/);
   assert.equal(mk([hurt('h'), card('x')]).action.enabled, true);
+});
+
+for (const offlineReason of ['missing', 'unavailable']) test(`${offlineReason}: no send from the panel, card menu, button or drag; the bilan explains unavailable files`, async () => {
+  const offline = card('offline', { available: false, offlineReason, exemplars: [{ id: 'offline-x', available: false }] });
+  assert.deepEqual(sendableCards([offline]), []);
+  assert.deepEqual(dropRefusal([offline]), { kind: 'unavailable' });
+  const state = sendButtonState(offline, [device()], 'd');
+  assert.equal(state.kind, 'blocked');
+  assert.equal(state.reasonKey, 'catalogue:reason.action.fileUnavailable');
+  const buttonTree = render(LuniiSendButton, { state, onSend() { assert.fail('offline button sent'); } });
+  const button = elements(buttonTree).find(e => e.type === Button);
+  const ui = runner(() => useCatalogueSendUi({ lunii: { luniiDevices: [device()], activeLuniiId: 'd', send: { sendCards() { assert.fail('offline panel sent'); } } }, targets: [offline] }));
+  try {
+    const sendUi = ui.render();
+    assert.equal(sendUi.action.enabled, false);
+    sendUi.runSelection();
+    const menu = sendUi.menuEntries([], { kind: 'card' }, offline)[0];
+    assert.equal(menu.action.enabled, false);
+    assert.equal(menu.action.reasonKey, 'catalogue:reason.action.fileUnavailable');
+    assert.equal(menu.detail, sendUi.action.reasonText);
+    assert.equal(tipOf(buttonTree, button), menu.detail);
+    const { app, log, lunii } = sendHarness({ cards: [offline] });
+    try {
+      let hook = app.render(); hook.startDrag([offline.id]); hook = app.render();
+      hook.hover(lunii.luniiDevices[0], null); hook = app.render();
+      assert.equal(hook.over.refused, 'unavailable');
+      const ghost = render(LuniiDragGhost, { send: hook, cardsById: new Map([[offline.id, offline]]), active: { kind: 'card' } });
+      assert.ok(text(ghost).includes(menu.detail));
+      assert.equal(await hook.drop(lunii.luniiDevices[0], null), null);
+      assert.deepEqual(log.send, []); assert.deepEqual(log.begin, []);
+      // A previously offered action can still arrive after a source goes offline.
+      const ctx = await app.render().sendCards('d', [offline.id], null);
+      assert.deepEqual(log.send, []);
+      assert.equal(sendReport(ctx, null).refused[0].presentation.key, state.reasonKey);
+    } finally { app.unmount(); }
+  } finally { ui.unmount(); }
+});
+
+test('mixed missing, unplugged and present cards: only available copies leave and the drag count follows them', async () => {
+  const cards = [card('x'), ...['missing', 'unavailable'].map(offlineReason => card(offlineReason, { available: false, offlineReason, exemplars: [{ id: `${offlineReason}-x`, available: false }] }))];
+  assert.deepEqual(sendableCards(cards).map(card => card.id), ['x']);
+  assert.equal(dropRefusal(cards), null);
+  const { app, log, lunii } = sendHarness({ cards });
+  try {
+    let hook = app.render(); hook.startDrag(cards.map(card => card.id)); hook = app.render();
+    hook.hover(lunii.luniiDevices[0], null); hook = app.render();
+    assert.equal(hook.over.count, 1);
+    const ghost = render(LuniiDragGhost, { send: hook, cardsById: new Map(cards.map(card => [card.id, card])), active: { kind: 'card' } });
+    assert.match(text(ghost), /Une histoire/);
+    const ctx = await hook.drop(lunii.luniiDevices[0], null);
+    assert.deepEqual(log.send[0].selection.map(item => item.exemplarId), ['x-x']);
+    assert.deepEqual(sendReport(ctx, null).refused.map(item => item.presentation.key), ['catalogue:reason.action.fileUnavailable', 'catalogue:reason.action.fileUnavailable']);
+    assert.equal(refusalPresentation({ code: 'NO_EXEMPLAR' }).key, 'catalogue:actions.reason.noExemplar', 'filter refusal keeps its own wording');
+    const filtered = buildSelection([cards[0]], 3, [], new Map([['x', 'filtered-out-copy']]));
+    const filteredContext = sendContext({ operationId: 'filtered', device: device(), startIndex: 0, cards: [cards[0]], ...filtered });
+    assert.equal(filteredContext.refused[0].reason.code, 'NO_EXEMPLAR', 'an available card without a matching choice keeps the filter refusal');
+  } finally { app.unmount(); }
 });
 
 test('explicit notStarted rows retain titles, settle progress and expose the Rust deviceFault', () => {

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { runner } from './reactHookDriver.mjs';
 import { createDiskHarness } from './tauriDiskHarness.mjs';
+import { projectStorageDiskCommands } from './projectStorageDiskCommands.mjs';
 const { useSdStore } = await import('../src/store/sdStore.js');
 const { useSDJobs } = await import('../src/hooks/useSDJobs.js');
 const { createProjectStorage } = await import('../src/store/projectStorage.js');
@@ -30,7 +31,10 @@ for (const firstFails of [true, false]) {
         started.push(filename);
         if (filename === 'fast.png' && firstFails) throw new Error('fast output failed');
         if (filename === 'slow.png') await slow;
-        const path = `${workspaceDir}/images-generees/${projectDestination.folder}/${filename}`;
+        const folder = await projectStorageDiskCommands.resolve_project_folder({
+          root: workspaceDir, ...projectDestination, create: true, category: 'images-generees',
+        });
+        const path = `${workspaceDir}/images-generees/${folder}/${filename}`;
         await fs.writeFile(path, filename);
         if (filename === 'slow.png') slowFinished = true;
         return path;

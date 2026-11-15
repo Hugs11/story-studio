@@ -77,9 +77,9 @@ export function useCatalogueOperations({ api = catalogueApi(), cards = [] } = {}
     void subscription.current.catch(() => {});
     return () => { stopped = true; buffer.dispose(); unlisten?.(); };
   }, [api, dispatch, session]);
-  const start = useCallback(async (expectedSourcesRevision, { sourceIds, paths, automatic = false } = {}) => {
+  const start = useCallback(async (expectedSourcesRevision, { sourceIds, paths, force = false, automatic = false } = {}) => {
     await subscription.current;
-    const receipt = await api.startScan({ sourceIds, paths, requestId: crypto.randomUUID(), expectedSourcesRevision });
+    const receipt = await api.startScan({ sourceIds, paths, ...(force ? { force: true } : {}), requestId: crypto.randomUUID(), expectedSourcesRevision });
     const snapshot = await api.getOperation(receipt.operationId);
     await deliveryRef.current([snapshot], !automatic);
     if (!automatic) dispatch({ type: 'open', id: receipt.operationId });

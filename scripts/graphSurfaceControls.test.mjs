@@ -1,6 +1,6 @@
 // Les corrections de fiabilité de la vue du graphe à plat : couleurs
 // acceptées par le moteur, miniature fidèle et navigable, zoom ancré au
-// centre, capture qui montre le rendu complet.
+// centre.
 //
 // Ces essais sont des rendus statiques et des appels de gestionnaires sous
 // Node : ils établissent la géométrie et les contrats, pas la qualité visuelle
@@ -13,7 +13,6 @@ import React from 'react';
 import { readEngineColors, resetColorCache, toRenderableColor } from '../src/components/AdvancedGraphCanvas/engines/engineColors.js';
 import { buildOverview, overviewCamera } from '../src/store/advancedGraphView/graphOverview.js';
 import { nodeRoles } from '../src/store/advancedGraphView/graphRoles.js';
-import { paintOverlay } from '../src/components/AdvancedGraphCanvas/graphSurfaceCapture.js';
 import { commandKeyLabel } from '../src/utils/platformKeys.js';
 
 const { elementByAttribute, mountSurface } = await import('./chromeBench.mjs');
@@ -208,184 +207,6 @@ test('la borne basse du zoom ne remonte pas une vue déjà cadrée à 1 %', () =
   });
   elementByAttribute(elements, 'aria-label', 'Réduire').props.onClick();
   assert.ok(calls[0].zoom < 0.01, `zoom ${calls[0].zoom} : un plancher à 2 % faisait sauter la vue`);
-});
-
-test('la capture compose le rendu du moteur et la couche de surimpressions', () => {
-  // Le PNG du moteur seul perdait noms, pastilles et zones de groupe : ce
-  // n'était plus la preuve du rendu qu'il annonçait.
-  const painted = [];
-  const context = {
-    save() {}, restore() {}, beginPath() {}, closePath() {}, moveTo() {}, arcTo() {},
-    arc() {}, stroke() {}, fill() {}, fillRect() {}, setLineDash() {}, translate() {}, scale() {},
-    measureText: () => ({ width: 40 }),
-    fillText: (text) => painted.push(text),
-  };
-  paintOverlay(context, {
-    detailLevel: 'full',
-    groups: [{ id: 'forêt', x: 0, y: 0, width: 200, height: 100 }],
-    nodes: [
-      { path: '/a', kind: 'stage', label: 'Accueil', x: 60, y: 60, width: 104, height: 80, isEntry: true },
-      { path: '/b', kind: 'action', label: 'Choix', x: 220, y: 60, width: 52, height: 52, outgoingCount: 3 },
-    ],
-  });
-  assert.ok(painted.includes('FORÊT'), 'la zone de groupe est peinte avec son nom');
-  assert.ok(painted.includes('ENTRÉE'), 'la pastille de rôle est peinte');
-  assert.ok(painted.includes('Accueil'), 'le nom sous la carte est peint');
-  assert.ok(painted.includes('3'), 'le compte de sorties de l’Action est peint au-dessus du losange');
-});
-
-test('la capture masque le badge d’entrée avec les autres libellés', () => {
-  const painted = [];
-  const context = {
-    save() {}, restore() {}, beginPath() {}, closePath() {}, moveTo() {}, arcTo() {},
-    arc() {}, stroke() {}, fill() {}, fillRect() {}, setLineDash() {}, translate() {}, scale() {},
-    measureText: () => ({ width: 40 }),
-    fillText: (text) => painted.push(text),
-  };
-  const node = { path: '/a', kind: 'stage', label: 'Accueil', x: 60, y: 60, width: 104, height: 80, isEntry: true };
-
-  paintOverlay(context, { detailLevel: 'noLabels', groups: [], nodes: [node] });
-  assert.deepEqual(painted, [], 'ni le badge ni le nom ne survivent à noLabels');
-
-  paintOverlay(context, { detailLevel: 'simplified', groups: [], nodes: [node] });
-  assert.deepEqual(painted, ['ENTRÉE'], 'le repère d’entrée reste peint en vue très éloignée');
-});
-
-test('au régime éloigné, la capture peint les repères en pixels écran', () => {
-  const painted = [];
-  const context = {
-    save() {}, restore() {}, beginPath() {}, closePath() {}, moveTo() {}, arcTo() {},
-    arc() {}, stroke() {}, fill() {}, fillRect() {}, setLineDash() {},
-    measureText: () => ({ width: 40 }),
-    fillText: (text) => painted.push(text),
-  };
-  paintOverlay(context, {
-    detailLevel: 'simplified',
-    groups: [{ id: 'forêt', x: 0, y: 0, width: 200, height: 100 }],
-    nodes: [
-      { path: '/a', kind: 'stage', label: 'Accueil', x: 60, y: 60, width: 10, height: 6, isEntry: true },
-      { path: '/h', kind: 'stage', label: 'Carrefour', x: 300, y: 60, width: 10, height: 6, isHub: true, degree: 31 },
-      { path: '/x', kind: 'stage', label: 'Quelconque', x: 120, y: 60, width: 10, height: 6 },
-    ],
-  });
-  assert.deepEqual(painted, ['ENTRÉE', 'Carrefour · 31 liens']);
-});
-
-test('la capture peint la couche de surimpressions avec la palette du thème', () => {
-  // Le PNG du moteur prend le fond du thème courant. La couche peinte, elle,
-  // gardait des couleurs sombres écrites en dur : une capture en thème clair
-  // composait un rendu clair avec des pastilles et des noms peints pour le
-  // sombre — moitié d'un thème, moitié de l'autre.
-  const strokes = [];
-  const fills = [];
-  const context = {
-    save() {}, restore() {}, beginPath() {}, closePath() {}, moveTo() {}, arcTo() {},
-    arc() {}, stroke() { strokes.push(context.strokeStyle); }, fill() { fills.push(context.fillStyle); },
-    fillRect() {}, setLineDash() {},
-    measureText: (text) => ({ width: String(text).length * 4 }),
-    fillText() {},
-    strokeStyle: null, fillStyle: null, globalAlpha: 1,
-  };
-  const clair = {
-    surface: '#ebeef3', secondary: '#4a4a5e', accent: '#a8603a', accentText: '#8a4a28',
-    accentBorder: '#c79a78', focus: '#b8703f', warning: '#8a6f10', warningBorder: '#c0a95a',
-  };
-  paintOverlay(context, {
-    detailLevel: 'full',
-    groups: [],
-    nodes: [
-      { path: '/a', kind: 'stage', label: 'Accueil', x: 300, y: 300, width: 104, height: 80, isEntry: true, selected: true },
-    ],
-  }, clair);
-  assert.ok(fills.includes(clair.surface), 'le fond de la pastille vient du thème');
-  assert.ok(strokes.includes(clair.accentBorder), 'le contour de la pastille vient du thème');
-  assert.ok(strokes.includes(clair.accent), 'le cadre de sélection vient du thème');
-  assert.ok(
-    !fills.includes('rgba(10, 10, 14, .82)'),
-    'plus aucune couleur sombre écrite en dur',
-  );
-});
-
-test('au régime éloigné, les diagnostics ne laissent que les repères de navigation', () => {
-  const painted = [];
-  const context = {
-    save() {}, restore() {}, beginPath() {}, closePath() {}, moveTo() {}, arcTo() {},
-    arc() {}, stroke() {}, fill() {}, fillRect() {}, setLineDash() {},
-    measureText: (text) => ({ width: String(text).length * 8 }),
-    fillText: (text) => painted.push(text),
-  };
-  paintOverlay(context, {
-    detailLevel: 'simplified',
-    groups: [],
-    nodes: [
-      { path: '/a', kind: 'stage', label: 'Accueil', x: 60, y: 60, width: 10, height: 6, isEntry: true },
-      // Une zone qui rassemble dix-sept nœuds à corriger.
-      { path: '/w', kind: 'stage', label: 'Écran 3867', x: 200, y: 60, width: 10, height: 6, diagnosed: true, clusterCount: 17 },
-      // Un avertissement isolé : anneau seul, sans nom.
-      { path: '/s', kind: 'stage', label: 'Écran 4001', x: 260, y: 60, width: 10, height: 6, diagnosed: true },
-      { path: '/h', kind: 'stage', label: 'Carrefour', x: 320, y: 60, width: 10, height: 6, isHub: true, degree: 31 },
-    ],
-  });
-  assert.deepEqual(painted, ['ENTRÉE', 'Carrefour · 31 liens']);
-});
-
-test('la capture écrête ses textes comme la feuille de style', () => {
-  // La couche HTML borne le nom d'une carte à 112 px avec `text-overflow`.
-  // `fillText` ne borne rien : un libellé de repli qui vaut un UUID de 36
-  // caractères était peint sur trois fois la largeur de sa carte, et la capture
-  // montrait un enchevêtrement que l'écran n'a jamais affiché. Une preuve de
-  // recette qui charge le rendu est aussi fausse qu'une preuve qui le flatte.
-  const painted = [];
-  // Une police de mesure simple et explicite : 8 px par caractère. Le nom tient
-  // donc 14 caractères dans ses 112 px.
-  const context = {
-    save() {}, restore() {}, beginPath() {}, closePath() {}, moveTo() {}, arcTo() {},
-    arc() {}, stroke() {}, fill() {}, fillRect() {}, setLineDash() {},
-    measureText: (text) => ({ width: String(text).length * 8 }),
-    fillText: (text) => painted.push(text),
-  };
-  const uuid = '0f0e2441-1d3e-4a8b-9c77-000000000ec0';
-  paintOverlay(context, {
-    detailLevel: 'full',
-    groups: [],
-    nodes: [
-      {
-        path: '/a', kind: 'stage', label: uuid, x: 300, y: 300,
-        width: 104, height: 80, hasDangling: true,
-      },
-    ],
-  });
-  const label = painted.find((text) => text.startsWith('0f0e2441'));
-  assert.ok(label, 'le nom de la carte est peint');
-  assert.ok(label.length < uuid.length, `le nom est écrêté : ${label}`);
-  assert.ok(label.endsWith('…'), `le nom écrêté porte des points de suspension : ${label}`);
-  assert.ok(context.measureText(label).width <= 112, 'le nom tient dans les 112 px de la feuille de style');
-
-  assert.equal(painted.find((text) => text.startsWith('DESTINATI')), undefined,
-    'la capture ne répète plus les blocages de la pastille commune');
-});
-
-test('au régime éloigné, le nom d’un repère est écrêté à sa borne', () => {
-  const painted = [];
-  const context = {
-    save() {}, restore() {}, beginPath() {}, closePath() {}, moveTo() {}, arcTo() {},
-    arc() {}, stroke() {}, fill() {}, fillRect() {}, setLineDash() {},
-    measureText: (text) => ({ width: String(text).length * 8 }),
-    fillText: (text) => painted.push(text),
-  };
-  paintOverlay(context, {
-    detailLevel: 'simplified',
-    groups: [],
-    nodes: [
-      {
-        path: '/h', kind: 'stage', label: 'Un carrefour au nom interminable qui dépasse la borne',
-        x: 90, y: 60, width: 10, height: 6, isHub: true, degree: 31,
-      },
-    ],
-  });
-  assert.equal(painted.length, 1);
-  assert.ok(painted[0].endsWith('…'), `le repère est écrêté : ${painted[0]}`);
-  assert.ok(context.measureText(painted[0]).width <= 220, 'le repère tient dans ses 220 px');
 });
 
 test('un pack sans entrée exploitable ne transforme pas la miniature en aplat', () => {

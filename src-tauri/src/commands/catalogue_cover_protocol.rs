@@ -81,7 +81,7 @@ pub fn status(served: &Served) -> StatusCode {
         Served::Stale => StatusCode::GONE,
         Served::TooLarge => StatusCode::PAYLOAD_TOO_LARGE,
         Served::Unreadable => StatusCode::UNPROCESSABLE_ENTITY,
-        Served::Busy | Served::Offline => StatusCode::SERVICE_UNAVAILABLE,
+        Served::Busy | Served::Offline | Served::OfficialPending => StatusCode::SERVICE_UNAVAILABLE,
     }
 }
 
@@ -91,7 +91,10 @@ fn empty(status: StatusCode, state: &str) -> Response<Vec<u8>> {
         // A failure may change at any time: never cached.
         .header(header::CACHE_CONTROL, "no-store")
         .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        .header(header::ACCESS_CONTROL_EXPOSE_HEADERS, STATE_HEADER)
+        .header(
+            header::ACCESS_CONTROL_EXPOSE_HEADERS,
+            format!("{STATE_HEADER}, Retry-After"),
+        )
         .header(STATE_HEADER, state);
     if status == StatusCode::SERVICE_UNAVAILABLE && state == "busy" {
         response = response.header(header::RETRY_AFTER, "1");
@@ -139,6 +142,7 @@ mod tests {
             (Served::TooLarge, 413, "tooLarge"),
             (Served::Unreadable, 422, "unreadable"),
             (Served::Busy, 503, "busy"),
+            (Served::OfficialPending, 503, "officialPending"),
             (Served::Offline, 503, "offline"),
         ];
         for (served, code, state) in cases {
@@ -149,6 +153,13 @@ mod tests {
             assert_eq!(response.headers()[STATE_HEADER], state);
             assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
             assert!(response.body().is_empty());
+            if state == "busy" {
+                assert_eq!(response.headers()[header::RETRY_AFTER], "1");
+                assert!(response.headers()[header::ACCESS_CONTROL_EXPOSE_HEADERS]
+                    .to_str()
+                    .unwrap()
+                    .contains("Retry-After"));
+            }
         }
     }
 

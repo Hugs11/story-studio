@@ -74,6 +74,13 @@ pub(crate) fn edge_envelope_args(input: &Path) -> Vec<String> {
 }
 
 pub(crate) fn measure_edge_silence(ffmpeg: &Path, input: &Path) -> Result<EdgeMeasure, String> {
+    Ok(edges_from_envelope(&measure_edge_envelope(ffmpeg, input)?))
+}
+
+pub(crate) fn measure_edge_envelope(
+    ffmpeg: &Path,
+    input: &Path,
+) -> Result<Vec<(f64, f64)>, String> {
     let mut cmd = Command::new(ffmpeg);
     cmd.args(edge_envelope_args(input))
         .stdout(Stdio::null())
@@ -104,9 +111,17 @@ pub(crate) fn measure_edge_silence(ffmpeg: &Path, input: &Path) -> Result<EdgeMe
                 .into_transport()
         });
     }
-    Ok(edges_from_envelope(&parse_rms_envelope(
-        &String::from_utf8_lossy(&out.stderr),
-    )))
+    Ok(parse_rms_envelope(&String::from_utf8_lossy(&out.stderr)))
+}
+
+/// A static gain shifts every RMS window, including fades. Reuse the same
+/// relative threshold and absolute clamps as the output measurement.
+pub(crate) fn edges_after_gain(env: &[(f64, f64)], gain_db: f64) -> EdgeMeasure {
+    let amplified: Vec<_> = env
+        .iter()
+        .map(|(time, rms)| (*time, rms + gain_db))
+        .collect();
+    edges_from_envelope(&amplified)
 }
 
 pub(crate) fn build_edge_silence_filters(
@@ -450,6 +465,25 @@ mod tests {
         let (leading, trailing) = measured(edges_from_envelope(&env));
         assert!((leading - 26.0 * WIN).abs() < WIN, "début {}", leading);
         assert!((trailing - 30.0 * WIN).abs() < WIN, "fin {}", trailing);
+    }
+
+    #[test]
+    fn gain_prediction_reuses_absolute_ceiling_and_relative_threshold() {
+        let env = build_env(&[
+            (-80.0, 6),
+            (-43.0, 20),
+            (-27.0, 200),
+            (-43.0, 20),
+            (-80.0, 6),
+        ]);
+        let before = measured(edges_from_envelope(&env));
+        let boosted = measured(edges_after_gain(&env, 12.0));
+        assert!(before.0 > 0.35 && before.1 > 0.35);
+        assert!(boosted.0 < 0.35 && boosted.1 < 0.35);
+
+        let quiet = build_env(&[(-100.0, 22), (-30.0, 200), (-100.0, 22)]);
+        assert_eq!(edges_after_gain(&quiet, 16.0), edges_from_envelope(&quiet));
+        assert_eq!(edges_after_gain(&quiet, -8.0), edges_from_envelope(&quiet));
     }
 
     #[test]

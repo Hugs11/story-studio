@@ -493,6 +493,7 @@ function AppContent() {
     pathAudit,
     pathAuditPending,
     workspaceDirRef: exportWorkspaceDirRef,
+    mediaStorageRef,
     importedPackPendingMetaRef,
     showErrorDialog,
     showChoiceDialog,
@@ -570,7 +571,9 @@ function AppContent() {
     autoSaveEnabled,
     autoSaveBackupLimit,
     savedSnapshotRef,
+    autoSavePathRef,
     autoSaveSnapshotRef,
+    setAutoSavedPath,
     captureWorkSession,
     isWorkSessionCurrent,
     isSavingRef,
@@ -610,6 +613,7 @@ function AppContent() {
     [],
   );
   const { applyLoadedProject, handleLoad, handleLoadRecent, openProjectFromPath } = useProjectLoading({
+    confirmBackgroundWork: confirmBackgroundWorkBeforeClose,
     store,
     sdStore,
     xttsStore,
@@ -668,6 +672,7 @@ function AppContent() {
   } = useMissingMediaRelink({
     store,
     advancedAuthoring,
+    advancedMediaUsages,
     mediaLibraryPathsRef,
     setMediaLibraryPaths,
     pathAudit,
@@ -729,6 +734,7 @@ function AppContent() {
   // partagée avec useWindowCloseGuard) et lui est passée en entrée.
   const {
     handleNewProject,
+    confirmProjectReplacement,
     handleReturnToCatalogue,
     handleSelectProjectType,
     handleEditExistingPack,
@@ -1028,7 +1034,7 @@ function AppContent() {
     onGenerate: handleProduce, editorReady: projectOpen, onRecoverSession: handleRecoverSession,
     active: modals.isOpen('catalogue'),
     openProjectFromPath, onLand: handleLandEditablePack, onLandAdvanced: landAdvancedPack,
-    onBeforeReplace: () => askSaveBeforeLeaveCurrent(handleSave),
+    onBeforeReplace: confirmProjectReplacement,
     onCloseCatalogue: () => modals.close('catalogue'), onNotice: setImportNotice,
     onError: error => showErrorDialog({ message: error }),
   });
@@ -1326,6 +1332,7 @@ function AppContent() {
   });
 
   const projectContextValue = useProjectContextValue({
+    advancedMediaUsages,
     mediaStorage,
     savePath: store.savePath,
     projectName: effectiveProjectFilePrefix,
@@ -1377,7 +1384,7 @@ function AppContent() {
     onLandAggregate: handleLandAggregate,
     onLandEditablePack: handleLandEditablePack,
     onLandAdvancedPack: landAdvancedPack,
-    onBeforeReplacePack: () => askSaveBeforeLeaveCurrent(handleSave),
+    onBeforeReplacePack: confirmProjectReplacement,
     onSimulatePackReady: handleSimulatePackReady,
     onPodcastFunnelImport: handlePodcastFunnelImport,
     onPodcastEditorImport: handlePodcastEditorImport,
@@ -1440,8 +1447,6 @@ function AppContent() {
       suspensionNotice,
       onNewProject: commands.newProject,
       onReturnToCatalogue: commands.returnToCatalogue,
-      onOpenProject: commands.openProject,
-      onOpenPack: commands.openPack,
       onSaveProject: commands.save,
       onSaveProjectAs: commands.saveAs,
       onContinueInGraph: commands.continueInGraph,

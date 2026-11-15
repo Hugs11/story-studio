@@ -117,7 +117,7 @@
 }
 .catalogue-notice { margin-top: var(--space-3); padding: var(--space-2) var(--space-3); border-inline-start: 3px solid var(--accent-2); color: var(--text-secondary); font-size: 12px; }
 
-/* Pastille d'activité (lot A). */
+/* Pastille d'activité. */
 .catalogue-activity-anchor { display: inline-flex; }
 .catalogue-activity { width: min(400px, calc(100vw - 24px)); }
 /* Chaque notification est une carte : on voit où l'une finit et où la suivante commence. */

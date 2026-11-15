@@ -48,6 +48,8 @@ pub struct Activity {
     pub analyses: AtomicU64,
     /// Explicit full scans started.
     pub full_scans: AtomicU64,
+    /// Exclusion sets constructed (including their workspace database read).
+    pub exclusions: AtomicU64,
     /// Complete listings of a source (reconciliations).
     pub inventories: AtomicU64,
     /// Targeted refreshes run for touched paths.
@@ -80,6 +82,7 @@ pub struct Activity {
 pub struct ActivitySnapshot {
     pub analyses: u64,
     pub full_scans: u64,
+    pub exclusions: u64,
     pub inventories: u64,
     pub targeted: u64,
     pub reconciliations: u64,
@@ -93,6 +96,7 @@ impl Activity {
         ActivitySnapshot {
             analyses: get(&self.analyses),
             full_scans: get(&self.full_scans),
+            exclusions: get(&self.exclusions),
             inventories: get(&self.inventories),
             targeted: get(&self.targeted),
             reconciliations: get(&self.reconciliations),

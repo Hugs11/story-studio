@@ -161,7 +161,7 @@ fn the_node_paths_of_a_document_are_the_only_admissible_anchors() {
 ///
 /// La surface de gestes refuse aujourd'hui d'agir sur un identifiant ambigu
 /// (`AMBIGUOUS_NODE`), donc l'ensemble des décalages est vide en pratique. La
-/// règle est éprouvée ici **à l'unité**, pour qu'un lot qui relâcherait cette
+/// règle est éprouvée ici **à l'unité**, pour qu'une modification qui relâcherait cette
 /// garde ne réintroduise pas le détachement muet : sans retargeting, l'ancrage
 /// de `#1` se rabattrait silencieusement sur un autre nœud, ce qu'aucune
 /// détection d'orphelin ne verrait — le chemin resterait valide.

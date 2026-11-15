@@ -1368,6 +1368,7 @@ mod tests {
 
     fn options() -> GlobalOptions {
         GlobalOptions {
+            end_node: false,
             harmonize_loudness: true,
             add_silence: false,
             silence_mode: None,
@@ -1382,6 +1383,9 @@ mod tests {
 
     fn base_project(project_type: &str) -> Project {
         Project {
+            root_name: String::new(),
+            end_node_name: String::new(),
+            tree_color: None,
             name: "Validation test".to_string(),
             project_type: Some(project_type.to_string()),
             root_audio: None,

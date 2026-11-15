@@ -151,11 +151,11 @@ const EDGE_WIDTH = 1.7;
 
 // Demi-largeur de la gaine. Cytoscape peint la sous-couche d'une arête en trait
 // **plein** de `largeur + 2 × underlay-padding`, juste avant le trait lui-même
-// et avant ses flèches : une seule passe suffit donc là où le handoff en
+// et avant ses flèches : une seule passe suffit donc là où la maquette en
 // décrivait deux, et le motif de tiret du trait laisse voir la gaine au lieu du
 // décor.
 //
-// Le « largeur + 3 » du handoff réservait à chaque trait un couloir de 4,7
+// Le « largeur + 3 » de la maquette réservait à chaque trait un couloir de 4,7
 // unités, soit 2,8 fois sa propre largeur. Dans un faisceau — celui de
 // l'entrée en compte plusieurs centaines — les traits voisins sont plus serrés
 // que ce couloir : les gaines se recouvrent, et comme chacune est peinte juste
@@ -171,12 +171,12 @@ const EDGE_SHEATH_PADDING = 0.7;
 // Cytoscape dessine une flèche dans un carré normalisé de 0,3 d'arête, mis à
 // l'échelle par `max(pow(largeur × 13,37 ; 0,9) ; 29) × arrow-scale`. À la
 // largeur de 1,7 le premier terme reste sous le plancher de 29 : une forme
-// mesure donc `0,3 × 29 × arrow-scale` unités. Les tailles du handoff sont
+// mesure donc `0,3 × 29 × arrow-scale` unités. Les tailles de la maquette sont
 // données en pixels à 100 % de zoom, où une unité de graphe vaut un pixel.
 const ARROW_UNIT = 0.3 * 29;
 const arrowScale = (units) => Math.round((units / ARROW_UNIT) * 100) / 100;
 
-// Les terminaisons sont ramenées **aux deux tiers** des tailles du handoff.
+// Les terminaisons sont ramenées **aux deux tiers** des tailles de la maquette.
 //
 // Elles y étaient calibrées seules, sans rapport au trait qu'elles terminent :
 // 10,5 unités de triangle pour 1,7 de trait, c'est 6,2 fois la largeur du
@@ -209,7 +209,7 @@ const inRevealBand = (zoom) => zoom >= PORT_REVEAL_ZOOM && zoom < PORT_HANDLE_ZO
 
 // Les tons de groupe restent hors des deux familles de nœuds : un bandeau teal
 // sur un Écran le ferait lire comme une Action, un bandeau violet se fondrait
-// dans sa carte. Même liste dans `graphSurfaceCapture.js` et dans la feuille
+// dans sa carte. Même liste dans la feuille
 // `AdvancedGraphCanvas.css`.
 const GROUP_TONES = Object.freeze(['#6b8f5e', '#8f7d68', '#87904e', '#a86a86', '#5f87a8', '#7a8494']);
 // Le logo de la Liste tombe avec les prises peintes : il mesure encore 4,3 px
@@ -537,7 +537,7 @@ function stylesheet(color, ink = edgeInk(1), far = nodesFar(1)) {
       selector: 'node',
       style: {
         // Les textes et les marqueurs sont posés par la couche HTML du stage :
-        // Cytoscape ne sait pas rendre fidèlement les cartes du handoff.
+        // Cytoscape ne sait pas rendre fidèlement les cartes de la maquette.
         label: '',
         width: 104,
         height: 80,
@@ -675,7 +675,7 @@ function stylesheet(color, ink = edgeInk(1), far = nodesFar(1)) {
       // HOME : trait **tireté** et barre perpendiculaire. La différence OK/HOME
       // ne repose donc pas sur la couleur, comme le protocole l'exige. Le motif
       // s'exprime en unités de graphe : il se met à l'échelle tout seul, et le
-      // pas du handoff tient au dézoom là où l'ancien `[7, 5]` se refermait en
+      // pas de la maquette tient au dézoom là où l'ancien `[7, 5]` se refermait en
       // trait plein dès le premier palier.
       selector: `edge[kind = "${EDGE_KINDS.STAGE_HOME}"]`,
       style: {
@@ -1375,11 +1375,8 @@ export function createCytoscapeEngine({
       // `full: false` : la vue telle qu'elle est cadrée, pas le graphe entier.
       // C'est ce que l'auteur voit qui doit être montré.
       //
-      // Ce PNG est le rendu **du moteur seul**. Les noms, pastilles, zones de
-      // groupe et repères de la maquette vivent dans la couche HTML, et une
-      // capture de recette doit les porter aussi : c'est `captureGraphSurface`
-      // qui compose les deux, à partir de ce PNG et du même relevé de
-      // surimpressions que l'écran affiche.
+      // Ce PNG contient seulement le rendu du moteur. Les textes et les
+      // repères HTML sont rendus séparément par GraphNodeOverlays.
       //
       // Le fond est **celui du thème courant**, relu sur le conteneur. Il était
       // écrit en dur à la valeur sombre : une capture prise en thème clair

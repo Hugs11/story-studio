@@ -25,7 +25,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
 
-use super::super::audio::mp3_encode_args;
+use super::super::audio::{copy_mp3_without_id3, mp3_encode_args};
 use super::super::image::ensure_image_320x240;
 use super::super::parallel::try_map_parallel;
 use super::digest::sha256_file;
@@ -179,7 +179,11 @@ impl<'a> TaskExecutor<'a> {
         let _ = fs::remove_file(pending);
 
         match task.plan() {
-            ConversionPlan::AudioVerbatim | ConversionPlan::ImageVerbatim { .. } => {
+            ConversionPlan::AudioVerbatim => {
+                copy_mp3_without_id3(input, pending)
+                    .map_err(|error| write_error(pending, &error))?;
+            }
+            ConversionPlan::ImageVerbatim { .. } => {
                 fs::copy(input, pending).map_err(|error| write_error(pending, &error))?;
             }
             ConversionPlan::AudioEncode { filters, .. } => {

@@ -66,15 +66,7 @@ pub(crate) fn mp3_header_is_native_compatible(bytes: &[u8]) -> bool {
 }
 
 pub(crate) fn find_mpeg_sync(bytes: &[u8]) -> Option<usize> {
-    let start = if bytes.starts_with(b"ID3") && bytes.len() >= 10 {
-        let size = ((bytes[6] as usize) << 21)
-            | ((bytes[7] as usize) << 14)
-            | ((bytes[8] as usize) << 7)
-            | (bytes[9] as usize);
-        10 + size
-    } else {
-        0
-    };
+    let start = id3v2_end(bytes)?;
 
     let search = bytes.get(start..)?;
     for i in 0..search.len().saturating_sub(1) {
@@ -83,6 +75,60 @@ pub(crate) fn find_mpeg_sync(bytes: &[u8]) -> Option<usize> {
         }
     }
     None
+}
+
+/// Taille syncsafe du tag de tête, pied ID3v2.4 compris.
+fn id3v2_end(bytes: &[u8]) -> Option<usize> {
+    if !bytes.starts_with(b"ID3") {
+        return Some(0);
+    }
+    let header = bytes.get(..10)?;
+    if header[6..10].iter().any(|byte| byte & 0x80 != 0) {
+        return None;
+    }
+    let size = header[6..10]
+        .iter()
+        .fold(0_usize, |size, byte| (size << 7) | usize::from(*byte));
+    let footer = if header[3] == 4 && header[5] & 0x10 != 0 {
+        10
+    } else {
+        0
+    };
+    Some(10 + size + footer)
+}
+
+/// Conserve uniquement les octets audio, sans rechercher une trame plus loin :
+/// un préfixe inattendu impose l'encodage plutôt qu'une copie approximative.
+pub(crate) fn mp3_without_id3(bytes: &[u8]) -> Option<&[u8]> {
+    let start = id3v2_end(bytes)?;
+    let end =
+        if bytes.len() >= 128 && bytes.get(bytes.len() - 128..bytes.len() - 125) == Some(b"TAG") {
+            bytes.len() - 128
+        } else {
+            bytes.len()
+        };
+    let audio = bytes.get(start..end)?;
+    let header = audio.get(..4)?;
+    // Sync, version/couche, débit et fréquence non réservés (débit libre admis).
+    if header[0] != 0xff
+        || header[1] & 0xe0 != 0xe0
+        || (header[1] >> 3) & 3 == 1
+        || (header[1] >> 1) & 3 == 0
+        || header[2] >> 4 == 15
+        || (header[2] >> 2) & 3 == 3
+    {
+        return None;
+    }
+    Some(audio)
+}
+
+/// Les deux éditeurs passent ici pour conserver les trames sans les tags.
+pub(crate) fn copy_mp3_without_id3(source: &Path, output: &Path) -> std::io::Result<()> {
+    let bytes = fs::read(source)?;
+    let audio = mp3_without_id3(&bytes).ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid MPEG prefix")
+    })?;
+    fs::write(output, audio)
 }
 
 /// Prépare un asset audio : mesure (niveau + silences), décide entre **copie
@@ -134,8 +180,15 @@ pub(crate) fn prepare_audio_asset(
         leading_silence_sec,
         trailing_silence_sec,
     )? {
+        let output = processed_audio_dir.join(processed_audio_output_name(role));
+        copy_mp3_without_id3(&source, &output).map_err(|error| {
+            UserMessage::new(codes::GENERATION_AUDIO_VERBATIM_READ_FAILED)
+                .param("reason", error.to_string())
+                .with_detail(error.to_string())
+                .into_transport()
+        })?;
         return Ok(AudioPreparationResult {
-            preparation: AudioPreparation::Verbatim { source },
+            preparation: AudioPreparation::Verbatim { source: output },
             warnings: silent_warning.into_iter().collect(),
         });
     }
@@ -191,7 +244,7 @@ fn audio_can_copy_verbatim(
             .with_detail((e).to_string())
             .into_transport()
     })?;
-    Ok(mp3_header_is_native_compatible(&bytes))
+    Ok(mp3_without_id3(&bytes).is_some_and(mp3_header_is_native_compatible))
 }
 
 /// Lit au plus `max` octets du début d'un fichier : la détection d'en-tête MP3

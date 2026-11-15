@@ -1919,35 +1919,6 @@
       "status": "ai-reviewed"
     }
   },
-  "aggregate.count.stories_one": {
-    "context": "Agrégation > résultat ; nombre d’histoires contenues dans le ZIP généré. ; accord selon count, y compris zéro et un million.",
-    "en": {
-      "sourceHash": "cf65226aa8cd",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "cf65226aa8cd",
-      "status": "ai-reviewed"
-    }
-  },
-  "aggregate.count.stories_many": {
-    "context": "Agrégation > résultat ; nombre d’histoires contenues dans le ZIP généré. ; accord selon count, y compris zéro et un million.",
-    "it": {
-      "sourceHash": "74bf29178fba",
-      "status": "ai-reviewed"
-    }
-  },
-  "aggregate.count.stories_other": {
-    "context": "Agrégation > résultat ; nombre d’histoires contenues dans le ZIP généré. ; accord selon count, y compris zéro et un million.",
-    "en": {
-      "sourceHash": "74bf29178fba",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "74bf29178fba",
-      "status": "ai-reviewed"
-    }
-  },
   "aggregate.count.scenes_one": {
     "context": "Agrégation > ligne d’archive et total de sélection ; nombre de scènes détectées. ; accord selon count, y compris zéro et un million.",
     "en": {
@@ -2285,65 +2256,6 @@
       "status": "ai-reviewed"
     }
   },
-  "aggregate.destination.title": {
-    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
-    "en": {
-      "sourceHash": "324205939b0a",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "324205939b0a",
-      "status": "ai-reviewed"
-    },
-    "maxLength": 100
-  },
-  "aggregate.destination.editor": {
-    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
-    "en": {
-      "sourceHash": "86e88378596b",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "86e88378596b",
-      "status": "ai-reviewed"
-    },
-    "maxLength": 100
-  },
-  "aggregate.destination.generate": {
-    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
-    "en": {
-      "sourceHash": "d433962c99e5",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "d433962c99e5",
-      "status": "ai-reviewed"
-    },
-    "maxLength": 100
-  },
-  "aggregate.destination.review": {
-    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
-    "en": {
-      "sourceHash": "b419a56825aa",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "b419a56825aa",
-      "status": "ai-reviewed"
-    },
-    "maxLength": 100
-  },
-  "aggregate.destination.hint": {
-    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
-    "en": {
-      "sourceHash": "5a07331a621c",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "5a07331a621c",
-      "status": "ai-reviewed"
-    }
-  },
   "aggregate.destination.opening": {
     "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
     "en": {
@@ -2352,51 +2264,6 @@
     },
     "it": {
       "sourceHash": "8c4b6e6ee643",
-      "status": "ai-reviewed"
-    }
-  },
-  "aggregate.review.title": {
-    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
-    "en": {
-      "sourceHash": "3983887c50a9",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "3983887c50a9",
-      "status": "ai-reviewed"
-    },
-    "maxLength": 100
-  },
-  "aggregate.review.folder": {
-    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
-    "en": {
-      "sourceHash": "80da466f41de",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "80da466f41de",
-      "status": "ai-reviewed"
-    }
-  },
-  "aggregate.review.file": {
-    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
-    "en": {
-      "sourceHash": "7084e42a84c4",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "7084e42a84c4",
-      "status": "ai-reviewed"
-    }
-  },
-  "aggregate.review.replace": {
-    "context": "Assistant d’assemblage : choix final, confirmation de destination ou état de préparation. Accessible au clavier ; conserver les paramètres de chemin.",
-    "en": {
-      "sourceHash": "bde3790b4353",
-      "status": "ai-reviewed"
-    },
-    "it": {
-      "sourceHash": "bde3790b4353",
       "status": "ai-reviewed"
     }
   },
@@ -2464,6 +2331,83 @@
     },
     "it": {
       "sourceHash": "e93dffab7393",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.packs.reorder": {
+    "context": "AggregatePacks : choix de destination et ordre des packs dans l’assistant.",
+    "en": {
+      "status": "ai-reviewed",
+      "sourceHash": "df693ddc423d"
+    },
+    "it": {
+      "status": "ai-reviewed",
+      "sourceHash": "df693ddc423d"
+    }
+  },
+  "aggregate.packs.dragInstructions": {
+    "context": "AggregatePacks : consigne clavier et annonces de réordonnancement des packs, pour les lecteurs d’écran.",
+    "en": {
+      "status": "ai-reviewed",
+      "sourceHash": "f8cf0dde4530"
+    },
+    "it": {
+      "status": "ai-reviewed",
+      "sourceHash": "f8cf0dde4530"
+    }
+  },
+  "aggregate.packs.pickedUp": {
+    "context": "AggregatePacks : consigne clavier et annonces de réordonnancement des packs, pour les lecteurs d’écran.",
+    "en": {
+      "status": "ai-reviewed",
+      "sourceHash": "2cb90c550497"
+    },
+    "it": {
+      "status": "ai-reviewed",
+      "sourceHash": "2cb90c550497"
+    }
+  },
+  "aggregate.packs.dropped": {
+    "context": "AggregatePacks : consigne clavier et annonces de réordonnancement des packs, pour les lecteurs d’écran.",
+    "en": {
+      "status": "ai-reviewed",
+      "sourceHash": "b4dc3c3e0984"
+    },
+    "it": {
+      "status": "ai-reviewed",
+      "sourceHash": "b4dc3c3e0984"
+    }
+  },
+  "aggregate.packs.cancelled": {
+    "context": "AggregatePacks : consigne clavier et annonces de réordonnancement des packs, pour les lecteurs d’écran.",
+    "en": {
+      "status": "ai-reviewed",
+      "sourceHash": "7a4d82e25a1a"
+    },
+    "it": {
+      "status": "ai-reviewed",
+      "sourceHash": "7a4d82e25a1a"
+    }
+  },
+  "aggregate.editor.continue": {
+    "context": "Assistant d’assemblage : action secondaire du pied Packs, Audio et Image vers l’éditeur par menus.",
+    "en": {
+      "sourceHash": "fce05b2535b8",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "fce05b2535b8",
+      "status": "ai-reviewed"
+    }
+  },
+  "aggregate.audio.editorHint": {
+    "context": "Assistant d’assemblage : aide sous l’en-tête Audio, les choix sont conservés à l’atterrissage.",
+    "en": {
+      "sourceHash": "2a53791f1359",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2a53791f1359",
       "status": "ai-reviewed"
     }
   }

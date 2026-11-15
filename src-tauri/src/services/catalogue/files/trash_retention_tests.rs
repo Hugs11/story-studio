@@ -354,7 +354,7 @@ fn absent_pack(found_later: bool) {
             fs::create_dir(&other).unwrap();
             let moved = other.join(if directory { "Moved" } else { "Moved.zip" });
             fs::rename(saved, &moved).unwrap();
-            f.store.add_source(&other, 1, false).unwrap();
+            f.store.add_source(&other, 1).unwrap();
             full_scan(&f);
             assert_personal_data(&f);
             let card = f
@@ -824,7 +824,7 @@ fn trash_retention_source_removal_keeps_the_other_sources_trashed_copy() {
         fs::create_dir(&other).unwrap();
         let copy = other.join("Copy.zip");
         fs::copy(&f.source, &copy).unwrap();
-        let added = f.store.add_source(&other, 1, false).unwrap();
+        let added = f.store.add_source(&other, 1).unwrap();
         let exclusions = f
             .store
             .exclusions(&f.root.join("cache"), &f.root.join("data"))

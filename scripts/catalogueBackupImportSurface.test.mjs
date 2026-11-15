@@ -100,7 +100,7 @@ test('an individual-choice conflict explains its own reason in three languages',
  }
 });
 
-// FINy (REVb3 P3): official and reference values can become conflicts; the
+// official and reference values can become conflicts; the
 // legend names their field instead of falling back to the details link text.
 test('reference and pending Lunii value conflicts name their field in three languages', async () => {
  const { ImportConflictRow } = await import('../src/components/Catalogue/backup/ImportConflictRow.jsx');

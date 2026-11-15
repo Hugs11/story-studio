@@ -334,7 +334,7 @@ export function createLuniiDevices(api, settings = { read, write }, timers = glo
         const repair = result?.outcomes?.find(o => o.status === 'repaired' || o.status === 'repairedNotDurable');
         if (repair) publish({ notice: { key: 'catalogue:lunii.repairResult', params: { kept: repair.kept, removed: repair.removed.length + (repair.truncated ? 1 : 0), orphans: result.device.orphans.length } } });
         const warning = result?.outcomes?.some(o => !['complete', 'repaired'].includes(o.status));
-        if (warning) throw { code: method.startsWith('hide') ? 'STORYTELLER_STORY_PARKING_FAILED' : 'STORYTELLER_WRITE_FAILED', params: {} };
+        if (warning) throw { code: method.startsWith('hide') ? 'STORYTELLER_STORY_PARKING_FAILED' : 'STORYTELLER_DEVICE_WRITE_FAILED', params: {} };
       } catch (error) { failure = error; }
       // Even a rejected command can have committed part of its write.
       let released = false;

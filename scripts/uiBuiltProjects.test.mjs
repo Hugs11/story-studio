@@ -37,6 +37,7 @@ const { createStorySelectionAudioUpdate } = await import('../src/store/storyTitl
 const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'ui-built-projects');
 const MEDIA = '/ui-media';
 const noop = () => {};
+const { releaseProjectMediaJob } = await import('../src/store/projectMediaOutput.js');
 
 function deterministicIds() {
   const original = crypto.randomUUID;
@@ -56,6 +57,7 @@ async function mountEditor(t) {
     await disk.dispose();
   });
   const jobs = [];
+  t.after(() => jobs.forEach(releaseProjectMediaJob));
   const dialogs = [];
   let store; let mutations; let session; let generation;
   const app = runner(() => {
@@ -79,6 +81,7 @@ async function mountEditor(t) {
     generation = usePackGeneration({
       store,
       renderQueue: { addJob: (job) => jobs.push(job) },
+      mediaStorageRef: { current: { root: MEDIA, storage: store.project.storage, ephemeral: true } },
       pathAudit: {},
       pathAuditPending: false,
       workspaceDirRef: { current: '' },

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fixture from './fixtures/home-fr-base-sources.json' with { type: 'json' };
-import { applyLot413 } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrections } from './i18nFrenchSourceCorrections.mjs';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from './viteTestServer.mjs';
@@ -18,7 +18,7 @@ async function surfaceServer(original = false) {
   return createServer({ configFile: false, plugins: [{ name: 'home-surface-fixtures', enforce: 'pre', transform(code, id) {
     if (id.endsWith('/Dialog.jsx')) code = code.replace("import { createPortal } from 'react-dom';", 'const createPortal = (children) => children;').replace('function Dialog(', 'export function Dialog(').replace('document.body,', 'null,');
     if (id.endsWith('/AppModalPortal.jsx')) return 'export function AppModalPortal({children}) { return children; }';
-    // Ces surfaces appartiennent aux prochains lots ; leurs props visibles sont conservées.
+    // Ces surfaces sont couvertes par leurs propres tests ; leurs props visibles sont conservées.
     if (id.endsWith('/ImageField.jsx')) return 'export function ImageField({badge,formatHint}) { return <div><span>{badge}</span><span>{formatHint}</span></div>; }';
     if (id.endsWith('/PackAudioProcessingFields.jsx')) return 'export function PackAudioProcessingFields() { return null; }';
     if (original && /\/(ModeSelector|AggregatePacksFunnel|PackNameModal)\.jsx$/.test(id)) code = sourceAtBase(id.slice(id.indexOf('/src/') + 1));
@@ -64,9 +64,21 @@ test('Accueil et funnels : FR comparé aux sources indépendantes de la base, re
     const renders = scenarios(s); const originals = scenarios(original);
     for (let i = 0; i < renders.length; i++) {
       // Les attendus proviennent du code de BASE, jamais du nouveau catalogue.
-      let expected = text(applyLot413(originals[i]()));
-      // The final destination is a deliberate addition to the original funnel.
-      if (i === 4) expected += 'Destination de l’assemblageOuvrir dans l’éditeur par menusGénérer directementLe choix ne lance aucune génération. Les noms, les images et l’ordre restent modifiables.';
+      let expected = text(applyFrenchSourceCorrections(originals[i]()));
+      // L77: fixed four steps; the footer also offers continuation in the menu editor.
+      if (i >= 1 && i <= 3) expected = expected.replace(/(Étape \d \/ 4)Continuer/, '$1Poursuivre dans l’éditeur par menusContinuer');
+      if (i === 2) expected = expected.replace('La voix qui annonce le menu agrégé sur la Lunii.', 'La voix qui annonce le menu agrégé sur la Lunii.Tu peux aussi poursuivre dans l’éditeur par menus : ce que tu as déjà choisi y sera repris.');
+      // Embedded metadata applies drafts on each edit; only generation remains.
+      if (i === 4) expected = expected.replace('AppliquerAppliquer &amp; générer', 'Générer le pack');
+      if (i === 7 || i === 8) expected = expected.replace('AnnulerAppliquerAppliquer &amp; générer', 'AnnulerAppliquer &amp; générer');
+      // L70-3: stage nodes are scenes, and embedded sheets have a single
+      // Back/Generate bar, no inner close or export-folder status.
+      if (i === 6) expected = expected.replace('2 histoires', '2 scènes');
+      if (i === 7 || i === 8) expected = expected
+        .replace('×', '')
+        .replace("Aucun dossier d’export disponible", '')
+        .replace('AnnulerAppliquer &amp; générer', 'PrécédentAppliquer &amp; générer');
+      if (i === 7) expected = expected.replace('1 histoire', '1 pack');
       if (i === 5) expected = expected.replace('Génération du pack…', 'AnnulerGénération du pack…');
       // FICHED: the editor description is free text, with explicit help.
       expected = expected.replace('Description notes de version', 'Description Texte libre : présentation, contenu, notes de version…');
@@ -97,7 +109,7 @@ test('Accueil et funnels : FR comparé aux sources indépendantes de la base, re
     }
     for (const [saving, expected] of [['save', 'Application…'], ['generate', 'Préparation…']]) {
       globalThis.__homeFixture = { saving }; await s.runtime.changeLanguage('fr');
-      const html = s.render(s.PackNameModal, { open: true, embedded: true });
+      const html = s.render(s.PackNameModal, { open: true, embedded: saving !== 'save' });
       assert.ok(html.includes(expected)); assert.doesNotMatch(html, /Application\.\.\.|Préparation\.\.\./);
     }
   } finally { globalThis.__homeFixture = oldFixture; await server.close(); await originalServer.close(); }

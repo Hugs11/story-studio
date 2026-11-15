@@ -7,6 +7,7 @@ import react from '@vitejs/plugin-react';
 import { card } from './catalogueFixtures.mjs';
 import { memoizePipeline } from '../src/store/catalogue/pipeline.js';
 import { menuEntries } from '../src/store/catalogue/cardActions.js';
+import { selectionActions, selectionPanelActions, selectionMenuEntries } from '../src/store/catalogue/selectionActions.js';
 import { menuReducer, CLOSED_MENU } from '../src/store/catalogue/menuState.js';
 const noop = () => {};
 const view = { selected: new Set(['a']), activeId: 'a', expanded: new Set(['a']), menu: CLOSED_MENU, setActiveId: noop, onItemClick: noop, onOpenModal: noop, onItemKeyDown: noop, onCardMenu: noop, onFormatClick: noop, onExemplarMenu: noop, onToggleExpanded: noop };
@@ -78,6 +79,18 @@ test('two views, menus and read-only fiche render accessible FR/EN/IT surfaces',
         assert.doesNotMatch(html, /ⓘ/);
         assert.match(html, /<span class="catalogue-menu-item-label"[^>]*>[^<]+<\/span><span id="[^"]+-reason"[^>]*class="catalogue-menu-item-reason-mark"><svg/);
       }
+      const ids = cards.map(card => card.id);
+      const sendReason = engine.t('catalogue:reason.action.fileUnavailable');
+      const selectionCommands = [...selectionPanelActions(cards, selectionActions(ids, cards, ids, {}).actions, 'idle'),
+        { id: 'luniiSend', labelKey: 'catalogue:lunii.sendSelection', enabled: false, reasonText: sendReason, reasonKey: 'catalogue:data.noTarget' }];
+      const selectionMenu = menuReducer(CLOSED_MENU, { type: 'open', kind: 'selection', itemCount: selectionCommands.length });
+      const selectionHtml = render(CardContextMenu, { menu: selectionMenu, card: cards[0], entries: selectionMenuEntries(selectionCommands), dispatch: noop, onActivate: noop, onBack: noop, tagMenu: { tags: [], targets: cards, busy: false, onMutate: noop } });
+      assert.equal((selectionHtml.match(/role="menuitem"/g) ?? []).length, selectionCommands.length);
+      assert.ok(selectionHtml.includes(engine.t('catalogue:selection.inline.assemble', { count: 2 })));
+      assert.ok(selectionHtml.includes(engine.t('catalogue:fiche.panel.selected', { count: 2 })));
+      assert.ok(selectionHtml.includes(sendReason));
+      assert.ok(!selectionHtml.includes(engine.t('catalogue:data.noTarget')), 'the menu presents the panel reason text');
+      assert.doesNotMatch(selectionHtml, /catalogue:|\[object Object\]|undefined/);
     }
   } finally { await server.close(); }
 });

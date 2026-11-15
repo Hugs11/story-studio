@@ -697,7 +697,7 @@ fn m1_portable_export_keeps_offline_cards_and_excludes_confirmed_erasures_and_re
     f.seed();
     let packs = f.root.join("packs");
     fs::create_dir_all(&packs).unwrap();
-    let added = f.store.add_source(&packs, 0, false).unwrap();
+    let added = f.store.add_source(&packs, 0).unwrap();
     // A durable exemplar without any observation cache is offline, not erased.
     f.store.write(|tx| {
         tx.execute("INSERT INTO exemplar(id,fiche_id,anchor_json,proof_json,content_revision,retired) VALUES ('offline','card',?1,'{}',1,0)",[json!({"path":packs.join("absent.zip").to_string_lossy()}).to_string()]).map_err(error)?;

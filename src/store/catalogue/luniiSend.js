@@ -93,7 +93,7 @@ export function sendButtonState(card, devices, activeId) {
   // Every available copy has a damaged picture: refused from the start, with the engine's own reason.
   const damaged = damagedCardRefusal(card);
   if (damaged) return { kind: 'blocked', targets, damaged };
-  if (!sendableExemplar(card)) return { kind: 'blocked', targets, reasonKey: 'catalogue:actions.reason.noExemplar' };
+  if (!sendableExemplar(card)) return { kind: 'blocked', targets, reasonKey: 'catalogue:reason.action.fileUnavailable' };
   if (open.length >= 2) return { kind: 'choose', targets };
   const [target] = targets;
   if (target.presence) return { kind: 'present', targets, target };
@@ -139,17 +139,18 @@ export function dropGauge(device, estimate) {
   };
 }
 
-/** Cards that may leave for a Lunii: official stories never do, nor those whose every copy has a damaged picture. */
-export function sendableCards(cards, devices = []) { return cards.filter(card => !isOfficialCard(card, devices) && !damagedCardRefusal(card)); }
+/** Cards that may leave for a Lunii: an available, undamaged copy of a non-official story. */
+export function sendableCards(cards, devices = []) { return cards.filter(card => !isOfficialCard(card, devices) && sendableExemplar(card)); }
 
 /**
  * Why none of these cards may be dropped on a Lunii, or null when at least one may:
- * `{kind: 'official'}` or `{kind: 'damaged', reason: {code, params}}` (the first damaged card).
+ * Official stories, damaged copies (the first damaged card), or unavailable files.
  */
 export function dropRefusal(cards, devices = []) {
   if (!cards.length || sendableCards(cards, devices).length) return null;
   const reason = cards.filter(card => !isOfficialCard(card, devices)).map(damagedCardRefusal).find(Boolean);
-  return reason ? { kind: 'damaged', reason } : { kind: 'official' };
+  if (reason) return { kind: 'damaged', reason };
+  return cards.some(card => !isOfficialCard(card, devices)) ? { kind: 'unavailable' } : { kind: 'official' };
 }
 
 /**
@@ -181,7 +182,7 @@ export function sendContext({ operationId, device, startIndex, cards, entries, s
   const refusedCard = card => {
     if (official.includes(card)) return refused(card, 'STORYTELLER_OFFICIAL_REFUSED');
     const reason = damaged.includes(card) ? damagedCardRefusal(card) : null;
-    return reason ? refused(card, reason.code, reason.params) : refused(card, 'NO_EXEMPLAR');
+    return reason ? refused(card, reason.code, reason.params) : refused(card, sendableExemplar(card) ? 'NO_EXEMPLAR' : 'FILE_UNAVAILABLE');
   };
   return {
     operationId, deviceId: device.id, deviceName: device.name ?? null, startIndex,
@@ -275,6 +276,7 @@ export function refusalPresentation(reason, { position = null } = {}) {
     }
     case 'STORYTELLER_IMAGE_UNREADABLE_UNNAMED':
     case 'STORYTELLER_SOUND_UNREADABLE_UNNAMED': return { key: null, params: {}, reason, action: 'editor' };
+    case 'FILE_UNAVAILABLE': return { key: 'catalogue:reason.action.fileUnavailable', params: {}, action: null };
     case 'NO_EXEMPLAR': return { key: 'catalogue:actions.reason.noExemplar', params: {}, action: null };
     default: return { key: null, params: {}, reason, action: null };
   }

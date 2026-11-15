@@ -8,7 +8,7 @@ import { createServer } from './viteTestServer.mjs';
 import { withBaseSourceAliases } from './baseSourceAliases.mjs';
 import react from '@vitejs/plugin-react';
 import fixture from './fixtures/tree-fields-fr-base-sources.json' with { type: 'json' };
-import { applyLot413Deep, LOT_413_TREE } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrectionsDeep, FRENCH_TREE_REPLACEMENTS } from './i18nFrenchSourceCorrections.mjs';
 import metadata from '../src/locales/_meta/tree.json' with { type: 'json' };
 import { createTestI18n } from './i18nTestSetup.mjs';
 import { pseudoResources } from '../src/i18n/pseudo.js';
@@ -24,15 +24,28 @@ const withZipFolderButton = (name, texts) => {
   const at = texts.findIndex((text) => text === 'Choisir' || text === 'Remplacer');
   return at < 0 ? texts : [...texts.slice(0, at + 1), 'Choisir un dossier', ...texts.slice(at + 1)];
 };
+// Une histoire avec message de fin personnel enchaîne toujours sur ce message : la bascule
+// « Rester / Enchaîner » n'y a plus d'effet et n'est plus affichée (retrait volontaire, présente dans la base).
+const END_MODE_TOGGLE_TEXTS = ['À la fin', 'Rester sur l’Écran', 'Enchaîner', 'Comportement à la fin de l’histoire'];
+const withoutEndModeToggle = (name, props, texts) => {
+  if (name !== 'AfterPlaySection' || !props.node?.afterPlaybackPromptAudio || props.node.nativeStageId) return texts;
+  const remaining = [...texts];
+  for (const text of END_MODE_TOGGLE_TEXTS) {
+    const at = remaining.indexOf(text);
+    if (at >= 0) remaining.splice(at, 1);
+  }
+  return remaining;
+};
 const sourceTexts = (html) => [...html.matchAll(/>([^<>]+)</g)].map((m) => m[1])
   .concat([...html.matchAll(/(?:title|aria-label|placeholder|alt)="([^"]+)"/g)].map((m) => m[1]))
   .map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
 
-async function surfaceServer(original) {
+async function surfaceServer(original, openNavigation = false) {
   return createServer({ configFile: false, plugins: [{ name: 'tree-field-fixtures', enforce: 'pre', transform(code, id) {
     const file = id.slice(id.indexOf('/src/') + 1);
     if (original && fixture.sources[file]) code = fixture.sources[file];
     if (original) code = withBaseSourceAliases(code, id);
+    if (openNavigation && id.endsWith('/storyUtils.jsx')) code = code.replace('useState(false)', 'useState(true)');
     if (id.endsWith('/ProjectContext.js')) return `export function useProjectContext() { return { pathAudit: globalThis.__treeFieldFixture.missing ? { '/_AUTHOR_FILE_.wav': false, '/_AUTHOR_FILE_.png': false } : {}, xttsSettings: {}, sdSettings: { aiImageGen: true }, sdJobs: globalThis.__treeFieldFixture.jobs ?? [], onOpenSDGenerate() {} }; }`;
     if (id.endsWith('/MediaTransferContext.js')) return 'export function useMediaTransfer() { return { notifyCutPaste() {} }; }';
     if (id.endsWith('/ProjectActionsContext.js')) return 'export function useProjectActions() { return { onAttachStoryEndToGlobal() {} }; }';
@@ -69,6 +82,48 @@ const story = { id: 's', type: 'story', name: '_AUTHOR_STORY_', audio: null, con
 const project = { projectType: 'pack', rootName: '', rootEntries: [story], globalOptions: {}, packMetadata: {} };
 const graph = { document: { stageNodes: [{ uuid: '_AUTHOR_STAGE_ID_', name: '_AUTHOR_STAGE_', controlSettings: {}, squareOne: true }], actionNodes: [] } };
 const baseProps = { project, allMenus: [], allStories: [story], onUpdate: noop, onDelete: noop }; 
+
+test('message de fin : Histoire suivante disponible en pack, repli affiché en Histoire seule sans modifier le projet', async () => {
+  const server = await surfaceServer(false, true);
+  const previous = globalThis.__treeFieldFixture;
+  globalThis.__treeFieldFixture = {};
+  i18next.init(createTestI18n().options);
+  await i18next.changeLanguage('fr');
+  try {
+    const { EndNodeEditor } = await server.ssrLoadModule('/src/components/editors/EndNodeEditor.jsx');
+    for (const projectType of ['simple', 'pack']) {
+      for (const target of [null, 'next_story']) {
+        const props = {
+          ...baseProps,
+          project: { ...project, projectType },
+          nightModeReturn: target,
+          nightModeHomeReturn: target,
+          onUpdateNightModeAudio: noop,
+        };
+        const before = JSON.stringify(props);
+        const html = renderToStaticMarkup(React.createElement(I18nextProvider, { i18n: i18next }, React.createElement(EndNodeEditor, props)));
+        const popovers = [...html.matchAll(/role="listbox"[^>]*>(.*?)<\/div><\/div><\/div>/g)].map(match => match[1]);
+        assert.equal(popovers.length, 2, 'Accueil et Après le message');
+        for (const popover of popovers) {
+          assert.equal(popover.includes('Histoire suivante'), projectType === 'pack');
+          assert.match(popover, /_AUTHOR_STORY_/, 'les autres destinations restent proposées');
+        }
+        if (target === 'next_story') {
+          const labels = [...html.matchAll(/class="navigation-listbox-trigger"[^>]*>(.*?)<\/button>/g)].map(match => sourceTexts(match[1]));
+          assert.equal(labels.length, 2);
+          for (const texts of labels) {
+            assert.ok(texts.some(text => text.includes(projectType === 'simple' ? '_AUTHOR_STORY_' : 'Histoire suivante')));
+          }
+        }
+        assert.equal(JSON.stringify(props), before);
+      }
+    }
+  } finally {
+    globalThis.__treeFieldFixture = previous;
+    await server.close();
+  }
+});
+
 const scenarios = [
   ...[null, '/_AUTHOR_FILE_.wav'].flatMap((file) => [false, true].map((missing) => ['AudioField', { file, onPick: noop, onClear: noop }, { missing, menu: true }])),
   ...['record', 'tts'].map((source) => ['AudioField', { onPick: noop }, { notice: true, source }]),
@@ -110,7 +165,7 @@ test('champs arbre : FR rendu contre git show BASE indépendant, EN/IT/pseudo, a
       globalThis.__treeFieldFixture = state;
       for (const surface of [current, original]) for (const kind of ['audioClipboard', 'imageClipboard']) { surface.__clipboard[kind].clear(); if (state.clipboard) surface.__clipboard[kind].set('/_AUTHOR_CLIP_', { mode: state.clipboard }); }
       await instance.changeLanguage('fr');
-      assert.deepEqual(sourceTexts(render(current[name], props)), withZipFolderButton(name, applyLot413Deep(sourceTexts(render(original[name], props)), LOT_413_TREE)), `FR ${name} ${JSON.stringify(state)}`);
+      assert.deepEqual(sourceTexts(render(current[name], props)), withoutEndModeToggle(name, props, withZipFolderButton(name, applyFrenchSourceCorrectionsDeep(sourceTexts(render(original[name], props)), FRENCH_TREE_REPLACEMENTS))), `FR ${name} ${JSON.stringify(state)}`);
       const before = JSON.stringify(props);
       for (const language of ['en', 'it', 'pseudo']) {
         await instance.changeLanguage(language);
@@ -135,11 +190,11 @@ test('catalogue tree : hash, paramètres, statuts et fuite FR détectée par mut
     if (metadata[key].en) assert.equal(metadata[key].en.status, 'ai-reviewed'); if (metadata[key].it) assert.equal(metadata[key].it.status, 'ai-reviewed');
     for (const language of ['en', 'it']) {
       if (resources[language].tree[key] === undefined) { assert.ok(language === 'en' && key.endsWith('_many') || key.endsWith('_zero'));  continue; }
-      // Lot 4.3b : modèles de ponctuation sans prose et marqueur de format ZIP ; les assertions des anciennes clés restent identiques.
+      // modèles de ponctuation sans prose et marqueur de format ZIP ; les assertions des anciennes clés restent identiques.
       const neutral = new Set(['display.option.aria', 'context.disabled.aria', 'nodeType.zip', 'control.ok.short', 'root.image.badge', 'nativeGraph.counts.summary', 'nativeGraph.stage.name', 'endPlayback.mixed.summary', 'media.image.label', 'navigation.destination.label', 'multi.image.progress', 'media.native.audio', 'media.native.image']);
-      // Lot 4.13 : « l’audio » (IT), « Pause » (EN) et « OK » sont identiques dans la langue cible (TREE_LANGUAGE_NEUTRAL_KEYS).
+      // « l’audio » (IT), « Pause » (EN) et « OK » sont identiques dans la langue cible (TREE_LANGUAGE_NEUTRAL_KEYS).
       if ({ en: ['nativeGraph.control.pause', 'nativeGraph.control.ok'], it: ['context.file.audio', 'nativeGraph.control.ok'] }[language].includes(key)) continue;
-      // Relecture Opus : mots identiques dans la langue cible, déclarés aussi dans TREE_NEUTRAL_KEYS.
+      // Traductions identiques : mots identiques dans la langue cible, déclarés aussi dans TREE_NEUTRAL_KEYS.
       if (neutral.has(key) || ['color.orange.label', 'diagram.focus.short'].includes(key)) continue;
       assert.notEqual(resources[language].tree[key], value);
       const mutated = structuredClone(catalogues);

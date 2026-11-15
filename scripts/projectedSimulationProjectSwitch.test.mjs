@@ -71,7 +71,7 @@ const { normalizeProjectData, projectToRustExport } = await import('../src/store
 const { WorkspaceView } = await import('../src/workspace/WorkspaceView.jsx');
 const { AppShell } = await import('../src/components/AppShell.jsx');
 const settle = () => new Promise((resolve) => setImmediate(resolve));
-const idle = { status: 'idle', graph: null, error: null };
+const idle = { status: 'idle', graph: null, error: null, stale: false };
 
 function fixture(projectType, title) {
   return normalizeProjectData({
@@ -212,9 +212,31 @@ function workspaceHarness(t, from) {
   const props = (name) => elements(hook.render()).find((element) => element.type === name).props;
   return {
     hook, requests, selections, props,
+    edit() { project = { ...project, globalOptions: { ...project.globalOptions, autoNext: true } }; },
     replace(to) { project = fixture(to, 'Projet B'); projectEpoch += 1; },
   };
 }
+
+test('le workspace transmet l’avis et Relancer emprunte le lancement racine existant', async (t) => {
+  const workspace = workspaceHarness(t, 'pack');
+  workspace.props('StructurePanel').onSimulateRoot();
+  workspace.hook.render(); workspace.hook.flush(); await settle();
+  workspace.requests[0].resolve(selectableProjection('Projet A'));
+  await settle();
+  const initial = workspace.props('FloatingSimulator');
+  assert.equal(initial.documentStale, false);
+  workspace.edit();
+  const edited = workspace.props('FloatingSimulator');
+  assert.equal(edited.documentStale, true);
+  assert.equal(edited.documentGraph, initial.documentGraph);
+  edited.onRestart();
+  workspace.hook.render(); workspace.hook.flush(); await settle();
+  assert.equal(workspace.requests.length, 2);
+  workspace.requests[1].resolve(selectableProjection('Projet A modifié'));
+  await settle();
+  assert.equal(workspace.props('FloatingSimulator').documentStale, false);
+  assert.equal(workspace.requests[1].dto.globalOptions.autoNext, true);
+});
 
 function selectableProjection(title) {
   return {

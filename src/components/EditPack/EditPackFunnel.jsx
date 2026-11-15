@@ -18,7 +18,6 @@ import { pickFolder, pickZip } from '../../hooks/useFileDialog';
 import { basename } from '../../utils/fileUtils';
 import {
   createEditPackOperationLifecycle,
-  editorChooserFor,
   runEditPackBundleChildOperation,
   runEditPackImportOperation,
 } from './editPackOperationLifecycle';
@@ -53,8 +52,8 @@ const BUNDLE_PROGRESS_EVENT = 'pack-bundle-inspection-progress';
  *   Graphe directement.
  * @param {Function} props.onBeforeReplace async () — garde de sauvegarde du
  *   projet courant, appelée seulement quand le pack et l'éditeur sont connus.
- * @param {boolean}  props.openedFromGraph ouvert depuis l'Éditeur graphe : un
- *   pack compatible avec les deux éditeurs s'ouvre dans le Graphe sans question.
+ * @param {boolean}  props.openedFromGraph ouvert depuis l'Éditeur graphe :
+ *   dispense de la notice quand le pack ne s'ouvre que dans le Graphe.
  * @param {Function} props.onNotice (texte) — notice affichée à l'atterrissage quand
  *   un pack ne s'ouvre que dans le Graphe et que l'auteur ne l'avait pas choisi.
  */
@@ -80,8 +79,8 @@ export function EditPackFunnel({
   // un verdict le ramène à sa liste, pas à la zone de dépôt.
   const [bundle, setBundle] = useState(null);
   const [selectedChildId, setSelectedChildId] = useState(null);
-  // L'éditeur d'origine est celui de l'ouverture : l'atterrissage change le
-  // projet courant, pas la question déjà tranchée.
+  // La notice dépend de l'éditeur à l'ouverture, avant que l'atterrissage
+  // change le projet courant.
   const [fromGraph] = useState(openedFromGraph);
   const operationLifecycleRef = useRef(null);
   const extractionOwnerRef = useRef(null);
@@ -203,7 +202,7 @@ export function EditPackFunnel({
       },
       land: (zipPath) => onLand({ zipPath, packLabel }),
       landAdvanced: onLandAdvanced ? (zipPath) => onLandAdvanced({ zipPath, packLabel }) : null,
-      chooseEditor: onLandAdvanced ? editorChooser : null,
+      chooseEditor: onLandAdvanced ? askEditor : null,
       beforeReplace: onBeforeReplace,
     });
     if (result.status === 'bundle') {
@@ -256,7 +255,7 @@ export function EditPackFunnel({
       },
       land: (zipPath) => onLand({ zipPath, packLabel }),
       landAdvanced: onLandAdvanced ? (zipPath) => onLandAdvanced({ zipPath, packLabel }) : null,
-      chooseEditor: onLandAdvanced ? editorChooser : null,
+      chooseEditor: onLandAdvanced ? askEditor : null,
       beforeReplace: onBeforeReplace,
     });
     const result = owner ? await owner.run(run) : await run();
@@ -286,20 +285,19 @@ export function EditPackFunnel({
 
   const handleDrop = (paths) => processPack(paths?.[0], 'auto');
 
-  function askEditor() {
+  function askEditor({ report }) {
     return showChoiceDialog({
       get title() { return t('import:edit.editorChoice.title'); },
       get message() { return t('import:edit.editorChoice.message'); },
       variant: 'info',
       cancelValue: null,
       actions: [
-        { value: 'free', get label() { return t('import:edit.menuEditor.action'); }, kind: 'secondary' },
+        { value: 'free', get label() { return report?.projectType === 'simple' ? t('import:edit.simpleEditor.action') : t('import:edit.menuEditor.action'); }, kind: 'secondary' },
         { value: 'advanced', get label() { return t('import:edit.graphEditor.action'); }, kind: 'primary', autoFocus: true },
         { value: null, get label() { return t('common:dialog.cancel.label'); }, kind: 'ghost' },
       ],
     });
   }
-  const editorChooser = editorChooserFor({ openedFromGraph: fromGraph, askEditor });
   const handleBrowseFile = async () => {
     const operation = operationLifecycleRef.current;
     const session = operation.captureSession();

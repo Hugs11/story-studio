@@ -10,7 +10,7 @@ import i18next from 'i18next';
 import fixture from './fixtures/media-fr-base-sources.json' with { type: 'json' };
 import { pseudoText } from '../src/i18n/pseudo.js';
 import { createTestI18n } from './i18nTestSetup.mjs';
-import { applyLot413 } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrections } from './i18nFrenchSourceCorrections.mjs';
 import { checkCatalogues } from './check-i18n.mjs';
 import fr from '../src/locales/fr/media.json' with { type: 'json' };
 import en from '../src/locales/en/media.json' with { type: 'json' };
@@ -32,7 +32,7 @@ const BASE = '9e730689c3943cda333b1d7eb92e4d7f06524c77';
 const plain = (s) => s.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 const richPseudoFragments = new Set(Object.values(fr).flatMap(value => [...pseudoText(value).matchAll(/<strong>([^<]+)<\/strong>/g)].map(m => m[1])));
 
-// Corrections FR du lot 6, appliquées uniquement aux attentes BASE.
+// Corrections FR de typographie, appliquées uniquement aux attentes BASE.
 function applyShiftLabels(value) {
   return value.replaceAll('Shift+I', 'Maj+I').replaceAll('Shift+O', 'Maj+O');
 }
@@ -149,7 +149,7 @@ test('Médias : FR identique à la source BASE indépendante, puis EN/IT/pseudo 
       return html.slice(trigger.length);
     };
     const currentHtml = current.render();
-    const currentFr = currentHtml.map(plain), beforeFr = before.render().map((html, index) => plain(withoutRemovedTrigger(applyShiftLabels(applyLot413(html)), index)));
+    const currentFr = currentHtml.map(plain), beforeFr = before.render().map((html, index) => plain(withoutRemovedTrigger(applyShiftLabels(applyFrenchSourceCorrections(html)), index)));
     assert.equal(currentFr.length, beforeFr.length);
     // Changement UI volontaire : les deux choix restent, l'arrêt passe par Toggle.
     const packAudioScenarios = new Set([27, 28, 29]);
@@ -162,7 +162,7 @@ test('Médias : FR identique à la source BASE indépendante, puis EN/IT/pseudo 
       }
     });
     // Attributs accessibles et infobulles compris : HTML FR complet identique.
-    const beforeHtml = before.render().map((html, index) => withoutRemovedTrigger(applyShiftLabels(applyLot413(html)), index));
+    const beforeHtml = before.render().map((html, index) => withoutRemovedTrigger(applyShiftLabels(applyFrenchSourceCorrections(html)), index));
     currentHtml.forEach((html, index) => {
       if (!packAudioScenarios.has(index)) assert.equal(html, beforeHtml[index], `scénario ${index} (HTML)`);
       else {
@@ -196,8 +196,8 @@ test('Médias : FR identique à la source BASE indépendante, puis EN/IT/pseudo 
 test('chaque texte FR du catalogue provient de la source BASE', () => {
   const sources = Object.values(fixture.sources).join('\n')
     .replaceAll('\\\'', '\'').replaceAll('\\n', '\n')
-  // Lot 4.13 : corrections FR explicites appliquées à la source BASE.
-  const sourcesFixed = applyShiftLabels(applyLot413(sources));
+  // corrections FR explicites appliquées à la source BASE.
+  const sourcesFixed = applyShiftLabels(applyFrenchSourceCorrections(sources));
   // Gabarits réassemblés depuis des ternaires/fragments BASE, vérifiés par le rendu SSR ci-dessus
   // ou par les tests ciblés de ce fichier ; libellés neutres de pluriels créés par CLDR.
   const composed = new Set([

@@ -442,7 +442,7 @@ export function PackNameModal({
             {(isAdvanced ? draft.title : exportName) || t('home:packName.header.title')}
           </h2>
         </div>
-        <Button variant="icon" className="modal-close pack-meta-close" onClick={onClose} aria-label={t('common:dialog.close.label')}>×</Button>
+        {!embedded && <Button variant="icon" className="modal-close pack-meta-close" onClick={onClose} aria-label={t('common:dialog.close.label')}>×</Button>}
       </header>
 
       <div className="pack-meta-body">
@@ -650,10 +650,10 @@ export function PackNameModal({
       <div className="pack-meta-preview">
         <div className="pack-meta-preview-head">
           <span className="pack-meta-preview-label">{t('home:packName.filename.previewLabel')}</span>
-          <div className={`pack-meta-status is-${collision}`}>
+          {!embedded && <div className={`pack-meta-status is-${collision}`}>
             {collision === 'collision' ? <TriangleAlert className="chrome-icon" strokeWidth={2} absoluteStrokeWidth /> : <CircleCheck className="chrome-icon" strokeWidth={2} absoluteStrokeWidth />}
             <span>{collisionText}</span>
-          </div>
+          </div>}
         </div>
         {/* Le nom reste un aperçu : le moteur l'assainit et peut ajouter -2. */}
         <div className="pack-meta-filename" title={exportName ? `${exportName}.zip` : ''}>
@@ -686,7 +686,9 @@ export function PackNameModal({
           </div>
         ) : (
           <div className="pack-meta-summary">
-            <Trans i18nKey="home:packName.count.stories" count={stats.stories} components={{ strong: <strong /> }} />
+            {embedded
+              ? <strong>{t('home:aggregate.count.packs', { count: stats.stories })}</strong>
+              : <Trans i18nKey="home:packName.count.stories" count={stats.stories} components={{ strong: <strong /> }} />}
             <span>{t('home:packName.count.media', { count: stats.media })}</span>
           </div>
         )}
@@ -694,17 +696,17 @@ export function PackNameModal({
           <p className="pack-meta-notice" role="status" aria-live="polite">{presentStoredError(notice)}<TechnicalDetail value={notice?.userMessage ? presentUserMessage(notice.userMessage).technicalDetail : ''} /></p>
         ) : null}
         <div className="pack-meta-actions">
-          <Button onClick={onClose} disabled={saving}>{t('common:dialog.cancel.label')}</Button>
-          <Button
+          <Button onClick={onClose} disabled={saving}>{embedded ? t('home:funnel.footer.back') : t('common:dialog.cancel.label')}</Button>
+          {!embedded && <Button
             onClick={() => submit('save')}
             disabled={!!saving || audioDurationInvalid}
           >
             {saving === 'save' ? t('home:packName.save.applying') : t('home:packName.save.apply')}
-          </Button>
+          </Button>}
           {/* Ce bouton est là **des deux côtés** : la fiche est la première
               étape du parcours de fabrication. Ce qui bloque est
               demandé juste après, au départ de la production. */}
-          <Tooltip text={generateButtonTooltip} wrap>
+          <Tooltip text={generateButtonTooltip} disabled={!!primaryActionLabel && !generateButtonDisabled} wrap>
             <Button
               variant="primary"
               onClick={() => submit('generate')}

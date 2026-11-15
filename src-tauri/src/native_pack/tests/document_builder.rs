@@ -1077,6 +1077,9 @@ fn auto_next_overrides_end_steps_and_story_returns() {
 #[test]
 fn canonicalizes_pack_structure() {
     let project = Project {
+        root_name: String::new(),
+        end_node_name: String::new(),
+        tree_color: None,
         name: "Pack".to_string(),
         project_type: Some("pack".to_string()),
         root_audio: Some("root.mp3".to_string()),
@@ -1123,6 +1126,9 @@ fn canonicalizes_pack_structure() {
 #[test]
 fn canonicalizes_recursive_root_entries_structure() {
     let project = Project {
+        root_name: String::new(),
+        end_node_name: String::new(),
+        tree_color: None,
         name: "Recursive pack".to_string(),
         project_type: Some("pack".to_string()),
         root_audio: Some("root.mp3".to_string()),
@@ -1303,6 +1309,9 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
     fs::write(&cover_asset_path, b"cover-asset").expect("write staged cover asset");
 
     let project = Project {
+        root_name: String::new(),
+        end_node_name: String::new(),
+        tree_color: None,
         name: "Dedup pack".to_string(),
         project_type: Some("pack".to_string()),
         root_audio: Some("root.mp3".to_string()),
@@ -1323,6 +1332,7 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
             ..ProjectEntry::default()
         }],
         global_options: GlobalOptions {
+            end_node: false,
             add_silence: false,
             silence_mode: None,
             harmonize_loudness: true,

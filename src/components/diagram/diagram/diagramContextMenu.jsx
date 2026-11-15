@@ -4,6 +4,7 @@ import { audioClipboard, imageClipboard } from '../../../store/fieldClipboard';
 import { TREE_COLOR_PALETTE } from '../../tree/treeOperations';
 import { Copy, Scissors, ClipboardPaste, Trash2, FolderPlus, Music, Image as ImageIcon, Moon, House, FilePen, Play } from '../../icons/LucideLocal';
 import { END_NODE_ID } from '../flowDiagramLayout';
+import { hasVisibleEndNode } from '../../../store/generatedNavigation.js';
 import { getAssemblyReplacementEligibility, resolveAudioStoriesInProjectOrder } from '../../../store/mediaToolContext';
 import {
   MENU_DEPTH_LIMIT_REACHED_MESSAGE,
@@ -78,8 +79,7 @@ export function buildDiagramContextActions({
   });
   actions.push({ icon: <Music />, label: t("tree:context.media.import"), fn: () => onAddStory?.(menuId) });
 
-  const hasEndNode = !!(project.nightModeAudio || project.globalOptions?.nightMode || project.globalOptions?.endNode);
-  if (nodeType === 'root' && !hasEndNode) {
+  if (nodeType === 'root' && !hasVisibleEndNode(project)) {
     actions.push('sep');
     actions.push({ icon: <Moon />, label: t("tree:context.end.add"), fn: () => onAddEndNode?.() });
   }

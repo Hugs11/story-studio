@@ -374,7 +374,7 @@ fn registered_source_through_a_directory_alias_supports_checker_duplicates_and_t
     let alias = DirectoryAlias::new(&packs, f.root.join("user-selected-source"));
     f.store =
         Arc::new(Store::open(&f.root.join("alias-data"), &f.root.join("alias-cache")).unwrap());
-    f.store.add_source(&alias.0, 0, false).unwrap();
+    f.store.add_source(&alias.0, 0).unwrap();
     let receipt = f
         .store
         .start_scan(

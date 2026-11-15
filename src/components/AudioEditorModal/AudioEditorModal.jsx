@@ -43,7 +43,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   const trimEndRef = useRef(0);
   const auditionEndRef = useRef(null);
 
-  const { mediaStorage } = useProjectContext();
+  const { mediaStorage, isAudioShared } = useProjectContext();
   const [duration, setDuration] = useState(0);
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(0);
@@ -117,6 +117,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     savePath,
     workspaceDir,
     mediaStorage,
+    isAudioShared,
     onConfirm,
     wsRef,
     durationRef,

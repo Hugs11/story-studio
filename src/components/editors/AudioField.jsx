@@ -58,6 +58,7 @@ export function AudioField({
   ttsTextSuggestion = '',
   ttsFilenameHint = 'tts',
   xttsTarget = null,
+  mediaTarget = xttsTarget,
   emptyBadge = null,
   levelLabel = null,
 }) {
@@ -184,11 +185,14 @@ export function AudioField({
     }
   }
 
-  async function handlePicked(path) {
+  async function handlePicked(path, clip = null) {
     if (!path) return;
     const previous = file;
     const importedPath = await onImportFile?.(path) ?? path;
-    if (onPick) await onPick(importedPath);
+    if (onPick) {
+      await onPick(importedPath);
+      if (clip?.mode === 'cut') notifyCutPaste({ path: clip.path, source: clip.source, target: mediaTarget });
+    }
     // L'ancien fichier n'est plus référencé : on le garde visible dans le
     // gestionnaire de médias (filtre « Non utilisés ») plutôt que de le rendre
     // orphelin invisible sur le disque.
@@ -295,10 +299,7 @@ export function AudioField({
   function pasteClipboardAudio() {
     const clip = audioClipboard.getEntry();
     if (!clip?.path) return;
-    if (clip.mode === 'cut') {
-      notifyCutPaste({ path: clip.path, kind: 'audio' });
-    }
-    void handlePicked(clip.path);
+    void handlePicked(clip.path, clip);
     if (clip.mode === 'cut') audioClipboard.clear();
   }
 
@@ -565,7 +566,7 @@ export function AudioField({
               ...(onPick ? ['sep'] : []),
               { icon: <Copy />, label: t("tree:media.clipboard.copy"), fn: () => audioClipboard.set(file) },
               // eslint-disable-next-line i18next/no-literal-string -- enum du presse-papiers
-              { icon: <Scissors />, label: t("tree:media.clipboard.cut"), fn: () => audioClipboard.set(file, { mode: 'cut' }) },
+              { icon: <Scissors />, label: t("tree:media.clipboard.cut"), fn: () => audioClipboard.set(file, { mode: 'cut', source: mediaTarget ?? { clear: onClear } }) },
               { icon: <FolderOpen />, label: t("tree:media.file.reveal"), fn: () => revealItemInDir(file) },
             ] : []),
             ...(audioClipboard.get() && onPick ? [

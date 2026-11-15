@@ -35,8 +35,8 @@ test('la fixture de contrat est lue page par page et normalisée', async () => {
   assert.deepEqual(result.cards.map((card) => card.id), ['card-lune', 'card-ours', 'card-trois']);
   assert.equal(result.cards[0].formats.join(','), 'project,zip');
   assert.deepEqual(fake.calls, [
-    { command: 'catalogue_list_entries', args: { limit: 200, cursor: null, includeUnavailable: true } },
-    { command: 'catalogue_list_entries', args: { limit: 200, cursor: '7:false:2:2', includeUnavailable: true } },
+    { command: 'catalogue_list_entries', args: { limit: 1000, cursor: null, includeUnavailable: true } },
+    { command: 'catalogue_list_entries', args: { limit: 1000, cursor: '7:false:2:2', includeUnavailable: true } },
   ]);
 });
 

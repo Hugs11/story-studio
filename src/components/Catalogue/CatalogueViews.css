@@ -114,6 +114,15 @@
   .catalogue-cover-arrival { animation: none; }
 }
 .catalogue-cover--small { width: 5rem; height: 3.75rem; }
+.catalogue-cover.catalogue-cover--official-pending,
+.catalogue-fiche-cover > .catalogue-cover.catalogue-cover--official-pending {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg2));
+  color: var(--text-secondary);
+}
+.catalogue-cover-official-pending { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); max-width: 100%; }
+.catalogue-cover-official-pending svg { width: 24px; height: 24px; flex-shrink: 0; opacity: 0.7; }
+.catalogue-cover-official-pending > span { max-width: 18ch; line-height: 1.4; overflow-wrap: anywhere; }
+.catalogue-cover--small .catalogue-cover-official-pending > span { display: none; }
 .catalogue-cover-frame--small { width: 5rem; }
 .catalogue-cover-frame--offline .catalogue-cover { filter: grayscale(1); opacity: 0.55; }
 .catalogue-cover-frame--missing .catalogue-cover { opacity: 0.45; }

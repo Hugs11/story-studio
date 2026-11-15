@@ -120,8 +120,8 @@ export function createAdvancedAuthoringSession({
   // Un envoi et un seul retour. La capture de fraîcheur est faite **avant**
   // l'appel et relue **après** : c'est la seule façon de distinguer « ce
   // résultat concerne encore ce travail » de « il concerne un état que l'auteur
-  // a déjà quitté », et les deux se produisent pendant les ≈ 190 ms que le lot
-  // 04 a mesurées sur le profil extrême.
+  // a déjà quitté », et les deux se produisent pendant les ≈ 190 ms mesurées
+  // sur le profil extrême.
   async function send(intent) {
     const project = readProject();
     const captured = readTicket();

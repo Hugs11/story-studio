@@ -17,7 +17,7 @@ import { checkCatalogues, sourceHash } from './check-i18n.mjs';
 import { installMountedDom, renderedText, click } from './treeMountedDom.mjs';
 
 import fixture from './fixtures/tree-diagram-fr-base-sources.json' with { type: 'json' };
-import { applyLot413, applyLot413Deep, LOT_413_TREE } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrections, applyFrenchSourceCorrectionsDeep, FRENCH_TREE_REPLACEMENTS } from './i18nFrenchSourceCorrections.mjs';
 
 const BASE = 'fcbfa8eb709f505185af5170e6873e9e98d07274';
 const files = [
@@ -115,7 +115,7 @@ test('FR des surfaces arbre/diagramme contre git show BASE ; pseudo réellement 
       await i18next.changeLanguage('fr');
       const fr = renderToStaticMarkup(wrap(current[name], props, current));
       const old = renderToStaticMarkup(wrap(original[name], { ...props, projectIndex: original.model.buildProjectIndex(input.project ?? project) }, original));
-      assert.deepEqual(textValues(fr), applyLot413Deep(textValues(old), LOT_413_TREE), `FR ${name} ${JSON.stringify(input)}`);
+      assert.deepEqual(textValues(fr), applyFrenchSourceCorrectionsDeep(textValues(old), FRENCH_TREE_REPLACEMENTS), `FR ${name} ${JSON.stringify(input)}`);
       const before = JSON.stringify(props.project);
       for (const language of ['en', 'it', 'pseudo']) {
         await i18next.changeLanguage(language);
@@ -142,7 +142,7 @@ test('FR des surfaces arbre/diagramme contre git show BASE ; pseudo réellement 
       const props = { id: 's', type: 'story', label: '_AUTHOR_TITLE_', level: 1, navigationBadges: [currentBadges.formatBadgeTitle(data)] };
       const html = renderToStaticMarkup(wrap(current.TreeNode, props, current));
       const old = renderToStaticMarkup(wrap(original.TreeNode, { ...props, navigationBadges: [originalBadges.formatBadgeTitle(data)] }, original));
-      assert.deepEqual(textValues(html), applyLot413Deep(textValues(old), LOT_413_TREE), `badge FR ${JSON.stringify(data)}`);
+      assert.deepEqual(textValues(html), applyFrenchSourceCorrectionsDeep(textValues(old), FRENCH_TREE_REPLACEMENTS), `badge FR ${JSON.stringify(data)}`);
       await i18next.changeLanguage('pseudo');
       const pseudo = renderToStaticMarkup(wrap(current.TreeNode, { ...props, navigationBadges: [currentBadges.formatBadgeTitle(data)] }, current));
       for (const value of textValues(pseudo)) if (/\p{L}/u.test(value) && !value.includes('_AUTHOR_')) assert.ok(value.includes('['), `badge hors pseudo ${data.kind}: ${value}`);
@@ -164,7 +164,7 @@ test('FR des surfaces arbre/diagramme contre git show BASE ; pseudo réellement 
         await i18next.changeLanguage('fr');
         const html = renderToStaticMarkup(wrap(current.ContextMenu, { x: 0, y: 0, actions: build(props) }, current));
         const old = renderToStaticMarkup(wrap(original.ContextMenu, { x: 0, y: 0, actions: oldBuild(props) }, original));
-        assert.deepEqual(textValues(html), applyLot413Deep(textValues(old), LOT_413_TREE), `menu FR ${nodeType}/${multi}`);
+        assert.deepEqual(textValues(html), applyFrenchSourceCorrectionsDeep(textValues(old), FRENCH_TREE_REPLACEMENTS), `menu FR ${nodeType}/${multi}`);
         await i18next.changeLanguage('pseudo');
         const pseudo = renderToStaticMarkup(wrap(current.ContextMenu, { x: 0, y: 0, actions: build(props) }, current));
         for (const value of textValues(pseudo)) if (/\p{L}/u.test(value) && !value.includes('_AUTHOR_') && !/^#[0-9a-f]{6}$/i.test(value)) assert.ok(value.includes('['), `menu hors pseudo ${nodeType}/${multi}: ${value}`);
@@ -175,8 +175,8 @@ test('FR des surfaces arbre/diagramme contre git show BASE ; pseudo réellement 
 });
 
 test('FR catalogue ancien intact ; métadonnées nouvelles et mutation de fuite FR dans chaque traduction', () => {
-  // Lot 4.13 : valeurs FR corrigées volontairement (typographie, pluriels, vocabulaire), listées au rapport.
-  const lot413 = {
+  // valeurs FR corrigées volontairement (typographie, pluriels, vocabulaire), énumérées ci-dessous.
+  const frenchCorrections = {
     "audio.record.action": "Enregistrer l’audio",
     "audio.play.seek": "Se déplacer dans l’audio",
     "audio.field.removeAudio": "Retirer l’audio de ce champ",
@@ -331,7 +331,7 @@ test('FR catalogue ancien intact ; métadonnées nouvelles et mutation de fuite 
   const removedWithLegacyLink = new Set(Object.keys(baseCatalogue).filter(key => key.startsWith('ref.')));
   assert.equal(removedWithLegacyLink.size, 11);
   for (const key of [...removedWithLegacyLink, 'ref.target.unknown', 'diagram.route.reference', 'diagram.legend.links']) assert.equal(Object.hasOwn(resources.fr.tree, key), false, key);
-  for (const [key, text] of Object.entries(baseCatalogue)) if (!removedWithLegacyLink.has(key)) assert.equal(resources.fr.tree[key], lot413[key] ?? text, key);
+  for (const [key, text] of Object.entries(baseCatalogue)) if (!removedWithLegacyLink.has(key)) assert.equal(resources.fr.tree[key], frenchCorrections[key] ?? text, key);
   const catalogue = Object.fromEntries(['fr', 'en', 'it'].map(l => [l, { tree: resources[l].tree }]));
   const neutral = new Set(['nodeType.zip', 'display.option.aria', 'context.disabled.aria']);
   assert.ok(addedKeys.length > 150);
@@ -343,9 +343,9 @@ test('FR catalogue ancien intact ; métadonnées nouvelles et mutation de fuite 
     for (const language of ['en', 'it']) {
       if (resources[language].tree[key] === undefined) { assert.equal(language, 'en'); assert.ok(key.endsWith('_many')); continue; }
       assert.equal(metadata[key][language].status, 'ai-reviewed'); assert.equal(metadata[key][language].sourceHash, sourceHash(resources.fr.tree[key]));
-      // Relecture Opus : mots identiques dans la langue cible, déclarés aussi dans TREE_NEUTRAL_KEYS.
+      // Traductions identiques : mots identiques dans la langue cible, déclarés aussi dans TREE_NEUTRAL_KEYS.
       if (['color.orange.label', 'diagram.focus.short'].includes(key)) continue;
-      // Lot 4.13 : neutres d’une seule langue (TREE_LANGUAGE_NEUTRAL_KEYS).
+      // neutres d’une seule langue (TREE_LANGUAGE_NEUTRAL_KEYS).
       if ({ en: ['nativeGraph.control.pause', 'nativeGraph.control.ok'], it: ['context.file.audio', 'nativeGraph.control.ok'] }[language].includes(key)) continue;
       if (neutral.has(key)) { assert.ok(!/\p{L}/u.test(resources.fr.tree[key].replace(/{{.*?}}/g, '')) || resources.fr.tree[key] === 'ZIP'); continue; }
       assert.notEqual(resources[language].tree[key], resources.fr.tree[key]);
@@ -356,7 +356,7 @@ test('FR catalogue ancien intact ; métadonnées nouvelles et mutation de fuite 
   assert.equal(resources.fr.common['project.saveAs.fallbackLabel'], 'Enregistrer sous…');
 });
 
-test('pluriels du lot : 0, 1, 2, un million ; catégories, codes/paramètres et logique protégée identique à BASE', async () => {
+test('pluriels du graphe : 0, 1, 2, un million ; catégories, codes/paramètres et logique protégée identique à BASE', async () => {
   const engine = createTestI18n();
   for (const language of ['fr', 'en', 'it']) {
     await engine.changeLanguage(language);
@@ -446,8 +446,8 @@ test('présentateur des cibles : parité FR avec les helpers BASE, noms auteur j
     const old = await original.ssrLoadModule('/src/store/generatedNavigation.js');
     const index = { entryById: new Map([['a', { name: 'Racine' }], ['b', { name: 'Histoire suivante' }]]) };
     for (const target of [null, 'root', 'next_story', '__contextual_next_story__', 'a', 'b', 'missing', 'story:a', 'story_play:a', 'story_home_step:b']) {
-      // Lot 4.13 : la cible « root » s’affiche « Menu racine » (le nom d’auteur « Racine » reste intact).
-      assert.equal(presentTreeNavigationTargetName(target, index), applyLot413(old.getGeneratedNavigationTargetName(target, index), target === 'root' ? [[/^Racine$/, 'Menu racine']] : []), String(target));
+      // la cible « root » s’affiche « Menu racine » (le nom d’auteur « Racine » reste intact).
+      assert.equal(presentTreeNavigationTargetName(target, index), applyFrenchSourceCorrections(old.getGeneratedNavigationTargetName(target, index), target === 'root' ? [[/^Racine$/, 'Menu racine']] : []), String(target));
     }
     for (const language of ['en', 'it']) {
       await i18next.changeLanguage(language);

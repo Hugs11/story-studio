@@ -18,9 +18,8 @@ import { translateCommon as t } from '../i18n/commonPresentation.js';
 //
 // L'inventaire est une **donnée**, pas un rendu : la barre le peint, la table
 // des raccourcis y lit ses disponibilités, et un test le dresse dans les deux
-// éditeurs sans monter React. C'est la preuve centrale du lot — la liste des
-// commandes atteignables de chaque côté, avec ce qui est commun et ce qui est
-// propre.
+// éditeurs sans monter React : il vérifie les commandes atteignables de chaque
+// côté, avec ce qui est commun et ce qui est propre.
 //
 // **Suspendre n'est pas masquer.** Pendant un export, les commandes qui
 // changeraient le document ou le projet restent visibles et désactivées, avec

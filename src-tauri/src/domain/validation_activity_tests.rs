@@ -46,6 +46,7 @@ impl Drop for Disk {
 
 fn options(auto_next: bool, night_mode: bool) -> GlobalOptions {
     GlobalOptions {
+        end_node: false,
         harmonize_loudness: true,
         add_silence: false,
         silence_mode: None,
@@ -80,6 +81,9 @@ fn step(audio: Option<String>, image: Option<String>) -> AfterPlaybackSequenceSt
 
 fn pack(disk: &Disk, entries: Vec<ProjectEntry>, options: GlobalOptions) -> Project {
     Project {
+        root_name: String::new(),
+        end_node_name: String::new(),
+        tree_color: None,
         name: "Pack".to_string(),
         project_type: Some("pack".to_string()),
         root_audio: Some(disk.file("root.mp3")),

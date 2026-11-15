@@ -223,6 +223,7 @@ export const RootEditor = memo(function RootEditor({
                   qu'elle n'en a pas de propre, elle suit cette image. */}
               <ImageField
                 fieldId="root:coverImage"
+                mediaTarget={{ kind: 'root', field: 'rootImage' }}
                 file={node.rootImage}
                 badge={t("tree:root.image.badge")}
                 formatHint={t("tree:root.image.hint")}

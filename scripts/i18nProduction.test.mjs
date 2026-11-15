@@ -7,7 +7,7 @@ import { createServer } from './viteTestServer.mjs';
 import react from '@vitejs/plugin-react';
 import i18next from 'i18next';
 import { BASE, sources, dependencySources } from './i18nProductionSourceFixture.mjs';
-import { applyLot413 } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrections } from './i18nFrenchSourceCorrections.mjs';
 import { createTestI18n } from './i18nTestSetup.mjs';
 import { checkCatalogues, checkSource, sourceHash } from './check-i18n.mjs';
 import { pseudoResources } from '../src/i18n/pseudo.js';
@@ -51,8 +51,8 @@ test('Production : catalogue, source indépendante, mutation FR détectée et ex
   assert.equal(BASE, 'ead31360c9da01844f0dbc878395ea60990914bc');
   assert.deepEqual(checkCatalogues(resources, { production: meta }).errors, []);
   assert.ok(checkSource('productionRef(unknownKey)', 'src/hooks/unknown.js', resources).errors.some(error => error.includes('clé dynamique non déclarée')));
-  // Lot 4.13 : corrections FR explicites appliquées à la source BASE.
-  const source = applyLot413(Object.values({ ...sources, ...dependencySources }).join('\n'));
+  // corrections FR explicites appliquées à la source BASE.
+  const source = applyFrenchSourceCorrections(Object.values({ ...sources, ...dependencySources }).join('\n'));
   const interpolated = new Set(['report.measurement.initial', 'report.measurement.final', 'report.measurement.gain', 'report.measurement.limiting', 'generation.blocked.message', 'save.error.message', 'save.rollback.message', 'refusal.empty.message', 'refusal.media.message', 'refusal.assessment.message', 'refusal.mediaCheck.message', 'work.prepare.message', 'work.lock.message', 'native.title.qualified']);
   for (const [key, text] of Object.entries(fr)) {
     for (const lng of ['en', 'it']) if (key in resources[lng].production) {
@@ -140,7 +140,7 @@ test('Production : surfaces réellement rendues contre BASE, FR/EN/IT/pseudo, at
       const now = (await current.ssrLoadModule(`/src/components/${file}.jsx`))[name]; const old = (await original.ssrLoadModule(`/src/components/${file}.jsx`))[name];
       const render = (component, module) => renderToStaticMarkup(React.createElement(I18nextProvider, { i18n: engine }, React.createElement(component,
         name === 'ProductionReport' ? { ...props, report: module.renderJobReport(props.job) } : props)));
-      await engine.changeLanguage('fr'); assert.equal(render(now, nowReport), applyLot413(render(old, oldReport)), `${name}:${props.job?.status ?? ''}`);
+      await engine.changeLanguage('fr'); assert.equal(render(now, nowReport), applyFrenchSourceCorrections(render(old, oldReport)), `${name}:${props.job?.status ?? ''}`);
       for (const lng of ['en', 'it', 'pseudo']) {
         await engine.changeLanguage(lng); const html = render(now, nowReport);
         assert.doesNotMatch(html, /\[object Object\]|production:[a-z]+\./);
@@ -161,9 +161,9 @@ test('Production : surfaces réellement rendues contre BASE, FR/EN/IT/pseudo, at
     await engine.changeLanguage('fr');
     for (const count of [0, 1, 2, 1000000]) {
       const summary = { blocked: true, blocking: Array.from({ length: count }, () => ({ levelLabel: '_AUTHOR_LEVEL_', code: '_CODE_', message: '_AUTHOR_DETAIL_' })) };
-      assert.equal(work.documentBlockage(summary).message, applyLot413(originalWork.documentBlockage(summary).message));
+      assert.equal(work.documentBlockage(summary).message, applyFrenchSourceCorrections(originalWork.documentBlockage(summary).message));
     }
-    assert.equal(work.emptyPackBlockage([]).message, applyLot413(originalWork.emptyPackBlockage([]).message));
+    assert.equal(work.emptyPackBlockage([]).message, applyFrenchSourceCorrections(originalWork.emptyPackBlockage([]).message));
     // Le journal porte le diagnostic brut tel que l'exécuteur l'écrit pour une erreur codée.
     const errorReport = nowReport.renderJobReport(job('error', { errorMessage: { code: 'COMFYUI_SERVICE_ERROR', params: {}, detail: '_RAW_TOOL_' }, logs: [{ code: 'TOOL_PROCESS_OUTPUT', params: { output: '_RAW_TOOL_' }, detail: '_RAW_TOOL_' }] }));
     const component = (await current.ssrLoadModule('/src/components/production/ProductionReport.jsx')).ProductionReport;
@@ -183,7 +183,7 @@ test('Production : refus IPC typés et rejet sans valeur restent des refus dans 
     const envelope = { kind: 'output-write', message: { code: 'COMFYUI_SERVICE_ERROR', params: {}, detail: '_RAW_TOOL_' }, path: '/_AUTHOR_PARTIAL_' };
     const request = { job: { request: {} }, invokeExport: async () => { throw envelope; } };
     const result = await now.runAdvancedWork(request); const originalResult = await old.runAdvancedWork(request);
-    assert.equal(result.refusal.title, applyLot413(originalResult.refusal.title)); assert.equal(result.refusal.message, applyLot413(originalResult.refusal.message));
+    assert.equal(result.refusal.title, applyFrenchSourceCorrections(originalResult.refusal.title)); assert.equal(result.refusal.message, applyFrenchSourceCorrections(originalResult.refusal.message));
     const seen = [];
     for (const lng of ['fr', 'en', 'it']) {
       await engine.changeLanguage(lng); seen.push([result.refusal.title, result.refusal.message]);

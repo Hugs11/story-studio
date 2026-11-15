@@ -150,7 +150,7 @@ export async function importPack(page, archivePath, { editor = 'menus', timeout 
   await page.getByText('Modifier un pack existant').click();
   await dropFiles(page, '[data-funnel-drop]', [archivePath]);
   const chooser = modalWithText(page, 'Choisir l’éditeur');
-  const name = editor === 'graphe' ? 'Éditeur graphe' : 'Éditeur par menus';
+  const name = editor === 'graphe' ? 'Éditeur graphe' : /^Éditeur (par menus|simplifié)$/;
   await chooser.waitFor({ timeout }).catch(() => {});
   if (await chooser.count()) {
     await chooser.getByRole('button', { name, exact: true }).click();

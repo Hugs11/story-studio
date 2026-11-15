@@ -7,7 +7,7 @@ import { createServer } from './viteTestServer.mjs';
 import react from '@vitejs/plugin-react';
 import i18next from 'i18next';
 import { sources, BASE } from './i18nAiSourceFixture.mjs';
-import { applyLot413 } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrections } from './i18nFrenchSourceCorrections.mjs';
 import { createTestI18n } from './i18nTestSetup.mjs';
 import { checkCatalogues, AI_NEUTRAL_KEYS, sourceHash } from './check-i18n.mjs';
 import { pseudoResources } from '../src/i18n/pseudo.js';
@@ -20,7 +20,7 @@ import { presentUserMessage, presentStoredError, userMessageTransport } from '..
 import { getImageJobTargetRef } from '../src/store/aiJobLabels.js';
 
 const resources = { fr: { ai: fr }, en: { ai: en }, it: { ai: it } };
-// Lot select A : ces listes natives sont devenues le composant Select, fermé par défaut : seule l'option choisie
+// Listes de sélection : ces listes natives sont devenues le composant Select, fermé par défaut : seule l'option choisie
 // est dans le DOM. L'ancien rendu est donc ramené à son option choisie (le texte visible reste celui de la source ; sans option choisie, le navigateur affiche la première).
 const collapseNativeSelect = (html, isMigrated) => html.replace(/<select\b[^>]*>[\s\S]*?<\/select>/g, (block) => (
   isMigrated(block) ? `<span>${(block.match(/<option\b[^>]*\bselected=""[^>]*>([\s\S]*?)<\/option>/) ?? block.match(/<option\b[^>]*>([\s\S]*?)<\/option>/))?.[1] ?? ''}</span>` : block
@@ -50,15 +50,15 @@ async function server(original = false) {
 test('IA : source française figée, métadonnées et règle d’or par mutation', () => {
   assert.equal(BASE, 'ae7fa04f797c490441e360a10e031797f18705d0');
   assert.deepEqual(checkCatalogues(resources, { ai: meta }).errors, []);
-  // Lot 4.13 : corrections FR explicites appliquées à la source BASE.
-  const original = applyLot413(Object.values(sources).join('\n'));
+  // corrections FR explicites appliquées à la source BASE.
+  const original = applyFrenchSourceCorrections(Object.values(sources).join('\n'));
   const templates = new Set(['voice.text.emptyCount', 'voice.text.tooLong', 'voice.output.help', 'voice.speed.label', 'voice.option.download', 'queue.progress.label', 'queue.image.preview', 'queue.audio.stopFile', 'queue.audio.playFile', 'image.submit.multiple', 'usage.screen.detail', 'usage.node.detail', 'usage.node.modified', 'usage.field.missing', 'usage.node.homeStep', 'target.story.home', 'target.stage.image', 'target.story.selection', 'target.folder.image', 'queue.example.target']);
   for (const [key, value] of Object.entries(fr)) {
-    // Lot 4.13 : queue.example.target relue (statut ai → ai-reviewed).
+    // queue.example.target relue (statut ai → ai-reviewed).
     assert.equal(meta[key].en?.status ?? 'ai-reviewed', 'ai-reviewed');
     for (const lng of ['en', 'it']) if (key in resources[lng].ai) assert.equal(meta[key][lng].sourceHash, sourceHash(value));
     if (templates.has(key) || /_one|_many|_other/.test(key)) continue;
-    // « Envoi... » / « Génération... » : la source corrigée (applyLot413) porte déjà « … ».
+    // « Envoi... » / « Génération... » : la source corrigée (applyFrenchSourceCorrections) porte déjà « … ».
     const old = value;
     // Les options Piper sont une table partagée hors périmètre, figées ci-dessous.
     if (key === 'voice.language.enGB' || key === 'voice.language.enUS') { assert.equal(value, key.endsWith('GB') ? 'English UK' : 'English US'); continue; }
@@ -129,7 +129,7 @@ test('IA : FR rendu contre git show BASE, EN/IT et surface pseudo avec attributs
       const old = (await original.ssrLoadModule(`/src/components/${file}.jsx`))[name];
       const render = component => renderToStaticMarkup(React.createElement(I18nextProvider, { i18n: runtime }, React.createElement(component, props)));
       await runtime.changeLanguage('fr');
-      assert.equal(plain(render(now)), plain(applyLot413(name === 'GenerateVoiceModal' ? collapseNativeSelect(render(old), block => block.includes('tts-input')) : render(old))).replace('Envoi...', 'Envoi…').replace('Génération...', 'Génération…'), name);
+      assert.equal(plain(render(now)), plain(applyFrenchSourceCorrections(name === 'GenerateVoiceModal' ? collapseNativeSelect(render(old), block => block.includes('tts-input')) : render(old))).replace('Envoi...', 'Envoi…').replace('Génération...', 'Génération…'), name);
       for (const language of ['en', 'it', 'pseudo']) {
         await runtime.changeLanguage(language); const html = render(now);
         assert.doesNotMatch(html, /\[object Object\]|ai:[a-z]+\./);
@@ -161,13 +161,13 @@ test('IA : usages rendus et replis de destination comparés aux sources indépen
         function Usage() { const usage = module.useAiJobUsage({ project, projectIndex: index, advancedMediaUsages }); return React.createElement('div', null, ...[usage.getAudioJobUsage(a), usage.getImageJobUsage(i)].map((u, n) => React.createElement('span', { key: n, title: u.detail }, u.label))); }
         return renderToStaticMarkup(React.createElement(I18nextProvider, { i18n: engine }, React.createElement(Usage)));
       };
-      await engine.changeLanguage('fr'); assert.equal(render(now), applyLot413(render(old)));
+      await engine.changeLanguage('fr'); assert.equal(render(now), applyFrenchSourceCorrections(render(old)));
       await engine.changeLanguage('pseudo'); assertSurface(render(now));
       assert.equal(JSON.stringify(project), before);
     }
     const currentLabels = await current.ssrLoadModule('/src/store/aiJobLabels.js'); const originalLabels = await original.ssrLoadModule('/src/store/aiJobLabels.js');
     await engine.changeLanguage('fr');
-    for (const fieldId of ['root:coverImage', 'root:rootImage', 'root:thumbnailImage', 's:homeStep:image', 'stage:s:image', 's:itemImage', 'm:image']) assert.equal(currentLabels.getImageJobTargetLabel({ fieldId }, index), applyLot413(originalLabels.getImageJobTargetLabel({ fieldId }, index)));
+    for (const fieldId of ['root:coverImage', 'root:rootImage', 'root:thumbnailImage', 's:homeStep:image', 'stage:s:image', 's:itemImage', 'm:image']) assert.equal(currentLabels.getImageJobTargetLabel({ fieldId }, index), applyFrenchSourceCorrections(originalLabels.getImageJobTargetLabel({ fieldId }, index)));
     const drawing = await current.ssrLoadModule('/src/components/TextImageGenerator/drawTextImage.js');
     const calls = []; const ctx = { fillRect() {}, measureText: text => ({ width: text.length }), fillText: text => calls.push(text) };
     for (const lng of ['fr', 'en', 'it']) { await engine.changeLanguage(lng); calls.length = 0; drawing.drawTextImage(ctx, ''); assert.equal(calls.join(' '), engine.t('ai:textImage.title.fallback')); calls.length = 0; drawing.drawTextImage(ctx, '_AUTHOR_TEXT_'); assert.equal(calls.join(' '), '_AUTHOR_TEXT_'); }

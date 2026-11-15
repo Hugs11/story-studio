@@ -265,3 +265,6 @@ fn a_menu_editor_project_generates_a_valid_pack() {
     );
     assert_eq!(ok_target(&pack, "Fin - histoire-2"), "Dossier de test");
 }
+
+#[path = "generation_ui_aggregate_tests.rs"]
+mod aggregate_tests;

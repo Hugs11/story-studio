@@ -5,7 +5,7 @@
 // produite (`ZipReviewPanel`) ou un pack posé dans l'arbre (« Simuler ce
 // pack… »/« Simuler depuis ici »). Ce module ne sait pas d'où vient l'écoute :
 // il lit `.lunii-sim` et pilote ses boutons, ce qui rend la trace comparable
-// entre le projet et l'archive qu'il produit — c'est tout l'enjeu du lot.
+// entre le projet et l'archive qu'il produit.
 //
 // Aucune sonde applicative : titre, sous-titre, présence d'image et barre de
 // lecture (durée) viennent du DOM ; le journal IPC (`events.ipc()`) est lu à

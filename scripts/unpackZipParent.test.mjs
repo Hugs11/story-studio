@@ -99,6 +99,61 @@ function parentWithZips(zipIds) {
   });
 }
 
+test('recipe opening sanitizes restored pack labels only, including steps', async () => {
+  const c = mount(normalizeProjectData({ projectType: 'pack', rootEntries: [] }), {
+    recipeReopened: true, projectType: 'pack', title: 'Pack',
+    restoredPackNameIds: ['recipe-0', 'recipe-1', 'recipe-1/step-0', 'recipe-1/step-1'],
+    entries: [{ id: 'recipe-0', type: 'menu', name: 'Menu/retouché\u0007', children: [
+      { id: 'recipe-1', type: 'story', name: 'Le/loup\u0007', audio: 'C:/audio/story.mp3',
+        afterPlaybackSequence: [{ id: 'step-0', name: 'Fin/retouchée\u0007', audio: 'C:/audio/end.mp3' }],
+        afterPlaybackHomeStep: { id: 'step-1', name: 'Accueil/retouché\u0007', audio: 'C:/audio/home.mp3' } },
+      { id: 'recipe-2', type: 'story', name: 'Nom / auteur intact', audio: 'C:/audio/other.mp3',
+        afterPlaybackSequence: [{ id: 'step-0', name: 'Fin / auteur intact', audio: 'C:/audio/other-end.mp3' }] },
+    ] }],
+  });
+  try {
+    const transformed = await c.session.unpackZipIntoBlankProject({
+      zipPath: 'C:/pack.zip', workspaceDir: 'C:/ws',
+      baseProject: normalizeProjectData({ projectType: 'pack', rootEntries: [] }),
+    });
+    const menu = transformed.project.rootEntries[0];
+    assert.equal(menu.name, 'Menu retouché');
+    assert.equal(menu.children[0].name, 'Le loup');
+    assert.equal(menu.children[0].afterPlaybackSequence[0].name, 'Fin retouchée');
+    assert.equal(menu.children[0].afterPlaybackHomeStep.name, 'Accueil retouché');
+    assert.equal(menu.children[1].name, 'Nom / auteur intact');
+    assert.equal(menu.children[1].afterPlaybackSequence[0].name, 'Fin / auteur intact');
+    assert.deepEqual(c.errors, []);
+  } finally { c.restore(); }
+});
+
+test('recipe opening preserves names and restores the simple editor through the import hook', async () => {
+  const c = mount(normalizeProjectData({ projectType: 'pack', rootEntries: [] }), {
+    recipeReopened: true, projectType: 'simple', title: 'Pack',
+    rootName: '', endNodeName: '', treeColor: '#abcdef',
+    rootAudio: 'C:/audio/root.mp3', rootImage: 'C:/image/root.png',
+    nightModeAudio: 'C:/audio/end.mp3', nightModeReturn: 'root',
+    globalOptions: { autoNext: false, nightMode: false, endNode: true, endMessageAutoplay: false, silenceMode: 'off', harmonizeLoudness: false },
+    entries: [{ id: 'recipe-0', type: 'story', name: 'Nom / auteur \\ intact', audio: 'C:/audio/story.mp3', silentTitleStage: true }],
+  });
+  try {
+    const transformed = await c.session.unpackZipIntoBlankProject({
+      zipPath: 'C:/pack.zip', workspaceDir: 'C:/ws',
+      baseProject: normalizeProjectData({ projectType: 'pack', rootEntries: [] }),
+    });
+    const project = normalizeProjectData(transformed.project);
+    assert.equal(project.projectType, 'simple');
+    assert.equal(project.rootEntries[0].name, 'Nom / auteur \\ intact');
+    assert.equal(project.rootEntries[0].silentTitleStage, true);
+    assert.equal(project.endNodeName, 'Message de fin');
+    assert.equal(project.globalOptions.endNode, true);
+    assert.equal(project.globalOptions.endMessageAutoplay, false);
+    assert.equal(project.nightModeAudio.replaceAll('\\', '/'), 'C:/audio/end.mp3');
+    assert.equal(project.nightModeReturn, 'root');
+    assert.equal(project.nativeGraph, null);
+  } finally { c.restore(); }
+});
+
 function allIds(entries, out = []) {
   for (const entry of entries ?? []) {
     out.push(entry.id);

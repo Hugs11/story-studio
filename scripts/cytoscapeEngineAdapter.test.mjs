@@ -162,8 +162,8 @@ test("la carte d'un Écran sans image se détache du fond du canvas, dans les de
       `le contour du thème ${name} revient vers le fond au lieu de s'en écarter`,
     );
   }
-  // Le rapport s'inverse d'un thème à l'autre : c'est la condition que le
-  // handoff avait manquée en laissant le thème clair hors passe.
+  // Le rapport s'inverse d'un thème à l'autre : c'est la condition que la
+  // maquette avait manquée en laissant le thème clair hors passe.
   assert.ok(relativeLuminance(light('--graph-card-bg')) < relativeLuminance(light('--bg0')));
   assert.ok(relativeLuminance(dark('--graph-card-bg')) > relativeLuminance(dark('--bg0')));
 });

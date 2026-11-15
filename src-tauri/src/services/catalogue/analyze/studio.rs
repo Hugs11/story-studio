@@ -68,10 +68,30 @@ pub fn directory(
         }
         return Ok(out);
     }
+    // Stamped before detection: the reader resolves these names without
+    // regard to case, so the folder's exact-name token may miss them.
+    let mut reads = Vec::new();
+    for name in super::evidence::PACK_FOLDER_ENTRIES {
+        super::evidence::record(
+            &mut reads,
+            super::evidence::ExternalRead::capture(path, super::evidence::Anchor::Unit, name, true),
+        );
+    }
     if crate::support::fs_pack_reader::detect_fs_pack_variant(path).is_some() {
         let mut out = Observation::new("fsDirectory");
-        out.raw = crate::support::fs_pack_reader::read_fs_pack_preview(path)
-            .map_err(crate::support::fs_pack_reader::FsPreviewError::into_reason)?;
+        out.raw = crate::support::fs_pack_reader::read_fs_pack_preview_observed(path, |name| {
+            super::evidence::record(
+                &mut reads,
+                super::evidence::ExternalRead::capture(
+                    path,
+                    super::evidence::Anchor::Unit,
+                    name,
+                    true,
+                ),
+            )
+        })
+        .map_err(crate::support::fs_pack_reader::FsPreviewError::into_reason)?;
+        out.external_reads = reads;
         out.cover = out.raw.get("cover").filter(|v| !v.is_null()).cloned();
         if measure {
             let variant = crate::support::fs_pack_reader::detect_fs_pack_variant(path).unwrap();

@@ -5,6 +5,7 @@ import {
   basename,
   basenameNoExt,
   dirname,
+  isAbsoluteFilePath,
   isPathInside,
   joinPath,
   normalizeWindowsPath,
@@ -12,6 +13,15 @@ import {
   stripWindowsLongPathPrefix,
   toProjectRelativePath,
 } from '../src/utils/fileUtils.js';
+
+test('absolute file paths distinguish catalogue covers from ZIP asset names on all platforms', () => {
+  for (const path of ['/tmp/Cover.png', 'C:/Cover.png', 'C:\\Cover.png', '\\\\server\\share\\Cover.png', '//server/share/Cover.png', '\\\\?\\C:\\Cover.png']) {
+    assert.equal(isAbsoluteFilePath(path), true, path);
+  }
+  for (const path of [null, '', 'c0ffee.bmp', 'assets/c0ffee.bmp', './cover.png', '../cover.png']) {
+    assert.equal(isAbsoluteFilePath(path), false, String(path));
+  }
+});
 
 test('pathKey strips Windows long path prefixes and compares mixed case paths', () => {
   assert.equal(pathKey('\\\\?\\C:\\Foo\\bar.MP3'), 'c:/foo/bar.mp3');

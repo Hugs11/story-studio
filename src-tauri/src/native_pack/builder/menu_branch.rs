@@ -82,6 +82,10 @@ impl<'a> StoryBuilder<'a> {
                         &menu.children,
                         child_index,
                     );
+                    let inherited_default_return = menu.return_after_play.is_some()
+                        && story.return_after_play.is_none()
+                        && !story.ok
+                        && !story.autoplay;
                     // Quand returnOnHome est absent mais returnAfterPlay défini, Home reste
                     // sur le menu parent pour différer du chemin OK généré. Avec auto_next,
                     // Home reste aussi sur le menu par défaut.
@@ -89,7 +93,9 @@ impl<'a> StoryBuilder<'a> {
                         None
                     } else {
                         Some(
-                            if story.return_on_home.is_none() && story.return_after_play.is_some() {
+                            if story.return_on_home.is_none()
+                                && (story.return_after_play.is_some() || inherited_default_return)
+                            {
                                 self.resolve_story_home_transition(
                                     None,
                                     menu_replay_transition.clone(),
@@ -108,6 +114,7 @@ impl<'a> StoryBuilder<'a> {
                     // Force autoplay for stories with no explicit controls in any menu context
                     // (not just nested menus) so they never hang after playback.
                     let effective_simple_leaf = auto_next_active
+                        || inherited_default_return
                         || (menu.return_after_play.is_none() && story.return_after_play.is_none());
                     let (night_bridge_return, night_bridge_home) = self
                         .compute_night_bridge_targets(

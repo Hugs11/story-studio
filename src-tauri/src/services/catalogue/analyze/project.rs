@@ -215,8 +215,36 @@ fn read_project(
         } else {
             path.parent().unwrap_or(Path::new(".")).join(cover)
         };
+        // The image lies outside the project file: its presence is evidence a
+        // cached analysis must check again (same location as `resolved`).
+        super::evidence::record(
+            &mut out.external_reads,
+            super::evidence::ExternalRead::capture(
+                path,
+                super::evidence::Anchor::Parent,
+                relative,
+                false,
+            ),
+        );
+        // Size and date of the image: replacing it changes the stored cover,
+        // hence the observation revision (cover signature, thumbnail key).
+        let stamp = std::fs::metadata(&resolved)
+            .ok()
+            .filter(|m| m.is_file())
+            .and_then(|m| {
+                let time = m
+                    .modified()
+                    .ok()?
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .ok()?;
+                Some(serde_json::json!([
+                    m.len(),
+                    time.as_secs(),
+                    time.subsec_nanos()
+                ]))
+            });
         out.cover = Some(
-            serde_json::json!({"raw":relative,"path":crate::support::paths::path_for_frontend(&resolved),"available":resolved.is_file()}),
+            serde_json::json!({"raw":relative,"path":crate::support::paths::path_for_frontend(&resolved),"available":resolved.is_file(),"stamp":stamp}),
         );
     }
     out.raw = raw;

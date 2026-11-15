@@ -64,9 +64,13 @@ export function useProjectLifecycle({
 
   // Retour à l'accueil : PAS de nouvelle session, c'est un reset. Nettoyage
   // complet mémoire + session + jobs ; après quoi projectType est null → ModeSelector.
-  async function leaveProject(beforeReset = null) {
+  async function confirmProjectReplacement() {
     if (!await confirmBackgroundWork()) return false;
-    const canContinue = await askSaveBeforeLeaveCurrent(handleSave);
+    return askSaveBeforeLeaveCurrent(handleSave);
+  }
+
+  async function leaveProject(beforeReset = null) {
+    const canContinue = await confirmProjectReplacement();
     if (!canContinue) return false;
     beforeReset?.();
     store.resetProject();
@@ -184,6 +188,7 @@ export function useProjectLifecycle({
   }
 
   return {
+    confirmProjectReplacement,
     handleNewProject,
     handleReturnToCatalogue,
     handleSelectProjectType,

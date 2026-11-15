@@ -1,4 +1,5 @@
 import { translateTree as t } from '../../../i18n/treePresentation.js';
+import { hasVisibleEndNode } from '../../../store/generatedNavigation.js';
 import { buildStructureProjection, getStructureEdgeId } from './structurePresentation.js';
 
 const END_NODE_ID = 'end-node';
@@ -87,11 +88,7 @@ export function getStructureLevelLayout(project, metrics, options = {}) {
     node.entry.storyIds?.forEach((storyId) => hiddenStoryGroupByStoryId.set(storyId, node.entry.id));
   }
 
-  const hasEndNode = !!(
-    project.nightModeAudio
-    || project.globalOptions?.nightMode
-    || project.globalOptions?.endNode
-  );
+  const hasEndNode = hasVisibleEndNode(project);
   let endNodeX = null;
   let endNodeY = null;
   if (hasEndNode) {

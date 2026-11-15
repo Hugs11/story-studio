@@ -79,6 +79,12 @@ pub(crate) fn safe_reason(error: UserMessage) -> UserMessage {
     safe
 }
 fn safe_reason_content(error: UserMessage) -> UserMessage {
+    if matches!(
+        error.code.as_str(),
+        codes::CATALOG_TARGET_REVISION_CHANGED | codes::CATALOG_TARGET_REVISION_STALE
+    ) {
+        return UserMessage::new(codes::CATALOG_TARGET_REVISION_STALE);
+    }
     if error.code == codes::GENERATION_CANCELLED {
         return UserMessage::new(codes::STORYTELLER_SEND_CANCELLED);
     }
@@ -303,17 +309,21 @@ pub(crate) fn run(
     op: Arc<Operation>,
     sink: Sink,
 ) {
+    // Capture every target before copying any story. Unrelated catalogue changes
+    // during the batch must not invalidate the user's initial selection.
+    let targets = resolve_selection(&store, &selection);
     let _access = device::platform::access_guard();
     let _operation = device.backup_scope();
+    let mut targets = targets.into_iter();
     let items = run_batch_tracked(
         &selection,
         &op.cancel,
         |items| publish(&op, &sink, items, false),
         |selected, stage, enter| {
+            let target = targets.next().unwrap();
             let result = (|| {
-                let mut target =
-                    store.resolve_target(&selected.exemplar_id, selected.expected_revision)?;
-                target.require_unchanged(std::time::Duration::from_secs(5))?;
+                let mut target = target?;
+                require_selected_target(&store, selected, &target)?;
                 let uuid = target
                     .observation
                     .as_ref()
@@ -436,6 +446,32 @@ pub(crate) fn run(
         },
     );
     publish(&op, &sink, &items, true);
+}
+
+pub(crate) fn resolve_selection(store: &Store, selection: &[Selection]) -> Vec<Result<Target>> {
+    selection
+        .iter()
+        .map(|selected| store.resolve_target(&selected.exemplar_id, selected.expected_revision))
+        .collect()
+}
+
+pub(crate) fn require_selected_target(
+    store: &Store,
+    selected: &Selection,
+    target: &Target,
+) -> Result<()> {
+    let active: bool = store.read(|c| {
+        c.query_row(
+            "SELECT EXISTS(SELECT 1 FROM exemplar WHERE id=?1 AND retired=0)",
+            [&selected.exemplar_id],
+            |r| r.get(0),
+        )
+    })?;
+    if !active {
+        return Err(UserMessage::new(codes::CATALOG_TARGET_REVISION_STALE));
+    }
+    target.require_unchanged(std::time::Duration::from_secs(5))?;
+    Ok(())
 }
 
 // A committed payload remains successful even if its durability or sidecar warns.
@@ -583,6 +619,7 @@ fn run_batch_tracked(
                     codes::STORYTELLER_SOUND_UNREADABLE_UNNAMED,
                     codes::GENERATION_CANCELLED,
                     codes::STORYTELLER_SEND_CANCELLED,
+                    codes::CATALOG_TARGET_REVISION_STALE,
                 ]
                 .contains(&error.code.as_str())
                 {
@@ -1897,5 +1934,61 @@ mod tests {
                     .is_none()));
             }
         }
+    }
+
+    /// A stale selection keeps an actionable reason without disclosing a path.
+    #[test]
+    fn stale_catalogue_revision_is_not_shown_as_a_generic_preparation_failure() {
+        let stale = crate::services::catalogue::open::target::changed("C:/Packs/histoire.zip");
+        assert_eq!(stale.code, codes::CATALOG_TARGET_REVISION_CHANGED);
+        let items = run_batch(
+            &selection(),
+            &AtomicBool::new(false),
+            |_| {},
+            |_, _| {
+                Err(crate::services::catalogue::open::target::changed(
+                    "C:/Packs/histoire.zip",
+                ))
+            },
+        );
+        let shown = items[0].reason.as_ref().unwrap();
+        assert_eq!(shown.code, codes::CATALOG_TARGET_REVISION_STALE);
+        assert!(shown.params.is_empty());
+        assert!(items
+            .iter()
+            .all(|item| item.step == "refused" && !item.device_fault));
+        assert_ne!(
+            shown.code,
+            codes::STORYTELLER_WRITE_FAILED,
+            "the reason became « Impossible de préparer cette histoire pour ta Lunii. Réessaie. »"
+        );
+    }
+
+    #[test]
+    fn retired_middle_exemplar_is_refused_and_the_other_stories_continue() {
+        let items = run_batch(
+            &selection(),
+            &AtomicBool::new(false),
+            |_| {},
+            |selected, _| {
+                if selected.exemplar_id == "refused" {
+                    Err(UserMessage::new(codes::CATALOG_TARGET_REVISION_STALE))
+                } else {
+                    Ok(None)
+                }
+            },
+        );
+        assert_eq!(
+            items
+                .iter()
+                .map(|item| item.step.as_str())
+                .collect::<Vec<_>>(),
+            vec!["done", "refused", "done"]
+        );
+        assert_eq!(
+            items[1].reason.as_ref().unwrap().code,
+            codes::CATALOG_TARGET_REVISION_STALE
+        );
+        assert!(!items[1].device_fault);
     }
 }

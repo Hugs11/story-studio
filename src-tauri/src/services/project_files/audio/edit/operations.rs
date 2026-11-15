@@ -314,6 +314,7 @@ pub fn restore_audio_original(
     input_path: &str,
     save_path: Option<&str>,
     workspace_dir: Option<&str>,
+    preserve_input: bool,
 ) -> Result<TrimAudioResult, String> {
     let input = validate_existing_file_path(input_path, codes::AUDIO_FILE_LABEL_TRANSPORT)?;
     if !is_in_trim_dir(input_path, workspace_dir, save_path)? {
@@ -339,6 +340,29 @@ pub fn restore_audio_original(
         codes::AUDIO_ORIGINAL_FILE_LABEL_TRANSPORT,
     )?;
     let expected_backup = is_expected_audio_original_path(&input, &original);
+    // Restaurer un champ partagé ne doit ni réécrire l'autre son, ni consommer
+    // sa sauvegarde et son sidecar.
+    if preserve_input {
+        let extension = original
+            .extension()
+            .and_then(OsStr::to_str)
+            .unwrap_or("flac");
+        let stem = input.file_stem().and_then(OsStr::to_str).unwrap_or("audio");
+        let output = input.with_file_name(format!(
+            "{stem}_restored_{}.{extension}",
+            uuid::Uuid::new_v4()
+        ));
+        fs::copy(&original, &output).map_err(|e| {
+            user_message::UserMessage::new(codes::AUDIO_ORIGINAL_RESTORE_FAILED)
+                .param("error", user_message::transport_param(e.to_string()))
+                .into_transport()
+        })?;
+        return Ok(TrimAudioResult {
+            output_path: path_for_frontend(&output),
+            path_changed: true,
+            original_path: Some(path_for_frontend(&original)),
+        });
+    }
     let switch_to_managed_original =
         !expected_backup && is_in_managed_media_dir(&original, workspace_dir, save_path);
     let sidecar_parent = audio_edit_sidecar_path(&input)
@@ -422,6 +446,7 @@ pub fn commit_audio_preview(
     workspace_dir: Option<&str>,
     preview_root: &Path,
     project_destination: Option<&crate::services::project_files::ProjectMediaDestination>,
+    preserve_input: bool,
 ) -> Result<TrimAudioResult, String> {
     commit_audio_preview_in(
         input_path,
@@ -430,6 +455,7 @@ pub fn commit_audio_preview(
         workspace_dir,
         preview_root,
         project_destination,
+        preserve_input,
     )
 }
 
@@ -440,6 +466,7 @@ pub(crate) fn commit_audio_preview_in(
     workspace_dir: Option<&str>,
     preview_temp_root: &Path,
     project_destination: Option<&crate::services::project_files::ProjectMediaDestination>,
+    preserve_input: bool,
 ) -> Result<TrimAudioResult, String> {
     let input = validate_existing_file_path(input_path, codes::AUDIO_FILE_LABEL_TRANSPORT)?;
     let preview = validate_managed_audio_preview_in(Path::new(preview_path), preview_temp_root)?
@@ -457,8 +484,9 @@ pub(crate) fn commit_audio_preview_in(
     let same_format = ext == input_ext;
     let ffmpeg = get_ffmpeg_path()?;
 
-    let in_place =
-        same_format && is_in_trim_dir(input_path, workspace_dir, save_path).unwrap_or(false);
+    let in_place = !preserve_input
+        && same_format
+        && is_in_trim_dir(input_path, workspace_dir, save_path).unwrap_or(false);
 
     let (output, final_path, path_changed) = if in_place {
         let parent = input.parent().unwrap_or(Path::new("."));
@@ -580,7 +608,8 @@ pub fn apply_audio_edit(request: AudioEditRequest<'_>) -> Result<TrimAudioResult
     let source = audio_edit_source_for(&input);
     let ffmpeg = get_ffmpeg_path()?;
 
-    let in_place = same_format
+    let in_place = !request.preserve_input
+        && same_format
         && is_in_trim_dir(request.input_path, request.workspace_dir, request.save_path)
             .unwrap_or(false);
 

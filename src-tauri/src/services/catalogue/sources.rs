@@ -186,6 +186,22 @@ fn normalize_with_links(path: &Path, followed_links: usize) -> Result<PathBuf> {
 /// A path resolved through its links, with its comparison key. Both touch the
 /// disk (links, and case or Unicode probes on macOS and Windows).
 pub(crate) type Resolution = (PathBuf, Vec<u8>);
+
+fn probe_source_directory(path: &Path) -> Result<(Resolution, bool)> {
+    if !path.is_absolute() {
+        return Err(UserMessage::new(codes::CATALOG_SOURCE_INVALID));
+    }
+    let owned = path.to_path_buf();
+    let (resolution, is_dir) = probe::bounded(path, probe::PROBE_TIMEOUT, move || {
+        let resolution = normalize(&owned).map(|resolved| {
+            let path_key = key(&resolved);
+            (resolved, path_key)
+        });
+        (resolution, owned.is_dir())
+    })
+    .ok_or_else(unavailable)?;
+    Ok((resolution?, is_dir))
+}
 /// Resolves a source path; replaced in tests by a probe that never answers.
 pub(crate) type Resolver = Arc<dyn Fn(&Path) -> Option<Resolution> + Send + Sync>;
 
@@ -567,30 +583,20 @@ impl Store {
     }
     /// Every disk probe (resolution, directory check, reconciliation of the
     /// other sources) is bounded and runs before the transaction.
-    pub fn add_source(&self, path: &Path, expected: i64, declined: bool) -> Result<SourceOutcome> {
-        if !path.is_absolute() {
-            return Err(UserMessage::new(codes::CATALOG_SOURCE_INVALID));
-        }
-        let owned = path.to_path_buf();
-        let (resolution, is_dir) = probe::bounded(path, probe::PROBE_TIMEOUT, move || {
-            let resolution = normalize(&owned).map(|resolved| {
-                let path_key = key(&resolved);
-                (resolved, path_key)
-            });
-            (resolution, owned.is_dir())
-        })
-        .ok_or_else(unavailable)?;
-        let resolution = resolution?;
-        if !declined && !is_dir {
+    pub fn add_source(&self, path: &Path, expected: i64) -> Result<SourceOutcome> {
+        let (resolution, is_dir) = probe_source_directory(path)?;
+        if !is_dir {
             return Err(UserMessage::new(codes::CATALOG_SOURCE_INVALID));
         }
         let plan = self.plan_reconciliation(&default_resolver(), probe::PROBE_TIMEOUT)?;
-        self.mutate_source(
-            Some((path, &resolution, &plan)),
-            None,
-            expected,
-            if declined { "declined" } else { "active" },
-        )
+        self.mutate_source(Some((path, &resolution, &plan)), None, expected, "active")
+    }
+    /// Seeds a historical refusal for reconciliation and migration tests.
+    #[cfg(test)]
+    pub fn add_declined_source(&self, path: &Path, expected: i64) -> Result<SourceOutcome> {
+        let (resolution, _) = probe_source_directory(path)?;
+        let plan = self.plan_reconciliation(&default_resolver(), probe::PROBE_TIMEOUT)?;
+        self.mutate_source(Some((path, &resolution, &plan)), None, expected, "declined")
     }
     #[cfg(test)]
     pub fn remove_source(&self, id: &str, expected: i64) -> Result<SourceOutcome> {
@@ -745,6 +751,9 @@ impl Store {
         })
     }
     fn build_exclusions(&self, cache: &Path, data: &Path, resolve: bool) -> Result<Exclusions> {
+        self.activity
+            .exclusions
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let workspaces = self.workspace_roots()?;
         let mut items = Vec::new();
         let mut add = |path: PathBuf, role: &str| {

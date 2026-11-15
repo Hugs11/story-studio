@@ -200,6 +200,7 @@ pub async fn lunii_device_open(app: tauri::AppHandle, device_id: String) -> Resu
         inspect(app, &store, &device_id)
     })
     .await
+    .map_err(|error| driver::classify_error(error, "device"))
 }
 fn bytes(path: &std::path::Path) -> Option<u64> {
     bytes_at(path, 0)
@@ -372,7 +373,7 @@ fn inspect_mode(
         .is_some_and(|ids| device.list_lost(&backup_lists, &ids, &listed));
     let writable = NativeVolumes.writable(&device.root).unwrap_or(false);
     let read_only = inventory.read_only_cause(writable);
-    let state = if inventory.metadata.version == 1 {
+    let mut state = if inventory.metadata.version == 1 {
         "unsupported"
     } else if inventory.playlist_state == driver::PlaylistState::Damaged {
         "damaged"
@@ -404,8 +405,22 @@ fn inspect_mode(
     } else {
         Some(driver::Error::ReadOnly)
     };
-    let (repair_preview, repair_preview_error) =
+    let (repair_preview, mut repair_preview_error) =
         repair_preview(state == "damaged", refusal, || device.repair_preview());
+    if state == "damaged"
+        && inventory.playlist_error.is_none()
+        && repair_preview_error
+            .as_ref()
+            .is_some_and(|error| error.code == codes::STORYTELLER_PLAYLIST_HEALTHY)
+    {
+        state = if read_only.is_some() {
+            "readOnly"
+        } else {
+            "ready"
+        };
+        banners.retain(|banner| *banner != "damagedMissingStories");
+        repair_preview_error = None;
+    }
     Ok(json!({
         "id": id, "name": device.name().map_err(UserMessage::from)?,
         "serial": inventory.metadata.serial(),
@@ -443,7 +458,11 @@ pub async fn lunii_device_inspect(
 }
 fn classify_send_setup_error(error: UserMessage) -> UserMessage {
     // Reservation and Device::open access the device before local preparation.
-    driver::classify_error(error, "device")
+    let mut error = driver::classify_error(error, "device");
+    if error.code == codes::STORYTELLER_DEVICE_WRITE_FAILED {
+        error.code = codes::STORYTELLER_WRITE_FAILED.into();
+    }
+    error
 }
 #[tauri::command]
 pub async fn lunii_device_send(
@@ -778,6 +797,7 @@ pub async fn lunii_device_eject(app: tauri::AppHandle, device_id: String) -> Res
         Ok(json!({"id":device_id,"state":"ejected"}))
     })
     .await
+    .map_err(|error| driver::classify_error(error, "device"))
 }
 /// Covers use opaque addresses like catalogue-cover, never filesystem URLs.
 pub(crate) fn cover(app: &tauri::AppHandle, path: &str) -> Result<Vec<u8>> {

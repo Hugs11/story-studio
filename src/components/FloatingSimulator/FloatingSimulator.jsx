@@ -104,6 +104,8 @@ export function FloatingSimulator({
   documentStartId = null,
   documentStatus = null,
   documentError = null,
+  documentStale = false,
+  onRestart,
   consultation = null,
   onActiveNodeChange,
   onClose,
@@ -151,6 +153,12 @@ export function FloatingSimulator({
         onActiveNodeChange={onActiveNodeChange}
         onClose={handleClose}
       />
+      {documentStale && !zipPath && !consultation && (
+        <div className="floating-simulator-stale" role="status">
+          <span>{t('common:simulator.playback.stale')}</span>
+          <Button size="sm" onClick={onRestart}>{t('common:simulator.playback.restart')}</Button>
+        </div>
+      )}
       {!isShowingNotice && (
         <button
           type="button"

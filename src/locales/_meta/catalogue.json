@@ -682,6 +682,18 @@
       "status": "ai-reviewed"
     }
   },
+  "progress.phase.listening": {
+    "context": "Bibliothèque de packs : suivi de la lecture des archives 7z solides après les analyses, avant la publication finale.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "d52f5eb46df7",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d52f5eb46df7",
+      "status": "ai-reviewed"
+    }
+  },
   "progress.phase.finalization": {
     "context": "Bibliothèque de packs : suivi d’un scan pendant la publication de l’index, avant l’annonce de la fin. Phrase courte.",
     "maxLength": 48,
@@ -2931,6 +2943,18 @@
     },
     "maxLength": 32
   },
+  "cover.officialPending.label": {
+    "context": "Catalogue : attente temporaire de récupération de la jaquette officielle ; infobulle et nom accessible dans les petites vignettes.",
+    "en": {
+      "status": "ai-reviewed",
+      "sourceHash": "163330960e02"
+    },
+    "it": {
+      "status": "ai-reviewed",
+      "sourceHash": "163330960e02"
+    },
+    "maxLength": 45
+  },
   "cover.loading.label": {
     "context": "Catalogue : espace réservé pendant le chargement progressif de la jaquette.",
     "en": {
@@ -2997,7 +3021,7 @@
     }
   },
   "filter.summary.values": {
-    "context": "Catalogue : récapitulatif visible et accessible d’un filtre multivaleur. family est le nom traduit ; values contient les valeurs présentées (formats traduits, chemins ou étiquettes utilisateur). Traductions et paramètres relus pendant la reprise de la revue 2d.",
+    "context": "Catalogue : récapitulatif visible et accessible d’un filtre multivaleur. family est le nom traduit ; values contient les valeurs présentées (formats traduits, chemins ou étiquettes utilisateur).",
     "en": {
       "status": "ai-reviewed",
       "sourceHash": "07702d38645a"
@@ -4397,13 +4421,13 @@
     }
   },
   "assembly.effectiveValues": {
-    "context": "Assistant d’assemblage : provenance des noms et images modifiables, sans écriture dans les sources.",
+    "context": "Assistant d’assemblage : renommage des nœuds dans l’éditeur ; la couverture de chaque pack sur la Lunii reste celle de l’archive source.",
     "en": {
-      "sourceHash": "096b6f4fcf77",
+      "sourceHash": "045cff4f6f30",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "096b6f4fcf77",
+      "sourceHash": "045cff4f6f30",
       "status": "ai-reviewed"
     }
   },
@@ -5571,13 +5595,24 @@
     }
   },
   "preferences.location.label": {
-    "context": "Préférences > Catalogue : Emplacement du catalogue.",
+    "context": "Préférences > Catalogue : dossier des données durables, distinct des dossiers de packs et du cache.",
     "en": {
-      "sourceHash": "541bbce7b4b3",
+      "sourceHash": "009cc89bce4b",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "541bbce7b4b3",
+      "sourceHash": "009cc89bce4b",
+      "status": "ai-reviewed"
+    }
+  },
+  "preferences.location.description": {
+    "context": "Préférences > Catalogue : contenu du dossier app-data/catalogue (base et images), les packs restent dans les dossiers de travail.",
+    "en": {
+      "sourceHash": "10901ac24692",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "10901ac24692",
       "status": "ai-reviewed"
     }
   },
@@ -6147,7 +6182,7 @@
     }
   },
   "tags.contextMenu": {
-    "context": "Catalogue : sous-menu commun et étiquettes des cartes (lot ETIQ).",
+    "context": "Catalogue : sous-menu commun et étiquettes des cartes.",
     "en": {
       "sourceHash": "b0bba38f5947",
       "status": "ai-reviewed"
@@ -6158,7 +6193,7 @@
     }
   },
   "tags.moreCount": {
-    "context": "Catalogue : sous-menu commun et étiquettes des cartes (lot ETIQ).",
+    "context": "Catalogue : sous-menu commun et étiquettes des cartes.",
     "en": {
       "sourceHash": "dcccc8a38439",
       "status": "ai-reviewed"
@@ -11003,6 +11038,28 @@
     "context": "Carte de refus d’envoi d’un projet incomplet vers la Lunii : résumé sans détail système, nombre de fichiers issu de la cause structurée si disponible, ouverture dans son éditeur.",
     "it": {
       "sourceHash": "438f88e797e4",
+      "status": "ai-reviewed"
+    }
+  },
+  "preferences.reanalyze.action": {
+    "context": "Catalogue: one-time forced scan of every source, including listening measurements.",
+    "en": {
+      "sourceHash": "657b5cc97797",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "657b5cc97797",
+      "status": "ai-reviewed"
+    }
+  },
+  "preferences.reanalyze.description": {
+    "context": "Catalogue: one-time forced scan of every source, including listening measurements.",
+    "en": {
+      "sourceHash": "2420981fecb3",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2420981fecb3",
       "status": "ai-reviewed"
     }
   }

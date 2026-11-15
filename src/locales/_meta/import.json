@@ -346,6 +346,18 @@
       "status": "ai-reviewed"
     }
   },
+  "edit.simpleEditor.action": {
+    "context": "Modifier un pack : choix de l’éditeur pour une recette de type simple. Surface : src/components/EditPack/EditPackFunnel.jsx.",
+    "maxLength": 48,
+    "en": {
+      "sourceHash": "4884ae8c98b5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4884ae8c98b5",
+      "status": "ai-reviewed"
+    }
+  },
   "edit.menuEditor.action": {
     "context": "Import > edit > menuEditor ; action affiché pendant ce parcours ; déclenche l’action indiquée, libellé court. Surface : src/components/EditPack/EditPackFunnel.jsx.",
     "maxLength": 48,
@@ -2968,6 +2980,17 @@
     },
     "it": {
       "sourceHash": "27cbb14c80a9",
+      "status": "ai-reviewed"
+    }
+  },
+  "media.import.projectChanged": {
+    "context": "Accueil > import podcast ou YouTube interrompu après un changement de projet ; écran d’erreur de l’assistant. Surface : src/hooks/useMediaImport.js.",
+    "en": {
+      "sourceHash": "ddbf45a85d93",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ddbf45a85d93",
       "status": "ai-reviewed"
     }
   }

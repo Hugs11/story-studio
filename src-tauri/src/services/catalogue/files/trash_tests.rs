@@ -450,11 +450,7 @@ fn trash_forbids_source_roots_and_archive_children_even_for_direct_launch() {
                 .member_chain = vec![json!({"path":"child.zip"})];
         } else {
             f.store
-                .add_source(
-                    &f.source,
-                    f.store.list_sources().unwrap().sources_revision,
-                    false,
-                )
+                .add_source(&f.source, f.store.list_sources().unwrap().sources_revision)
                 .unwrap();
             // Reach target validation rather than stopping at the revision guard.
             let revision = f.store.list_sources().unwrap().catalogue_revision;
@@ -1348,7 +1344,7 @@ fn moving_identity_tombstone_with_changed_content_is_kept() {
     }
 }
 
-// Expectation changed in REVa4 (P3-2): the tombstone is recognized by its
+// the tombstone is recognized by its
 // reserved name, so an old row without the mode is relearned like the others.
 #[test]
 fn removal_evidence_without_identity_mode_relearns_reserved_tombstone() {
@@ -1407,7 +1403,7 @@ fn tombstone_outside_its_reserved_name_keeps_strict_proof() {
     );
 }
 
-// P3-2: on a stable volume, a remount (replugged drive: new device number)
+// on a stable volume, a remount (replugged drive: new device number)
 // changes every identity, whether or not the detached proof was recorded.
 #[test]
 fn remounted_volume_permanent_deletion_recovers_reserved_tombstone() {
@@ -1509,9 +1505,9 @@ fn stable_identity_permanent_deletion_records_strict_mode() {
     );
 }
 
-// REVa4 (P3-1): a failed probe keeps the strict proof and never refuses the
+// a failed probe keeps the strict proof and never refuses the
 // deletion. The tombstone left by an unrecorded detach is now relearned at
-// its reserved name (P3-2), which lifts the lock this fallback used to keep.
+// its reserved name, which lifts the lock this fallback used to keep.
 #[test]
 fn failed_probe_keeps_strict_mode_and_permanent_deletion_succeeds() {
     for directory in [false, true] {

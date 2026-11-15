@@ -21,6 +21,13 @@ function snapshot(overrides = {}) {
   };
 }
 
+test('solid 7z reading has a dedicated line and retains the known analysis progress', () => {
+  const summary = summarizeOperation(snapshot({ phase: 'listening', candidates: { discovered: 30, processed: 30, total: 30 } }));
+  assert.deepEqual(summary.progressLine, { key: 'catalogue:progress.phase.listening', params: {} });
+  assert.equal(summary.progress.analysed, 30);
+  assert.equal(summary.progress.total, 30);
+});
+
 test('bilan : compteurs disjoints, processed = somme des sept résultats, motifs détaillant les refusés', () => {
   const summary = summarizeOperation(snapshot({
     status: 'partial', scanComplete: true, sequence: 9,

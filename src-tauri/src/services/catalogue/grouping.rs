@@ -101,17 +101,19 @@ const UPSERT_EXEMPLAR: &str = "INSERT INTO exemplar
        (id,fiche_id,container_id,anchor_json,verified_uuid,proof_json,
         content_revision,retired,created_at)
      VALUES (?1,?2,?6,?3,?4,?5,1,0,unixepoch())
-     ON CONFLICT(id) DO UPDATE SET anchor_json=excluded.anchor_json,
+     ON CONFLICT(id) DO UPDATE SET anchor_json=excluded.anchor_json,container_id=excluded.container_id,
        proof_json=excluded.proof_json,verified_uuid=excluded.verified_uuid,
        content_revision=exemplar.content_revision
          + CASE WHEN exemplar.proof_json!=excluded.proof_json THEN 1 ELSE 0 END";
 const UPSERT_OBSERVATION: &str =
     "INSERT INTO cache.observation VALUES (?1,?10,?2,?3,1,?4,?5,NULL,?6,?7,'{}',?8,?9)
      ON CONFLICT(exemplar_id) DO UPDATE SET content_token=excluded.content_token,
+       locator_key=excluded.locator_key,container_id=excluded.container_id,
        state=excluded.state,modified_at=excluded.modified_at,byte_size=excluded.byte_size,
        raw_observation_json=excluded.raw_observation_json,scan_id=excluded.scan_id,
        content_revision=observation.content_revision
-         + CASE WHEN observation.content_token!=excluded.content_token THEN 1 ELSE 0 END";
+         + CASE WHEN observation.content_token!=excluded.content_token
+             OR json_extract(observation.raw_observation_json,'$.cover') IS NOT json_extract(excluded.raw_observation_json,'$.cover') THEN 1 ELSE 0 END";
 const INSERT_EXTRACTED: &str =
     "INSERT INTO cache.extracted_value VALUES (?1,?2,'',?3,?4,?5,?6,NULL,?7)";
 const MARK_UNSEEN: &str = "UPDATE cache.observation SET state=?3
@@ -131,12 +133,19 @@ fn scope_scan_id(scan: &str, source: &str) -> String {
     format!("{scan}:{source}")
 }
 
-fn check_sources_revision(tx: &Transaction<'_>, expected: i64) -> Result<i64> {
+fn check_sources_revision(
+    tx: &Transaction<'_>,
+    expected: &super::scan::SourceExpectation<'_>,
+) -> Result<i64> {
     let current: i64 = tx
         .query_row("SELECT sources_revision FROM catalogue", [], |r| r.get(0))
         .map_err(error)?;
-    if current != expected {
-        return Err(UserMessage::new(codes::CATALOG_REVISION_CONFLICT));
+    match expected {
+        super::scan::SourceExpectation::Revision(expected) if current != *expected => {
+            return Err(UserMessage::new(codes::CATALOG_REVISION_CONFLICT))
+        }
+        super::scan::SourceExpectation::Snapshot(snapshot) => snapshot.check(tx)?,
+        _ => {}
     }
     Ok(current)
 }
@@ -439,17 +448,18 @@ impl Store {
         })
     }
 
-    pub(super) fn preserve_deferred(
+    pub(super) fn preserve_deferred<'a>(
         &self,
         id: &str,
-        expected: i64,
+        expected: impl Into<super::scan::SourceExpectation<'a>>,
         source: &str,
         path: &std::path::Path,
     ) -> Result<()> {
+        let expected = expected.into();
         self.write(|tx| {
-            check_sources_revision(tx, expected)?;
+            let current = check_sources_revision(tx, &expected)?;
             let scan_id = scope_scan_id(id, source);
-            tx.execute("INSERT OR IGNORE INTO cache.scan VALUES (?1,?2,?3,'incomplete','[]')", params![scan_id,source,expected]).map_err(error)?;
+            tx.execute("INSERT OR IGNORE INTO cache.scan VALUES (?1,?2,?3,'incomplete','[]')", params![scan_id,source,current]).map_err(error)?;
             let locator = json!({"pathKey":super::path_identity::key(path)}).to_string();
             tx.execute("UPDATE cache.observation SET scan_id=?1 WHERE exemplar_id IN
                 (SELECT id FROM exemplar WHERE json_extract(anchor_json,'$.pathKey')=json_extract(?2,'$.pathKey') AND retired=0)", params![scan_id,locator]).map_err(error)?;
@@ -458,16 +468,17 @@ impl Store {
     }
 
     /// Publishes one bounded batch of analysed exemplars in one transaction.
-    pub fn publish_scan(
+    pub fn publish_scan<'a>(
         &self,
         id: &str,
-        expected_sources: i64,
+        expected_sources: impl Into<super::scan::SourceExpectation<'a>>,
         items: &[Scanned],
         scopes: &[(String, bool)],
     ) -> Result<Published> {
         self.restore_trashed_items(items)?;
+        let expected_sources = expected_sources.into();
         self.write(|tx| {
-            let current = check_sources_revision(tx, expected_sources)?;
+            let current = check_sources_revision(tx, &expected_sources)?;
             for (source, complete) in scopes {
                 let status = if *complete { "complete" } else { "incomplete" };
                 tx.execute(
@@ -503,17 +514,18 @@ impl Store {
     /// touched, and confirms the absence of `removed` files, in one
     /// transaction. Nothing else in the source is read or changed; the
     /// revision advances only if the index changed.
-    pub fn publish_targeted(
+    pub fn publish_targeted<'a>(
         &self,
         id: &str,
-        expected_sources: i64,
+        expected_sources: impl Into<super::scan::SourceExpectation<'a>>,
         source: &str,
         items: &[Scanned],
         removed: &[Vec<u8>],
     ) -> Result<Published> {
         self.restore_trashed_items(items)?;
+        let expected_sources = expected_sources.into();
         self.write(|tx| {
-            let current = check_sources_revision(tx, expected_sources)?;
+            let current = check_sources_revision(tx, &expected_sources)?;
             publish_targeted_tx(tx, id, current, source, items, removed)
         })
     }
@@ -549,14 +561,15 @@ impl Store {
 
     /// Closes each scope. A failed or cut root only makes unseen observations
     /// unavailable: it never retires anchors nor deletes personal information.
-    pub fn finalize_scan(
+    pub fn finalize_scan<'a>(
         &self,
         id: &str,
-        expected_sources: i64,
+        expected_sources: impl Into<super::scan::SourceExpectation<'a>>,
         scopes: &[(String, bool)],
     ) -> Result<i64> {
+        let expected_sources = expected_sources.into();
         self.write(|tx| {
-            let current = check_sources_revision(tx, expected_sources)?;
+            let current = check_sources_revision(tx, &expected_sources)?;
             let mut changed = false;
             for (source, complete) in scopes {
                 let scan_id = scope_scan_id(id, source);
@@ -631,6 +644,43 @@ fn current_anchor(tx: &Transaction<'_>, locator: &str) -> Result<Option<Anchor>>
     })
     .optional()
     .map_err(error)
+}
+
+/// A native identity includes the volume/device, so equal UUIDs on another
+/// disk cannot take over an exemplar. Missing native IDs keep path anchoring.
+fn moved_exemplar(
+    tx: &Transaction<'_>,
+    card: &str,
+    scan: &str,
+    item: &Scanned,
+    locator: &str,
+) -> Result<Option<String>> {
+    let Some(file_id) = item.file_id.as_deref() else {
+        return Ok(None);
+    };
+    let mut statement = tx
+        .prepare(
+            "SELECT e.id,json_extract(e.anchor_json,'$.path') FROM exemplar e
+         JOIN exemplar_file_state f ON f.exemplar_id=e.id
+         JOIN cache.observation o ON o.exemplar_id=e.id
+         WHERE e.fiche_id=?1 AND e.retired=0 AND f.file_id=?2
+           AND json_extract(e.anchor_json,'$.memberKey') IS json_extract(?3,'$.memberKey')
+           AND o.state<>'unavailable' AND instr(o.scan_id,?4 || ':')!=1",
+        )
+        .map_err(error)?;
+    let candidates = statement
+        .query_map(params![card, file_id, locator, scan], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?))
+        })
+        .map_err(error)?;
+    for candidate in candidates {
+        let (id, path) = candidate.map_err(error)?;
+        // Permission and I/O errors do not prove absence.
+        if path.is_some_and(|path| matches!(std::path::Path::new(&path).try_exists(), Ok(false))) {
+            return Ok(Some(id));
+        }
+    }
+    Ok(None)
 }
 
 fn publish_item(
@@ -772,8 +822,7 @@ fn publish_item(
                 let outcome = if old.token == item.token
                     && old.state == observation.state
                     && old.locator == locator
-                    && old.raw.as_deref()
-                        == Some(serde_json::to_string(observation).map_err(error)?.as_str())
+                    && observation.matches_raw(old.raw.as_deref())
                 {
                     "unchanged"
                 } else {
@@ -789,8 +838,23 @@ fn publish_item(
                         .map_err(error)?;
                 }
                 let card = card_for(tx, observation, result)?;
-                let exemplar = uuid::Uuid::new_v4().to_string();
-                (exemplar, card, "indexedNew")
+                let moved = if old.is_none() {
+                    moved_exemplar(tx, &card, scan, item, &locator)?
+                } else {
+                    None
+                };
+                if let Some(exemplar) = moved {
+                    // Coverage follows the new path, including moves between sources.
+                    tx.execute(
+                        "DELETE FROM cache.coverage WHERE exemplar_id=?1",
+                        [&exemplar],
+                    )
+                    .map_err(error)?;
+                    (exemplar, card, "updated")
+                } else {
+                    let exemplar = uuid::Uuid::new_v4().to_string();
+                    (exemplar, card, "indexedNew")
+                }
             }
         }
     };
@@ -1027,7 +1091,7 @@ impl Store {
         include_unavailable: bool,
         after_revision: impl FnOnce(),
     ) -> Result<EntryPage> {
-        let limit = limit.clamp(1, 200);
+        let limit = limit.clamp(1, 1000);
         let page = self.read_snapshot(|c| {
             let revision: i64 = c.query_row("SELECT revision FROM catalogue", [], |r| r.get(0))?;
             after_revision();

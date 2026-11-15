@@ -47,7 +47,7 @@ pub async fn catalogue_add_source(
     expected_sources_revision: i64,
 ) -> Result<SourceOutcome, UserMessage> {
     run(app, move |app, store| {
-        let outcome = store.add_source(Path::new(&path), expected_sources_revision, false)?;
+        let outcome = store.add_source(Path::new(&path), expected_sources_revision)?;
         catalogue::sources_changed(app);
         Ok(outcome)
     })
@@ -104,6 +104,7 @@ pub async fn catalogue_start_scan(
     app: tauri::AppHandle,
     source_ids: Option<Vec<String>>,
     paths: Option<Vec<String>>,
+    force: Option<bool>,
     request_id: String,
     expected_sources_revision: i64,
 ) -> Result<catalogue::scan::Receipt, UserMessage> {
@@ -113,9 +114,14 @@ pub async fn catalogue_start_scan(
             .app_cache_dir()
             .map_err(catalogue::store::error)?;
         let data = app.path().app_data_dir().map_err(catalogue::store::error)?;
-        store.start_scan_paths(
-            source_ids,
+        store.start_scan_forced(
+            source_ids.clone(),
             paths,
+            if force.unwrap_or(false) {
+                source_ids
+            } else {
+                Some(Vec::new())
+            },
             request_id,
             expected_sources_revision,
             cache,
@@ -268,22 +274,6 @@ pub async fn catalogue_list_operations(
 ) -> Result<catalogue::scan::OperationList, UserMessage> {
     run(app, move |_, store| {
         store.list_operations(limit.unwrap_or(20) as usize)
-    })
-    .await
-}
-#[tauri::command]
-pub async fn catalogue_explain_path(
-    app: tauri::AppHandle,
-    path: String,
-) -> Result<catalogue::path_explanation::PathExplanation, UserMessage> {
-    run(app, move |app, store| {
-        store.explain_path(
-            Path::new(&path),
-            &app.path()
-                .app_cache_dir()
-                .map_err(catalogue::store::error)?,
-            &app.path().app_data_dir().map_err(catalogue::store::error)?,
-        )
     })
     .await
 }

@@ -81,7 +81,7 @@ const config = [
   },
   {
     // Liste explicite des surfaces raccordées, à étendre par domaine.
-    files: ["src/components/AdvancedGraphCanvas/AdvancedGraphCanvas.jsx","src/components/AdvancedGraphCanvas/GraphCanvasStage.jsx","src/components/AdvancedGraphCanvas/GraphInspector.jsx","src/components/AdvancedGraphCanvas/GraphNodeOverlays.jsx","src/components/AdvancedGraphCanvas/GraphSearchPanel.jsx","src/components/AdvancedGraphCanvas/GraphSurfaceControls.jsx","src/components/AdvancedGraphCanvas/graphSurfaceCapture.js","src/components/AdvancedWorkspace/AdvancedDialog.jsx","src/components/AdvancedWorkspace/AdvancedWorkspace.jsx","src/components/AdvancedWorkspace/CreateConstructionDialog.jsx","src/components/AdvancedWorkspace/NewStageDefaultsDialog.jsx","src/components/AdvancedWorkspace/useGraphArrangement.js","src/hooks/graphCopyFlow.js","src/hooks/useAdvancedProjectEntry.js","src/store/advancedAuthoring/constructions.js","src/store/advancedAuthoring/defaultNodeNames.js","src/store/advancedGraphView/advancedViewSession.js","src/store/advancedGraphView/graphPresentation.js","src/store/advancedGraphView/graphViewModel.js","src/store/graphCopy.js",
+    files: ["src/components/AdvancedGraphCanvas/GraphCanvasStage.jsx","src/components/AdvancedGraphCanvas/GraphNodeOverlays.jsx","src/components/AdvancedGraphCanvas/GraphSearchPanel.jsx","src/components/AdvancedGraphCanvas/GraphSurfaceControls.jsx","src/components/AdvancedWorkspace/AdvancedDialog.jsx","src/components/AdvancedWorkspace/AdvancedWorkspace.jsx","src/components/AdvancedWorkspace/CreateConstructionDialog.jsx","src/components/AdvancedWorkspace/NewStageDefaultsDialog.jsx","src/components/AdvancedWorkspace/useGraphArrangement.js","src/hooks/graphCopyFlow.js","src/hooks/useAdvancedProjectEntry.js","src/store/advancedAuthoring/constructions.js","src/store/advancedAuthoring/defaultNodeNames.js","src/store/advancedGraphView/advancedViewSession.js","src/store/advancedGraphView/graphPresentation.js","src/store/advancedGraphView/graphViewModel.js","src/store/graphCopy.js",
       "src/components/editors/EndMessagePlaybackControl.jsx",
       "src/components/editors/EndNodeEditor.jsx",
       "src/components/editors/MenuEditor.jsx",
@@ -244,13 +244,13 @@ const graphFiles = [
   "src/components/AdvancedWorkspace/LandingSelect.jsx",
   "src/components/AdvancedWorkspace/ListenFromActionDialog.jsx",
   "src/components/AdvancedWorkspace/ControlsEditor.jsx",
-  "src/components/AdvancedGraphCanvas/AdvancedGraphCanvas.jsx",
+
   "src/components/AdvancedGraphCanvas/GraphCanvasStage.jsx",
-  "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
+
   "src/components/AdvancedGraphCanvas/GraphNodeOverlays.jsx",
   "src/components/AdvancedGraphCanvas/GraphSearchPanel.jsx",
   "src/components/AdvancedGraphCanvas/GraphSurfaceControls.jsx",
-  "src/components/AdvancedGraphCanvas/graphSurfaceCapture.js",
+
   "src/components/AdvancedWorkspace/AdvancedDialog.jsx",
   "src/components/AdvancedWorkspace/AdvancedWorkspace.jsx",
   "src/components/AdvancedWorkspace/CreateConstructionDialog.jsx",

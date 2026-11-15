@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { catalogueApi } from '../store/catalogue/catalogueApi.js';
-import { createReloadScheduler, entriesReducer, INITIAL_ENTRIES_STATE } from '../store/catalogue/entriesState.js';
+import { createReloadScheduler, entriesReducer, INITIAL_ENTRIES_STATE, loadEntriesWithRetry } from '../store/catalogue/entriesState.js';
 
 /**
  * Fiches du catalogue : chargement initial, puis rechargement regroupé à
@@ -25,7 +25,10 @@ export function useCatalogueEntries({ api = catalogueApi() } = {}) {
         if (opening) { opening = false; await apiRef.current.openCatalogue?.(); }
         dispatch({ type: 'loadStarted' });
         try {
-          const { cards, revision } = await apiRef.current.listAllEntries({ signal: controller.signal });
+          const { cards, revision } = await loadEntriesWithRetry(
+            options => apiRef.current.listAllEntries(options), controller.signal,
+            () => { if (!controller.signal.aborted) dispatch({ type: 'loadRetrying' }); },
+          );
           if (!controller.signal.aborted) dispatch({ type: 'loadSucceeded', cards, revision });
           return revision;
         } catch (error) {

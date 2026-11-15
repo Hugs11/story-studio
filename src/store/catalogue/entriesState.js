@@ -13,15 +13,32 @@ export const INITIAL_ENTRIES_STATE = Object.freeze({
   reloading: false,
 });
 
+// The paginated reader already retries immediately. Give a busy catalogue time
+// to settle before surfacing cursor expiry (five more reads, one second apart).
+export async function loadEntriesWithRetry(load, signal, onRetry) {
+  for (let retries = 0; ; retries += 1) {
+    signal.throwIfAborted();
+    try {
+      return await load({ signal });
+    } catch (error) {
+      if (error.code !== 'CATALOG_ENTRIES_CURSOR_EXPIRED' || retries >= 5) throw error;
+      onRetry?.();
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+}
+
 /**
  * @param {typeof INITIAL_ENTRIES_STATE} state
- * @param {{type: 'loadStarted'} | {type: 'loadSucceeded', cards: Array, revision: number}
+ * @param {{type: 'loadStarted'|'loadRetrying'} | {type: 'loadSucceeded', cards: Array, revision: number}
  *   | {type: 'loadFailed', error: unknown}} action
  */
 export function entriesReducer(state = INITIAL_ENTRIES_STATE, action) {
   switch (action.type) {
     case 'loadStarted':
       return state.status === 'loading' ? state : { ...state, reloading: true };
+    case 'loadRetrying':
+      return { ...state, error: null, status: state.status === 'error' ? 'loading' : state.status };
     case 'loadSucceeded':
       return { status: 'ready', cards: shareUnchangedCards(state.cards, action.cards), revision: action.revision, error: null, reloading: false };
     case 'favoritePatched': {

@@ -1,6 +1,6 @@
 import { useCatalogueTranslation } from '../../i18n/useCatalogueTranslation.js';
 import { presentCommon, useCommonTranslation } from '../../i18n/commonPresentation.js';
-import { FilePen, FolderOpen, House, Package, Save, Waypoints } from '../icons/LucideLocal';
+import { FilePen, House, Package, Save, Waypoints } from '../icons/LucideLocal';
 import { MenuItem, MenuPopover } from './MenuPopover';
 
 // Une entrée du menu, pilotée par l'inventaire de la barre : libellé,
@@ -29,12 +29,10 @@ export function ProjectMenuPopover({
   onOpenChange,
   trigger,
   shortcutLabels,
-  // Les entrées du groupe « fichier » de l'inventaire, dans son ordre.
+  // Le groupe « fichier » conserve aussi les commandes d'ouverture au clavier.
   commands = [],
   onNewProject,
   onReturnToCatalogue,
-  onOpenProject,
-  onOpenPack,
   onSaveProject,
   onSaveProjectAs,
   onContinueInGraph,
@@ -61,19 +59,6 @@ export function ProjectMenuPopover({
         fallbackShortcut={shortcutLabels.newProject}
         Icon={House}
         onClick={() => handleAction(onNewProject)}
-      />
-      <ProjectMenuItem
-        entry={find('openProject')}
-        fallbackLabel={t('common:project.open.label')}
-        fallbackShortcut={shortcutLabels.openProject}
-        Icon={FolderOpen}
-        onClick={() => handleAction(onOpenProject)}
-      />
-      <ProjectMenuItem
-        entry={find('openPack')}
-        fallbackLabel={t('common:project.openPack.label')}
-        Icon={Package}
-        onClick={() => handleAction(onOpenPack)}
       />
       <span className="project-menu-sep" />
       <ProjectMenuItem

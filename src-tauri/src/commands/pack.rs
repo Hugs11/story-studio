@@ -439,6 +439,7 @@ pub async fn analyze_community_pack(
     zip_path: String,
     preparation_id: Option<String>,
     expected_content_token: Option<String>,
+    source_label: Option<String>,
 ) -> Result<community_pack_checker::PackValidationReport, UserMessage> {
     let result: Result<_, String> = async {
     log::info!(target: "pack_checker", "analyze_community_pack: '{}'", zip_path);
@@ -462,7 +463,19 @@ pub async fn analyze_community_pack(
         if analysis_zip != source {
             emit(codes::FILES_ANALYSIS_ARCHIVE_PREPARING_TRANSPORT);
         }
-        let mut report = community_pack_checker::analyze_pack_with_log(&analysis_zip, &emit);
+        let source_path = source_label
+            .as_deref()
+            .map(str::trim)
+            .filter(|label| !label.is_empty())
+            .map(|label| {
+                crate::services::project_files::validate_existing_dir_path(
+                    label,
+                    codes::FILES_IMPORTED_PACK_FOLDER_TRANSPORT,
+                )
+            })
+            .transpose()?
+            .unwrap_or_else(|| source.clone());
+        let mut report = community_pack_checker::analyze_pack_with_source_log(&analysis_zip, &source_path, &emit);
         report.official_provenance = crate::domain::official_provenance::imported_provenance(&report.pack_uuid, app.try_state::<crate::services::catalogue::CatalogueState>().as_deref()).map_err(UserMessage::into_transport)?;
         report.identity_locked = crate::domain::official_provenance::is_official_origin(report.official_provenance, &report.pack_uuid, app.try_state::<crate::services::catalogue::CatalogueState>().as_deref()).map_err(UserMessage::into_transport)?;
         report.pack_name = pack_name_from_source(&source);

@@ -62,6 +62,13 @@ const PROJECT_OPEN_KEYS = [KEYS.LAST_OPEN_PROJECT_DIR, KEYS.LAST_PROJECT_DIR];
 const PROJECT_SAVE_KEYS = [KEYS.LAST_SAVE_PROJECT_DIR, KEYS.LAST_PROJECT_DIR];
 const RECENT_PROJECT_LIMIT = 8;
 const BACKUP_DIR_NAME = '.story-studio-backups';
+
+// La copie d'un projet jamais enregistré n'est qu'un filet pour le travail
+// courant. Ne jamais effacer le fichier que l'auteur vient d'enregistrer dessus.
+export async function discardProjectAutosave(path, savedPath = null) {
+  if (!path || (savedPath && pathKey(path) === pathKey(savedPath))) return;
+  await withDeclaredWrite({ kind: 'projectSave', paths: [path] }, () => remove(path));
+}
 // Caracteres interdits dans un nom de fichier `.mbah` propose a l'utilisateur.
 const FILENAME_FORBIDDEN_CHARS = /[<>:"/\\|?*\[\]+]/g;
 
@@ -266,7 +273,7 @@ async function resolveLoadedProjectPath(maybeRelativePath, mbahDir, workspaceDir
 
 async function resolveLoadedProjectPaths(project, mbahDir, workspaceDir, cache) {
   const cloned = structuredClone(project);
-  for (const ref of walkProjectMediaReferences(cloned)) {
+  for (const ref of walkProjectMediaReferences(cloned, { includeRelativeZipCovers: true })) {
     ref.obj[ref.key] = await resolveLoadedProjectPath(ref.path, mbahDir, workspaceDir, cache);
   }
   return cloned;
@@ -407,7 +414,15 @@ async function backupProjectFile(path, limit = 0, backupDirOverride = null) {
   const keep = Number(limit) || 0;
   if (keep <= 0 || !path || !(await exists(path))) return;
   const projectDir = getProjectDir(path);
-  const baseName = basenameNoExt(path);
+  let baseName = basenameNoExt(path);
+  if (backupDirOverride !== null) {
+    // Le dossier partagé ne permet pas d'attribuer les anciennes versions à
+    // un chemin précis : elles restent lisibles, hors de cette rotation.
+    // eslint-disable-next-line i18next/no-literal-string -- Identifiant d'algorithme Web Crypto, pas un texte UI.
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pathKey(path)));
+    const pathId = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('').slice(0, 16);
+    baseName = `${baseName}--${pathId}`;
+  }
   const backupDir = backupDirOverride ?? joinPath(projectDir, BACKUP_DIR_NAME);
   await mkdir(backupDir, { recursive: true });
   const entries = await readDir(backupDir).catch(() => []);

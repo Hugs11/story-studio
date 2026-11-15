@@ -7,7 +7,7 @@ import { createServer } from './viteTestServer.mjs';
 import react from '@vitejs/plugin-react';
 import i18next from 'i18next';
 import fixture from './fixtures/import-fr-base-sources.json' with { type: 'json' };
-import { applyLot413 } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrections } from './i18nFrenchSourceCorrections.mjs';
 import { pseudoText } from '../src/i18n/pseudo.js';
 import { createTestI18n } from './i18nTestSetup.mjs';
 import { checkCatalogues } from './check-i18n.mjs';
@@ -65,7 +65,7 @@ test('Imports : comparaison FR avec source indépendante et surfaces pseudo rée
   const s = await server(false), original = await server(true);
   try {
     const now = await surfaces(s), before = await surfaces(original);
-    assert.deepEqual(now.render().map(plain), before.render().map((html) => applePodcastCopy(plain(applyLot413(html)))));
+    assert.deepEqual(now.render().map(plain), before.render().map((html) => applePodcastCopy(plain(applyFrenchSourceCorrections(html)))));
     for (const lng of ['en', 'it', 'pseudo']) {
       await now.runtime.changeLanguage(lng);
       for (const html of now.render()) {
@@ -152,18 +152,18 @@ test('exceptions FR nominatives : seule la progression remplace ... par …', ()
   ];
   for (const [key, file, before] of changes) {
     assert.ok(fixture.sources[file].includes(before), `${file} texte indépendant de BASE`);
-    // Lot 4.13 : « ... » → « … », plus apostrophe typographique.
-    // folder.scan.progress : « Scan du dossier » reformulé au lot 4.13 (§D).
+    // « ... » → « … », plus apostrophe typographique.
+    // folder.scan.progress : « Scan du dossier » reformulé pour préciser le dossier.
     assert.equal(fr[key], key === 'folder.scan.progress' ? 'Recherche dans le dossier…' : before.slice(0, -3).replaceAll("'", '’') + '…');
   }
   assert.ok(fixture.sources['src/hooks/useImportSession.js'].includes('`Téléchargement de la ${itemLabel}...`'));
   assert.equal(fr['youtube.download.progress'], 'Téléchargement de la vidéo…');
-  // Lot 4.13 : « de la épisode » corrigé.
+  // « de la épisode » corrigé.
   assert.equal(fr['podcast.download.progress'], 'Téléchargement de l’épisode…');
   assert.equal(createTestI18n().t('common:project.saveAs.fallbackLabel'), 'Enregistrer sous…');
 });
 
-test('revue 3 : Provider avec dialogue déjà ouvert, notices et progression réellement rendus à chaud', async () => {
+test('Provider avec dialogue déjà ouvert, notices et progression réellement rendus à chaud', async () => {
   const previous = { hooks: globalThis.__importProviderHooks, runtime: globalThis.__importProviderRuntime, document: globalThis.document, HTMLElement: globalThis.HTMLElement };
   const slots = []; let cursor = 0;
   const stateHook = initial => {

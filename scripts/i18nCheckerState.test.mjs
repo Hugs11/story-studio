@@ -1,4 +1,4 @@
-// Lot 4.9 — état du vérificateur : journal en direct, ligne de correction, notices
+// état du vérificateur : journal en direct, ligne de correction, notices
 // et erreurs gardés comme références, relus dans la langue active (vrai hook).
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,7 +21,7 @@ const report = { packName: '_AUTHOR_PACK_', issues: [], audioItems: [], imageIte
 test('Vérificateur : journal, ligne de correction et notices suivent la langue, sans muter le rapport', async () => {
   let analyses = 0;
   const disk = await createDiskHarness({ commands: {
-    analyze_community_pack: async () => { analyses += 1; return structuredClone(report); },
+    analyze_community_pack: async (args) => { assert.equal(args.sourceLabel, null); analyses += 1; return structuredClone(report); },
     create_fixed_community_pack: async () => ({ fixedZipPath: '/_AUTHOR_OUT_.zip', automaticCorrectionsApplied: 1, optionalAudioSilencesFixed: 1000000 }),
   } });
   try {
@@ -30,7 +30,7 @@ test('Vérificateur : journal, ligne de correction et notices suivent la langue,
     const hook = runner(() => { checker = useCommunityPackChecker(); });
     hook.render();
     await checker.analyzePath('/_AUTHOR_PACK_.zip'); hook.render();
-    // Progression : « ... » → « … » (exception nominative du brief), FR sinon identique.
+    // Progression : « ... » → « … » (correction typographique explicite), FR sinon identique.
     assert.deepEqual(checker.liveLog, ['Analyse du pack demandée…', '_RAW_RUST_LINE_', 'Analyse terminée.']);
     await checker.fixPack(null, { outputDir: '/_AUTHOR_DIR_' }); hook.render();
     assert.equal(analyses, 2);
@@ -56,6 +56,37 @@ test('Vérificateur : journal, ligne de correction et notices suivent la langue,
     assert.equal(JSON.stringify({ ...checker.report, technicalLog: checker.report.technicalLog.length }), stored, 'langue sans effet sur les données du rapport');
     hook.unmount();
   } finally { await disk.dispose(); await i18next.changeLanguage('fr'); }
+});
+
+test('Vérificateur : le dossier source accompagne le ZIP converti lors de l’analyse', async () => {
+  const folder = '/packs/3+]Mon_histoire[by_Auteur';
+  const cachedZip = '/cache/hashed.zip';
+  let analysisArgs;
+  const disk = await createDiskHarness({ commands: {
+    path_kinds: async () => ['folder'],
+    convert_folder_pack_to_zip: async ({ folderPath }) => {
+      assert.equal(folderPath, folder);
+      return cachedZip;
+    },
+    analyze_community_pack: async (args) => {
+      analysisArgs = args;
+      return structuredClone(report);
+    },
+  } });
+  try {
+    let checker;
+    const hook = runner(() => { checker = useCommunityPackChecker(); });
+    hook.render();
+    await checker.analyzePath(folder); hook.render();
+    assert.deepEqual(analysisArgs, {
+      zipPath: cachedZip,
+      sourceLabel: folder,
+      preparationId: null,
+      expectedContentToken: null,
+    });
+    assert.equal(checker.report.packName, '3+]Mon_histoire[by_Auteur');
+    hook.unmount();
+  } finally { await disk.dispose(); }
 });
 
 test('Vérificateur : échec de correction présenté par code et paramètres, détail brut conservé', async () => {

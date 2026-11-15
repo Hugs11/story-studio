@@ -106,6 +106,7 @@ export const MenuEditor = memo(function MenuEditor({ node, project, parentMenu, 
               </div>
               <ImageField
                 fieldId={`${node.id}:image`}
+                mediaTarget={{ kind: 'menu', entryId: node.id, field: 'image' }}
                 file={node.image}
                 extraActions={[
                   {
@@ -151,6 +152,7 @@ export const MenuEditor = memo(function MenuEditor({ node, project, parentMenu, 
             <div className="card-copy card-copy--inline">{t("tree:nativeGraph.counts.summary", { stages: t("tree:count.stages.label", { count: nativeGraphStageCount }), actions: t("tree:count.actions.label", { count: nativeGraphActionCount }) })}</div>
           </div>
           <NativeGraphEditor
+            entryId={node.id}
             graph={nativeGraph}
             onChange={(nextGraph) => onUpdate({ nativeGraph: nextGraph })}
           />

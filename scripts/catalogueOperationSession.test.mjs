@@ -93,6 +93,29 @@ test('registry failure prevents automatic startup but still permits manual start
   } finally { app.unmount(); }
 });
 
+test('automatic scan forwards the unattempted source scope without opening its tracker', async () => {
+  const starts = [];
+  const snapshot = { operationId: 'scan', sequence: 1, status: 'running' };
+  const api = {
+    subscribeOperations: async () => () => {},
+    listOperations: async () => ({ items: [], retainedOperationIds: ['scan'] }),
+    startScan: async args => { starts.push(args); return { operationId: 'scan' }; },
+    getOperation: async () => snapshot,
+  };
+  const app = runner(() => useCatalogueOperations({ api }));
+  try {
+    app.render(); app.flush(); await tick();
+    assert.equal(app.render().ready, true);
+    await app.render().start(7, { sourceIds: ['workspace'], automatic: true });
+    assert.equal(starts.length, 1);
+    assert.deepEqual(starts[0].sourceIds, ['workspace']);
+    assert.equal(starts[0].expectedSourcesRevision, 7);
+    assert.equal(typeof starts[0].requestId, 'string');
+    assert.equal(app.render().state.items.scan, snapshot);
+    assert.equal(app.render().state.selected, null);
+  } finally { app.unmount(); }
+});
+
 test('Preferences resolves multi-file trash titles from the shared catalogue session', async () => {
   const listeners = [], timers = [];
   const snapshot = { operationId: 'trash', operationKind: 'trash', sequence: 2, timestamp: 1, status: 'success', outcomes: { updated: 2 } };

@@ -22,12 +22,12 @@ export function LuniiDragGhost({ send, cardsById, active }) {
     </div>;
   }
   if (!send?.drag) return null;
-  const count = send.drag.cardIds.length;
   const over = send.over;
+  const count = over?.count ?? send.drag.cardIds.length;
   return <div className="lunii-drag-ghost" aria-hidden="true">
     {ghostCover && <img src={ghostCover} alt="" />}
     <span>{t('catalogue:lunii.dragCount', { count })}</span>
-    {over?.refused ? <span className="lunii-drag-ghost-refused">{over.refused === 'damaged' ? presentCatalogueError(over.reason).message : t('catalogue:lunii.officialReason')}</span>
+    {over?.refused ? <span className="lunii-drag-ghost-refused">{over.refused === 'damaged' ? presentCatalogueError(over.reason).message : over.refused === 'unavailable' ? t('catalogue:reason.action.fileUnavailable') : t('catalogue:lunii.officialReason')}</span>
       : over && <span className="lunii-drag-ghost-position">{t('catalogue:lunii.dragPosition', { position: over.position })}</span>}
   </div>;
 }

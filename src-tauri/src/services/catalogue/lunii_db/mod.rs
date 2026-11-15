@@ -115,11 +115,19 @@ impl Store {
     }
     pub fn set_lunii_permission(&self, allowed: bool) -> Result<()> {
         self.write(|tx| {
-            tx.execute(
-                "UPDATE lunii_permission SET allowed=?1 WHERE id=1",
-                [allowed],
-            )
-            .map_err(error)?;
+            let changed = tx
+                .execute(
+                    "UPDATE lunii_permission SET allowed=?1 WHERE id=1 AND allowed IS NOT ?1",
+                    [allowed],
+                )
+                .map_err(error)?;
+            if changed > 0 {
+                tx.execute(
+                    "UPDATE catalogue SET revision=revision+1,cover_revision=cover_revision+1",
+                    [],
+                )
+                .map_err(error)?;
+            }
             Ok(())
         })?;
         {

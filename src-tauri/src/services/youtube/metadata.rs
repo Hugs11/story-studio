@@ -25,6 +25,54 @@ const AUDIO_LANGUAGE_TIMEOUT: Duration = Duration::from_secs(5 * 60);
 /// `SLEEP_REQUESTS`, et un blocage doit interrompre l'analyse au plus tôt.
 const AUDIO_LANGUAGE_CHUNK_SIZE: usize = 10;
 
+// Même exclusion que mediaSubscriptionSource.js ; exemples communs dans scripts/fixtures.
+fn is_custom_channel_name(name: &str) -> bool {
+    !matches!(
+        name.to_ascii_lowercase().as_str(),
+        "watch"
+            | "playlist"
+            | "shorts"
+            | "embed"
+            | "results"
+            | "feed"
+            | "live"
+            | "channel"
+            | "c"
+            | "user"
+            | "hashtag"
+            | "premium"
+            | "account"
+            | "about"
+            | "gaming"
+            | "music"
+            | "kids"
+            | "t"
+            | "redirect"
+            | "signin"
+            | "logout"
+            | "upload"
+            | "v"
+            | "attribution_link"
+            | "oembed"
+            | "s"
+            | "post"
+            | "podcasts"
+            | "clip"
+            | "watch_popup"
+            | "e"
+            | "w"
+            | "browse"
+            | "trending"
+            | "explore"
+            | "search"
+            | "movies"
+            | "shared"
+            | "storefront"
+            | "feeds"
+            | "live_chat"
+    )
+}
+
 /// Valide qu'une URL est bien une URL YouTube (HTTP/HTTPS sur un domaine YouTube).
 /// Évite d'utiliser yt-dlp comme téléchargeur générique d'un site arbitraire.
 pub(super) fn validate_youtube_url(url: &str) -> Result<(), String> {
@@ -335,6 +383,12 @@ pub(super) fn normalize_listing_url(url: &str) -> Result<String, String> {
     }
 
     let is_handle_root = matches!(segments.as_slice(), [handle] if handle.starts_with('@'));
+    let is_youtube_host = matches!(
+        parsed.host_str(),
+        Some("youtube.com" | "www.youtube.com" | "m.youtube.com" | "music.youtube.com")
+    );
+    let is_custom_root =
+        is_youtube_host && matches!(segments.as_slice(), [name] if is_custom_channel_name(name));
     let is_legacy_root = matches!(
         segments.as_slice(),
         [kind, _] if matches!(*kind, "channel" | "c" | "user")
@@ -345,9 +399,13 @@ pub(super) fn normalize_listing_url(url: &str) -> Result<String, String> {
     ) || matches!(
         segments.as_slice(),
         [kind, _, "featured"] if matches!(*kind, "channel" | "c" | "user")
-    );
+    ) || (is_youtube_host
+        && matches!(
+            segments.as_slice(),
+            [name, "featured"] if is_custom_channel_name(name)
+        ));
 
-    if is_handle_root || is_legacy_root || is_featured_tab {
+    if is_handle_root || is_custom_root || is_legacy_root || is_featured_tab {
         let base_segments = if is_featured_tab {
             &segments[..segments.len() - 1]
         } else {
@@ -359,6 +417,25 @@ pub(super) fn normalize_listing_url(url: &str) -> Result<String, String> {
     }
 
     Ok(parsed.to_string().trim_end_matches('/').to_string())
+}
+
+#[cfg(test)]
+mod subscription_url_tests {
+    #[test]
+    fn shared_subscription_url_examples() {
+        let examples: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../scripts/fixtures/youtubeSubscriptionUrls.json"
+        ))
+        .unwrap();
+        for example in examples.as_array().unwrap() {
+            let url = example["url"].as_str().unwrap();
+            assert_eq!(
+                super::normalize_listing_url(url).unwrap(),
+                example["listingUrl"].as_str().unwrap(),
+                "{url}"
+            );
+        }
+    }
 }
 
 /// Renvoie la plage inclusive comprise par yt-dlp. La borne haute inclut une
@@ -614,18 +691,18 @@ pub(super) fn reorder_numbered_series(videos: &mut [YoutubeVideo]) {
     }
 }
 
-/// URL de visionnage : `url`/`webpage_url` si déjà http(s), sinon reconstruite
-/// depuis l'identifiant.
+/// URL de visionnage : reconstruite d'abord depuis l'identifiant (le champ `url`
+/// de yt-dlp est l'URL du flux pour une vidéo seule). Sans identifiant, repli sur
+/// `webpage_url` puis `url`, uniquement s'ils passent la validation d'hôte YouTube.
 fn watch_url(entry: &Value, id: Option<&str>) -> Option<String> {
-    for key in ["url", "webpage_url"] {
-        if let Some(u) = entry.get(key).and_then(Value::as_str) {
-            if u.starts_with("http://") || u.starts_with("https://") {
-                return Some(u.to_string());
-            }
-        }
+    if let Some(id) = id.filter(|s| !s.is_empty()) {
+        return Some(format!("https://www.youtube.com/watch?v={}", id));
     }
-    id.filter(|s| !s.is_empty())
-        .map(|id| format!("https://www.youtube.com/watch?v={}", id))
+    ["webpage_url", "url"]
+        .into_iter()
+        .filter_map(|key| entry.get(key).and_then(Value::as_str))
+        .find(|u| validate_youtube_url(u).is_ok())
+        .map(str::to_string)
 }
 
 /// Miniature : champ `thumbnail`, sinon dernière de `thumbnails`, sinon miniature
@@ -682,5 +759,51 @@ mod proposed_names_tests {
             original.videos.iter().map(|v| &v.id).collect::<Vec<_>>()
         );
         assert_eq!(named.videos[0].audio_url, original.videos[0].audio_url);
+    }
+
+    #[test]
+    fn watch_url_rebuilds_from_id_for_single_video_with_stream_url() {
+        let entry = serde_json::json!({
+            "id": "abc123",
+            "url": "https://rr1---sn-xyz.googlevideo.com/videoplayback?expire=1",
+            "webpage_url": "https://www.youtube.com/watch?v=abc123"
+        });
+        assert_eq!(
+            super::watch_url(&entry, Some("abc123")).as_deref(),
+            Some("https://www.youtube.com/watch?v=abc123")
+        );
+    }
+
+    #[test]
+    fn watch_url_flat_playlist_entry_uses_id() {
+        let entry = serde_json::json!({
+            "id": "abc123",
+            "url": "https://www.youtube.com/watch?v=abc123"
+        });
+        assert_eq!(
+            super::watch_url(&entry, Some("abc123")).as_deref(),
+            Some("https://www.youtube.com/watch?v=abc123")
+        );
+    }
+
+    #[test]
+    fn watch_url_without_id_falls_back_to_valid_youtube_page_only() {
+        let page = serde_json::json!({
+            "webpage_url": "https://www.youtube.com/watch?v=zzz",
+            "url": "https://rr1---sn-xyz.googlevideo.com/videoplayback?x=1"
+        });
+        assert_eq!(
+            super::watch_url(&page, None).as_deref(),
+            Some("https://www.youtube.com/watch?v=zzz")
+        );
+        assert_eq!(
+            super::watch_url(&page, Some("")).as_deref(),
+            Some("https://www.youtube.com/watch?v=zzz")
+        );
+        let stream_only = serde_json::json!({
+            "url": "https://rr1---sn-xyz.googlevideo.com/videoplayback?x=1",
+            "webpage_url": "https://example.com/v"
+        });
+        assert_eq!(super::watch_url(&stream_only, None), None);
     }
 }

@@ -30,6 +30,7 @@
   "edit.childPreparation.progress": "Preparing the selected audiobook…",
   "edit.editorChoice.title": "Choose an editor",
   "edit.editorChoice.message": "This audiobook can be edited in either editor.",
+  "edit.simpleEditor.action": "Simple editor",
   "edit.menuEditor.action": "Menu editor",
   "edit.graphEditor.action": "Graph editor",
   "edit.simulator.progress": "Preparing the simulator…",
@@ -258,5 +259,6 @@
   "media.follow.alreadyPaused": "Already followed (paused) for this project",
   "media.follow.manage": "Preferences → Media subscriptions",
   "media.follow.manageButton": "Manage media subscriptions in Preferences",
-  "media.follow.sources": "Sources followed for this project"
+  "media.follow.sources": "Sources followed for this project",
+  "media.import.projectChanged": "The import was interrupted because the project changed."
 }

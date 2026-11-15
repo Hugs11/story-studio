@@ -4,7 +4,7 @@ import { useCatalogueTranslation } from '../../../i18n/useCatalogueTranslation.j
 import { durationCell } from '../../../store/catalogue/detailsRow.js';
 import { Button } from '../../common/Button.jsx';
 import { Tooltip } from '../../common/Tooltip.jsx';
-import { Star, X, Plus, Layers, Tag, CircleDashed, Send } from '../../icons/LucideLocal.jsx';
+import { Star, X, Plus, Layers, Tag, CircleDashed, Send, Trash2 } from '../../icons/LucideLocal.jsx';
 import { FavoriteStar } from '../FavoriteStar.jsx';
 import { CoverImage } from '../views/CoverImage.jsx';
 import { MenuPopover } from '../../layout/MenuPopover.jsx';
@@ -59,6 +59,7 @@ export function FicheSelectionSummary({ cards, tags = [], onClose, onTags, actio
   const summary = selectionSummary(cards);
   const assemble = actions.find(action => action.id === 'assemble');
   const send = actions.find(action => action.id === 'luniiSend');
+  const remove = actions.find(action => action.id === 'removeFromCatalogue');
   if (!cards.length) return null;
   const previews = cards.length > PREVIEW_LIMIT ? cards.slice(0, PREVIEW_LIMIT - 1) : cards;
   return <div className="catalogue-fiche-content catalogue-selection-panel">
@@ -77,6 +78,7 @@ export function FicheSelectionSummary({ cards, tags = [], onClose, onTags, actio
     </p>
     <div className="catalogue-selection-production">{assemble && <div className="catalogue-selection-assemble"><SelectionAction variant="primary" action={assemble} onAction={onAction}><Layers width={16} height={16} />{t('catalogue:selection.inline.assemble', { count: cards.length })}</SelectionAction><p>{t('catalogue:selection.inline.assemblyHelp', { count: cards.length })}</p></div>}
       {send && <div className="catalogue-fiche-send"><SelectionAction action={send} size="md" className="catalogue-send catalogue-send--fiche" onAction={onAction}><Send width={16} height={16} />{t('catalogue:lunii.sendSelection')}</SelectionAction></div>}
+      {remove && <SelectionAction action={remove} onAction={onAction}><Trash2 width={16} height={16} />{t('catalogue:actions.removeFromCatalogue.label')}</SelectionAction>}
     </div>
     <section><h3 className="catalogue-section-title">{t('catalogue:tags.title')}</h3><SelectionTags cards={cards} tags={tags} actions={actions} onTags={onTags} /></section>
     <section><h3 className="catalogue-section-title">{t('catalogue:selection.inline.edit', { count: cards.length })}</h3><SelectionMetadataControls cards={cards} {...controls} /></section>
@@ -104,5 +106,6 @@ export function SelectionFloatingBar({ panelVisible, cards, visible = showSelect
     </MenuPopover>
     {command('luniiSend', <><Send width={16} height={16} />{t('catalogue:lunii.sendSelection')}</>)}
     {command('assemble', <><Layers width={16} height={16} />{t('catalogue:selection.inline.assemble', { count: cards.length })}</>, 'primary')}
+    {command('removeFromCatalogue', <><Trash2 width={16} height={16} />{t('catalogue:actions.removeFromCatalogue.label')}</>)}
   </div>;
 }

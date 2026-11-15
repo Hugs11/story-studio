@@ -2,22 +2,27 @@
 
 Story Studio is MIT-licensed, but its desktop bundles also redistribute
 standalone third-party programs under their own licenses. This document covers
-the third-party binaries configured for Story Studio 0.9.10. Their versions,
+the third-party binaries configured for Story Studio 0.9.12. Their versions,
 provenance and source references are recorded below.
 
-The existing `v0.9.9` GitHub release includes a
-`story-studio-v0.9.9-corresponding-sources.zip` asset. This earlier archive contains the pinned
+The `v0.9.11` GitHub release includes a
+`story-studio-v0.9.11-corresponding-sources.zip` asset (earlier releases:
+`story-studio-v0.9.9-corresponding-sources.zip`). This archive contains the pinned
 Piper and eSpeak NG sources, the Story Studio Piper patch and build recipe,
 the FFmpeg source releases matching each bundled major/minor version, the
 embedded FFmpeg build configurations, the 7-Zip 25.01 source, the AppImage
 type2 runtime source, the imageio-ffmpeg 0.6.0 source, and the earlier offer.
 
-## 0.9.10 release
+## 0.9.12 release
 
-Story Studio 0.9.10 redistributes the same third-party binaries as 0.9.9:
-the pinned versions and checksums below are unchanged. The `v0.9.10` GitHub
-release includes a `story-studio-v0.9.10-corresponding-sources.zip` asset
-with the same corresponding sources as the 0.9.9 archive.
+Story Studio 0.9.12 redistributes the same third-party binaries as 0.9.11:
+the pinned versions and checksums below are unchanged. The `v0.9.12` GitHub
+release includes a `story-studio-v0.9.12-corresponding-sources.zip` asset
+with the same corresponding sources as the 0.9.11 archive, together with this
+offer, the notices and the build recipes of this release.
+The archive was published on 15 November 2026 at
+<https://github.com/Hugs11/story-studio/releases/download/v0.9.12/story-studio-v0.9.12-corresponding-sources.zip>;
+its SHA-256 is listed in the `SHA256SUMS.txt` asset of the same release.
 
 ## Piper 1.6
 
@@ -61,7 +66,7 @@ squashfuse, zstd and zlib projects and their source locations.
 
 ## Source request
 
-For at least three years after the publication of Story Studio 0.9.10, the
+For at least three years after the publication of Story Studio 0.9.12, the
 maintainer will provide the corresponding source and the available build
 information for these redistributed binaries at no charge other than the
 reasonable cost of physical transfer. Requests can be opened on the public
@@ -69,7 +74,7 @@ GitHub repository with the title `Corresponding source request`; private
 contact is also available through GitHub Private Vulnerability Reporting when
 the request must contain non-public contact information.
 
-The source offer accompanying Story Studio 0.9.9 remains in effect.
+The source offers accompanying Story Studio 0.9.9, 0.9.10 and 0.9.11 remain in effect.
 
 This offer applies only to third-party binaries redistributed by Story Studio.
 Voice models downloaded separately keep the licenses stated in

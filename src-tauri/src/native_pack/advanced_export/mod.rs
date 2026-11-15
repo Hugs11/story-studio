@@ -630,6 +630,7 @@ fn write_local_archive(
         .collect();
     write_pack_zip(
         &ArchiveContents {
+            recipe_json: None,
             identity,
             story_json,
             assets,

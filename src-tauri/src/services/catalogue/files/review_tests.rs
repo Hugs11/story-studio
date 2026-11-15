@@ -96,7 +96,7 @@ fn cross_review_owned_cleanup_rejects_recreated_files_and_partial_directories() 
 }
 
 #[test]
-fn lunii_missing_cover_displays_the_existing_pack_image() {
+fn lunii_not_yet_downloaded_cover_keeps_the_pack_image_unread() {
     let mut f = official_cover_fixture();
     let mut png = std::io::Cursor::new(Vec::new());
     image::DynamicImage::new_rgb8(24, 24)
@@ -114,15 +114,18 @@ fn lunii_missing_cover_displays_the_existing_pack_image() {
     publish::replace(&temp, &f.source).unwrap();
     reindex(&mut f);
     let id = f.card["ficheId"].as_str().unwrap();
-    assert!(f.store.lunii_thumbnail(id).unwrap().is_none());
+    assert_eq!(
+        f.store.lunii_thumbnail(id).unwrap().unwrap().state,
+        "officialPending"
+    );
     assert_eq!(
         f.store.get_thumbnail(None, Some(id), None).unwrap().state,
-        "ready"
+        "officialPending"
     );
 }
 
 #[test]
-fn lunii_pending_cover_keeps_absent_status_while_the_pack_image_is_displayed() {
+fn lunii_pending_cover_keeps_the_pack_unread_and_the_thumbnail_neutral() {
     let mut f = official_cover_fixture();
     let mut png = std::io::Cursor::new(Vec::new());
     image::DynamicImage::new_rgb8(24, 24)
@@ -158,6 +161,6 @@ fn lunii_pending_cover_keeps_absent_status_while_the_pack_image_is_displayed() {
     retained
         .recv_timeout(crate::test_support::timeout())
         .unwrap();
-    assert_eq!(status, Some("absent"));
-    assert_eq!(displayed, "ready");
+    assert_eq!(status, Some("officialPending"));
+    assert_eq!(displayed, "officialPending");
 }

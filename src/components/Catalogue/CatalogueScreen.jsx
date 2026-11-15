@@ -67,12 +67,14 @@ export function CatalogueScreen({ leaveGuard, onLandAggregate, workspaceDir, onC
   useEffect(() => {
     if (initialized.current || sources.loading || !operations.ready) return;
     initialized.current = true;
-    // A first workspace is registered on opening this screen. Previously
-    // registered sources already have the engine's startup operation.
-    if (Object.keys(operations.state.items).length === 0 && sources.items.some((s) => s.status === 'active')) {
-      void operations.start(sources.sourcesRevision, { automatic: true }).catch(setActionError);
+    // A first workspace is registered on opening this screen. The date records
+    // only successful scans; a terminal status also counts as a previous attempt.
+    const sourceIds = sources.items.filter((s) => s.status === 'active' && !s.scanning
+      && s.lastScanAt == null && s.lastScanStatus == null).map((s) => s.id);
+    if (sourceIds.length > 0) {
+      void operations.start(sources.sourcesRevision, { sourceIds, automatic: true }).catch(setActionError);
     }
-  }, [sources.loading, sources.sourcesRevision, sources.items, operations.ready, operations.state.items, operations.start]);
+  }, [sources.loading, sources.sourcesRevision, sources.items, operations.ready, operations.start]);
   useEffect(() => { document.getElementById('catalogue-title')?.focus(); }, []);
   const ficheAbandon = useRef(null);
   useEffect(() => {

@@ -52,7 +52,7 @@ const STAGE_HOME = 'stage-home';
 // pas une ligne. C'est l'orientation des positions STUdio mesurées, et celle
 // que « graphe à plat » désigne. Les pas reprennent les écarts relevés sur ce
 // pack. Le passage de l'Action de 104 à 52 de large retire 26 unités de chaque
-// intervalle sans reprendre les pas inventés du handoff : les 161 unités d'air
+// intervalle sans reprendre les pas de la maquette : les 161 unités d'air
 // Écran→Action et les 131 unités Action→Écran restent donc intactes.
 // `ROW` reste dominé par l'Écran de 80 de haut, son nom sur 14 posé 5 plus bas.
 export const PARCOURS_STEPS = Object.freeze({

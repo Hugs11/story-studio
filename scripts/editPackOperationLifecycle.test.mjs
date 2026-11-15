@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   createEditPackOperationLifecycle,
-  editorChooserFor,
   runEditPackBundleChildOperation,
   runEditPackImportOperation,
 } from '../src/components/EditPack/editPackOperationLifecycle.js';
@@ -390,30 +389,30 @@ test('un enfant extrait après fermeture n\'atterrit nulle part', async () => {
   assert.equal((await pending).status, 'cancelled');
 });
 
-test('depuis le graphe, un pack compatible avec les deux éditeurs s’ouvre dans le graphe sans question', async () => {
+test('depuis le graphe, un pack compatible demande le choix et peut ouvrir les menus', async () => {
   const lifecycle = createEditPackOperationLifecycle();
-  const advanced = [];
+  const landed = [];
+  let questions = 0;
   const result = await runEditPackImportOperation({
     lifecycle,
     path: '/packs/histoire.zip',
     isFolder: false,
     convertFolder: () => assert.fail('aucune conversion'),
     classify: async () => ({ authoringEditable: true }),
-    land: () => assert.fail('atterrissage Libre inattendu'),
-    landAdvanced: async (zipPath) => { advanced.push(zipPath); },
-    chooseEditor: editorChooserFor({
-      openedFromGraph: true,
-      askEditor: () => assert.fail('aucune question depuis le graphe'),
-    }),
+    land: async (zipPath) => { landed.push(zipPath); },
+    landAdvanced: () => assert.fail('atterrissage Graphe inattendu'),
+    chooseEditor: async () => { questions += 1; return 'free'; },
   });
   assert.equal(result.status, 'landed');
-  assert.equal(result.advanced, true);
-  assert.deepEqual(advanced, ['/packs/histoire.zip']);
+  assert.equal(questions, 1);
+  assert.equal(result.advanced, false);
+  assert.deepEqual(landed, ['/packs/histoire.zip']);
 });
 
-test('depuis le graphe, un enfant d’enveloppe compatible s’ouvre aussi dans le graphe sans question', async () => {
+test('depuis le graphe, un enfant d’enveloppe compatible demande aussi le choix', async () => {
   const lifecycle = createEditPackOperationLifecycle();
   const advanced = [];
+  let questions = 0;
   const result = await runEditPackBundleChildOperation({
     lifecycle,
     containerPath: '/packs/enveloppe.zip',
@@ -423,12 +422,10 @@ test('depuis le graphe, un enfant d’enveloppe compatible s’ouvre aussi dans 
     classify: async () => ({ authoringEditable: true }),
     land: () => assert.fail('atterrissage Libre inattendu'),
     landAdvanced: async (zipPath) => { advanced.push(zipPath); },
-    chooseEditor: editorChooserFor({
-      openedFromGraph: true,
-      askEditor: () => assert.fail('aucune question depuis le graphe'),
-    }),
+    chooseEditor: async () => { questions += 1; return 'advanced'; },
   });
   assert.equal(result.status, 'landed');
+  assert.equal(questions, 1);
   assert.equal(result.advanced, true);
   assert.deepEqual(advanced, ['/cache/enfant.zip']);
 });
@@ -445,10 +442,7 @@ test('depuis l’éditeur par menus ou l’accueil, le choix de l’éditeur res
     classify: async () => ({ authoringEditable: true }),
     land: async (zipPath) => { landed.push(zipPath); },
     landAdvanced: () => assert.fail('atterrissage Graphe inattendu'),
-    chooseEditor: editorChooserFor({
-      openedFromGraph: false,
-      askEditor: async () => { events.push('asked'); return 'free'; },
-    }),
+    chooseEditor: async () => { events.push('asked'); return 'free'; },
   });
   assert.equal(result.status, 'landed');
   assert.equal(result.advanced, false);

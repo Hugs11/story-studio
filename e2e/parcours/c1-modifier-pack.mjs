@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { launchApp } from '../lib/launch.mjs';
 import { createRun } from '../lib/run-context.mjs';
 import { closeFunnel, goHome, importPack, modalWithText, returnHome, openPackMetadata } from '../lib/actions.mjs';
+import { reopenRecipePack } from '../lib/recipe-helpers.mjs';
 import { smallestArchive, smallestArchives, smallestByExt } from '../lib/corpus.mjs';
 import { convertToFsFolder } from '../studio/studio.mjs';
 import { inventory, inventoryDiff } from '../lib/oracles.mjs';
@@ -34,6 +35,11 @@ export async function run() {
   const { page, events } = app;
   const allFaults = [];
   try {
+    await goHome(page);
+    for (const projectType of ['simple', 'pack']) {
+      events.setStep(`recette-${projectType}`);
+      await reopenRecipePack(page, ctx, events, projectType);
+    }
     // Deux petites archives éditables distinctes (menus, puis graphe).
     const [editableA, editableB] = smallestArchives(EDITABLE_DIR, 2);
     const zipMenus = join(ctx.dir('entrées'), 'ordinaire-menus.zip');
@@ -175,7 +181,7 @@ export async function run() {
         const errorText = outcome === 'error' ? (await errorAfterContinue.innerText()).trim() : null;
         ctx.check('enveloppe : pas de refus « sorti de son dossier temporaire »', outcome !== 'error' && outcome !== 'timeout', { outcome, errorText });
         if (outcome === 'chooser') {
-          await chooser.getByRole('button', { name: 'Éditeur par menus', exact: true }).click();
+          await chooser.getByRole('button', { name: /^Éditeur (par menus|simplifié)$/, exact: true }).click();
         }
         const landed = outcome === 'chooser' || outcome === 'editor'
           ? await generate.waitFor({ timeout: 180_000 }).then(() => true, () => false)

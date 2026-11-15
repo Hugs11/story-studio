@@ -88,6 +88,12 @@ export function CommunityPackCheckerFunnel({ onClose, initialEntry = null, prepa
     if (report) setStep(1);
   }
 
+  const contentRef = useRef(null);
+  useEffect(() => {
+    const body = contentRef.current?.closest('.funnel-body');
+    if (body) body.scrollTop = 0;
+  }, [step]);
+
   const initialStarted = useRef(false);
   useEffect(() => {
     if (!initialEntry || initialStarted.current) return;
@@ -241,7 +247,7 @@ export function CommunityPackCheckerFunnel({ onClose, initialEntry = null, prepa
           </button>
         </FunnelDoneState>
       ) : (
-        <div className="checker-root pack-checker-funnel">
+        <div className="checker-root pack-checker-funnel" ref={contentRef}>
           {step === 0 ? (
             <div className="funnel-step-content pack-checker-step">
               <FunnelSectionHeader
@@ -319,7 +325,7 @@ export function CommunityPackCheckerFunnel({ onClose, initialEntry = null, prepa
               </div>
               {metadataOpen ? (
                 <CommunityPackMetadataModal
-                  report={checker.report}
+                  report={checker.sourceFolder ? { ...checker.report, zipPath: checker.sourceFolder } : checker.report}
                   busy={busy}
                   onCancel={() => setMetadataOpen(false)}
                   onSubmit={(metadataPatch) => fixPack(metadataPatch)}

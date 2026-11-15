@@ -224,6 +224,7 @@ fn the_archive_control_really_runs_and_rejects_two_swapped_media() {
     let nominal = scratch.dir("archives").join("nominal.zip");
     write_pack_zip(
         &ArchiveContents {
+            recipe_json: None,
             identity: &crate::native_pack::output_identity::for_story(
                 &serde_json::from_str(&story_json).unwrap(),
                 crate::native_pack::output_identity::OutputForm::Rewritten,

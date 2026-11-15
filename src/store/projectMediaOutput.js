@@ -34,23 +34,27 @@ export function beginProjectMediaOutput(context, { invokeCommand = invokeTauri }
   if (workId && locks.has(workId) && locks.get(workId) !== context?.saveToken) throw importPresentationError('media:output.project.locked', {}, { code: 'MEDIA_OUTPUT_PROJECT_LOCKED' });
   if (workId) active.set(workId, (active.get(workId) ?? 0) + 1);
   let released = false;
-  let resolved = null;
-  const destination = () => {
-    if (!resolved) {
-      resolved = !ephemeral && storage
-        ? invokeCommand('resolve_project_folder', { root, folder: storage.folder, workId, create: true })
-          .then((folder) => ({ folder, workId }))
-        : Promise.resolve(null);
-    }
-    return resolved;
-  };
+  const directories = new Map();
+  let validated = null;
   return {
     async directory(category) {
       if (!PROJECT_MEDIA_CATEGORIES.includes(category)) throw importPresentationError('media:output.category.invalid', {}, { code: 'MEDIA_OUTPUT_CATEGORY_INVALID' });
-      const projectDestination = await destination();
+      if (!directories.has(category)) directories.set(category, !ephemeral && storage
+        ? invokeCommand('resolve_project_folder', { root, folder: storage.folder, workId, create: true, category })
+          .then((folder) => ({ folder, workId }))
+        : Promise.resolve(null));
+      const projectDestination = await directories.get(category);
       return joinPath(root, category, ...(projectDestination ? [projectDestination.folder] : []));
     },
-    async arguments() { return { workspaceDir: root, projectDestination: await destination() }; },
+    async arguments() {
+      if (!ephemeral && storage) {
+        // Validate the workspace before queueing a job. Without a category,
+        // resolution creates no project media folders.
+        validated ??= invokeCommand('resolve_project_folder', { root, folder: storage.folder, workId, create: true });
+        await validated;
+      }
+      return { workspaceDir: root, projectDestination: !ephemeral && storage ? { folder: storage.folder, workId } : null };
+    },
     release() {
       if (released) return;
       released = true;

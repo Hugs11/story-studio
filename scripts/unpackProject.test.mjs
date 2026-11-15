@@ -4,6 +4,44 @@ import assert from 'node:assert/strict';
 import { buildProjectAfterZipUnpack, getUnpackedPackDetails } from '../src/store/unpackProject.js';
 import { normalizeProjectData } from '../src/store/projectModel.js';
 
+test('recipe promotion restores the simple editor and author settings', () => {
+  const project = normalizeProjectData({ projectType: 'pack', rootEntries: [] });
+  const entries = [{ id: 'recipe-0', type: 'story', name: 'Nom auteur', audio: 'C:/media/story.mp3', treeColor: '#123456', silentTitleStage: true }];
+  const { project: actual } = buildProjectAfterZipUnpack({
+    project, entries, menuId: null,
+    result: {
+      recipeReopened: true, projectType: 'simple', title: 'Titre du pack retouché',
+      rootName: 'Racine auteur', endNodeName: 'Fin auteur', treeColor: '#abcdef',
+      globalOptions: { autoNext: false, nightMode: true, endNode: true, endMessageAutoplay: false, silenceMode: 'off', harmonizeLoudness: false },
+      nightModeAudio: 'C:/media/end.mp3', nightModeReturn: 'root', nightModeHomeReturn: 'story:recipe-0',
+    },
+  });
+  assert.equal(actual.projectType, 'simple');
+  assert.equal(actual.rootName, 'Racine auteur');
+  assert.equal(actual.endNodeName, 'Fin auteur');
+  assert.equal(actual.treeColor, '#abcdef');
+  assert.equal(actual.globalOptions.endNode, true);
+  assert.equal(actual.globalOptions.endMessageAutoplay, false);
+  assert.equal(actual.globalOptions.harmonizeLoudness, false);
+  assert.equal(actual.nightModeAudio, 'C:/media/end.mp3');
+  assert.equal(actual.nightModeReturn, 'root');
+  assert.equal(actual.nightModeHomeReturn, 'story:recipe-0');
+  assert.equal(actual.nativeGraph, null);
+  assert.deepEqual(actual.rootEntries, entries);
+});
+
+test('embedding a recipe pack keeps the containing project type and settings', () => {
+  const project = normalizeProjectData({ projectType: 'pack', projectName: 'Parent', rootEntries: [{ id: 'zip', type: 'zip', name: 'Pack', zipPath: 'C:/pack.zip' }] });
+  const { project: actual, promoted } = buildProjectAfterZipUnpack({
+    project, itemId: 'zip', menuId: null, entries: [{ id: 'recipe-0', type: 'story', audio: 'C:/s.mp3' }],
+    result: { recipeReopened: true, projectType: 'simple', globalOptions: { nightMode: true }, rootName: 'Autre' },
+  });
+  assert.equal(promoted, false);
+  assert.equal(actual.projectType, 'pack');
+  assert.deepEqual(actual.globalOptions, project.globalOptions);
+  assert.equal(actual.rootName, project.rootName);
+});
+
 test('unpack derives a clean title from a non-prefixed filename (no story title)', () => {
   const { packMetadata } = getUnpackedPackDetails({
     result: {},

@@ -4,12 +4,16 @@
 // jobs des stores — changent par rendu ; un useMemo les figerait sans warning.
 // Les stores SD/XTTS sont passés entiers : le hook en dérive
 // sdSettings/sdJobs/xttsJobs/onRemoveSdResult.
+import { collectMediaLibrary } from '../store/mediaLibrary.js';
+import { pathKey } from '../utils/fileUtils.js';
+
 export function useProjectContextValue({
   mediaStorage,
   savePath,
   projectName,
   workspaceDir,
   project,
+  advancedMediaUsages = null,
   xttsSettings,
   sdStore,
   xttsStore,
@@ -28,6 +32,11 @@ export function useProjectContextValue({
     savePath,
     projectName,
     workspaceDir,
+    isAudioShared: (path) => {
+      const media = collectMediaLibrary({ project, advancedUsages: advancedMediaUsages })
+        .find((item) => pathKey(item.path) === pathKey(path));
+      return !!media && (media.projectUsedCount > 1 || !media.usageKnown);
+    },
     globalOptions: project.globalOptions,
     xttsSettings,
     sdSettings: sdStore.sdSettings,

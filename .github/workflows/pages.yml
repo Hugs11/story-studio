@@ -2,12 +2,12 @@ name: GitHub Pages
 
 on:
   push:
-    branches: [main, 0.9.10]
+    branches: [main]
     paths:
       - "docs/**"
       - ".github/workflows/pages.yml"
   pull_request:
-    branches: [main, 0.9.10]
+    branches: [main]
     paths:
       - "docs/**"
       - ".github/workflows/pages.yml"

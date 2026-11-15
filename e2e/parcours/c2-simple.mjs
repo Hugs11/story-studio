@@ -89,7 +89,8 @@ export async function run() {
     await showRootEditor(page);
     // « Nom de l'histoire » : titre du pack et nom de l'archive
     // (`hasExplicitExportPackName`), la fiche n'est donc pas redemandée.
-    await page.locator('#root-simple-name').fill('Histoire C2 simplifiée');
+    await page.locator('#root-simple-name').fill('');
+    await page.locator('#root-simple-name').pressSequentially('Histoire C2 simplifiée');
     await page.locator('#root-simple-name').blur();
     const rootCard = page.locator('.root-identity-card').first();
     const coverImage = synthImage(ctx.dir('couverture-simple'), 'couverture.png', 3);

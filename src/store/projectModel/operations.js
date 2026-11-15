@@ -214,6 +214,42 @@ export function updateEntry(project, entryId, fields) {
   return updateProjectRootEntries(project, nextRootEntries);
 }
 
+// Une coupe de champ ne retire que son emploi, même si le fichier est partagé.
+export function clearMediaField(project, source, path) {
+  if (!source || !path) return project;
+  const { kind, field, entryId, stepId } = source;
+  if (kind === 'nativeStage') {
+    if (source.workId !== project.storage?.workId) return project;
+    const owner = entryId ? findEntryById(project, entryId) : project;
+    const graph = owner?.nativeGraph;
+    const stages = graph?.document?.stageNodes ?? [];
+    const stage = stages.find((item) => (item.uuid || item.id) === source.stageId);
+    if (!isSameMediaPath(stage?.[field], path)) return project;
+    const nativeGraph = { ...graph, document: { ...graph.document,
+      stageNodes: stages.map((item) => item === stage ? { ...item, [field]: null } : item),
+    } };
+    return entryId ? updateEntry(project, entryId, { nativeGraph }) : { ...project, nativeGraph };
+  }
+  const entry = kind === 'rootStory'
+    ? project.rootEntries?.find((item) => item.type === 'story')
+    : findEntryById(project, entryId);
+  const owner = kind === 'root' ? project
+    : kind === 'storySequence' ? entry?.afterPlaybackSequence?.find((step) => step.id === stepId)
+    : kind === 'storyHomeStep' ? entry?.afterPlaybackHomeStep
+    : entry;
+  if (!isSameMediaPath(owner?.[field], path)) return project;
+  if (kind === 'root') return { ...project, [field]: null };
+  if (kind === 'storySequence') {
+    return updateEntry(project, entry.id, {
+      afterPlaybackSequence: entry.afterPlaybackSequence.map((step) => step.id === stepId ? { ...step, [field]: null } : step),
+    });
+  }
+  if (kind === 'storyHomeStep') {
+    return updateEntry(project, entry.id, { afterPlaybackHomeStep: { ...owner, [field]: null } });
+  }
+  return updateEntry(project, entry.id, { [field]: null });
+}
+
 export function clearMediaReferences(project, path) {
   if (!path) return project;
   let next = { ...project };

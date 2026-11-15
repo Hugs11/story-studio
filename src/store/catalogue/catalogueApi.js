@@ -11,7 +11,7 @@ import { normalizeEntries } from './entryModel.js';
 import { presentUserMessage, rustMessageEnvelope } from '../../i18n/userMessage.js';
 
 /** Page maximale acceptée par le moteur. */
-export const ENTRY_PAGE_LIMIT = 200;
+export const ENTRY_PAGE_LIMIT = 1000;
 const CURSOR_EXPIRED = 'CATALOG_ENTRIES_CURSOR_EXPIRED';
 const MAX_RESTARTS = 5;
 
@@ -66,6 +66,8 @@ function throwIfAborted(signal) {
  * @param {{invoke?: Function, listen?: Function}} [bridge] doublures de test
  */
 export function createCatalogueApi(bridge = {}) {
+  const coverRetries = new Set();
+  let coverRetryListener = null;
   let resolved = bridge.invoke && bridge.listen ? Promise.resolve(bridge) : null;
   const getBridge = () => {
     resolved ??= tauriBridge();
@@ -150,17 +152,32 @@ export function createCatalogueApi(bridge = {}) {
     }
     return () => { for (const stop of stops) void releaseTauriListener(stop); };
   }
+  // One native listener for every mounted cover, including unchanged signatures.
+  function subscribeCoverRetries(callback) {
+    coverRetries.add(callback);
+    if (!coverRetryListener) {
+      coverRetryListener = getBridge().then(({ listen }) => listen('catalogue-operation-finished', () => {
+        for (const retry of coverRetries) retry();
+      })).catch(() => null);
+    }
+    return () => {
+      coverRetries.delete(callback);
+      if (!coverRetries.size && coverRetryListener) {
+        void coverRetryListener.then(stop => releaseTauriListener(stop));
+        coverRetryListener = null;
+      }
+    };
+  }
   return {
     luniiPermission: () => call('catalogue_lunii_permission'),
     setLuniiPermission: (allowed) => call('catalogue_lunii_set_permission', { allowed, locale: i18n.language ?? 'en' }),
     openCatalogue: () => call('catalogue_lunii_open', { locale: i18n.language ?? 'en' }).catch(() => {}),
-    listAllEntries, subscribeChanges, subscribeOperations,
+    listAllEntries, subscribeChanges, subscribeOperations, subscribeCoverRetries,
     listSources: (workspaceDir) => call('catalogue_list_sources', { workspaceDir }),
     addSource: (path, expectedSourcesRevision) => call('catalogue_add_source', { path, expectedSourcesRevision }),
     previewRemoveSource: (sourceId) => call('catalogue_preview_remove_source', { sourceId }),
     removeSource: (sourceId, expectedSourcesRevision, expectedCatalogueRevision) => call('catalogue_remove_source', { sourceId, expectedSourcesRevision, expectedCatalogueRevision }),
     getExclusions: () => call('catalogue_get_source_exclusions'),
-    explainPath: (path) => call('catalogue_explain_path', { path }),
     listOperations: (limit = 20) => call('catalogue_list_operations', { limit }),
     getOperation: (operationId, { limit = 100, cursor = null, issuesOnly = false } = {}) => call('catalogue_get_operation', { operationId, limit, cursor, ...(issuesOnly ? { issuesOnly: true } : {}) }),
     startScan: (args) => call('catalogue_start_scan', args),

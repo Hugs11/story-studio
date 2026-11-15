@@ -36,7 +36,16 @@ export function getGeneratedEndMessageControls(entry, {
 function getStoryPlaySimpleLeafPlayback(entry, parentMenu, project) {
   if (!!project?.globalOptions?.autoNext) return true;
   if (!parentMenu) return false;
-  return !hasNonEmptyValue(parentMenu.returnAfterPlay) && !hasNonEmptyValue(entry?.returnAfterPlay);
+  return !hasNonEmptyValue(entry?.returnAfterPlay);
+}
+
+// Fin personnelle (invite ou séquence) qui part seule, comme le message global : la bascule
+// Enchaîner / Rester n'a plus de sens. Une histoire importée garde ses réglages d'origine.
+export function hasGeneratedLocalEndMessage(entry, autoNextActive) {
+  return !autoNextActive
+    && !hasNonEmptyValue(entry?.nativeStageId)
+    && (hasNonEmptyValue(entry?.afterPlaybackPromptAudio)
+      || (entry?.afterPlaybackSequence?.length ?? 0) > 0);
 }
 
 export function getGeneratedStoryPlayControls(entry, parentMenu, project) {
@@ -46,10 +55,12 @@ export function getGeneratedStoryPlayControls(entry, parentMenu, project) {
   const simpleLeafPlayback = getStoryPlaySimpleLeafPlayback(entry, parentMenu, project);
   const configuredAutoplay = controls.autoplay === true;
   const configuredOk = controls.ok === true;
+  const hasLocalEndMessage = hasGeneratedLocalEndMessage(entry, autoNextActive);
   const forceAutoplay = !!(
     autoNextActive
     || hasNonEmptyValue(entry?.returnAfterPlay)
     || hasEffectiveNightMode
+    || hasLocalEndMessage
     || (simpleLeafPlayback && !configuredOk && !configuredAutoplay)
   );
 

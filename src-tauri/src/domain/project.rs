@@ -9,8 +9,11 @@ pub(crate) enum SilenceMode {
     Normalize,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub(crate) struct GlobalOptions {
+    /// Nœud « Message de fin » présent dans l'éditeur ; lu seulement par la recette.
+    #[serde(rename = "endNode", default)]
+    pub(crate) end_node: bool,
     #[serde(rename = "addSilence", default)]
     pub(crate) add_silence: bool,
     #[serde(rename = "silenceMode", default)]
@@ -50,7 +53,7 @@ impl GlobalOptions {
     }
 }
 
-#[derive(Deserialize, Clone, Copy, Debug)]
+#[derive(Deserialize, Serialize, Clone, Copy, Debug)]
 #[serde(untagged)]
 pub(crate) enum AudioEdgeSilenceDuration {
     Uniform(f64),
@@ -108,7 +111,7 @@ pub(crate) struct EntryControlSettings {
     pub(crate) home: Option<bool>,
 }
 
-#[derive(Deserialize, Clone, Default)]
+#[derive(Deserialize, Serialize, Clone, Default)]
 pub(crate) struct AfterPlaybackSequenceStep {
     #[serde(default)]
     pub(crate) id: String,
@@ -130,8 +133,10 @@ pub(crate) struct AfterPlaybackSequenceStep {
     pub(crate) home_none: bool,
 }
 
-#[derive(Deserialize, Clone, Default)]
+#[derive(Deserialize, Serialize, Clone, Default)]
 pub(crate) struct ProjectEntry {
+    #[serde(rename = "treeColor", default)]
+    pub(crate) tree_color: Option<String>,
     #[serde(default)]
     pub(crate) id: String,
     #[serde(rename = "type")]
@@ -175,6 +180,7 @@ pub(crate) struct ProjectEntry {
         rename = "importedContinuation",
         alias = "_importedContinuation",
         default,
+        skip_serializing_if = "Option::is_none",
         deserialize_with = "deserialize_flag_presence"
     )]
     pub(crate) imported_continuation: Option<bool>,
@@ -206,12 +212,20 @@ pub(crate) struct ProjectEntry {
     pub(crate) after_playback_sequence: Vec<AfterPlaybackSequenceStep>,
     #[serde(rename = "afterPlaybackHomeStep", default)]
     pub(crate) after_playback_home_step: Option<AfterPlaybackSequenceStep>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) children: Vec<ProjectEntry>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub(crate) struct Project {
+    // Intention d'auteur sans effet sur le pack, lue seulement par la recette
+    // (`native_pack::recipe`) : noms de la racine et du message de fin, couleur.
+    #[serde(rename = "rootName", default)]
+    pub(crate) root_name: String,
+    #[serde(rename = "endNodeName", default)]
+    pub(crate) end_node_name: String,
+    #[serde(rename = "treeColor", default)]
+    pub(crate) tree_color: Option<String>,
     #[serde(default)]
     pub(crate) name: String,
     #[serde(rename = "projectType")]
@@ -266,7 +280,23 @@ fn default_pack_version() -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{AudioEdgeSilenceDuration, GlobalOptions};
+    use super::{AudioEdgeSilenceDuration, GlobalOptions, ProjectEntry};
+
+    #[test]
+    fn empty_children_keep_explicit_entry_type_and_deserialize_as_empty() {
+        for kind in ["story", "menu", "zip"] {
+            let entry: ProjectEntry = serde_json::from_value(serde_json::json!({
+                "type": kind, "children": []
+            }))
+            .unwrap();
+            let value = serde_json::to_value(&entry).unwrap();
+            assert_eq!(value["type"], kind);
+            assert!(value.get("children").is_none());
+            let restored: ProjectEntry = serde_json::from_value(value).unwrap();
+            assert_eq!(restored.entry_type, kind);
+            assert!(restored.children.is_empty());
+        }
+    }
 
     #[test]
     fn legacy_global_options_keep_end_message_autoplay() {

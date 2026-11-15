@@ -3,7 +3,7 @@
 //! Même périmètre et mêmes refus que sa conversion en ZIP
 //! (`ensure_studio_pack_zip_from_dir`) : racine de pack localisée par
 //! `locate_pack_root`, dossiers intermédiaires et entrées refusés s'ils sont des
-//! liens, seuls `story.json`, `thumbnail.png` et `assets/` parcourus, et le
+//! liens, seuls `story.json`, `thumbnail.png`, la recette optionnelle et `assets/` parcourus, et le
 //! `story.json` rendu est celui que la conversion aurait écrit dans l'archive.
 //! Un média est désigné par le nom qu'il aurait dans cette archive, comparé
 //! exactement (casse comprise) comme le ferait la lecture du ZIP.

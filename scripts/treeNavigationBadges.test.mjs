@@ -605,7 +605,7 @@ test('Invariant : computeBadgesData ne stocke aucun nom textuel', () => {
   }
 });
 
-// --- Classement des issues par identifiant stable (lot 4.13) ---
+// --- Classement des issues par identifiant stable ---
 
 test('badges retour/Accueil : mêmes statuts en FR, EN et IT, classés par issue.navigation', async () => {
   const { default: i18next } = await import('i18next');
@@ -616,7 +616,7 @@ test('badges retour/Accueil : mêmes statuts en FR, EN et IT, classés par issue
   }
   const story = { id: 's1', type: 'story', name: 'Histoire', audio: 'a.mp3', itemImage: 'i.png', itemAudio: 't.mp3', returnAfterPlay: 'menu:absent-retour', returnOnHome: 'menu:absent-accueil' };
   const project = { projectType: 'pack', rootEntries: [story] };
-  // Ancien filtre (texte français, avant le lot 4.13), gardé ici comme mutant.
+  // Ancien filtre (texte français, avant les corrections typographiques), gardé ici comme mutant.
   const legacy = (issues) => ({
     return: getStrongestStatus(issues.filter((issue) => issue.text.includes('destination de retour'))),
     home: getStrongestStatus(issues.filter((issue) => issue.text.includes('destination bouton Accueil') || issue.text.includes('destination Home spécifique inutile'))),

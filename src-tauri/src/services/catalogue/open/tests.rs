@@ -44,7 +44,7 @@ impl Fixture {
     }
     fn open(&self) -> Arc<Store> {
         let store = Arc::new(Store::open(&self.0.join("data"), &self.0.join("cache")).unwrap());
-        store.add_source(&self.source(), 0, false).unwrap();
+        store.add_source(&self.source(), 0).unwrap();
         store
     }
     fn scan(&self, store: &Arc<Store>) {
@@ -1366,38 +1366,38 @@ fn generation_folder_can_be_explicitly_declined_then_accepted() {
     let store = f.open();
     let folder = f.0.join("generation");
     std::fs::create_dir(&folder).unwrap();
-    let explanation = serde_json::to_value(
-        store
-            .explain_path(&folder, &f.0.join("cache"), &f.0.join("data"))
-            .unwrap(),
-    )
-    .unwrap();
-    assert!(explanation["coveredBySourceId"].is_null());
+    let resolved_folder = std::fs::canonicalize(&folder).unwrap();
+    assert!(!store
+        .list_sources()
+        .unwrap()
+        .items
+        .iter()
+        .any(|s| resolved_folder.starts_with(&s.resolved_path) && s.status == "active"));
     let revision = store.list_sources().unwrap().sources_revision;
-    store.add_source(&folder, revision, true).unwrap();
+    store.add_declined_source(&folder, revision).unwrap();
     let sources = store.list_sources().unwrap();
     assert!(sources
         .items
         .iter()
         .any(|s| s.native_path == folder && s.status == "declined"));
-    let explanation = serde_json::to_value(
-        store
-            .explain_path(&folder, &f.0.join("cache"), &f.0.join("data"))
-            .unwrap(),
-    )
-    .unwrap();
-    assert!(explanation["coveredBySourceId"].is_null());
-    store
-        .add_source(&folder, sources.sources_revision, false)
-        .unwrap();
-    let explanation = serde_json::to_value(
-        store
-            .explain_path(&folder, &f.0.join("cache"), &f.0.join("data"))
-            .unwrap(),
-    )
-    .unwrap();
-    assert!(explanation["coveredBySourceId"].is_string());
-    assert!(explanation["excluded"].is_null());
+    assert!(!store
+        .list_sources()
+        .unwrap()
+        .items
+        .iter()
+        .any(|s| resolved_folder.starts_with(&s.resolved_path) && s.status == "active"));
+    store.add_source(&folder, sources.sources_revision).unwrap();
+    assert!(store
+        .list_sources()
+        .unwrap()
+        .items
+        .iter()
+        .any(|s| s.native_path == folder && s.status == "active"));
+    assert!(store
+        .exclusions_raw(&f.0.join("cache"), &f.0.join("data"))
+        .unwrap()
+        .reason_for_resolved(&folder, None)
+        .is_none());
     assert!(std::fs::read_dir(&folder).unwrap().next().is_none());
 }
 
@@ -2100,5 +2100,118 @@ fn catalogue_import_reads_only_already_cached_project_cover() {
             .map(|(p, _)| std::fs::metadata(p).unwrap().modified().unwrap())
             .collect::<Vec<_>>(),
         mtimes
+    );
+}
+
+/// A favourite changed while copying must not invalidate the remaining targets.
+#[test]
+fn send_batch_item_survives_a_favourite_set_while_the_previous_item_is_copied() {
+    let f = Fixture::new();
+    for name in ["first.zip", "second.zip"] {
+        std::fs::write(f.source().join(name), zip_bytes(&pack_entries("", name))).unwrap();
+    }
+    let store = f.open();
+    f.scan(&store);
+    let (first, revision) = exemplar(&store, "first.zip", None);
+    let (second, _) = exemplar(&store, "second.zip", None);
+    use crate::services::storyteller::send::{
+        require_selected_target, resolve_selection, Selection,
+    };
+    let selection = [first, second].map(|exemplar_id| Selection {
+        exemplar_id,
+        expected_revision: revision,
+    });
+    let targets = resolve_selection(&store, &selection);
+    // Item 1 of the batch: resolved, then copied to the Lunii (minutes).
+    require_selected_target(&store, &selection[0], targets[0].as_ref().unwrap()).unwrap();
+    // Meanwhile the user stars any card of the catalogue.
+    let page = store.list_entries(200, None).unwrap();
+    let card = page.items[0]["id"].as_str().unwrap().to_owned();
+    let fiche = store.get_card(&card).unwrap()["ficheRevision"].clone();
+    store
+        .mutate(
+            serde_json::from_value(json!({"kind":"setFavorite","requestKey":"send-favourite","ficheIds":[&card],"value":true,"expectedFicheRevisions":{&card:fiche}})).unwrap(),
+            revision,
+        )
+        .unwrap();
+    // Item 2 of the same batch, same `expectedRevision` as sent by the interface.
+    let next = require_selected_target(&store, &selection[1], targets[1].as_ref().unwrap());
+    assert!(
+        next.is_ok(),
+        "the second story of the batch is refused: {:?}",
+        next.err().map(|e| e.code)
+    );
+}
+
+#[test]
+fn send_batch_rejects_a_retired_exemplar_and_keeps_other_targets() {
+    use crate::services::storyteller::send::{
+        require_selected_target, resolve_selection, Selection,
+    };
+    let f = Fixture::new();
+    let names = ["first.zip", "removed.zip", "last.zip"];
+    for name in names {
+        std::fs::write(f.source().join(name), zip_bytes(&pack_entries("", name))).unwrap();
+    }
+    let store = f.open();
+    f.scan(&store);
+    let selection = names.map(|name| {
+        let (exemplar_id, expected_revision) = exemplar(&store, name, None);
+        Selection {
+            exemplar_id,
+            expected_revision,
+        }
+    });
+    let targets = resolve_selection(&store, &selection);
+    require_selected_target(&store, &selection[0], targets[0].as_ref().unwrap()).unwrap();
+    // The user removes a card while the first story is copied. Its file stays
+    // on disk, so the unchanged-file check alone would still accept it.
+    let fiche: String = store
+        .read(|c| {
+            c.query_row(
+                "SELECT fiche_id FROM exemplar WHERE id=?1",
+                [&selection[1].exemplar_id],
+                |r| r.get(0),
+            )
+        })
+        .unwrap();
+    store
+        .remove_cards_confirmed(&[fiche], selection[1].expected_revision)
+        .unwrap();
+    let next = require_selected_target(&store, &selection[1], targets[1].as_ref().unwrap());
+    assert_eq!(next.unwrap_err().code, codes::CATALOG_TARGET_REVISION_STALE);
+    require_selected_target(&store, &selection[2], targets[2].as_ref().unwrap()).unwrap();
+}
+
+#[test]
+fn send_selection_rejects_an_initially_stale_revision_and_a_later_file_change() {
+    use crate::services::storyteller::send::{
+        require_selected_target, resolve_selection, Selection,
+    };
+    let f = Fixture::new();
+    let path = f.source().join("story.zip");
+    std::fs::write(&path, zip_bytes(&pack_entries("", "Story"))).unwrap();
+    let store = f.open();
+    f.scan(&store);
+    let (exemplar_id, expected_revision) = exemplar(&store, "story.zip", None);
+    let mut selection = [Selection {
+        exemplar_id,
+        expected_revision: expected_revision - 1,
+    }];
+    assert_eq!(
+        resolve_selection(&store, &selection)[0]
+            .as_ref()
+            .unwrap_err()
+            .code,
+        codes::CATALOG_TARGET_REVISION_CHANGED
+    );
+    selection[0].expected_revision = expected_revision;
+    let targets = resolve_selection(&store, &selection);
+    std::fs::write(&path, b"replacement").unwrap();
+    assert_eq!(
+        require_selected_target(&store, &selection[0], targets[0].as_ref().unwrap())
+            .unwrap_err()
+            .code,
+        codes::CATALOG_TARGET_REVISION_CHANGED
     );
 }

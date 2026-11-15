@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { translateGraph as t, graphTranslationEngine } from '../../i18n/graphPresentation.js';
 // Les contrôles ancrés à la surface : actions du L, zoom, cadrage, légende et vue d'ensemble.
 //
-// Ils ne bougent pas avec la caméra — ce sont les seules surimpressions du
-// handoff qui restent collées aux coins de la scène. La géométrie de la
+// Ils ne bougent pas avec la caméra — ce sont les seules surimpressions de la
+// maquette qui restent collées aux coins de la scène. La géométrie de la
 // miniature, elle, vit dans `graphOverview` : c'est une projection, et une
 // projection se vérifie hors du rendu.
 

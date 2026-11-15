@@ -56,7 +56,6 @@ export const KEYS = Object.freeze({
   XTTS_SETTINGS: 'xttsSettings',
   SD_SETTINGS: 'sdSettings',
   KEYBOARD_SHORTCUTS: 'storyStudioKeyboardShortcuts',
-  SD_RESULTS: 'sdJobResults',
   MEDIA_METADATA_PREFIX: 'ss-meta-v2:',
   AUDIO_ASSEMBLY_OPTIONS: 'audio-assembly-opts',
   DIAGRAM_SHOW_TREE: 'diagramShowTree',
@@ -171,6 +170,8 @@ export function hasExistingSettings() {
 // Migrations ponctuelles des réglages persistés, appelées au boot (main.jsx)
 // avant le montage de l'app.
 export function runSettingsMigrations() {
+  // La file IA appartient à la session ; les images restent dans le projet.
+  remove('sdJobResults');
   remove('showCentralDiagram');
   remove('fd_auto_open_settings');
   remove('fd_inspector_width');

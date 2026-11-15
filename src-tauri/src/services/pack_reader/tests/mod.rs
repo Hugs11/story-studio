@@ -15,5 +15,5 @@ mod graph_integrity;
 mod numeric_fidelity;
 mod presence_fidelity;
 mod projection;
-mod structural_compare;
+pub(super) mod structural_compare;
 mod validation;

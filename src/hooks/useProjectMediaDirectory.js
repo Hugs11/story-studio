@@ -18,7 +18,7 @@ export function useProjectMediaDirectoryValue(category, fallback = null) {
   useEffect(() => {
     let cancelled = false;
     if (!root || ephemeral || !workId) return undefined;
-    invoke('resolve_project_folder', { root, folder, workId, create: false })
+    invoke('resolve_project_folder', { root, folder, workId, create: false, category })
       .then(name => { if (!cancelled) setResolved({ key, value: joinPath(root, category, name) }); })
       .catch(() => { if (!cancelled) setResolved({ key, value: { key: "tree:directory.destination.failed" } }); });
     return () => { cancelled = true; };

@@ -478,7 +478,15 @@ pub(super) fn detect_story_return_stage_id<'a>(
 
     StoryReturnDetection {
         target_stage_id,
-        home_stage_id: home_target.map(|value| value.to_string()),
+        // Avec un écran de fin personnel, le Home de l'histoire garde sa cible
+        // directe : la suivre jusqu'au bout de la chaîne la ferait rejoindre
+        // la cible du OK de fin, et l'index de sélection d'origine serait perdu.
+        home_stage_id: if prompt_stage_id.is_some() {
+            direct_home_target.or(home_target)
+        } else {
+            home_target
+        }
+        .map(|value| value.to_string()),
         prompt_stage_id,
         prompt_ok_stage_id,
         prompt_home_stage_id,

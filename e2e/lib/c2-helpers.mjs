@@ -106,10 +106,20 @@ export async function saveProjectAsExplicit(page, targetPath) {
   return saveProjectAs(page, targetPath, { shortcut: 'Control+Shift+s' });
 }
 
-export async function openProjectDialog(page, path, { timeout = 60_000 } = {}) {
-  const { answerNext } = await import('./dialogs.mjs');
+export async function openProjectDialog(page, path, { timeout = 60_000, backgroundWorkAnswer = null } = {}) {
+  const { answerNext, discardPendingAnswer } = await import('./dialogs.mjs');
   await answerNext(page, 'open', path);
   await page.keyboard.press('Control+o');
+  // Une ouverture pendant un travail de fond demande maintenant le même accord
+  // qu'un retour à l'accueil, avant tout dialogue d'enregistrement ou d'ouverture.
+  if (backgroundWorkAnswer) {
+    await page.getByText('Un travail est encore en cours. Quitter maintenant l’interrompra.', { exact: true }).waitFor({ timeout });
+    await page.getByRole('button', { name: backgroundWorkAnswer, exact: true }).click();
+    if (backgroundWorkAnswer === 'Rester') {
+      await discardPendingAnswer(page, 'open', path);
+      return false;
+    }
+  }
   const { projectMenuButton } = await import('./actions.mjs');
   return projectMenuButton(page).waitFor({ timeout }).then(() => true, () => false);
 }

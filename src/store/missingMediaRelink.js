@@ -22,9 +22,12 @@ export function mediaKindFromPath(path) {
   return 'media';
 }
 
-export function collectMissingMedia(project, statusByPath = {}) {
+// L'atelier fournit le Set des références citées par sa vue du document.
+// Ce filtre ne concerne que les liaisons graphe, jamais les médias des menus.
+export function collectMissingMedia(project, statusByPath = {}, referencedAssetRefs = null) {
   const byPath = new Map();
   for (const ref of walkProjectMediaReferences(project)) {
+    if (ref.scope === 'advanced-asset' && referencedAssetRefs && !referencedAssetRefs.has(ref.obj.assetRef)) continue;
     if (statusByPath?.[ref.path] !== false) continue;
     const key = pathKey(ref.path);
     const current = byPath.get(key) ?? {
@@ -80,13 +83,15 @@ export function relinkProjectMedia(project, replacements = {}) {
 //
 // Un pas par liaison touchée : une même référence employée par plusieurs Écrans
 // ne produit qu'un seul pas, puisque le geste repointe la référence entière.
-export function planAdvancedRelink(project, replacements = {}) {
+// Le même Set que pour la boîte écarte les liaisons laissées par un remplacement.
+export function planAdvancedRelink(project, replacements = {}, referencedAssetRefs = null) {
   const map = normalizeReplacementMap(replacements);
   if (map.size === 0) return [];
   const plan = [];
   const seen = new Set();
   for (const binding of readMediaBindings(project)) {
     const assetRef = binding?.assetRef;
+    if (referencedAssetRefs && !referencedAssetRefs.has(assetRef)) continue;
     if (typeof assetRef !== 'string' || assetRef === '' || seen.has(assetRef)) continue;
     const replacement = replacementForPath(binding?.path, map);
     if (!replacement) continue;

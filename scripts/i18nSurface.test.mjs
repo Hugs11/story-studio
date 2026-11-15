@@ -135,22 +135,3 @@ for (const development of [true, false]) {
     }
   });
 }
-
-test('AdvancedGraphCanvas présente vraiment le rejet du codec via UserMessage', async () => {
-  const server = await createServer({ configFile: false,
-    plugins: [{ name: 'rejected-view-fixture', transform(_code, id) {
-      if (id.endsWith('/useAdvancedGraphView.js')) return `export function useAdvancedGraphView() { return { status: 'failed', error: { code: 'VALIDATION_FIELD_MISSING_MASCULINE', params: { label: { code: 'LABEL_PROJECT_ROOT_AUDIO', params: {} } } } }; }`;
-    } }, react()], optimizeDeps: { noDiscovery: true, include: [] },
-    server: { middlewareMode: true, hmr: false, ws: false, watch: null },
-  });
-  try {
-    const { default: Canvas } = await server.ssrLoadModule('/src/components/AdvancedGraphCanvas/AdvancedGraphCanvas.jsx');
-    for (const [language, expected] of [['fr', 'Audio racine manquant.'], ['en', 'Missing: Top menu audio.'], ['it', 'Elemento mancante: Audio del menu iniziale.']]) {
-      const engine = createTestI18n();
-      await engine.changeLanguage(language);
-      const html = renderToStaticMarkup(React.createElement(I18nextProvider, { i18n: engine }, React.createElement(Canvas, { payload: '{}' })));
-      assert.ok(html.includes(expected), html);
-      assert.doesNotMatch(html, /\[object Object\]|&quot;code&quot;/);
-    }
-  } finally { await server.close(); }
-});

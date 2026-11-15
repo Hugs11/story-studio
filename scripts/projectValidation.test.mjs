@@ -464,7 +464,10 @@ test('Accueil actif, « Rester sur l’écran » ou « Enchaîner » laissent un
   }
 });
 
-test('dans un dossier, seule une destination des histoires du dossier retire la sortie automatique', () => {
+// Attente changée (#69) : la destination du dossier donne désormais une sortie automatique (lecture auto + OK vers
+// elle) aux histoires sans réglage propre. Le refus « Fin sans sortie » venait du bug, comme son jumeau Rust
+// (`native_pack/tests/menu_endings.rs`).
+test('dans un dossier, une destination de fin du dossier garde la sortie automatique des histoires', () => {
   const folder = (fields = {}) => ({
     id: 'm',
     type: 'menu',
@@ -478,9 +481,7 @@ test('dans un dossier, seule une destination des histoires du dossier retire la 
   const issues = exitIssues(buildProject({
     rootEntries: [folder({ returnAfterPlay: 'root' }), storyEntry('c')],
   }));
-  assert.equal(issues.length, 1, JSON.stringify(issues));
-  assert.equal(issues[0].id, 'a');
-  assert.match(issues[0].text, /^Dossier \/ Histoire a — Fin sans sortie/);
+  assert.deepEqual(issues, [], JSON.stringify(issues));
 });
 
 test('les étapes de fin et l’écran de sélection tout désactivés ne sont pas signalés', () => {

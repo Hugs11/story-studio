@@ -25,14 +25,14 @@ export function parseConventionName(raw) {
   if (!raw) return null;
   const value = String(raw).trim().replace(/\.(zip|7z)$/i, '');
   const ageMatch = value.match(/^(?:(\d+)(?:-(\d+))?|-(\d+))\+\]/);
-  if (!ageMatch && !value.includes('[by_')) return null;
+  if (!ageMatch && !/\[by_/i.test(value)) return null;
   const minAge = ageMatch?.[1] ?? '';
   const maxAge = ageMatch?.[2] ?? ageMatch?.[3];
   let rest = value.slice(ageMatch?.[0].length ?? 0);
 
   let author = '';
   let version = 1;
-  const byIdx = rest.indexOf('[by_');
+  const byIdx = rest.search(/\[by_/i);
   if (byIdx !== -1) {
     const byPart = rest.slice(byIdx + 4);
     const vMatch = byPart.match(/[_-][Vv](\d+)$/);

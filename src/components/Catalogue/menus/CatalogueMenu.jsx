@@ -49,8 +49,8 @@ export function CatalogueMenuItem({ entry, index, active, onActivate, onHover, i
   >
     <span className="catalogue-menu-item-head">
       {Icon && <Icon className="catalogue-menu-item-icon" width={16} height={16} aria-hidden="true" />}
-      <span className="catalogue-menu-item-label" aria-live="polite">{copied ? t('catalogue:fiche.uuid.copied') : entry.label ?? t(action.labelKey)}</span>
-      {!action.enabled && action.reasonKey && <Tooltip text={t(action.reasonKey, action.reasonParams)} asChild wrap><span id={reasonId} aria-label={t(action.reasonKey, action.reasonParams)} className="catalogue-menu-item-reason-mark"><Info width={14} height={14} aria-hidden="true" /></span></Tooltip>}
+      <span className="catalogue-menu-item-label" aria-live="polite">{copied ? t('catalogue:fiche.uuid.copied') : entry.label ?? t(action.labelKey, action.labelParams)}</span>
+      {!action.enabled && (action.reasonText || action.reasonKey) && <Tooltip text={action.reasonText ?? t(action.reasonKey, action.reasonParams)} asChild wrap><span id={reasonId} aria-label={action.reasonText ?? t(action.reasonKey, action.reasonParams)} className="catalogue-menu-item-reason-mark"><Info width={14} height={14} aria-hidden="true" /></span></Tooltip>}
       {entry.submenu && <ChevronRight width={14} height={14} aria-hidden="true" />}
     </span>
     {entry.detail && <span className="catalogue-menu-item-detail">{entry.detail}</span>}

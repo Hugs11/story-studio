@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, 0.9.11]
+    branches: [main]
     # Manual run on any branch of the development repository: push a `ci-*` tag
     # or use "Run workflow" (workflow_dispatch).
     tags: ["ci-*"]

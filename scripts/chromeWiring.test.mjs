@@ -483,8 +483,6 @@ for (const [editor, workspaceMode] of EDITORS) {
       commands: fileGroup,
       onNewProject: toolbarHandlers.onNewProject,
       onReturnToCatalogue: toolbarHandlers.onReturnToCatalogue,
-      onOpenProject: toolbarHandlers.onOpenProject,
-      onOpenPack: toolbarHandlers.onOpenPack,
       onSaveProject: toolbarHandlers.onSaveProject,
       onSaveProjectAs: toolbarHandlers.onSaveProjectAs,
       onContinueInGraph: toolbarHandlers.onContinueInGraph,
@@ -494,7 +492,15 @@ for (const [editor, workspaceMode] of EDITORS) {
     assert.ok(!elementByClass(elements, 'project-menu-head'), 'le menu commence directement par ses commandes');
     assert.ok(elementByAttribute(elements, 'role', 'menu').props['aria-label'], 'le menu conserve son nom accessible');
 
-    for (const entry of fileGroup) {
+    const menuIds = ['returnToCatalogue', 'newProject', 'saveProject', 'saveProjectAs'];
+    if (workspaceMode === WORKSPACE_MODE_HIERARCHICAL) menuIds.push('continueInGraph');
+    assert.deepEqual(paintedCommandIds(elements), menuIds);
+    // Les ouvertures restent dans l'inventaire partagé avec le clavier.
+    for (const id of ['openProject', 'openPack']) {
+      assert.equal(fileGroup.find(entry => entry.id === id)?.available, true);
+    }
+
+    for (const entry of fileGroup.filter(entry => menuIds.includes(entry.id))) {
       const controle = commandControl(elements, entry.id);
       assert.ok(controle, `la commande « ${entry.id} » n'est pas peinte dans le tiroir`);
       assert.equal(typeof controle.props.onClick, 'function');

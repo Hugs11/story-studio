@@ -111,7 +111,11 @@ export function useMediaImport({
     const request = subscriptionRequest && subscriptions
       ? await subscriptions.prepareRequest(subscriptionRequest) : subscriptionRequest;
     const copy = MEDIA_FUNNEL_COPY[source];
-    await runFunnelLanding('pack', async () => {
+    await runFunnelLanding('pack', async (workspaceDir) => {
+      // La session et le projet sont installés, mais App peut ne pas avoir
+      // encore rendu le nouveau dossier dans sa ref média distincte. Capturer
+      // la destination acquise par la session, jamais celle du rendu précédent.
+      workspaceDirRef.current = workspaceDir;
       const mediaRequest = importSession.captureImport();
       try {
         const listTitle = String(list?.title || '').trim();
@@ -128,7 +132,7 @@ export function useMediaImport({
             logger.warn(`${copy.logPrefix}:cover-error title='${listTitle || copy.defaultTitle}' error=${coverError}`);
           }
         }
-        if (!mediaRequest.isCurrent()) return;
+        if (!mediaRequest.isCurrent()) throw importPresentationError('import:media.import.projectChanged', {}, { code: 'IMPORT_PROJECT_CHANGED' });
         if (listTitle || listCover) {
           store.setProject((project) => ({
             ...project,
@@ -152,7 +156,7 @@ export function useMediaImport({
           onProgress,
           suppressDialog: true,
         });
-        if (!mediaRequest.isCurrent()) return;
+        if (!mediaRequest.isCurrent()) throw importPresentationError('import:media.import.projectChanged', {}, { code: 'IMPORT_PROJECT_CHANGED' });
         if (result.total > 0 && result.failures >= result.total) {
           throw importPresentationError(source === 'youtube'
             ? youtubeImportFailureRef(result, copy.allFailedRef)
@@ -161,7 +165,7 @@ export function useMediaImport({
         if (result.failures > 0) {
           setImportNotice(partialFailureNotice(source, copy, result));
         }
-        if (!mediaRequest.isCurrent()) return;
+        if (!mediaRequest.isCurrent()) throw importPresentationError('import:media.import.projectChanged', {}, { code: 'IMPORT_PROJECT_CHANGED' });
         subscriptions?.applyRequest?.(request, result.importedEpisodeIds);
         logger.info(`${copy.logPrefix}:landed count=${result.imported}`);
       } finally { mediaRequest.release(); }

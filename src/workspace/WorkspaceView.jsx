@@ -530,6 +530,8 @@ export function WorkspaceView({
           documentStartId={startStageForEntry(simulation.graph, simulatorAnchorId)}
           documentStatus={simulation.status}
           documentError={simulation.error}
+          documentStale={simulation.stale}
+          onRestart={handleSimulateRoot}
           hostSelector=".workspace"
           layoutScope={EDITOR_LAYOUT_SCOPE.FREE}
           // Le simulateur désigne l'Écran qui joue ; l'arbre et le diagramme

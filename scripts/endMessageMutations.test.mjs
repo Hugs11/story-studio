@@ -38,6 +38,27 @@ function stories(project) {
   return project.rootEntries[0].children;
 }
 
+test('enchaînement actif : son, suppression et lecture se propagent sans toucher l’invite locale', () => {
+  const project = baseProject();
+  project.globalOptions.autoNext = true;
+  const [originalLinked, originalLocal] = stories(project);
+
+  const updated = updateGlobalEndMessageProject(project, { nightModeAudio: 'nouveau.mp3' });
+  assert.equal(stories(updated)[0].afterPlaybackPromptAudio, 'nouveau.mp3');
+  assert.deepEqual(stories(updated)[1], originalLocal);
+
+  const removed = removeGlobalEndMessageProject(project);
+  assert.equal(stories(removed)[0].afterPlaybackPromptAudio, null);
+  assert.deepEqual(stories(removed)[1], originalLocal);
+
+  const automatic = updateGlobalEndPlaybackProject(project, true);
+  assert.deepEqual(stories(automatic)[0].afterPlaybackPromptControlSettings,
+    { ...originalLinked.afterPlaybackPromptControlSettings, autoplay: true, ok: true });
+  assert.deepEqual(stories(automatic)[1], originalLocal);
+  assert.equal(project.globalOptions.autoNext, true);
+  assert.equal(originalLinked.afterPlaybackPromptAudio, 'global.mp3');
+});
+
 test('mise a jour globale propage seulement les projections liees et preserve les controles', () => {
   const project = baseProject();
   const next = updateGlobalEndMessageProject(project, { nightModeAudio: 'nouveau.mp3' });

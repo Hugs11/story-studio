@@ -223,3 +223,10 @@ test('repatriation resolves the configured workspace at each request and uses th
   await store.mutate('d', 'repatriateMany', [], ['a']);
   assert.equal(calls[0][4], 'Le conte');
 });
+
+
+test('removal state warnings use the device message rather than the send message', async () => {
+  const { store } = await setup({ remove: async () => ({ device: detail(), outcomes: [{ status: 'stateWarning' }] }) });
+  await store.mutate('d', 'remove', [['a']], ['a']);
+  assert.equal(store.getSnapshot().error.code, 'STORYTELLER_DEVICE_WRITE_FAILED');
+});

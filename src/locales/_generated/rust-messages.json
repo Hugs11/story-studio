@@ -168,6 +168,10 @@
     "params": []
   },
   {
+    "code": "STORYTELLER_DEVICE_WRITE_FAILED",
+    "params": []
+  },
+  {
     "code": "STORYTELLER_CIPHER_METADATA_REFUSED",
     "params": []
   },
@@ -1294,6 +1298,10 @@
     "params": []
   },
   {
+    "code": "CHECKER_VOLUME_BEST_EFFORT",
+    "params": []
+  },
+  {
     "code": "CHECKER_PEAK_MEASUREMENT_VALUE",
     "params": [
       "peak"
@@ -2017,6 +2025,26 @@
       "sizeMb",
       "maxFileMb"
     ]
+  },
+  {
+    "code": "CHECKER_ROLE_ROOT",
+    "params": []
+  },
+  {
+    "code": "CHECKER_ROLE_STORY",
+    "params": []
+  },
+  {
+    "code": "CHECKER_ROLE_END_MESSAGE",
+    "params": []
+  },
+  {
+    "code": "CHECKER_ROLE_TITLE",
+    "params": []
+  },
+  {
+    "code": "CHECKER_ROLE_NAVIGATION",
+    "params": []
   },
   {
     "code": "CHECKER_REPORT_ELEMENT_LABEL",

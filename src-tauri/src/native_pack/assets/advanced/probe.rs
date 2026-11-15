@@ -32,9 +32,7 @@ const POLL_INTERVAL: Duration = Duration::from_millis(20);
 /// Queue de `stderr` reprise dans le `detail` d'un refus.
 const STDERR_TAIL_BYTES: usize = 2048;
 
-/// Plafond de conservation de `stderr`. Les mesures d'enveloppe RMS écrivent
-/// une ligne par fenêtre : le flux entier est nécessaire pour les relire, mais
-/// il ne doit pas pouvoir croître sans borne.
+/// Plafond des diagnostics. Les mesures ont besoin du flux complet.
 const STDERR_MAX_BYTES: usize = 8 * 1024 * 1024;
 
 /// L'opération pour laquelle l'outil est invoqué.
@@ -63,7 +61,7 @@ pub(crate) enum InvocationOutcome {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ToolRun {
     pub(crate) outcome: InvocationOutcome,
-    /// Flux d'erreur complet, plafonné. Il porte aussi les **mesures** que
+    /// Flux d'erreur (plafonné pour les diagnostics). Il porte aussi les **mesures** que
     /// FFmpeg écrit là — enveloppe RMS, résumé EBU R128 — que les analyseurs
     /// déjà éprouvés du mode Libre relisent sans être dupliqués.
     pub(crate) stderr: String,
@@ -168,6 +166,28 @@ pub(crate) fn run_tool(
     deadline: Duration,
     stdout_handling: StdoutHandling,
 ) -> ToolRun {
+    run_tool_with_stderr_limit(
+        tool,
+        args,
+        deadline,
+        stdout_handling,
+        Some(STDERR_MAX_BYTES),
+    )
+}
+
+/// Les analyseurs RMS et EBU ont besoin de la vraie fin du flux, quelle que
+/// soit la durée du son. Même collecte que les menus, sans plafond silencieux.
+pub(crate) fn run_measurement(tool: &Path, args: &[String], deadline: Duration) -> ToolRun {
+    run_tool_with_stderr_limit(tool, args, deadline, StdoutHandling::Discard, None)
+}
+
+fn run_tool_with_stderr_limit(
+    tool: &Path,
+    args: &[String],
+    deadline: Duration,
+    stdout_handling: StdoutHandling,
+    stderr_limit: Option<usize>,
+) -> ToolRun {
     let mut command = Command::new(tool);
     command
         .args(args)
@@ -199,7 +219,7 @@ pub(crate) fn run_tool(
             None => 0,
         });
         let collector = scope.spawn(move || match stderr {
-            Some(mut stream) => drain_capped(&mut stream),
+            Some(mut stream) => drain_capped(&mut stream, stderr_limit),
             None => String::new(),
         });
 
@@ -252,16 +272,15 @@ fn drain_counting(stream: &mut impl Read) -> u64 {
     total
 }
 
-fn drain_capped(stream: &mut impl Read) -> String {
+fn drain_capped(stream: &mut impl Read, limit: Option<usize>) -> String {
     let mut collected = Vec::new();
     let mut scratch = [0_u8; 8 * 1024];
     loop {
         match stream.read(&mut scratch) {
             Ok(0) | Err(_) => break,
             Ok(read) => {
-                if collected.len() < STDERR_MAX_BYTES {
-                    collected.extend_from_slice(&scratch[..read]);
-                }
+                let keep = limit.map_or(read, |max| read.min(max.saturating_sub(collected.len())));
+                collected.extend_from_slice(&scratch[..keep]);
             }
         }
     }

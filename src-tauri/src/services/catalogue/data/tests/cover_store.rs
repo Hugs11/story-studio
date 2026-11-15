@@ -181,6 +181,106 @@ fn a_retained_official_cover_is_stored_once() {
 }
 
 #[test]
+fn missing_or_corrupt_official_cover_falls_back_to_pack() {
+    for corrupt in [false, true] {
+        let f = Fixture::new();
+        let id = f.publish(&[covered(&f, "pack", [255, 0, 0], 1)]);
+        let pack = f.store.fiche_thumbnail(&id, None).unwrap().bytes.unwrap();
+        official_lunii(&f);
+        review1_retained_cover(&f, &id);
+        let sha = field_value(&f.store, &id, "cover")["sha256"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        let signature = listed_cover_signatures(&f)[&id].clone();
+        let retained = f.store.images_root().join(sha);
+        if corrupt {
+            std::fs::write(&retained, b"corrupt image").unwrap();
+        } else {
+            std::fs::remove_file(&retained).unwrap();
+        }
+        assert_eq!(
+            f.store.lunii_thumbnail(&id).unwrap().unwrap().state,
+            "absent"
+        );
+        assert_eq!(ready(f.store.served_cover(&id, &signature).unwrap()), pack);
+        assert_eq!(listed_cover_signatures(&f)[&id], signature);
+    }
+}
+
+#[test]
+fn missing_correction_is_terminal_and_corrupt_correction_is_remembered() {
+    let f = Fixture::new();
+    let id = f.publish(&[covered(&f, "pack", [255, 0, 0], 1)]);
+    let path = f.root.join("green.png");
+    coloured_png(&path, [0, 255, 0]);
+    let stage = f.store.stage_cover(&path).unwrap();
+    f.mutate(
+        &id,
+        json!([{"field":"cover","state":"defined","coverStagingId":stage["coverStagingId"]}]),
+    );
+    let sha = stage["sha256"].as_str().unwrap().to_owned();
+    let signature = listed_cover_signatures(&f)[&id].clone();
+    let retained = f.store.images_root().join(sha);
+    let bytes = std::fs::read(&retained).unwrap();
+    std::fs::remove_file(&retained).unwrap();
+    assert!(f.store.served_cover(&id, &signature).is_err());
+    std::fs::write(&retained, &bytes).unwrap();
+    ready(f.store.served_cover(&id, &signature).unwrap());
+    for name in stored_files(&f, &id) {
+        std::fs::remove_file(f.store.cover_store_dir(&id).join(name)).unwrap();
+    }
+    std::fs::write(&retained, b"corrupt image").unwrap();
+    assert_eq!(
+        f.store.served_cover(&id, &signature).unwrap(),
+        Served::Unreadable
+    );
+    std::fs::write(&retained, bytes).unwrap();
+    assert_eq!(
+        f.store.served_cover(&id, &signature).unwrap(),
+        Served::Unreadable
+    );
+    assert_eq!(listed_cover_signatures(&f)[&id], signature);
+}
+
+// Windows sharing semantics allow a deterministic lock without changing ACLs.
+#[cfg(windows)]
+#[test]
+fn locked_retained_cover_is_busy_and_not_remembered() {
+    use std::os::windows::fs::OpenOptionsExt;
+    for official in [false, true] {
+        let f = Fixture::new();
+        let id = f.publish(&[covered(&f, "pack", [255, 0, 0], 1)]);
+        let sha = if official {
+            official_lunii(&f);
+            review1_retained_cover(&f, &id);
+            field_value(&f.store, &id, "cover")["sha256"]
+                .as_str()
+                .unwrap()
+                .to_owned()
+        } else {
+            let path = f.root.join("green.png");
+            coloured_png(&path, [0, 255, 0]);
+            let stage = f.store.stage_cover(&path).unwrap();
+            f.mutate(&id, json!([{"field":"cover","state":"defined","coverStagingId":stage["coverStagingId"]}]));
+            stage["sha256"].as_str().unwrap().to_owned()
+        };
+        let signature = listed_cover_signatures(&f)[&id].clone();
+        let lock = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(f.store.images_root().join(sha))
+            .unwrap();
+        for _ in 0..2 {
+            assert_eq!(f.store.served_cover(&id, &signature).unwrap(), Served::Busy);
+        }
+        drop(lock);
+        ready(f.store.served_cover(&id, &signature).unwrap());
+        assert_eq!(listed_cover_signatures(&f)[&id], signature);
+    }
+}
+
+#[test]
 fn forgetting_a_fiche_removes_its_cover_only() {
     let f = Fixture::new();
     let mut a = covered(&f, "a", [255, 0, 0], 1);
@@ -374,10 +474,191 @@ fn a_pending_official_cover_is_left_to_its_download() {
     assert_eq!((report.fabricated, report.skipped), (0, 1), "{report:?}");
     assert_eq!(f.store.lunii_cover_test_requests(), 0, "no download");
     assert!(stored_files(&f, &id).is_empty());
-    // Displayed meanwhile from the pack on demand, still without download.
+    // Stay neutral without reading the pack or starting a download.
     let pending = listed_cover_signatures(&f)[&id].clone();
-    ready(f.store.served_cover(&id, &pending).unwrap());
+    let turns = f.store.hold_cover_fabrications();
+    assert_eq!(
+        f.store.served_cover(&id, &pending).unwrap(),
+        Served::OfficialPending
+    );
+    drop(turns);
+    assert_eq!(
+        std::fs::read_dir(f.store.thumbnail_root()).unwrap().count(),
+        0
+    );
     assert_eq!(f.store.lunii_cover_test_requests(), 0);
+    review1_retained_cover(&f, &id);
+    let retained = listed_cover_signatures(&f)[&id].clone();
+    assert_ne!(pending, retained);
+    ready(f.store.served_cover(&id, &retained).unwrap());
+    assert_eq!(
+        std::fs::read_dir(f.store.thumbnail_root()).unwrap().count(),
+        0
+    );
+}
+
+#[test]
+fn official_cover_consent_and_conclusive_failure_control_pack_fallback() {
+    let f = Fixture::new();
+    let id = f.publish(&[covered(&f, "pack", [255, 0, 0], 1)]);
+    let local = listed_cover_signatures(&f)[&id].clone();
+    let pack = ready(f.store.served_cover(&id, &local).unwrap());
+    official_lunii(&f);
+    let pending = listed_cover_signatures(&f)[&id].clone();
+    assert_eq!(
+        f.store.served_cover(&id, &pending).unwrap(),
+        Served::OfficialPending
+    );
+    f.store.set_lunii_permission(false).unwrap();
+    let no_consent = listed_cover_signatures(&f)[&id].clone();
+    assert_ne!(no_consent, pending);
+    assert_eq!(ready(f.store.served_cover(&id, &no_consent).unwrap()), pack);
+    f.store.set_lunii_permission(true).unwrap();
+    f.store.lunii_cover_test_response(b"invalid image".to_vec());
+    let key = field_value(&f.store, &id, "cover")["key"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert!(f.store.lunii_cover_bytes(&id, &key).is_err());
+    let failed = listed_cover_signatures(&f)[&id].clone();
+    assert_ne!(failed, pending);
+    assert_eq!(ready(f.store.served_cover(&id, &failed).unwrap()), pack);
+}
+
+#[test]
+fn official_cover_transport_failure_keeps_the_pack_unread() {
+    let _network = crate::support::network::bounded::test_network();
+    let f = Fixture::new();
+    let id = f.publish(&[covered(&f, "pack", [255, 0, 0], 1)]);
+    official_lunii(&f);
+    let pending = listed_cover_signatures(&f)[&id].clone();
+    let key = field_value(&f.store, &id, "cover")["key"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert!(f.store.lunii_cover_bytes(&id, &key).is_err());
+    assert_eq!(listed_cover_signatures(&f)[&id], pending);
+    assert_eq!(
+        f.store.served_cover(&id, &pending).unwrap(),
+        Served::OfficialPending
+    );
+    assert_eq!(
+        std::fs::read_dir(f.store.thumbnail_root()).unwrap().count(),
+        0
+    );
+}
+
+#[test]
+fn inherited_exhausted_official_cover_attempts_fall_back_to_the_pack() {
+    let f = Fixture::new();
+    let id = f.publish(&[covered(&f, "pack", [255, 0, 0], 1)]);
+    let local = listed_cover_signatures(&f)[&id].clone();
+    let pack = ready(f.store.served_cover(&id, &local).unwrap());
+    official_lunii(&f);
+    let pending = listed_cover_signatures(&f)[&id].clone();
+    f.store
+        .write(|tx| {
+            tx.execute("INSERT INTO lunii_image_attempt VALUES (?1,3)", [&id])
+                .map_err(crate::services::catalogue::store::error)?;
+            Ok(())
+        })
+        .unwrap();
+    assert!(field_value(&f.store, &id, "cover")["downloadFailed"].is_null());
+    let exhausted = listed_cover_signatures(&f)[&id].clone();
+    assert_ne!(exhausted, pending);
+    assert!(f.store.lunii_thumbnail(&id).unwrap().is_none());
+    assert_eq!(ready(f.store.served_cover(&id, &exhausted).unwrap()), pack);
+    assert_eq!(f.store.lunii_cover_test_requests(), 0);
+}
+
+#[test]
+fn three_transport_failures_change_the_signature_and_fall_back_to_the_pack() {
+    let _network = crate::support::network::bounded::test_network();
+    let mut f = Fixture::new();
+    let id = f.publish(&[covered(&f, "pack", [255, 0, 0], 1)]);
+    let local = listed_cover_signatures(&f)[&id].clone();
+    let pack = ready(f.store.served_cover(&id, &local).unwrap());
+    official_lunii(&f);
+    let pending = listed_cover_signatures(&f)[&id].clone();
+    let key = field_value(&f.store, &id, "cover")["key"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    for attempt in 1..=3 {
+        let before = f.store.list_sources().unwrap().catalogue_revision;
+        let cover_before = f
+            .store
+            .read(|c| {
+                c.query_row("SELECT cover_revision FROM catalogue", [], |r| {
+                    r.get::<_, i64>(0)
+                })
+            })
+            .unwrap();
+        assert!(f.store.lunii_cover_bytes(&id, &key).is_err());
+        let failures = f
+            .store
+            .read(|c| {
+                c.query_row(
+                    "SELECT failures FROM lunii_image_attempt WHERE fiche_id=?1",
+                    [&id],
+                    |r| r.get::<_, i64>(0),
+                )
+            })
+            .unwrap();
+        assert_eq!(failures, attempt);
+        let signature = listed_cover_signatures(&f)[&id].clone();
+        if attempt < 3 {
+            assert_eq!(signature, pending);
+            assert_eq!(
+                f.store.served_cover(&id, &signature).unwrap(),
+                Served::OfficialPending
+            );
+            assert_eq!(f.store.list_sources().unwrap().catalogue_revision, before);
+        } else {
+            assert_ne!(signature, pending);
+            assert_eq!(ready(f.store.served_cover(&id, &signature).unwrap()), pack);
+            assert_eq!(
+                f.store.list_sources().unwrap().catalogue_revision,
+                before + 1
+            );
+            let cover_after = f
+                .store
+                .read(|c| {
+                    c.query_row("SELECT cover_revision FROM catalogue", [], |r| {
+                        r.get::<_, i64>(0)
+                    })
+                })
+                .unwrap();
+            assert_eq!(cover_after, cover_before + 1);
+            assert_eq!(f.store.served_cover(&id, &pending).unwrap(), Served::Stale);
+        }
+        // Reopening the store models a new application launch.
+        let placeholder =
+            Store::open(&f.root.join("unused-data"), &f.root.join("unused-cache")).unwrap();
+        drop(std::mem::replace(&mut f.store, placeholder));
+        f.store = Store::open(&f.root.join("data"), &f.root.join("cache")).unwrap();
+    }
+    let exhausted = listed_cover_signatures(&f)[&id].clone();
+    assert_ne!(exhausted, pending);
+    assert_eq!(ready(f.store.served_cover(&id, &exhausted).unwrap()), pack);
+    assert!(f.store.lunii_thumbnail(&id).unwrap().is_none());
+    assert!(f.store.lunii_cover_bytes(&id, &key).is_err());
+    assert_eq!(f.store.lunii_cover_test_requests(), 0);
+}
+
+#[test]
+fn unofficial_cover_with_consent_still_reads_the_pack() {
+    let f = Fixture::new();
+    f.store.set_lunii_permission(true).unwrap();
+    let mut item = covered(&f, "community", [255, 0, 0], 1);
+    item.observation.identity = None;
+    let id = f.publish(&[item]);
+    let signature = listed_cover_signatures(&f)[&id].clone();
+    ready(f.store.served_cover(&id, &signature).unwrap());
+    assert_eq!(
+        std::fs::read_dir(f.store.thumbnail_root()).unwrap().count(),
+        1
+    );
 }
 
 #[test]
@@ -389,6 +670,37 @@ fn interactive_requests_beyond_the_fabrication_turns_answer_busy() {
     assert_eq!(f.store.served_cover(&id, &signature).unwrap(), Served::Busy);
     drop(turns);
     ready(f.store.served_cover(&id, &signature).unwrap());
+}
+
+#[test]
+fn timed_out_cover_source_is_busy_and_not_remembered() {
+    use crate::services::catalogue::thumbnails::{bounded_source_read, SourceReadFailure};
+    let f = Fixture::new();
+    let id = f.publish(&[covered(&f, "pack", [255, 0, 0], 1)]);
+    let signature = listed_cover_signatures(&f)[&id].clone();
+    let (release, wait) = std::sync::mpsc::channel::<()>();
+    assert_eq!(
+        bounded_source_read(
+            f.source.clone(),
+            std::time::Duration::from_millis(10),
+            move || wait.recv()
+        ),
+        Err(SourceReadFailure::Busy)
+    );
+    assert_eq!(f.store.served_cover(&id, &signature).unwrap(), Served::Busy);
+    release.send(()).unwrap();
+    let deadline = std::time::Instant::now() + crate::test_support::timeout();
+    loop {
+        match f.store.served_cover(&id, &signature).unwrap() {
+            Served::Ready(_) => break,
+            Served::Busy => {
+                assert!(std::time::Instant::now() < deadline);
+                std::thread::sleep(std::time::Duration::from_millis(1));
+            }
+            other => panic!("cover did not recover: {other:?}"),
+        }
+    }
+    assert_eq!(listed_cover_signatures(&f)[&id], signature);
 }
 
 /// Serving an already made cover against making it, on a synthetic catalogue

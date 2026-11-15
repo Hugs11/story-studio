@@ -94,7 +94,7 @@ export async function run() {
         // forcer un clic sur un bouton désactivé.
         if (await metaSubmit.isDisabled()) {
           const titleInput = page.getByPlaceholder('Titre du pack');
-          if (await titleInput.count()) {
+          if (await titleInput.count() && !(await titleInput.inputValue()).trim()) {
             await titleInput.fill('Pack corrigé (parcours C1)');
             await page.waitForTimeout(300);
           }
@@ -105,6 +105,12 @@ export async function run() {
         if (await uuidPrompt.first().isVisible().catch(() => false)) {
           await clickButton(uuidPrompt.first(), /Conserver l.UUID actuel/);
           await page.waitForTimeout(300);
+        }
+        // L'âge n'est plus inventé par la fiche : le choisir explicitement
+        // lorsqu'il n'est déclaré ni dans le titre ni dans le nom du pack.
+        const age = page.locator('.checker-meta-age');
+        if (await age.locator('button.is-active').count() === 0 && !(await age.locator('input').inputValue())) {
+          await age.getByRole('button', { name: '6+', exact: true }).click();
         }
         await ctx.shot(page, 'metadonnees-correction');
         const submittable = await metaSubmit.isEnabled();

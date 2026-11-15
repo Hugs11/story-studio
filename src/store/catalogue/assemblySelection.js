@@ -8,8 +8,5 @@ export function assemblyPacks(preparation) {
 }
 
 export function assemblyAction(count, phase) {
-  return { id: 'assemble', labelKey: 'catalogue:assembly.title', enabled: count > 0 && phase === 'idle', reasonKey: count ? 'catalogue:assembly.preparing' : 'catalogue:data.noTarget' };
-}
-export function assemblyMenuEntries(entries, menu, count, phase) {
-  return menu.kind === 'card' && !menu.step && count > 1 ? [...entries, { key: 'assemble', exemplar: null, action: assemblyAction(count, phase) }] : entries;
+  return { id: 'assemble', labelKey: 'catalogue:selection.inline.assemble', labelParams: { count }, enabled: count > 0 && phase === 'idle', reasonKey: count ? 'catalogue:assembly.preparing' : 'catalogue:data.noTarget' };
 }

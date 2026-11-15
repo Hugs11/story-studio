@@ -62,6 +62,8 @@ pub enum Served {
     Ready(Vec<u8>),
     /// The fiche has no cover (none found, or a cleared correction).
     Absent,
+    /// Official acquisition pending with consent; keep the surface silent.
+    OfficialPending,
     /// The address signature is not the fiche's current one.
     Stale,
     UnknownFiche,
@@ -78,6 +80,7 @@ impl Served {
         match self {
             Self::Ready(_) => "ready",
             Self::Absent => "absent",
+            Self::OfficialPending => "officialPending",
             Self::Stale => "stale",
             Self::UnknownFiche => "unknownFiche",
             Self::BadAddress => "badAddress",
@@ -342,6 +345,11 @@ impl Store {
         if keys.signature != signature {
             return Ok(Served::Stale);
         }
+        // Pending official covers need no fabrication turn or source read.
+        // Answer before waiting behind decoders, so HEAD can keep the UI silent.
+        if keys.official_pending {
+            return Ok(Served::OfficialPending);
+        }
         if let Some(failure) = self.covers.failure(id, signature) {
             return Ok(failure);
         }
@@ -410,12 +418,12 @@ impl Store {
                 self.covers.remember(id, &keys.signature, Failure::TooLarge);
                 Served::TooLarge
             }
-            ("busy", _) => Served::Busy,
+            ("officialPending", _) => Served::OfficialPending,
+            ("busy", _) if !keys.offline => Served::Busy,
             _ if keys.offline => Served::Offline,
             _ => {
-                // Correction and official images are local: their failure is
-                // conclusive. An exemplar's is either marked (new signature)
-                // or transient, and stays retryable.
+                // Busy reads returned above are never remembered. Only
+                // conclusive correction/official decoding failures reach here.
                 if keys.supplier.is_none() {
                     self.covers
                         .remember(id, &keys.signature, Failure::Unreadable);

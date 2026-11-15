@@ -13,18 +13,25 @@ import { useCallback } from 'react';
 export function useProjectMutations({ store }) {
   const handleUpdateRoot = useCallback(({ projectName, name, rootName, endNodeName, packMetadata }) => {
     const nextProjectName = projectName ?? name;
-    if (nextProjectName !== undefined) store.updateProjectName(nextProjectName);
-    if (rootName !== undefined || endNodeName !== undefined || packMetadata !== undefined) {
+    if (nextProjectName !== undefined || rootName !== undefined || endNodeName !== undefined || packMetadata !== undefined) {
+      const nameFields = [nextProjectName, rootName, endNodeName].filter(value => value !== undefined);
+      const metadataIsName = packMetadata === undefined || (
+        nextProjectName !== undefined && Object.keys(packMetadata).length === 1 && packMetadata.title === nextProjectName
+      );
+      const historyGroup = nameFields.length === 1 && metadataIsName
+        ? `name:root:${rootName !== undefined ? 'rootName' : endNodeName !== undefined ? 'endNodeName' : 'projectName'}`
+        : null;
       store.setProject(p => ({
         ...p,
+        ...(nextProjectName !== undefined ? { projectName: nextProjectName } : {}),
         ...(rootName !== undefined ? { rootName } : {}),
         ...(endNodeName !== undefined ? { endNodeName } : {}),
         ...(packMetadata !== undefined
           ? { packMetadata: { ...(p.packMetadata ?? {}), ...packMetadata } }
           : {}),
-      }));
+      }), { historyGroup });
     }
-  }, [store.updateProjectName, store.setProject]);
+  }, [store.setProject]);
 
   const handleAddMenu = useCallback((parentMenuId = null) => {
     return store.addMenu(parentMenuId);
@@ -35,8 +42,8 @@ export function useProjectMutations({ store }) {
     else store.reorderMenuItems(menuId, newItems);
   }, [store.reorderRootItems, store.reorderMenuItems]);
 
-  const handleUpdateMenu = useCallback((fields, menuId = store.selectedId) => {
-    if (menuId) store.updateMenu(menuId, fields);
+  const handleUpdateMenu = useCallback((fields, menuId = store.selectedId, options) => {
+    if (menuId) store.updateMenu(menuId, fields, options);
   }, [store.updateMenu, store.selectedId]);
 
   const handleDeleteMenu = useCallback((menuId = store.selectedId) => {
@@ -52,8 +59,8 @@ export function useProjectMutations({ store }) {
     store.demoteRootToMenu();
   }, [store.demoteRootToMenu]);
 
-  const handleUpdateItem = useCallback((fields, itemId = store.selectedId) => {
-    if (itemId) store.updateItem(itemId, fields);
+  const handleUpdateItem = useCallback((fields, itemId = store.selectedId, options) => {
+    if (itemId) store.updateItem(itemId, fields, options);
   }, [store.updateItem, store.selectedId]);
 
   const handleBulkUpdateItems = useCallback((ids, getFields) => {

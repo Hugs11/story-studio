@@ -44,10 +44,16 @@ function globalPromptFields(fields = {}) {
   return next;
 }
 
-export function updateGlobalEndMessageProject(project, fields) {
-  const linkedStoryIds = collectEndMessagePresentations(project)
+function linkedGlobalStoryIds(project) {
+  // Les invites masquées par l'enchaînement doivent rester rattachées à leur réapparition.
+  const asIfEnded = { ...project, globalOptions: { ...project.globalOptions, autoNext: false } };
+  return collectEndMessagePresentations(asIfEnded)
     .filter((item) => item.presentationKind === 'global' && item.entry.afterPlaybackPromptAudio)
     .map((item) => item.entry.id);
+}
+
+export function updateGlobalEndMessageProject(project, fields) {
+  const linkedStoryIds = linkedGlobalStoryIds(project);
   let next = { ...project, ...(fields ?? {}) };
   const promptFields = globalPromptFields(fields);
   for (const storyId of linkedStoryIds) {
@@ -58,9 +64,7 @@ export function updateGlobalEndMessageProject(project, fields) {
 
 export function updateGlobalEndPlaybackProject(project, autoplay) {
   const normalizedAutoplay = !!autoplay;
-  const linkedStoryIds = collectEndMessagePresentations(project)
-    .filter((item) => item.presentationKind === 'global' && item.entry.afterPlaybackPromptAudio)
-    .map((item) => item.entry.id);
+  const linkedStoryIds = linkedGlobalStoryIds(project);
   let next = {
     ...project,
     globalOptions: {
@@ -99,9 +103,7 @@ export function attachStoryEndToGlobalProject(project, storyId) {
 }
 
 export function removeGlobalEndMessageProject(project) {
-  const linkedStoryIds = collectEndMessagePresentations(project)
-    .filter((item) => item.presentationKind === 'global' && item.entry.afterPlaybackPromptAudio)
-    .map((item) => item.entry.id);
+  const linkedStoryIds = linkedGlobalStoryIds(project);
   let next = {
     ...project,
     nightModeAudio: null,

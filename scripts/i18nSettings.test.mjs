@@ -6,7 +6,7 @@ import { I18nextProvider } from 'react-i18next';
 import { createServer } from './viteTestServer.mjs';
 import react from '@vitejs/plugin-react';
 import { sources, BASE, originalSettings } from './i18nSettingsSourceFixture.mjs';
-import { applyLot413 } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrections } from './i18nFrenchSourceCorrections.mjs';
 import { commandKeyLabel } from '../src/utils/platformKeys.js';
 import { checkCatalogues, SETTINGS_NEUTRAL_KEYS, sourceHash } from './check-i18n.mjs';
 import { pseudoResources } from '../src/i18n/pseudo.js';
@@ -60,9 +60,9 @@ test('réglages : parité, hashes, statuts préservés et mutation de fuite FR',
       'interface.language.availableCount_many': '{{count}} di lingue disponibili',
     },
   };
-  // Lot 4.13 : valeurs FR corrigées volontairement (typographie, vocabulaire, raccourcis paramétrés),
-  // listées au rapport du lot ; la fixture BASE reste intacte.
-  const lot413 = {
+  // valeurs FR corrigées volontairement (typographie, vocabulaire, raccourcis paramétrés),
+  // énumérées ci-dessous ; la fixture BASE reste intacte.
+  const frenchCorrections = {
     "interface.theme.description": "« Système » suit l’apparence configurée dans Windows, Linux et macOS.",
     "interface.selection.label": "Ouvrir les réglages quand on sélectionne un élément",
     "interface.selection.description": "Dans les trois éditeurs (Simplifié, par menus, Graphe) : un clic dans l’arbre, le diagramme, la liste ou le graphe rouvre les Réglages ou l’Inspecteur s’ils sont fermés.",
@@ -86,8 +86,8 @@ test('réglages : parité, hashes, statuts préservés et mutation de fuite FR',
     "save.shortcuts.description": "Raccourcis : <save>{{save}}</save> pour enregistrer, <saveAs>{{saveAs}}</saveAs> pour enregistrer sous",
     "youtube.path.description": "Laisse vide pour utiliser la version gérée automatiquement. Renseigne le chemin complet d’un exécutable <windows>yt-dlp.exe</windows> sous Windows ou <unix>yt-dlp</unix> sous Linux/macOS pour l’utiliser à la place (le téléchargement auto est alors ignoré).",
   };
-  for (const [key, value] of Object.entries(lot413)) assert.equal(fr[key], value, `lot 4.13 ${key}`);
-  const exceptions = new Set(['interface.theme.description', 'interface.selection.description', ...Object.keys(lot413)]);
+  for (const [key, value] of Object.entries(frenchCorrections)) assert.equal(fr[key], value, `correction FR ${key}`);
+  const exceptions = new Set(['interface.theme.description', 'interface.selection.description', ...Object.keys(frenchCorrections)]);
   for (const [key, value] of Object.entries(originalSettings.fr)) {
     if (!exceptions.has(key)) {
       assert.equal(fr[key], value, key);
@@ -131,7 +131,7 @@ test('réglages : rendu FR comparé à BASE et surface pseudo, attributs inclus'
       const render = component => renderToStaticMarkup(React.createElement(I18nextProvider, { i18n: engine }, React.createElement(component, component === old && name === 'XttsVoiceSettings' ? { ...props, xttsLogs: ['_RAW_TOOL_'] } : props)));
       await engine.changeLanguage('fr');
       // Évolution volontaire (signalement des sons à l'ajout) : la ligne ajoutée aux Projets et médias est retirée du rendu courant avant comparaison à BASE.
-      assert.equal(plain(render(now)).replace(name === 'XttsVoiceSettings' ? 'Détailtechnique' : '\u0000', '').replace(plain(fr['projects.levelAlerts.label'] + fr['projects.levelAlerts.description']), ''), plain(applyLot413(render(old)).replaceAll('Ctrl+Shift+S', `${commandKeyLabel()}+Maj+S`).replaceAll('Ctrl+S', `${commandKeyLabel()}+S`)).replaceAll('Workspaceencoursderésolution…', 'Emplacementdetravailencoursderésolution…'), name);
+      assert.equal(plain(render(now)).replace(name === 'XttsVoiceSettings' ? 'Détailtechnique' : '\u0000', '').replace(plain(fr['projects.levelAlerts.label'] + fr['projects.levelAlerts.description']), ''), plain(applyFrenchSourceCorrections(render(old)).replaceAll('Ctrl+Shift+S', `${commandKeyLabel()}+Maj+S`).replaceAll('Ctrl+S', `${commandKeyLabel()}+S`)).replaceAll('Workspaceencoursderésolution…', 'Emplacementdetravailencoursderésolution…'), name);
       for (const language of ['en', 'it', 'pseudo']) { await engine.changeLanguage(language); const html = render(now); assert.doesNotMatch(html, /\[object Object\]|settings:[a-z]+\./); if (language === 'pseudo') assertSurface(html); }
     }
     const { SettingsPanelHeader } = await current.ssrLoadModule('/src/workspace/SettingsPanelHeader.jsx');

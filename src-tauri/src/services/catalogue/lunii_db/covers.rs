@@ -5,6 +5,7 @@ use crate::services::catalogue::{data, thumbnails};
 pub(super) struct Acquisition {
     result: Mutex<Option<Result<Vec<u8>>>>,
     failure_accounted: Mutex<bool>,
+    definitive: AtomicBool,
 }
 const ACQUISITIONS: usize = 16;
 fn cancelled(cancel: &AtomicBool) -> Result<()> {
@@ -28,6 +29,15 @@ impl Store {
     }
 
     pub(super) fn download_lunii_covers_from(self: &Arc<Self>, sink: scan::Sink, base: String) {
+        self.download_lunii_covers_with_interval(sink, base, Duration::from_secs(5));
+    }
+
+    pub(super) fn download_lunii_covers_with_interval(
+        self: &Arc<Self>,
+        sink: scan::Sink,
+        base: String,
+        interval: Duration,
+    ) {
         if !self.lunii_allowed() {
             return;
         }
@@ -50,27 +60,43 @@ impl Store {
         let store = Arc::clone(self);
         std::thread::spawn(move || {
             let mut failures = std::collections::BTreeMap::<String, usize>::new();
+            let mut last_emit: Option<Instant> = None;
+            let mut notify_final = false;
+            let notify = || {
+                if let Ok(list) = store.list_sources() {
+                    sink(
+                        "catalogue-operation-finished",
+                        &super::super::events::Progress {
+                            request_id: "lunii-auto-images".into(),
+                            catalogue_changed: true,
+                            catalogue_revision: list.catalogue_revision,
+                            ..Default::default()
+                        },
+                    );
+                }
+            };
             for id in ids {
                 let result = store.acquire_lunii_thumbnail(&id, &base);
-                match result {
-                    Ok(Some(t)) if t.state == "ready" => {
-                        // Publish before starting the next request: later covers
-                        // may each spend their full network deadline waiting.
-                        if let Ok(list) = store.list_sources() {
-                            sink(
-                                "catalogue-operation-finished",
-                                &super::super::events::Progress {
-                                    request_id: "lunii-auto-images".into(),
-                                    catalogue_changed: true,
-                                    catalogue_revision: list.catalogue_revision,
-                                    ..Default::default()
-                                },
-                            );
-                        }
+                let changed = match result {
+                    Ok(Some(t)) => t.state == "ready",
+                    Err(reason) => {
+                        *failures.entry(reason.code.to_string()).or_default() += 1;
+                        true
                     }
-                    Err(reason) => *failures.entry(reason.code.to_string()).or_default() += 1,
-                    _ => {}
+                    _ => false,
+                };
+                if changed {
+                    notify_final = true;
+                    // Keep the first cover visible even if the next request is
+                    // slow, then group refreshes until the final signal.
+                    if last_emit.is_none_or(|last| last.elapsed() >= interval) {
+                        notify();
+                        last_emit = Some(Instant::now());
+                    }
                 }
+            }
+            if notify_final {
+                notify();
             }
             for (code, count) in failures {
                 log::warn!("{count} official covers unavailable: {code}");
@@ -79,29 +105,26 @@ impl Store {
     }
 
     pub fn lunii_thumbnail(&self, id: &str) -> Result<Option<thumbnails::Thumbnail>> {
-        let cover = self.read_snapshot(|c| {
-            Ok(data::card::resolution(c, id, &[])?
+        let (cover, retries_remaining) = self.read_snapshot(|c| {
+            let cover = data::card::resolution(c, id, &[])?
                 .values
                 .get("cover")
-                .cloned())
+                .cloned();
+            let retries_remaining = c.query_row(
+                "SELECT coalesce((SELECT failures FROM lunii_image_attempt WHERE fiche_id=?1),0)<3",
+                [id],
+                |r| r.get::<_, bool>(0),
+            )?;
+            Ok((cover, retries_remaining))
         })?;
         let Some(cover) = cover.filter(|v| v["kind"] == "lunii" && valid_cover(v)) else {
             return Ok(None);
         };
         if cover["sha256"].as_str().is_none() {
-            // Report an in-flight official acquisition independently of the
-            // display fallback. This status never starts a network request.
-            let key = format!("{id}:{}", cover["imagePath"].as_str().unwrap());
-            let pending = self
-                .lunii
-                .cover
-                .lock()
-                .map_err(error)?
-                .iter()
-                .any(|(k, job)| {
-                    k == &key && job.result.lock().is_ok_and(|result| result.is_none())
-                });
-            return Ok(pending.then(|| thumbnails::Thumbnail::state("absent")));
+            return Ok((self.lunii_allowed()
+                && retries_remaining
+                && cover["downloadFailed"] != true)
+                .then(|| thumbnails::Thumbnail::state("officialPending")));
         }
         self.lunii_thumbnail_from(id, "https://storage.googleapis.com/lunii-data-prod")
     }
@@ -145,13 +168,23 @@ impl Store {
             return Ok(None);
         };
         if let Some(sha) = sha {
-            let file = std::fs::File::open(self.images_root().join(sha)).map_err(error)?;
-            let mut bytes = Vec::new();
-            file.take(data::images::RETAINED_BYTES as u64 + 1)
-                .read_to_end(&mut bytes)
-                .map_err(error)?;
-            let bytes = verified_thumbnail(&bytes)?;
-            return Ok(Some(thumbnails::Thumbnail::ready(&bytes)));
+            // Only temporary locks defer the request. Other failures retain
+            // the absent-official path so the fiche can use its pack image.
+            let bytes = std::fs::File::open(self.images_root().join(sha)).and_then(|file| {
+                let mut bytes = Vec::new();
+                file.take(data::images::RETAINED_BYTES as u64 + 1)
+                    .read_to_end(&mut bytes)?;
+                Ok(bytes)
+            });
+            let bytes = match bytes {
+                Err(reason) if thumbnails::transient_image_read(&reason) => {
+                    return Ok(Some(thumbnails::Thumbnail::state("busy")));
+                }
+                result => result.map_err(error)?,
+            };
+            return Ok(Some(thumbnails::Thumbnail::ready(&verified_thumbnail(
+                &bytes,
+            )?)));
         }
         let bytes = self.fetch_lunii_cover(id, &path, base, &AtomicBool::new(false))?;
         self.retain_lunii_cover(id, &key, &bytes)?;
@@ -326,7 +359,10 @@ impl Store {
                             Some(bytes) => normalize_cover(&bytes),
                             None => download_cover(&url, &network_cancel),
                         }
-                        .map_err(|reason| reason.message)
+                        .map_err(|reason| {
+                            worker.definitive.store(reason.definitive, Ordering::SeqCst);
+                            reason.message
+                        })
                     };
                     if let Ok(mut slot) = worker.result.lock() {
                         *slot = Some(result);
@@ -370,6 +406,14 @@ impl Store {
             if !*accounted {
                 self.write(|tx| {
                     tx.execute("INSERT INTO lunii_image_attempt VALUES (?1,1) ON CONFLICT(fiche_id) DO UPDATE SET failures=min(failures+1,3)", [id]).map_err(error)?;
+                    let failures: i64 = tx.query_row("SELECT failures FROM lunii_image_attempt WHERE fiche_id=?1", [id], |r| r.get(0)).map_err(error)?;
+                    if job.definitive.load(Ordering::SeqCst) || failures >= 3 {
+                        // An exhausted transport retry budget also concludes
+                        // acquisition for this official path: use the pack image.
+                        // Fiche display and its cache signature read it together.
+                        tx.execute("UPDATE reference_value SET value_json=json_set(value_json,'$.downloadFailed',json('true')) WHERE fiche_id=?1 AND field='cover' AND json_extract(value_json,'$.imagePath')=?2 AND image_sha256 IS NULL AND provenance_id IN (SELECT id FROM provenance WHERE kind='lunii')", rusqlite::params![id, path]).map_err(error)?;
+                        tx.execute("UPDATE catalogue SET revision=revision+1,cover_revision=cover_revision+1", []).map_err(error)?;
+                    }
                     Ok(())
                 })?;
                 self.lunii

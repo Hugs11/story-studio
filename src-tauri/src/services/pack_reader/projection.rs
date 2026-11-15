@@ -574,9 +574,13 @@ fn walk_story_doc_to_entries_inner(
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .to_string();
-    let night_mode_detected = night_mode_audio.is_some();
-    let effective_night_mode_detected =
-        night_mode_detected && night_mode_available && !auto_next_detected;
+    // Les fins personnelles peuvent remplacer partout le son global. Dans ce
+    // cas le drapeau reste indépendant de la détection du message partagé.
+    // Garder le repli historique des graphes dont la fin n'est pas reconnue.
+    let effective_night_mode_detected = night_mode_available
+        && !auto_next_detected
+        && (night_mode_audio.is_some()
+            || (!uses_graph_import_projection && all_stories_have_personal_ends(&entries)));
 
     Ok(serde_json::json!({
         "rootId": format!("import-root:{}", sq_id),
@@ -730,6 +734,21 @@ fn unresolved_transition_targets_exist(
         })
 }
 
+fn all_stories_have_personal_ends(entries: &[serde_json::Value]) -> bool {
+    entries.iter().all(|entry| {
+        if entry["type"] == "menu" {
+            return entry["children"]
+                .as_array()
+                .is_some_and(|children| all_stories_have_personal_ends(children));
+        }
+        entry["type"] == "story"
+            && (entry["afterPlaybackPromptAudio"].is_string()
+                || entry["afterPlaybackSequence"]
+                    .as_array()
+                    .is_some_and(|steps| !steps.is_empty()))
+    })
+}
+
 /// Signature d'un graphe branchant interactif : au moins un stage autoplay « dispatcher »
 /// dont toutes les options OK pointent vers des stages roue non-autoplay. C'est le seul
 /// cas que `graph_import` tente de projeter ; sinon `walk_entry` traite l'arbre.
@@ -737,8 +756,46 @@ fn has_interactive_branching_graph(
     stages: &HashMap<&str, &serde_json::Value>,
     actions: &HashMap<&str, &serde_json::Value>,
 ) -> bool {
+    // Une Action déjà ouverte par une molette est une liste. Un écran de fin
+    // autoplay qui y revient ne constitue pas un aiguillage de quiz.
+    fn ok_action(stage: &serde_json::Value) -> Option<&str> {
+        stage.get("okTransition")?.get("actionNode")?.as_str()
+    }
+    let list_actions: HashSet<&str> = stages
+        .values()
+        .filter(|stage| stage_control_bool(stage, "wheel", false))
+        .filter_map(|stage| ok_action(stage))
+        .collect();
+    // L'éditeur par menus fait passer toutes les histoires par une fin commune.
+    // Une lecture qui revient directement à une liste qui la propose (sans passer
+    // par la fin commune) rend celle-ci partielle : elle reste alors un aiguillage
+    // du Graphe.
+    let menu_bypass = stages.values().any(|stage| {
+        let Some(stage_id) = stage_uuid(stage) else {
+            return false;
+        };
+        is_stage_autoplay(stage)
+            && stage_action_options(stage, actions).iter().any(|id| {
+                stages.get(id).is_some_and(|menu| {
+                    !is_stage_autoplay(menu)
+                        && stage_action_options(menu, actions).contains(&stage_id)
+                })
+            })
+    });
+    let is_shared = |stage_id: &str| {
+        stages
+            .values()
+            .filter(|source| stage_action_options(source, actions).contains(&stage_id))
+            .count()
+            >= 2
+    };
     stages.values().any(|stage| {
         if !is_stage_autoplay(stage) {
+            return false;
+        }
+        if ok_action(stage).is_some_and(|action| list_actions.contains(action))
+            && !(menu_bypass && stage_uuid(stage).is_some_and(is_shared))
+        {
             return false;
         }
         let options = stage_action_options(stage, actions);
@@ -1266,7 +1323,8 @@ pub(super) fn walk_entry(
                             .home_stage_id
                             .clone()
                             .filter(
-                                |target| Some(target.as_str()) != detection.target_stage_id.as_deref(),
+                                |target| Some(target.as_str()) != detection.target_stage_id.as_deref()
+                                    || detection.prompt_ok_stage_id.as_ref().is_some_and(|prompt_target| prompt_target != target),
                             ),
                         "returnOnHomeNone": detection.home_stage_id.is_none(),
                         "homeStoryStageId": detection.home_story_stage_id,
@@ -1334,7 +1392,8 @@ pub(super) fn walk_entry(
                                     .home_stage_id
                                     .clone()
                                     .filter(
-                                        |target| Some(target.as_str()) != detection.target_stage_id.as_deref(),
+                                        |target| Some(target.as_str()) != detection.target_stage_id.as_deref()
+                                            || detection.prompt_ok_stage_id.as_ref().is_some_and(|prompt_target| prompt_target != target),
                                     ),
                                 "returnOnHomeNone": detection.home_stage_id.is_none(),
                                 "homeStoryStageId": detection.home_story_stage_id,
@@ -1444,6 +1503,41 @@ mod tests {
 
     use super::super::graph_import::{promote_autonomous_root_target_values, OutOfTreeEdge};
     use super::remove_projected_night_bridge;
+
+    fn branching_graph_for(dispatcher_action: &str) -> bool {
+        let wheel = json!({"autoplay": false, "wheel": true});
+        let stages = [
+            json!({"uuid": "cover", "controlSettings": wheel,
+                   "okTransition": {"actionNode": "list", "optionIndex": 0}}),
+            json!({"uuid": "a", "controlSettings": wheel}),
+            json!({"uuid": "b", "controlSettings": wheel}),
+            json!({"uuid": "end", "controlSettings": {"autoplay": true, "wheel": false},
+                   "okTransition": {"actionNode": dispatcher_action, "optionIndex": 0}}),
+        ];
+        let actions = [
+            json!({"id": "list", "options": ["a", "b"]}),
+            json!({"id": "quiz", "options": ["a", "b"]}),
+        ];
+        let stage_map = stages
+            .iter()
+            .map(|s| (s["uuid"].as_str().unwrap(), s))
+            .collect();
+        let action_map = actions
+            .iter()
+            .map(|a| (a["id"].as_str().unwrap(), a))
+            .collect();
+        super::has_interactive_branching_graph(&stage_map, &action_map)
+    }
+
+    #[test]
+    fn an_end_screen_returning_to_an_existing_wheel_list_is_not_a_branching_graph() {
+        assert!(!branching_graph_for("list"));
+    }
+
+    #[test]
+    fn an_autoplay_screen_with_its_own_wheel_choices_stays_a_branching_graph() {
+        assert!(branching_graph_for("quiz"));
+    }
 
     #[test]
     fn untitled_pack_projection_does_not_invent_a_title() {

@@ -618,6 +618,19 @@ impl Worker {
             log::info!(target: "catalogue_watch", "event queue overflow on {source}, reconciling");
             self.request_reconcile(&source);
         }
+        // Readiness is entirely in memory. Keep the queues intact until both
+        // the heavy lock and fresh exclusions are available; lost events and
+        // failed exclusion reads must still be retried on the next tick.
+        // This guard must list every job run below (trash check, own writes,
+        // reconciliation, ready groups): a new job added after the exclusions
+        // read must be added here too, or it would only run alongside another.
+        if now < self.next_trash_check
+            && self.own.is_empty()
+            && !self.watched.iter().any(|watched| watched.reconcile)
+            && !self.grouper.has_ready(now)
+        {
+            return;
+        }
         let store = Arc::clone(&self.store);
         // One heavy job at a time: while an explicit scan runs, everything
         // stays queued and is replayed afterwards.
@@ -915,6 +928,138 @@ pub(super) fn inject_events(
 mod exclusion_retry_tests {
     use super::*;
 
+    struct Fixture {
+        worker: Worker,
+        _temp: Cleanup,
+    }
+
+    // Declared after the worker so cleanup runs after SQLite and watchers drop.
+    struct Cleanup(PathBuf);
+
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            std::fs::remove_dir_all(&self.0).unwrap();
+        }
+    }
+
+    impl Fixture {
+        fn new() -> Self {
+            let temp = crate::support::paths::canonical_temp_dir()
+                .join(format!("catalogue-watch-idle-{}", uuid::Uuid::new_v4()));
+            let source = temp.join("source");
+            std::fs::create_dir_all(&source).unwrap();
+            let source = std::fs::canonicalize(source).unwrap();
+            let store = Arc::new(Store::open(&temp.join("data"), &temp.join("cache")).unwrap());
+            let id = store.add_source(&source, 0).unwrap().source_id;
+            let now = Instant::now();
+            let config = Config {
+                stability: Duration::ZERO,
+                ..Config::default()
+            };
+            Self {
+                worker: Worker {
+                    store,
+                    registry: Box::leak(Box::default()),
+                    cache: temp.join("cache"),
+                    data: temp.join("data"),
+                    sender: channel().0,
+                    sink: Arc::new(|_| {}),
+                    grouper: batch::Grouper::new(config.quiet, config.max_delay, config.capacity),
+                    next_trash_check: now + config.poll_interval,
+                    watched: vec![Watched {
+                        root: Root {
+                            source_id: id,
+                            path: source.clone(),
+                        },
+                        native_path: source,
+                        handle: None,
+                        mode: Mode::Native,
+                        reason: None,
+                        reconcile: false,
+                        next_reconcile: now + config.reconcile_local,
+                        next_probe: now,
+                        last_reconciled: None,
+                    }],
+                    own: Vec::new(),
+                    status: Arc::default(),
+                    stopped: Arc::default(),
+                    config,
+                },
+                _temp: Cleanup(temp),
+            }
+        }
+    }
+
+    #[test]
+    fn watch_idle_ticks_do_not_build_exclusions() {
+        let mut fixture = Fixture::new();
+        let worker = &mut fixture.worker;
+        let now = Instant::now();
+        let before = worker.store.activity.snapshot();
+        for tick in 0..40 {
+            worker.process(now + worker.config.tick * tick);
+        }
+        let after = worker.store.activity.snapshot();
+        assert_eq!(after.exclusions, before.exclusions);
+        assert_eq!(after.full_scans, before.full_scans);
+        assert_eq!(after.reconciliations, before.reconciliations);
+
+        // A pending event does not justify disk reads before its quiet delay.
+        let source = worker.watched[0].root.source_id.clone();
+        worker.grouper.push(
+            &source,
+            worker.watched[0].native_path.join("pending.mbah"),
+            true,
+            now,
+        );
+        worker.process(now);
+        assert_eq!(
+            worker.store.activity.snapshot().exclusions,
+            before.exclusions
+        );
+        assert_eq!(worker.grouper.pending(&source), 1);
+    }
+
+    #[test]
+    fn watch_new_workspace_exclusion_is_respected_on_next_tick() {
+        let mut fixture = Fixture::new();
+        let worker = &mut fixture.worker;
+        let now = Instant::now();
+        // Build an initial set during a due trash check, before the workspace
+        // is registered. Subsequent work must never reuse that set.
+        worker.next_trash_check = now;
+        worker.process(now);
+        let before = worker.store.activity.snapshot();
+        assert_eq!(before.exclusions, 1);
+        let workspace = worker.watched[0].native_path.join("workspace");
+        let hidden = workspace.join("voix-generees/hidden.mbah");
+        std::fs::create_dir_all(hidden.parent().unwrap()).unwrap();
+        std::fs::write(
+            &hidden,
+            r#"{"projectName":"Hidden","packMetadata":{"title":"Hidden"}}"#,
+        )
+        .unwrap();
+        worker
+            .store
+            .remember_workspace(Some(&crate::support::paths::path_for_frontend(&workspace)))
+            .unwrap();
+        assert!(worker.accept(Input::SourcesChanged, now));
+        let source = worker.watched[0].root.source_id.clone();
+        worker.grouper.push(&source, hidden, true, now);
+        worker.process(now + worker.config.quiet);
+        let after = worker.store.activity.snapshot();
+        assert_eq!(after.exclusions, before.exclusions + 1);
+        assert_eq!(after.analyses, before.analyses);
+        assert_eq!(worker.grouper.pending(&source), 0);
+        assert_eq!(
+            worker
+                .store
+                .read(|c| c.query_row("SELECT count(*) FROM exemplar", [], |r| r.get::<_, i64>(0)))
+                .unwrap(),
+            0
+        );
+    }
+
     #[test]
     fn unknown_addition_is_retried_but_confirmed_exclusion_is_never_indexed() {
         let temp = std::env::temp_dir().join(format!("catalogue-excl3-{}", uuid::Uuid::new_v4()));
@@ -935,7 +1080,7 @@ mod exclusion_retry_tests {
         let allowed = std::fs::canonicalize(allowed).unwrap();
         let excluded = std::fs::canonicalize(excluded).unwrap();
         let store = Arc::new(Store::open(&temp.join("data"), &temp.join("cache")).unwrap());
-        let id = store.add_source(&source, 0, false).unwrap().source_id;
+        let id = store.add_source(&source, 0).unwrap().source_id;
         let now = Instant::now();
         let config = Config {
             quiet: Duration::ZERO,

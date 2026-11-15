@@ -427,7 +427,8 @@ pub(crate) fn device_fault(code: &str, stage: &str) -> bool {
         | codes::STORYTELLER_PLAYLIST_DAMAGED
         | codes::STORYTELLER_DEVICE_CHANGED
         | codes::STORYTELLER_PLAYLIST_TOO_LARGE
-        | codes::STORYTELLER_READ_ONLY => true,
+        | codes::STORYTELLER_READ_ONLY
+        | codes::STORYTELLER_DEVICE_WRITE_FAILED => true,
         codes::STORYTELLER_WRITE_FAILED => matches!(stage, "copying" | "finalizing" | "device"),
         _ => false,
     }
@@ -437,6 +438,10 @@ pub(crate) fn classify_error(
     mut error: crate::support::user_message::UserMessage,
     stage: &str,
 ) -> crate::support::user_message::UserMessage {
+    use crate::support::user_message::codes;
+    if stage == "device" && error.code == codes::STORYTELLER_WRITE_FAILED {
+        error.code = codes::STORYTELLER_DEVICE_WRITE_FAILED.into();
+    }
     error.device_fault = Some(
         error
             .device_fault

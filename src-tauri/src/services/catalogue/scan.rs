@@ -6,9 +6,9 @@ use super::{
     Result,
 };
 use crate::support::user_message::{codes, UserMessage};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, AtomicU64, Ordering},
@@ -19,6 +19,9 @@ use std::{
 #[derive(Default)]
 pub struct Manager {
     pub heavy: Mutex<()>,
+    queue: Mutex<VecDeque<String>>,
+    #[cfg(test)]
+    pub(super) test_hook: Mutex<Option<ScanHook>>,
     /// Separate from `heavy`: a running scan never delays a light read.
     pub light: LightReads,
     sink: Mutex<Option<Sink>>,
@@ -27,6 +30,36 @@ pub struct Manager {
 }
 /// Budget of simultaneous light reads (thumbnails), shared by every caller.
 pub const LIGHT_READS: usize = 2;
+#[cfg(test)]
+type ScanHook = Arc<dyn Fn(&str) + Send + Sync>;
+
+/// Release the reserved turn even if the worker unwinds.
+struct ScanTurn<'a> {
+    manager: &'a Manager,
+    id: &'a str,
+    op: &'a Operation,
+}
+impl Drop for ScanTurn<'_> {
+    fn drop(&mut self) {
+        if std::thread::panicking() {
+            let mut p = self.op.progress.lock().unwrap_or_else(|e| e.into_inner());
+            p.status = "failed".into();
+            p.scan_complete = false;
+            p.error = Some(UserMessage::new(codes::CATALOG_OPERATION_FAILED));
+        }
+        let mut queue = self.manager.queue.lock().unwrap_or_else(|e| e.into_inner());
+        queue.retain(|id| id != self.id);
+    }
+}
+impl Manager {
+    #[cfg(test)]
+    fn test_point(&self, stage: &str) {
+        let hook = self.test_hook.lock().unwrap().clone();
+        if let Some(hook) = hook {
+            hook(stage);
+        }
+    }
+}
 #[derive(Default)]
 pub struct LightReads {
     active: Mutex<usize>,
@@ -53,13 +86,134 @@ impl Drop for LightRead<'_> {
     }
 }
 pub struct Operation {
-    source_ids: Vec<String>,
+    source_ids: Mutex<Vec<String>>,
+    request: Mutex<Option<ScanRequest>>,
     pub cancel: Arc<AtomicBool>,
     pub published: AtomicBool,
     pub(crate) started: AtomicBool,
-    pub generation: u64,
     pub progress: Mutex<Progress>,
     last_emit: Mutex<Option<Instant>>,
+}
+#[derive(Clone)]
+struct ScanRequest {
+    source_ids: Option<Vec<String>>,
+    paths: Option<Vec<String>>,
+    request_ids: Vec<String>,
+    // None means all sources; Some(empty) means no forced source.
+    forced_sources: Option<Vec<String>>,
+}
+impl ScanRequest {
+    fn merge(
+        &mut self,
+        sources: Option<Vec<String>>,
+        paths: Option<Vec<String>>,
+        request: String,
+        forced_sources: Option<Vec<String>>,
+    ) {
+        fn union(target: &mut Option<Vec<String>>, incoming: Option<Vec<String>>) {
+            match (target.as_mut(), incoming) {
+                (Some(target), Some(incoming)) => {
+                    target.extend(incoming);
+                    target.sort();
+                    target.dedup();
+                }
+                _ => *target = None,
+            }
+        }
+        union(&mut self.forced_sources, forced_sources);
+        union(&mut self.source_ids, sources);
+        // A complete source request subsumes a path retry.
+        union(&mut self.paths, paths);
+        self.request_ids.push(request);
+    }
+}
+
+type SourceStamp = (String, Vec<u8>, Vec<u8>, String, i64);
+type SourceState = (Vec<SourceStamp>, Vec<Vec<u8>>);
+/// Only overlapping sources can affect coverage or included_in. Compare their
+/// durable identity and resolution inside the publication transaction. Every
+/// workspace path is compared, overlapping or not: a new workspace can change
+/// exclusions through resolved subfolders, even without a sources_revision bump.
+#[derive(Clone)]
+pub struct SourceSnapshot {
+    roots: Vec<PathBuf>,
+    sources: Vec<SourceStamp>,
+    workspaces: Vec<Vec<u8>>,
+}
+impl SourceSnapshot {
+    fn state(&self, c: &rusqlite::Connection) -> rusqlite::Result<SourceState> {
+        let overlaps = |path: &[u8]| {
+            let path = super::sources::native(path.to_vec());
+            self.roots
+                .iter()
+                .any(|root| root.starts_with(&path) || path.starts_with(root))
+        };
+        let sources = c.prepare("SELECT id,path,coalesce(resolved_path,path),status,revision FROM source WHERE status='active' ORDER BY id")?
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))?
+            .collect::<rusqlite::Result<Vec<SourceStamp>>>()?
+            .into_iter().filter(|s| overlaps(&s.1) || overlaps(&s.2)).collect();
+        // Every registration may introduce exclusions through linked role folders.
+        // Compare paths only: revisiting a known workspace changes no coverage.
+        // Publication checks stay database-only.
+        let workspaces = c
+            .prepare("SELECT path FROM workspace_root ORDER BY path")?
+            .query_map([], |r| r.get(0))?
+            .collect::<rusqlite::Result<Vec<Vec<u8>>>>()?;
+        Ok((sources, workspaces))
+    }
+    fn capture(store: &Store, sources: &[super::sources::Source]) -> Result<Self> {
+        let mut snapshot = Self {
+            roots: sources
+                .iter()
+                .flat_map(|s| [s.native_path.clone(), s.resolved_path.clone()])
+                .collect(),
+            sources: Vec::new(),
+            workspaces: Vec::new(),
+        };
+        let (rows, workspaces) = store.read(|c| snapshot.state(c))?;
+        // all_sources() and this read are separate snapshots. Refuse a source
+        // mutation in between rather than blessing roots from the older read.
+        if sources.iter().any(|s| {
+            !rows.iter().any(|r| {
+                r.0 == s.id
+                    && r.1 == super::sources::bytes(&s.native_path)
+                    && r.2 == super::sources::bytes(&s.resolved_path)
+                    && r.4 == s.revision
+            })
+        }) {
+            return Err(UserMessage::new(codes::CATALOG_SCAN_SUPERSEDED));
+        }
+        snapshot.sources = rows;
+        snapshot.workspaces = workspaces;
+        Ok(snapshot)
+    }
+    pub(super) fn check(&self, c: &rusqlite::Connection) -> Result<()> {
+        let (sources, workspaces) = self.state(c).map_err(error)?;
+        if sources != self.sources || workspaces != self.workspaces {
+            return Err(UserMessage::new(codes::CATALOG_SCAN_SUPERSEDED));
+        }
+        Ok(())
+    }
+    fn matches_store(&self, store: &Store) -> Result<bool> {
+        store
+            .read(|c| self.state(c))
+            .map(|(s, w)| s == self.sources && w == self.workspaces)
+    }
+}
+
+pub enum SourceExpectation<'a> {
+    Revision(i64),
+    Snapshot(&'a SourceSnapshot),
+}
+impl From<i64> for SourceExpectation<'_> {
+    fn from(revision: i64) -> Self {
+        Self::Revision(revision)
+    }
+}
+impl<'a> From<&'a SourceSnapshot> for SourceExpectation<'a> {
+    fn from(snapshot: &'a SourceSnapshot) -> Self {
+        Self::Snapshot(snapshot)
+    }
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -171,8 +325,74 @@ fn dependency_token(mut base: String, paths: &[String]) -> String {
     }
     base
 }
-/// Listening values stored for one exemplar of a file. Only these values
-/// are carried over from a previous scan; metadata is always analysed again.
+/// Disposable evidence persisted in the cached observation JSON.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalysisFingerprint {
+    version: u32,
+    resolved_path: Vec<u8>,
+    token: String,
+    file_id: Option<String>,
+    analysed_at: u64,
+    /// Files the analysis read outside `token`, each stamped before its read.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    reads: Vec<super::analyze::evidence::ExternalRead>,
+}
+impl AnalysisFingerprint {
+    fn capture(path: &Path, token: &str, analysed_at: u64) -> Self {
+        Self {
+            version: super::analyze::ANALYSIS_VERSION,
+            resolved_path: super::path_identity::key(&super::refresh::resolve_existing(path)),
+            token: token.into(),
+            file_id: super::writes::file_id(path),
+            analysed_at,
+            reads: Vec::new(),
+        }
+    }
+    /// Same version, file, token and identity, and every external read still
+    /// finds what it found (an absence included).
+    fn holds(&self, path: &Path, token: &str) -> bool {
+        let mut current = Self::capture(path, token, self.analysed_at);
+        current.reads.clone_from(&self.reads);
+        *self == current && self.reads_hold(path)
+    }
+    fn reads_hold(&self, path: &Path) -> bool {
+        self.reads.iter().all(|read| read.holds(path))
+    }
+    fn dates_safe(&self, dependencies: &[String]) -> bool {
+        // FAT/exFAT rounds dates by up to two seconds. Check internal pack
+        // files and sounds too: their edits need not touch the directory.
+        let mut parts = self.token.split(':');
+        let mut dates = Vec::new();
+        while let (Some(_size), Some(seconds), Some(nanos)) =
+            (parts.next(), parts.next(), parts.next())
+        {
+            if let (Ok(seconds), Ok(nanos)) = (seconds.parse::<u64>(), nanos.parse::<u64>()) {
+                dates.push(seconds.saturating_mul(1000) + nanos / 1_000_000);
+            } else {
+                return false;
+            }
+            if parts.next().is_none() {
+                break;
+            }
+        }
+        for path in dependencies {
+            let Ok(date) = std::fs::metadata(path).and_then(|m| m.modified()) else {
+                return false;
+            };
+            dates.push(
+                date.duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis() as u64,
+            );
+        }
+        dates.extend(self.reads.iter().filter_map(|read| read.date_millis()));
+        dates
+            .into_iter()
+            .all(|date| date.abs_diff(self.analysed_at) > 4000)
+    }
+}
+/// Listening values used when a full observation cannot be reused.
 struct StoredListening {
     member_key: Option<String>,
     listening_token: Option<String>,
@@ -187,6 +407,73 @@ pub(super) struct ContentState {
     pub analysis_stale: bool,
 }
 impl Store {
+    fn reuse_analysis(
+        &self,
+        source_id: &str,
+        path: &Path,
+        initial: &std::io::Result<(String, i64, u64)>,
+    ) -> Option<Vec<Scanned>> {
+        let (base, modified, size) = initial.as_ref().ok()?;
+        if token(path).ok().as_ref() != Some(&(base.clone(), *modified, *size)) {
+            return None;
+        }
+        let stored = self.stored_observations(path)?;
+        if stored.is_empty() {
+            return None;
+        }
+        let current = self.content_token(path).ok()?.0;
+        let mut items = Vec::new();
+        for (state, raw) in stored {
+            let observation: super::analyze::Observation = serde_json::from_str(&raw).ok()?;
+            let fingerprint = observation.analysis_fingerprint.as_ref()?;
+            if state != "available"
+                || observation.state != "available"
+                || observation.listening_pending
+                || observation.listening_version != super::analyze::LISTENING_VERSION
+                || observation.listening_token.as_ref() != Some(&current)
+                || !fingerprint.holds(path, base)
+                || !fingerprint.dates_safe(&observation.listening_dependencies)
+            {
+                return None;
+            }
+            items.push(Scanned {
+                source_id: source_id.into(),
+                path: crate::support::paths::path_for_frontend(path),
+                path_key: super::path_identity::key(path),
+                token: base.clone(),
+                modified: *modified,
+                size: *size,
+                file_id: fingerprint.file_id.clone(),
+                save_prestate: None,
+                observation,
+            });
+        }
+        let fingerprint = items.first()?.observation.analysis_fingerprint.as_ref()?;
+        (self.content_token(path).ok()?.0 == current && fingerprint.holds(path, base))
+            .then_some(items)
+    }
+    fn stored_observations(&self, path: &Path) -> Option<Vec<(String, String)>> {
+        let key = serde_json::to_string(&super::path_identity::key(path)).ok()?;
+        self.read(|c| {
+            c.prepare("SELECT o.state,o.raw_observation_json FROM exemplar e LEFT JOIN cache.observation o ON o.exemplar_id=e.id WHERE json_extract(e.anchor_json,'$.pathKey')=json(?1) AND e.retired=0 ORDER BY e.id")?
+                .query_map([key], |r| Ok((r.get(0)?, r.get(1)?)))?.collect()
+        }).ok()
+    }
+    /// An index or sound list read outside the token (a device-pack index in
+    /// another case) also feeds the listening values: when such a read
+    /// changed, the stored measurements cannot be trusted either. Caches
+    /// without evidence keep the listening token as their only check.
+    fn stored_reads_hold(&self, path: &Path) -> bool {
+        self.stored_observations(path)
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|(_, raw)| {
+                serde_json::from_str::<super::analyze::Observation>(raw)
+                    .ok()?
+                    .analysis_fingerprint
+            })
+            .all(|fingerprint| fingerprint.reads_hold(path))
+    }
     fn stored_listening(&self, path: &Path) -> Result<Vec<StoredListening>> {
         let key = serde_json::to_string(&super::path_identity::key(path)).map_err(error)?;
         self.read(|c| {
@@ -248,9 +535,8 @@ impl Store {
             analysis_stale,
         })
     }
-    /// Metadata is analysed as before. Listening values are measured only when
-    /// the file or one of its sounds changed (or the listening version did);
-    /// otherwise the stored values, and a still pending solid pass, are kept.
+    /// Reuse a complete stable observation, otherwise analyse metadata and
+    /// reuse listening measurements independently when still valid.
     pub(super) fn observe_listening(
         &self,
         source_id: &str,
@@ -258,15 +544,50 @@ impl Store {
         initial: &std::io::Result<(String, i64, u64)>,
         cancel: &AtomicBool,
     ) -> Vec<Scanned> {
+        self.observe_cached(source_id, path, initial, cancel, false)
+    }
+    pub(super) fn observe_cached(
+        &self,
+        source_id: &str,
+        path: &Path,
+        initial: &std::io::Result<(String, i64, u64)>,
+        cancel: &AtomicBool,
+        force: bool,
+    ) -> Vec<Scanned> {
+        if !force {
+            if let Some(items) = self.reuse_analysis(source_id, path, initial) {
+                return items;
+            }
+        }
+        let analysed_at = stamp();
+        let initial_id = super::writes::file_id(path);
         let stored = self.stored_listening(path).unwrap_or_default();
         let current = self.content_token(path).ok().map(|t| t.0);
-        let reuse = current.is_some()
+        let reuse = !force
+            && current.is_some()
             && !stored.is_empty()
             && stored.iter().all(|s| {
                 s.listening_token == current
                     && s.version == Some(i64::from(super::analyze::LISTENING_VERSION))
-            });
+            })
+            && self.stored_reads_hold(path);
         let mut values = observe(source_id, path, initial, cancel, &self.activity, !reuse);
+        if let Ok((token, _, _)) = initial {
+            let fingerprint = AnalysisFingerprint::capture(path, token, analysed_at);
+            for item in &mut values {
+                if initial_id == fingerprint.file_id {
+                    let mut evidence = fingerprint.clone();
+                    evidence.reads = std::mem::take(&mut item.observation.external_reads);
+                    item.observation.analysis_fingerprint = Some(evidence);
+                } else {
+                    item.observation = super::analyze::Observation::failure(
+                        &item.observation.format,
+                        "fileUnstable".into(),
+                        None,
+                    );
+                }
+            }
+        }
         if reuse {
             for item in &mut values {
                 let observation = &mut item.observation;
@@ -467,7 +788,7 @@ impl Store {
                 op.progress.lock().map_err(error)?.status.as_str(),
                 "queued" | "running" | "cancelling"
             ) {
-                ids.extend(op.source_ids.clone());
+                ids.extend(op.source_ids.lock().map_err(error)?.clone());
             }
         }
         Ok(ids)
@@ -504,11 +825,35 @@ impl Store {
     ) -> Result<Receipt> {
         self.start_scan_paths(source_ids, None, request_id, expected, cache, data, sink)
     }
-    #[allow(clippy::too_many_arguments)] // Additive IPC filter; existing callers retain start_scan.
+    #[cfg(test)]
+    #[allow(clippy::too_many_arguments)]
     pub fn start_scan_paths(
         self: &Arc<Self>,
         source_ids: Option<Vec<String>>,
         paths: Option<Vec<String>>,
+        request_id: String,
+        expected: i64,
+        cache: PathBuf,
+        data: PathBuf,
+        sink: Sink,
+    ) -> Result<Receipt> {
+        self.start_scan_forced(
+            source_ids,
+            paths,
+            Some(Vec::new()),
+            request_id,
+            expected,
+            cache,
+            data,
+            sink,
+        )
+    }
+    #[allow(clippy::too_many_arguments)]
+    pub fn start_scan_forced(
+        self: &Arc<Self>,
+        source_ids: Option<Vec<String>>,
+        paths: Option<Vec<String>>,
+        forced_sources: Option<Vec<String>>,
         request_id: String,
         expected: i64,
         cache: PathBuf,
@@ -521,51 +866,35 @@ impl Store {
         if list.sources_revision != expected {
             return Err(UserMessage::new(codes::CATALOG_REVISION_CONFLICT));
         }
-        let mut roots: Vec<_> = list
-            .items
-            .into_iter()
-            .filter(|s| {
-                s.status == "active" && source_ids.as_ref().is_none_or(|ids| ids.contains(&s.id))
-            })
-            .collect();
-        let retry_paths = paths
-            .map(|paths| {
-                paths
-                    .into_iter()
-                    .map(|path| {
-                        let raw = PathBuf::from(path);
-                        let resolved = super::refresh::resolve_existing(&raw);
-                        let source = roots
-                            .iter()
-                            .find(|s| {
-                                raw.is_absolute()
-                                    && resolved.starts_with(super::refresh::resolve_existing(
-                                        &s.native_path,
-                                    ))
-                            })
-                            .ok_or_else(|| UserMessage::new(codes::CATALOG_SOURCE_UNAVAILABLE))?;
-                        Ok((source.id.clone(), raw))
+        // Preserve the immediate IPC refusal for invalid retry paths. This is
+        // admission validation only: roots and path ownership are recomputed
+        // after acquiring heavy, including for coalesced requests.
+        if let Some(paths) = &paths {
+            for path in paths {
+                let raw = Path::new(path);
+                let resolved = super::refresh::resolve_existing(raw);
+                if !raw.is_absolute()
+                    || !list.items.iter().any(|source| {
+                        source.status == "active"
+                            && source_ids
+                                .as_ref()
+                                .is_none_or(|ids| ids.contains(&source.id))
+                            && resolved
+                                .starts_with(super::refresh::resolve_existing(&source.native_path))
                     })
-                    .collect::<Result<Vec<_>>>()
-            })
-            .transpose()?;
-        if let Some(paths) = &retry_paths {
-            roots.retain(|s| paths.iter().any(|(id, _)| id == &s.id));
+                {
+                    return Err(UserMessage::new(codes::CATALOG_SOURCE_UNAVAILABLE));
+                }
+            }
         }
-        let health_sources = roots.iter().map(|s| s.id.clone()).collect::<Vec<_>>();
-        let all_roots = roots.clone();
-        let selected: std::collections::HashSet<_> = roots.iter().map(|s| s.id.clone()).collect();
-        roots.retain(|s| {
-            retry_paths.is_some()
-                || s.included_in
-                    .as_ref()
-                    .is_none_or(|parent| !selected.contains(parent))
-        });
         let mut operations = self.scans.operations.lock().map_err(error)?;
-        if let Some(op) = operations
-            .values()
-            .find(|op| op.progress.lock().is_ok_and(|p| p.request_id == request_id))
-        {
+        if let Some(op) = operations.values().find(|op| {
+            op.progress.lock().is_ok_and(|p| p.request_id == request_id)
+                || op.request.lock().is_ok_and(|r| {
+                    r.as_ref()
+                        .is_some_and(|r| r.request_ids.contains(&request_id))
+                })
+        }) {
             let p = op.progress.lock().map_err(error)?;
             return Ok(Receipt {
                 operation_id: p.operation_id.clone(),
@@ -573,6 +902,46 @@ impl Store {
                 sources_revision: expected,
                 catalogue_revision: p.catalogue_revision,
             });
+        }
+        let mut queue = self.scans.queue.lock().map_err(error)?;
+        let front = queue.front().cloned();
+        queue.retain(|id| {
+            Some(id) == front.as_ref()
+                || operations
+                    .get(id)
+                    .is_some_and(|op| !op.cancel.load(Ordering::Relaxed))
+        });
+        // The front has its turn reserved, even while another heavy job runs.
+        // Later requests extend only the pending operation.
+        if let Some(pending) = queue.get(1).and_then(|id| operations.get(id)) {
+            if !pending.cancel.load(Ordering::Relaxed) {
+                let mut request = pending.request.lock().map_err(error)?;
+                request.as_mut().expect("queued scan request").merge(
+                    source_ids,
+                    paths,
+                    request_id.clone(),
+                    forced_sources,
+                );
+                *pending.source_ids.lock().map_err(error)? = request
+                    .as_ref()
+                    .expect("scan request")
+                    .source_ids
+                    .clone()
+                    .unwrap_or_else(|| {
+                        list.items
+                            .iter()
+                            .filter(|s| s.status == "active")
+                            .map(|s| s.id.clone())
+                            .collect()
+                    });
+                let p = pending.progress.lock().map_err(error)?;
+                return Ok(Receipt {
+                    operation_id: p.operation_id.clone(),
+                    request_id,
+                    sources_revision: expected,
+                    catalogue_revision: list.catalogue_revision,
+                });
+            }
         }
         if operations.len() >= 32 {
             let oldest = operations
@@ -596,14 +965,24 @@ impl Store {
                 return Err(UserMessage::new(codes::CATALOG_OPERATION_LIMIT));
             }
         }
-        let generation = self.scans.generation.fetch_add(1, Ordering::SeqCst) + 1;
         let id = uuid::Uuid::new_v4().to_string();
         let op = Arc::new(Operation {
-            source_ids: health_sources.clone(),
+            source_ids: Mutex::new(source_ids.clone().unwrap_or_else(|| {
+                list.items
+                    .iter()
+                    .filter(|s| s.status == "active")
+                    .map(|s| s.id.clone())
+                    .collect()
+            })),
+            request: Mutex::new(Some(ScanRequest {
+                source_ids,
+                paths,
+                request_ids: vec![request_id.clone()],
+                forced_sources,
+            })),
             cancel: Arc::new(AtomicBool::new(false)),
             published: AtomicBool::new(false),
             started: AtomicBool::new(false),
-            generation,
             last_emit: Mutex::new(None),
             progress: Mutex::new(Progress {
                 operation_kind: None,
@@ -624,7 +1003,7 @@ impl Store {
                 current_source_id: None,
                 current_directory: None,
                 roots: Roots {
-                    total: roots.len() as u64,
+                    total: 0,
                     ..Default::default()
                 },
                 directories: Directories::default(),
@@ -637,9 +1016,21 @@ impl Store {
             }),
         });
         operations.insert(id.clone(), Arc::clone(&op));
+        queue.push_back(id.clone());
+        drop(queue);
         drop(operations);
+        let operation_id = id.clone();
         let store = Arc::clone(self);
         std::thread::spawn(move || {
+            let turn = ScanTurn {
+                manager: &store.scans,
+                id: &id,
+                op: &op,
+            };
+            let mut panicked = false;
+            let mut health_sources = Vec::new();
+            let mut health_snapshot = None;
+            let mut targeted = false;
             let source_health = Mutex::new(HashMap::<String, bool>::new());
             let source_access = Mutex::new(HashMap::<String, &str>::new());
             let (heartbeat_stop, heartbeat) = std::sync::mpsc::channel::<()>();
@@ -652,20 +1043,100 @@ impl Store {
                     beat_op.emit(&beat_sink, false);
                 }
             });
-            let run = || -> Result<()> {
-                let _heavy = loop {
+            let acquire = || -> Result<Option<std::sync::MutexGuard<'_, ()>>> {
+                loop {
+                    if op.cancel.load(Ordering::Relaxed) {
+                        return Ok(None);
+                    }
+                    if store.scans.queue.lock().map_err(error)?.front() != Some(&id) {
+                        std::thread::sleep(Duration::from_millis(20));
+                        continue;
+                    }
                     match store.scans.heavy.try_lock() {
-                        Ok(guard) => break guard,
+                        Ok(guard) => return Ok(Some(guard)),
                         Err(std::sync::TryLockError::WouldBlock) => {
                             if op.cancel.load(Ordering::Relaxed) {
-                                return Ok(());
+                                return Ok(None);
                             }
                             std::thread::sleep(std::time::Duration::from_millis(20));
                         }
                         Err(reason) => return Err(error(reason)),
                     }
-                };
-                op.progress.lock().map_err(error)?.status = "running".into();
+                }
+            };
+            let run = || -> Result<()> {
+                #[cfg(test)]
+                store.scans.test_point("acquired");
+                let generation = store.scans.generation.load(Ordering::SeqCst);
+                let request = op
+                    .request
+                    .lock()
+                    .map_err(error)?
+                    .clone()
+                    .expect("scan request");
+                let source_ids = request.source_ids;
+                let paths = request.paths;
+                targeted = paths.is_some();
+                let list = store.all_sources()?;
+                let expected = list.sources_revision;
+                let mut roots: Vec<_> = list
+                    .items
+                    .into_iter()
+                    .filter(|s| {
+                        s.status == "active"
+                            && source_ids.as_ref().is_none_or(|ids| ids.contains(&s.id))
+                    })
+                    .collect();
+                let retry_paths = paths.map(|paths| {
+                    paths
+                        .into_iter()
+                        .filter_map(|path| {
+                            let raw = PathBuf::from(path);
+                            let resolved = super::refresh::resolve_existing(&raw);
+                            roots
+                                .iter()
+                                .find(|s| {
+                                    raw.is_absolute()
+                                        && resolved.starts_with(super::refresh::resolve_existing(
+                                            &s.native_path,
+                                        ))
+                                })
+                                .map(|source| (source.id.clone(), raw))
+                        })
+                        .collect::<Vec<_>>()
+                });
+                if let Some(paths) = &retry_paths {
+                    if paths.is_empty() {
+                        return Err(UserMessage::new(codes::CATALOG_SOURCE_UNAVAILABLE));
+                    }
+                    roots.retain(|s| paths.iter().any(|(id, _)| id == &s.id));
+                }
+                health_sources = roots.iter().map(|s| s.id.clone()).collect::<Vec<_>>();
+                let all_roots = roots.clone();
+                let snapshot = SourceSnapshot::capture(&store, &all_roots)?;
+                health_snapshot = Some(snapshot.clone());
+                let selected: std::collections::HashSet<_> =
+                    roots.iter().map(|s| s.id.clone()).collect();
+                roots.retain(|s| {
+                    retry_paths.is_some()
+                        || s.included_in
+                            .as_ref()
+                            .is_none_or(|parent| !selected.contains(parent))
+                });
+                *op.source_ids.lock().map_err(error)? = health_sources.clone();
+                {
+                    let mut p = op.progress.lock().map_err(error)?;
+                    p.sources_revision = expected;
+                    p.catalogue_revision = list.catalogue_revision;
+                    p.roots.total = roots.len() as u64;
+                }
+                {
+                    let mut p = op.progress.lock().map_err(error)?;
+                    if op.cancel.load(Ordering::SeqCst) {
+                        return Ok(());
+                    }
+                    p.status = "running".into();
+                }
                 store.activity.full_scans.fetch_add(1, Ordering::Relaxed);
                 op.emit(&sink, false);
                 let exclusions = store.exclusions(&cache, &data)?;
@@ -876,7 +1347,7 @@ impl Store {
                             .lock()
                             .map_err(error)?
                             .insert(source_id.clone(), false);
-                        store.preserve_deferred(&id, expected, &source_id, &path)?;
+                        store.preserve_deferred(&id, &snapshot, &source_id, &path)?;
                         if path.extension().and_then(|e| e.to_str()).is_some_and(|e| {
                             e.eq_ignore_ascii_case("zip") || e.eq_ignore_ascii_case("7z")
                         }) {
@@ -884,8 +1355,30 @@ impl Store {
                         }
                         continue;
                     }
-                    let mut analyzed =
-                        store.observe_listening(&source_id, &path, &initial, &op.cancel);
+                    // The registry gate protects no mutable analysis
+                    // state. Release it normally before forwarding a
+                    // pack reader panic to the worker's terminal handler.
+                    let analyzed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        #[cfg(test)]
+                        store.scans.test_point("analysis");
+                        store.observe_cached(
+                            &source_id,
+                            &path,
+                            &initial,
+                            &op.cancel,
+                            request
+                                .forced_sources
+                                .as_ref()
+                                .is_none_or(|ids| ids.contains(&source_id)),
+                        )
+                    }));
+                    let mut analyzed = match analyzed {
+                        Ok(items) => items,
+                        Err(payload) => {
+                            drop(_analysis);
+                            std::panic::resume_unwind(payload);
+                        }
+                    };
                     if analyzed.iter().any(|i| i.observation.listening_pending) {
                         listening_jobs.push((source_id.clone(), path.clone(), analyzed.clone()));
                     }
@@ -916,7 +1409,7 @@ impl Store {
                     // are rejected before they can change either database.
                     {
                         let _operations = store.scans.operations.lock().map_err(error)?;
-                        if store.scans.generation.load(Ordering::SeqCst) != op.generation {
+                        if store.scans.generation.load(Ordering::SeqCst) != generation {
                             return Err(UserMessage::new(codes::CATALOG_SCAN_SUPERSEDED));
                         }
                         if op.cancel.load(Ordering::Relaxed) {
@@ -929,9 +1422,9 @@ impl Store {
                                 .then_with(|| a.observation.member.cmp(&b.observation.member))
                         });
                         let published = if retry_paths.is_some() {
-                            store.publish_targeted(&id, expected, &source_id, &analyzed, &[])?
+                            store.publish_targeted(&id, &snapshot, &source_id, &analyzed, &[])?
                         } else {
-                            store.publish_scan(&id, expected, &analyzed, &scopes)?
+                            store.publish_scan(&id, &snapshot, &analyzed, &scopes)?
                         };
                         if analyzed
                             .iter()
@@ -964,10 +1457,27 @@ impl Store {
                 }
                 // Metadata is already visible for every file. Complete solid
                 // archives serially in this existing background scan worker.
+                // Fetch the published official covers during the slow 7z pass.
+                // The final call also catches fiches identified by that pass;
+                // overlapping workers share acquisitions and retained images.
+                if !listening_jobs.is_empty() {
+                    store.download_lunii_covers(sink.clone());
+                    let mut p = op.progress.lock().map_err(error)?;
+                    p.phase = "listening".into();
+                    p.current_directory = None;
+                    drop(p);
+                    op.emit(&sink, false);
+                }
                 for (source_id, path, items) in listening_jobs {
                     if op.cancel.load(Ordering::Relaxed) {
                         break;
                     }
+                    {
+                        let mut p = op.progress.lock().map_err(error)?;
+                        p.current_source_id = Some(source_id.clone());
+                        p.current_directory = Some(crate::support::paths::path_for_frontend(&path));
+                    }
+                    op.emit(&sink, false);
                     let items = match store.solid_pass(&path, &items, &op.cancel) {
                         SolidPass::Publish(items) => items,
                         SolidPass::Keep => continue,
@@ -979,8 +1489,8 @@ impl Store {
                     // A cancelled scan, a newer generation or a source change
                     // ends the pass without failing the scan.
                     if op.cancel.load(Ordering::Relaxed)
-                        || store.scans.generation.load(Ordering::SeqCst) != op.generation
-                        || store.sources_revision()? != expected
+                        || store.scans.generation.load(Ordering::SeqCst) != generation
+                        || !snapshot.matches_store(&store)?
                     {
                         break;
                     }
@@ -988,7 +1498,7 @@ impl Store {
                         continue;
                     }
                     let published =
-                        store.publish_targeted(&id, expected, &source_id, &items, &[])?;
+                        store.publish_targeted(&id, &snapshot, &source_id, &items, &[])?;
                     let mut p = op.progress.lock().map_err(error)?;
                     p.catalogue_revision = published.revision;
                     p.catalogue_changed |= published.changed;
@@ -1004,7 +1514,7 @@ impl Store {
                 op.emit(&sink, false);
                 // Keep start/generation changes out of the publication interval.
                 let _operations = store.scans.operations.lock().map_err(error)?;
-                if store.scans.generation.load(Ordering::SeqCst) != op.generation {
+                if store.scans.generation.load(Ordering::SeqCst) != generation {
                     return Err(UserMessage::new(codes::CATALOG_SCAN_SUPERSEDED));
                 }
                 if op.cancel.load(Ordering::Relaxed) {
@@ -1017,7 +1527,7 @@ impl Store {
                         .any(|p| p.starts_with(&path) || path.starts_with(p));
                     if blocked {
                         for p in pending.iter().filter(|p| p.starts_with(&path)) {
-                            store.preserve_deferred(&id, expected, source, p)?;
+                            store.preserve_deferred(&id, &snapshot, source, p)?;
                         }
                     }
                     if *complete && (!path.is_dir() || blocked) {
@@ -1034,9 +1544,12 @@ impl Store {
                 }
                 let _analysis = super::writes::shared().analysis_guard();
                 let revision = if retry_paths.is_some() {
+                    if !snapshot.matches_store(&store)? {
+                        return Err(UserMessage::new(codes::CATALOG_SCAN_SUPERSEDED));
+                    }
                     op.progress.lock().map_err(error)?.catalogue_revision
                 } else {
-                    store.finalize_scan(&id, expected, &scopes)?
+                    store.finalize_scan(&id, &snapshot, &scopes)?
                 };
                 let mut p = op.progress.lock().map_err(error)?;
                 p.catalogue_changed |= revision != p.catalogue_revision;
@@ -1047,12 +1560,31 @@ impl Store {
                 op.published.store(true, Ordering::SeqCst);
                 Ok(())
             };
-            let result = run();
+            // Catch while heavy is still owned: an analysis panic cannot poison
+            // the serializer or prevent the next queued operation from running.
+            let result = match acquire() {
+                Ok(Some(_heavy)) => {
+                    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(run)) {
+                        Ok(result) => result,
+                        Err(_) => {
+                            panicked = true;
+                            Err(UserMessage::new(codes::CATALOG_OPERATION_FAILED))
+                        }
+                    }
+                }
+                Ok(None) => Ok(()),
+                Err(reason) => Err(reason),
+            };
             let completed_without_failure = result.is_ok();
+            let superseded = result
+                .as_ref()
+                .is_err_and(|reason| reason.code == codes::CATALOG_SCAN_SUPERSEDED);
             drop(heartbeat_stop);
             let _ = beat.join();
             if let Ok(mut p) = op.progress.lock() {
-                p.status = if op.cancel.load(Ordering::Relaxed) {
+                p.status = if panicked {
+                    "failed"
+                } else if op.cancel.load(Ordering::Relaxed) {
                     "cancelled"
                 } else if result.is_err() {
                     "failed"
@@ -1067,7 +1599,6 @@ impl Store {
                     .discovered
                     .saturating_sub(p.candidates.processed);
                 if let Err(reason) = result {
-                    let superseded = reason.code == codes::CATALOG_SCAN_SUPERSEDED;
                     p.error = Some(if superseded {
                         reason
                     } else {
@@ -1086,9 +1617,14 @@ impl Store {
                     });
                 }
             }
-            if retry_paths.is_none() {
+            // run() decides supersession under operations while holding heavy.
+            // A later generation change does not invalidate this scan's attempt.
+            if !targeted && !superseded && !panicked {
                 if let Ok(p) = op.progress.lock() {
                     let _ = store.write(|tx| {
+                        if let Some(snapshot) = &health_snapshot {
+                            snapshot.check(tx)?;
+                        }
                         let health = source_health.lock().map_err(error)?;
                         let access = source_access.lock().map_err(error)?;
                         for source in &health_sources {
@@ -1101,15 +1637,104 @@ impl Store {
                     });
                 }
             }
+            if superseded && !op.cancel.load(Ordering::SeqCst) {
+                // Recover changes to coverage/exclusions. Revision-only
+                // invalidations retain their existing health contract.
+                let coverage_changed = health_snapshot.as_ref().is_none_or(|snapshot| {
+                    store
+                        .read(|c| snapshot.state(c))
+                        .is_ok_and(|(sources, workspaces)| {
+                            sources.len() != snapshot.sources.len()
+                                || sources.iter().zip(&snapshot.sources).any(|(a, b)| {
+                                    (&a.0, &a.1, &a.2, &a.3) != (&b.0, &b.1, &b.2, &b.3)
+                                })
+                                || workspaces != snapshot.workspaces
+                        })
+                });
+                if coverage_changed {
+                    if let Err(reason) = store.resume_superseded_scan(&op, &cache, &data, &sink) {
+                        log::warn!(target: "catalogue", "scan recovery admission failed: {}", reason.code);
+                    }
+                }
+            }
             op.emit(&sink, true);
+            // Health and recovery admission settle before handing over the turn.
+            drop(turn);
             store.download_lunii_covers(sink.clone());
         });
         Ok(Receipt {
-            operation_id: op_id(self, &request_id)?,
+            operation_id,
             request_id,
             sources_revision: expected,
             catalogue_revision: list.catalogue_revision,
         })
+    }
+    fn resume_superseded_scan(
+        self: &Arc<Self>,
+        op: &Operation,
+        cache: &Path,
+        data: &Path,
+        sink: &Sink,
+    ) -> Result<()> {
+        for attempt in 0..3 {
+            let list = self.all_sources()?;
+            let ids = op.source_ids.lock().map_err(error)?.clone();
+            let active = list
+                .items
+                .iter()
+                .filter(|s| s.status == "active" && ids.contains(&s.id))
+                .collect::<Vec<_>>();
+            if active.is_empty() {
+                return Ok(());
+            }
+            let request = op
+                .request
+                .lock()
+                .map_err(error)?
+                .clone()
+                .expect("scan request");
+            let paths = request.paths.map(|paths| {
+                paths
+                    .into_iter()
+                    .filter(|path| {
+                        let resolved = super::refresh::resolve_existing(Path::new(path));
+                        active.iter().any(|s| {
+                            resolved.starts_with(super::refresh::resolve_existing(&s.native_path))
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            });
+            if paths.as_ref().is_some_and(Vec::is_empty) {
+                return Ok(());
+            }
+            #[cfg(test)]
+            self.scans.test_point("resume-admission");
+            let result = self.start_scan_forced(
+                Some(active.iter().map(|s| s.id.clone()).collect()),
+                paths,
+                request.forced_sources,
+                uuid::Uuid::new_v4().to_string(),
+                list.sources_revision,
+                cache.to_path_buf(),
+                data.to_path_buf(),
+                Arc::clone(sink),
+            );
+            match result {
+                Err(e)
+                    if matches!(
+                        e.code.as_str(),
+                        codes::CATALOG_REVISION_CONFLICT | codes::CATALOG_SOURCE_UNAVAILABLE
+                    ) =>
+                {
+                    if attempt < 2 {
+                        std::thread::sleep(Duration::from_millis(20));
+                    }
+                }
+                result => return result.map(|_| ()),
+            }
+        }
+        // Continued source churn is caught by the next catalogue refresh.
+        Ok(())
     }
     pub fn get_operation(&self, id: &str) -> Result<Progress> {
         let operations = self.scans.operations.lock().map_err(error)?;
@@ -1185,23 +1810,6 @@ impl Store {
         Ok(p.clone())
     }
 }
-fn op_id(store: &Store, request: &str) -> Result<String> {
-    store
-        .scans
-        .operations
-        .lock()
-        .map_err(error)?
-        .iter()
-        .find_map(|(id, op)| {
-            op.progress
-                .lock()
-                .ok()
-                .filter(|p| p.request_id == request)
-                .map(|_| id.clone())
-        })
-        .ok_or_else(|| UserMessage::new(codes::CATALOG_OPERATION_EXPIRED))
-}
-
 /// A watcher refresh uses the same session reports and cancellation contract.
 /// Own, already-settled writes do not create these user-facing operations.
 pub(crate) struct AutomaticRefresh {
@@ -1279,11 +1887,11 @@ impl Store {
         let sources_revision = self.sources_revision()?;
         let id = uuid::Uuid::new_v4().to_string();
         let op = Arc::new(Operation {
-            source_ids: vec![source.source_id.clone()],
+            source_ids: Mutex::new(vec![source.source_id.clone()]),
+            request: Mutex::new(None),
             cancel: Arc::new(AtomicBool::new(false)),
             published: AtomicBool::new(false),
             started: AtomicBool::new(false),
-            generation: 0,
             last_emit: Mutex::new(None),
             progress: Mutex::new(Progress {
                 result: None,
@@ -1359,11 +1967,11 @@ impl Store {
     ) -> Result<(Receipt, Arc<Operation>)> {
         let sources = self.all_sources()?;
         let op = Arc::new(Operation {
-            source_ids: Vec::new(),
+            source_ids: Mutex::new(Vec::new()),
+            request: Mutex::new(None),
             cancel: Arc::new(AtomicBool::new(false)),
             published: AtomicBool::new(false),
             started: AtomicBool::new(false),
-            generation: 0,
             last_emit: Mutex::new(None),
             progress: Mutex::new(Progress {
                 result: None,
@@ -1504,11 +2112,11 @@ impl Store {
         let revision =
             self.read(|c| c.query_row("SELECT revision FROM catalogue", [], |r| r.get(0)))?;
         let op = Arc::new(Operation {
-            source_ids: vec![],
+            source_ids: Mutex::new(vec![]),
+            request: Mutex::new(None),
             cancel: Arc::new(AtomicBool::new(false)),
             published: AtomicBool::new(false),
             started: AtomicBool::new(false),
-            generation: 0,
             last_emit: Mutex::new(None),
             progress: Mutex::new(Progress {
                 operation_kind: Some(kind.into()),

@@ -117,6 +117,172 @@ mod disk_tests {
         }
     }
     const OWNER: &str = "00000000-0000-4000-8000-000000000001";
+    // Existing tests exercise transactions with all five categories populated.
+    // Build that fixture explicitly now that name resolution creates no media folders.
+    fn populate_all_categories(root: &str, folder: &str, work_id: &str) -> Result<String, String> {
+        let name =
+            resolve_project_media_folder(root, folder, work_id, PROJECT_CATEGORIES[0], true)?;
+        for category in PROJECT_CATEGORIES {
+            resolve_project_media_folder(root, folder, work_id, category, true)?;
+        }
+        Ok(name)
+    }
+    #[test]
+    fn media_categories_are_created_only_when_used_at_the_shared_rank() {
+        let ws = Workspace::new();
+        fs::create_dir_all(ws.0.join("zips-extraits/Azuro")).unwrap();
+        let folder = super::resolve_project_folder(ws.root(), "Azuro", OWNER, true).unwrap();
+        assert_eq!(folder, "Azuro (2)");
+        assert_eq!(
+            resolve_project_media_folder(ws.root(), "Azuro", OWNER, "images-generees", false)
+                .unwrap(),
+            folder
+        );
+        assert_eq!(fs::read_dir(&ws.0).unwrap().count(), 1);
+        let destination = ProjectMediaDestination {
+            folder: "Azuro".into(),
+            work_id: OWNER.into(),
+        };
+        for category in ["images-generees", "voix-generees"] {
+            let path = project_media_dir(ws.root(), category, Some(&destination)).unwrap();
+            assert_eq!(
+                path,
+                fs::canonicalize(ws.0.join(category).join(&folder)).unwrap()
+            );
+            assert!(owns_folder(&path, path.parent().unwrap(), OWNER));
+            assert_eq!(
+                project_media_dir(ws.root(), category, Some(&destination)).unwrap(),
+                path
+            );
+            assert!(!ws.0.join("enregistrements").exists());
+            assert!(!ws.0.join("fichiers-importes").exists());
+            if category == "images-generees" {
+                assert!(!ws.0.join("voix-generees").exists());
+            }
+        }
+        assert!(!ws.0.join("zips-extraits").join(folder).exists());
+    }
+    #[test]
+    fn interleaved_category_collision_preserves_media_and_renames_only_owned_folders() {
+        let ws = Workspace::new();
+        let destination = ProjectMediaDestination {
+            folder: "Azuro".into(),
+            work_id: OWNER.into(),
+        };
+        let image = project_media_dir(ws.root(), "images-generees", Some(&destination)).unwrap();
+        fs::write(image.join("a.png"), b"image").unwrap();
+        let foreign = ws.0.join("voix-generees/Azuro");
+        fs::create_dir_all(&foreign).unwrap();
+        fs::write(
+            foreign.join(MARKER),
+            serde_json::json!({"version":1,"workId":"00000000-0000-4000-8000-000000000002"})
+                .to_string(),
+        )
+        .unwrap();
+        fs::write(foreign.join("foreign.mp3"), b"foreign").unwrap();
+        let audio = project_media_dir(ws.root(), "voix-generees", Some(&destination)).unwrap();
+        assert!(audio.ends_with("voix-generees/Azuro (2)"));
+        fs::write(audio.join("a.mp3"), b"audio").unwrap();
+        let edits = image.join(".story-studio-image-edits");
+        fs::create_dir(&edits).unwrap();
+        let metadata = serde_json::json!({"sourcePath": path_for_frontend(audio.join("a.mp3")).replace('\\', "/"), "originalPath": path_for_frontend(image.join("a.png")).replace('\\', "/")});
+        fs::write(
+            edits.join("a.png.edit.json"),
+            serde_json::to_vec(&metadata).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            project_media_dir(ws.root(), "images-generees", Some(&destination)).unwrap(),
+            image
+        );
+        assert_eq!(
+            project_media_dir(ws.root(), "voix-generees", Some(&destination)).unwrap(),
+            audio
+        );
+        assert_eq!(
+            resolve_project_media_folder(ws.root(), "Azuro", OWNER, "images-generees", false)
+                .unwrap(),
+            "Azuro"
+        );
+        assert_eq!(
+            resolve_project_media_folder(ws.root(), "Azuro", OWNER, "voix-generees", false)
+                .unwrap(),
+            "Azuro (2)"
+        );
+        let old = "Azuro".to_string();
+        let moves = rename_project_folder(ws.root(), &old, "Nouveau", OWNER).unwrap();
+        assert_eq!(moves.len(), 2);
+        assert_eq!(
+            fs::read(ws.0.join("images-generees/Nouveau/a.png")).unwrap(),
+            b"image"
+        );
+        assert_eq!(
+            fs::read(ws.0.join("voix-generees/Nouveau/a.mp3")).unwrap(),
+            b"audio"
+        );
+        assert_eq!(fs::read(foreign.join("foreign.mp3")).unwrap(), b"foreign");
+        assert!(!ws.0.join("enregistrements").exists());
+        let original_folders = moves
+            .iter()
+            .map(|mapping| {
+                let from = Path::new(&mapping.from);
+                (
+                    from.parent()
+                        .unwrap()
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_string(),
+                    from.file_name().unwrap().to_str().unwrap().to_string(),
+                )
+            })
+            .collect();
+        restore_project_folder(ws.root(), "Nouveau", &old, OWNER, &original_folders).unwrap();
+        assert_eq!(fs::read(image.join("a.png")).unwrap(), b"image");
+        assert_eq!(fs::read(audio.join("a.mp3")).unwrap(), b"audio");
+        let restored: Value =
+            serde_json::from_slice(&fs::read(edits.join("a.png.edit.json")).unwrap()).unwrap();
+        assert_eq!(restored, metadata);
+    }
+    #[test]
+    fn rename_leaves_other_bases_with_the_same_owner_untouched() {
+        let ws = Workspace::new();
+        let destination = |folder: &str| ProjectMediaDestination {
+            folder: folder.into(),
+            work_id: OWNER.into(),
+        };
+        let first =
+            project_media_dir(ws.root(), "images-generees", Some(&destination("Base"))).unwrap();
+        let other =
+            project_media_dir(ws.root(), "images-generees", Some(&destination("Autre"))).unwrap();
+        fs::write(first.join("first.png"), b"first").unwrap();
+        fs::write(other.join("other.png"), b"other").unwrap();
+        let moves = rename_project_folder(ws.root(), "Base", "Nouveau", OWNER).unwrap();
+        assert_eq!(moves.len(), 1);
+        assert!(!first.exists());
+        assert_eq!(
+            fs::read(ws.0.join("images-generees/Nouveau/first.png")).unwrap(),
+            b"first"
+        );
+        assert_eq!(fs::read(other.join("other.png")).unwrap(), b"other");
+    }
+    #[test]
+    fn rename_accepts_absent_categories_and_a_project_without_media() {
+        let ws = Workspace::new();
+        assert!(rename_project_folder(ws.root(), "Ancien", "Nouveau", OWNER)
+            .unwrap()
+            .is_empty());
+        let destination = ProjectMediaDestination {
+            folder: "Ancien".into(),
+            work_id: OWNER.into(),
+        };
+        project_media_dir(ws.root(), "images-generees", Some(&destination)).unwrap();
+        let moves = rename_project_folder(ws.root(), "Ancien", "Nouveau", OWNER).unwrap();
+        assert_eq!(moves.len(), 1);
+        assert!(ws.0.join("images-generees/Nouveau").join(MARKER).is_file());
+        assert_eq!(fs::read_dir(&ws.0).unwrap().count(), 1);
+    }
     #[test]
     fn reserved_names_with_extensions_support_media_and_provisional_rename() {
         for name in [
@@ -127,11 +293,11 @@ mod disk_tests {
             format!("CON.{}", "😀".repeat(60)),
         ] {
             let ws = Workspace::new();
-            let old = resolve_project_folder(ws.root(), "Projet sans titre", OWNER, true).unwrap();
+            let old = populate_all_categories(ws.root(), "Projet sans titre", OWNER).unwrap();
             let target = resolve_project_folder(ws.root(), &name, OWNER, false).unwrap();
             assert_eq!(sanitize_project_folder(&target), target);
             rename_project_folder(ws.root(), &old, &target, OWNER).unwrap();
-            let resolved = resolve_project_folder(ws.root(), &name, OWNER, true).unwrap();
+            let resolved = populate_all_categories(ws.root(), &name, OWNER).unwrap();
             assert_eq!(resolved, target);
             let destination = ProjectMediaDestination {
                 folder: resolved,
@@ -149,16 +315,16 @@ mod disk_tests {
         let ws = Workspace::new();
         fs::create_dir_all(ws.0.join("images-generees/azuro")).unwrap();
         assert_eq!(
-            resolve_project_folder(ws.root(), "Azuro", OWNER, true).unwrap(),
+            populate_all_categories(ws.root(), "Azuro", OWNER).unwrap(),
             "Azuro (2)"
         );
         assert_eq!(
-            resolve_project_folder(ws.root(), "Azuro", OWNER, true).unwrap(),
+            populate_all_categories(ws.root(), "Azuro", OWNER).unwrap(),
             "Azuro (2)"
         );
         let other = "00000000-0000-4000-8000-000000000002";
         assert_eq!(
-            resolve_project_folder(ws.root(), "Azuro", other, true).unwrap(),
+            populate_all_categories(ws.root(), "Azuro", other).unwrap(),
             "Azuro (3)"
         );
         fs::create_dir_all(ws.0.join("zips-extraits/ÉTÉ")).unwrap();
@@ -196,7 +362,7 @@ mod disk_tests {
         let ws = Workspace::new();
         let foreign = ws.0.join("enregistrements/Projet sans titre");
         fs::create_dir_all(&foreign).unwrap();
-        let old = resolve_project_folder(ws.root(), "Projet sans titre", OWNER, true).unwrap();
+        let old = populate_all_categories(ws.root(), "Projet sans titre", OWNER).unwrap();
         assert_eq!(old, "Projet sans titre (2)");
         fs::remove_dir(&foreign).unwrap();
         // A category folder lost meanwhile is recreated in the owned rank.
@@ -208,7 +374,12 @@ mod disk_tests {
         fs::remove_dir(ws.0.join("images-generees/Projet sans titre (2)")).unwrap();
         for create in [false, true] {
             assert_eq!(
-                resolve_project_folder(ws.root(), "Projet sans titre", OWNER, create).unwrap(),
+                if create {
+                    populate_all_categories(ws.root(), "Projet sans titre", OWNER)
+                } else {
+                    resolve_project_folder(ws.root(), "Projet sans titre", OWNER, false)
+                }
+                .unwrap(),
                 old
             );
         }
@@ -231,26 +402,36 @@ mod disk_tests {
         // fails although no listed entry matches the candidate.
         let ws = Workspace::new();
         let attempts = std::cell::Cell::new(0);
-        let name = resolve_project_folder_impl(ws.root(), "Azuro", OWNER, true, |path| {
-            attempts.set(attempts.get() + 1);
-            if path.ends_with("enregistrements/Azuro") {
-                Err(std::io::ErrorKind::AlreadyExists.into())
-            } else {
-                fs::create_dir(path)
-            }
-        })
+        let name = resolve_project_folder_impl(
+            ws.root(),
+            "Azuro",
+            OWNER,
+            true,
+            Some("enregistrements"),
+            |path| {
+                attempts.set(attempts.get() + 1);
+                if path.ends_with("enregistrements/Azuro") {
+                    Err(std::io::ErrorKind::AlreadyExists.into())
+                } else {
+                    fs::create_dir(path)
+                }
+            },
+        )
         .unwrap();
         assert_eq!(name, "Azuro (2)");
         assert!(attempts.get() <= 10, "{} creation attempts", attempts.get());
         for category in PROJECT_CATEGORIES {
             assert!(!ws.0.join(category).join("Azuro").exists());
-            assert!(ws.0.join(category).join(&name).join(MARKER).is_file());
+            assert_eq!(
+                ws.0.join(category).join(&name).join(MARKER).is_file(),
+                category == "enregistrements"
+            );
         }
     }
     #[test]
     fn rename_rewrites_sidecars_and_rolls_back_failures() {
         let ws = Workspace::new();
-        resolve_project_folder(ws.root(), "Projet sans titre", OWNER, true).unwrap();
+        populate_all_categories(ws.root(), "Projet sans titre", OWNER).unwrap();
         let old = ws.0.join("voix-generees/Projet sans titre");
         fs::write(old.join("sound.mp3"), "audio").unwrap();
         let edits = old.join(".story-studio-audio-edits");
@@ -277,14 +458,20 @@ mod disk_tests {
             .replace('\\', "/")
             .into();
         assert_eq!(restored, expected);
-        let fail =
-            rename_project_folder_impl(ws.root(), "Projet sans titre", "Azuro", OWNER, |index| {
+        let fail = rename_project_folder_impl(
+            ws.root(),
+            "Projet sans titre",
+            "Azuro",
+            OWNER,
+            None,
+            |index| {
                 if index == 2 {
                     Err("Injected rename failure".into())
                 } else {
                     Ok(())
                 }
-            });
+            },
+        );
         assert!(fail.is_err());
         for category in PROJECT_CATEGORIES {
             assert!(ws.0.join(category).join("Projet sans titre").is_dir());
@@ -294,8 +481,8 @@ mod disk_tests {
     #[test]
     fn rename_refuses_foreign_markers_and_existing_destinations_even_owned() {
         let ws = Workspace::new();
-        resolve_project_folder(ws.root(), "Old", OWNER, true).unwrap();
-        resolve_project_folder(ws.root(), "New", OWNER, true).unwrap();
+        populate_all_categories(ws.root(), "Old", OWNER).unwrap();
+        populate_all_categories(ws.root(), "New", OWNER).unwrap();
         assert!(rename_project_folder(ws.root(), "Old", "New", OWNER).is_err());
         assert!(rename_project_folder(
             ws.root(),
@@ -312,11 +499,10 @@ mod disk_tests {
             let handles: Vec<_> = (0..12)
                 .map(|_| {
                     scope.spawn(|| {
-                        resolve_project_folder(
+                        populate_all_categories(
                             ws.root(),
                             "Azuro",
                             &uuid::Uuid::new_v4().to_string(),
-                            true,
                         )
                         .unwrap()
                     })
@@ -333,12 +519,12 @@ mod disk_tests {
         let ws = Workspace::new();
         let outside = Workspace::new();
         std::os::unix::fs::symlink(&outside.0, ws.0.join("voix-generees")).unwrap();
-        assert!(resolve_project_folder(ws.root(), "Azuro", OWNER, true).is_err());
+        assert!(populate_all_categories(ws.root(), "Azuro", OWNER).is_err());
         fs::remove_file(ws.0.join("voix-generees")).unwrap();
         fs::create_dir(ws.0.join("voix-generees")).unwrap();
         std::os::unix::fs::symlink(&outside.0, ws.0.join("voix-generees/Azuro")).unwrap();
         assert_eq!(
-            resolve_project_folder(ws.root(), "Azuro", OWNER, true).unwrap(),
+            populate_all_categories(ws.root(), "Azuro", OWNER).unwrap(),
             "Azuro (2)"
         );
         let marker =
@@ -450,17 +636,6 @@ fn root_and_categories(root: &str, create: bool) -> Result<(PathBuf, Vec<PathBuf
     let mut categories = Vec::new();
     for category in PROJECT_CATEGORIES {
         let dir = root.join(category);
-        if create && !dir.try_exists().map_err(io_error)? {
-            fs::create_dir(&dir)
-                .or_else(|e| {
-                    if e.kind() == std::io::ErrorKind::AlreadyExists {
-                        Ok(())
-                    } else {
-                        Err(e)
-                    }
-                })
-                .map_err(io_error)?;
-        }
         if fs::symlink_metadata(&dir).is_ok() {
             direct_directory(&dir, &root)?;
         }
@@ -535,15 +710,6 @@ pub(crate) fn atomic_write_to(path: &Path, bytes: &[u8], temporary: &Path) -> Re
     }
     result
 }
-fn undo_created(created: &[PathBuf]) -> Result<(), String> {
-    for path in created.iter().rev() {
-        fs::remove_file(path.join(MARKER)).map_err(io_error)?;
-        // Only empty directories created by this request; never recursive deletion.
-        fs::remove_dir(path).map_err(io_error)?;
-    }
-    Ok(())
-}
-
 fn candidate_name(base: &str, rank: u16) -> String {
     if rank == 1 {
         base.into()
@@ -588,23 +754,67 @@ fn choose_candidate(
     categories: &[PathBuf],
     work_id: &str,
     unavailable: &HashSet<String>,
+    target: Option<usize>,
 ) -> Result<String, String> {
     let found = candidate_entries(base, categories)?;
     for entries in found.values() {
-        if !entries
+        if entries
             .iter()
             .all(|(category, path)| owns_folder(path, &categories[*category], work_id))
+            && entries.iter().enumerate().any(|(index, (category, _))| {
+                entries[..index].iter().any(|(other, _)| other == category)
+            })
         {
-            continue;
-        }
-        if entries.iter().enumerate().any(|(index, (category, _))| {
-            entries[..index].iter().any(|(other, _)| other == category)
-        }) {
             return Err(
                 user_message::UserMessage::new(codes::FILES_PROJECT_FOLDER_NAME_COLLISION)
                     .with_detail("Plusieurs dossiers ont le même nom normalisé.".to_string())
                     .into_transport(),
             );
+        }
+    }
+    // Once categories are lazy, another project may occupy the shared rank
+    // in an unused category. Keep each owned category stable first.
+    if let Some(target) = target {
+        for require_target in [true, false] {
+            for entries in found.values() {
+                let owned: Vec<_> = entries
+                    .iter()
+                    .filter(|(category, path)| owns_folder(path, &categories[*category], work_id))
+                    .collect();
+                if owned.is_empty() {
+                    continue;
+                }
+                let in_target: Vec<_> = entries
+                    .iter()
+                    .filter(|(category, _)| *category == target)
+                    .collect();
+                let path = if require_target {
+                    if in_target.len() != 1
+                        || !owns_folder(&in_target[0].1, &categories[target], work_id)
+                    {
+                        continue;
+                    }
+                    &in_target[0].1
+                } else {
+                    if !in_target.is_empty() {
+                        continue;
+                    }
+                    &owned.last().unwrap().1
+                };
+                let name = path.file_name().unwrap().to_string_lossy().into_owned();
+                if !unavailable.contains(&name) {
+                    return Ok(name);
+                }
+            }
+        }
+    }
+    for entries in found.values() {
+        if target.is_some()
+            || !entries
+                .iter()
+                .all(|(category, path)| owns_folder(path, &categories[*category], work_id))
+        {
+            continue;
         }
         // Reuse the existing spelling rather than creating a case twin on POSIX.
         let (_, path) = entries.last().unwrap();
@@ -630,17 +840,42 @@ pub fn resolve_project_folder(
     work_id: &str,
     create: bool,
 ) -> Result<String, String> {
-    resolve_project_folder_impl(root, folder, work_id, create, |path| fs::create_dir(path))
+    resolve_project_folder_impl(root, folder, work_id, create, None, |path| {
+        fs::create_dir(path)
+    })
+}
+pub fn resolve_project_media_folder(
+    root: &str,
+    folder: &str,
+    work_id: &str,
+    category: &str,
+    create: bool,
+) -> Result<String, String> {
+    resolve_project_folder_impl(root, folder, work_id, create, Some(category), |path| {
+        fs::create_dir(path)
+    })
 }
 fn resolve_project_folder_impl(
     root: &str,
     folder: &str,
     work_id: &str,
     create: bool,
+    category: Option<&str>,
     create_dir: impl Fn(&Path) -> std::io::Result<()>,
 ) -> Result<String, String> {
     let _lock = FOLDER_LOCK.lock().map_err(io_error)?;
     validate_owner(work_id)?;
+    let target = category
+        .map(|category| {
+            PROJECT_CATEGORIES
+                .iter()
+                .position(|name| *name == category)
+                .ok_or_else(|| {
+                    user_message::UserMessage::new(codes::FILES_INVALID_MEDIA_CATEGORY)
+                        .into_transport()
+                })
+        })
+        .transpose()?;
     let base = sanitize_project_folder(folder);
     let (_, categories) = root_and_categories(root, create)?;
     // Each lost creation race (another process) lists the categories again;
@@ -648,52 +883,41 @@ fn resolve_project_folder_impl(
     // collision_key on a case-insensitive volume (ſ/s for instance).
     let mut unavailable = HashSet::new();
     for _ in 0..1000 {
-        let name = choose_candidate(&base, &categories, work_id, &unavailable)?;
-        if !create {
+        let name = choose_candidate(&base, &categories, work_id, &unavailable, target)?;
+        let Some(target) = target.filter(|_| create) else {
             return Ok(name);
-        }
-        let mut created = Vec::new();
-        let mut raced = false;
-        for parent in &categories {
-            if let Some(path) = existing_candidate(parent, &name)? {
-                if owns_folder(&path, parent, work_id) {
-                    continue;
-                }
-                raced = true;
-                break;
+        };
+        let parent = &categories[target];
+        fs::create_dir_all(parent).map_err(io_error)?;
+        direct_directory(parent, parent.parent().unwrap())?;
+        if let Some(path) = existing_candidate(parent, &name)? {
+            if owns_folder(&path, parent, work_id) {
+                return Ok(path.file_name().unwrap().to_string_lossy().into_owned());
             }
-            let path = parent.join(&name);
-            match create_dir(&path) {
-                Ok(()) => {
-                    let result = direct_directory(&path, parent).and_then(|_| {
-                        atomic_write(
-                            &path.join(MARKER),
-                            serde_json::json!({"version":1,"workId":work_id})
-                                .to_string()
-                                .as_bytes(),
-                        )
-                    });
-                    if let Err(error) = result {
-                        let _ = fs::remove_dir(&path);
-                        undo_created(&created)?;
-                        return Err(error);
-                    }
-                    created.push(path);
-                }
-                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
-                    raced = true;
-                    break;
-                }
-                Err(e) => {
-                    undo_created(&created)?;
-                    return Err(io_error(e));
-                }
-            }
-        }
-        if raced {
-            undo_created(&created)?;
             unavailable.insert(name);
             continue;
+        }
+        let path = parent.join(&name);
+        match create_dir(&path) {
+            Ok(()) => {
+                let result = direct_directory(&path, parent).and_then(|_| {
+                    atomic_write(
+                        &path.join(MARKER),
+                        serde_json::json!({"version":1,"workId":work_id})
+                            .to_string()
+                            .as_bytes(),
+                    )
+                });
+                if let Err(error) = result {
+                    let _ = fs::remove_dir(&path);
+                    return Err(error);
+                }
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                unavailable.insert(name);
+                continue;
+            }
+            Err(e) => return Err(io_error(e)),
         }
         return Ok(name);
     }
@@ -797,13 +1021,23 @@ pub fn rename_project_folder(
     new: &str,
     work_id: &str,
 ) -> Result<Vec<ProjectFolderMove>, String> {
-    rename_project_folder_impl(root, old, new, work_id, |_| Ok(()))
+    rename_project_folder_impl(root, old, new, work_id, None, |_| Ok(()))
+}
+pub fn restore_project_folder(
+    root: &str,
+    old: &str,
+    new: &str,
+    work_id: &str,
+    original_folders: &HashMap<String, String>,
+) -> Result<Vec<ProjectFolderMove>, String> {
+    rename_project_folder_impl(root, old, new, work_id, Some(original_folders), |_| Ok(()))
 }
 fn rename_project_folder_impl(
     root: &str,
     old: &str,
     new: &str,
     work_id: &str,
+    original_folders: Option<&HashMap<String, String>>,
     before_rename: impl Fn(usize) -> Result<(), String>,
 ) -> Result<Vec<ProjectFolderMove>, String> {
     let _lock = FOLDER_LOCK.lock().map_err(io_error)?;
@@ -811,30 +1045,64 @@ fn rename_project_folder_impl(
     validate_component(old)?;
     validate_component(new)?;
     let (_, categories) = root_and_categories(root, false)?;
+    if let Some(folders) = original_folders {
+        for (category, folder) in folders {
+            if !PROJECT_CATEGORIES.contains(&category.as_str()) {
+                return Err(
+                    user_message::UserMessage::new(codes::FILES_INVALID_MEDIA_CATEGORY)
+                        .into_transport(),
+                );
+            }
+            validate_component(folder)?;
+        }
+    }
     let mut pairs = Vec::new();
     let mut sidecars = Vec::new();
-    for parent in categories {
-        if let Some(from) = existing_candidate(&parent, old)? {
-            if !owns_folder(&from, &parent, work_id) {
-                return Err(
-                    user_message::UserMessage::new(codes::FILES_PROJECT_MARKER_MISSING)
-                        .with_detail("Dossier de projet étranger ou sans marqueur.".to_string())
-                        .into_transport(),
-                );
-            }
-            if old == new {
-                continue;
-            }
-            if existing_candidate(&parent, new)?.is_some() {
-                return Err(
-                    user_message::UserMessage::new(codes::FILES_PROJECT_MERGE_FORBIDDEN)
-                        .with_detail("Dossier cible déjà présent : fusion interdite.".to_string())
-                        .into_transport(),
-                );
-            }
-            collect_sidecars(&from, &mut sidecars, false)?;
-            pairs.push((from, parent.join(new)));
+    // Category ranks may diverge after a late collision. Only this base's
+    // candidates belong to the rename, even when another base shares its owner.
+    let candidates = candidate_entries(old, &categories)?;
+    let mut owned = Vec::new();
+    for (category, parent) in categories.iter().enumerate() {
+        if original_folders.is_some_and(|folders| {
+            !folders.contains_key(parent.file_name().unwrap().to_str().unwrap())
+        }) {
+            continue;
         }
+        let foreign_old = existing_candidate(parent, old)?
+            .is_some_and(|path| !owns_folder(&path, parent, work_id));
+        let owned_before = owned.len();
+        for (index, from) in candidates.values().flatten() {
+            if *index == category
+                && owns_folder(from, parent, work_id)
+                && (original_folders.is_none() || from.file_name().unwrap() == old)
+            {
+                owned.push((parent, from.clone()));
+            }
+        }
+        if owned.len() == owned_before && foreign_old {
+            return Err(
+                user_message::UserMessage::new(codes::FILES_PROJECT_MARKER_MISSING)
+                    .with_detail("Dossier de projet étranger ou sans marqueur.".to_string())
+                    .into_transport(),
+            );
+        }
+    }
+    for (parent, from) in owned {
+        let new = original_folders
+            .and_then(|folders| folders.get(parent.file_name().unwrap().to_str().unwrap()))
+            .map_or(new, String::as_str);
+        if from.file_name().is_some_and(|name| name == new) {
+            continue;
+        }
+        if existing_candidate(parent, new)?.is_some() {
+            return Err(
+                user_message::UserMessage::new(codes::FILES_PROJECT_MERGE_FORBIDDEN)
+                    .with_detail("Dossier cible déjà présent : fusion interdite.".to_string())
+                    .into_transport(),
+            );
+        }
+        collect_sidecars(&from, &mut sidecars, false)?;
+        pairs.push((from, parent.join(new)));
     }
     let moves: Vec<_> = pairs
         .iter()
@@ -870,7 +1138,11 @@ fn rename_project_folder_impl(
             before_rename(index)?;
             // Repeat ownership and destination checks immediately before rename.
             if !owns_folder(from, from.parent().unwrap(), work_id)
-                || existing_candidate(to.parent().unwrap(), new)?.is_some()
+                || existing_candidate(
+                    to.parent().unwrap(),
+                    to.file_name().unwrap().to_str().unwrap(),
+                )?
+                .is_some()
             {
                 return Err(user_message::UserMessage::new(
                     codes::FILES_FOLDER_CHANGED_DURING_ORGANIZATION,
@@ -950,12 +1222,21 @@ pub(crate) fn project_media_dir(
     };
     validate_component(&destination.folder)?;
     validate_owner(&destination.work_id)?;
+    let folder = resolve_project_media_folder(
+        root,
+        &destination.folder,
+        &destination.work_id,
+        category,
+        true,
+    )?;
     let (_, categories) = root_and_categories(root, false)?;
     let parent = &categories[PROJECT_CATEGORIES
         .iter()
         .position(|name| *name == category)
         .unwrap()];
-    let path = parent.join(&destination.folder);
+    let path = parent.join(folder);
+    // Resolution only returns an owned folder; recheck before writing in case
+    // another process replaced it in between.
     if !owns_folder(&path, parent, &destination.work_id) {
         return Err(
             user_message::UserMessage::new(codes::FILES_FOREIGN_UNRESERVED_MEDIA_TARGET)

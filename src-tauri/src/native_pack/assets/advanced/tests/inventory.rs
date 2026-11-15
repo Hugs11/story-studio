@@ -29,7 +29,7 @@ fn every_stage_field_that_carries_a_reference_becomes_a_destination() {
     assert_eq!(destinations[1].kind, MediaKind::Image);
     assert_eq!(destinations[2].stage_uuid, SECOND);
     // La référence partagée produit **deux** destinations : une place n'est pas
-    // un fichier, et c'est toute la difficulté que le lot doit tenir.
+    // un fichier, et c'est toute la difficulté à préserver.
     assert_eq!(destinations[2].asset_ref, "a.wav");
 }
 

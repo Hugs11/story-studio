@@ -107,3 +107,19 @@ test('le pont français conserve le détail des erreurs sans code dédié', () =
   }
   assert.equal(presentUserMessage({ code: 'INCONNU', detail }, { language: 'fr' }).fallback, true);
 });
+
+test('checker screen roles translate from Rust codes in every public language', () => {
+  const labels = {
+    fr: ['Racine', 'Histoire', 'Message de fin', 'Titre', 'Navigation'],
+    en: ['Root', 'Story', 'End message', 'Title', 'Navigation'],
+    it: ['Radice', 'Storia', 'Messaggio finale', 'Titolo', 'Navigazione'],
+  };
+  for (const language of ['fr', 'en', 'it']) {
+    engine.changeLanguage(language);
+    for (const [index, role] of ['ROOT', 'STORY', 'END_MESSAGE', 'TITLE', 'NAVIGATION'].entries()) {
+      const result = presentUserMessage({ code: 'CHECKER_ROLE_' + role, params: {} }, { t: engine.t.bind(engine), language });
+      assert.equal(result.message, labels[language][index]);
+      assert.equal(result.fallback, false);
+    }
+  }
+});

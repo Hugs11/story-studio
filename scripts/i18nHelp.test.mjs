@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from './viteTestServer.mjs';
 import react from '@vitejs/plugin-react';
 import { sources, BASE, SAVE_AS_FALLBACK } from './i18nHelpSourceFixture.mjs';
-import { applyLot413 } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrections } from './i18nFrenchSourceCorrections.mjs';
 import { checkCatalogues, HELP_NEUTRAL_KEYS, sourceHash } from './check-i18n.mjs';
 import { pseudoResources, pseudoText } from '../src/i18n/pseudo.js';
 import fr from '../src/locales/fr/help.json' with { type: 'json' };
@@ -66,7 +66,7 @@ test('aides : catalogues, paramètres, métadonnées, formes neutres et mutation
   assert.equal(BASE, 'b7f3903925285e37cf5dd8b184ed956db93d0e31');
   assert.equal(Object.keys(fr).length, 121); // Titre de l’encadré Aide supprimé.
   assert.equal(SAVE_AS_FALLBACK, 'Enregistrer sous...');
-  // Lot 4.13 : repli affiché, « ... » de la source corrigé en « … ».
+  // repli affiché, « ... » de la source corrigé en « … ».
   assert.equal(commonFr['project.saveAs.fallbackLabel'], SAVE_AS_FALLBACK.replace('...', '…'));
   assert.deepEqual(checkCatalogues(resources, { help: meta }).errors, []);
   for (const language of ['en', 'it']) {
@@ -81,7 +81,7 @@ test('aides : catalogues, paramètres, métadonnées, formes neutres et mutation
   // Les clés à paramètres reproduisent les phrases de la source indépendante.
   const original = sources['src/components/StorySettingsModal/KeyboardShortcutsModal.jsx'];
   assert.ok(original.includes('Déjà utilisé par « ${conflict.label} » dans ${scopeLabel}.'));
-  // Lot 4.13 : article ajouté (« dans la section « … » »).
+  // article ajouté (« dans la section « … » »).
   assert.equal(fr['keyboard.conflict.message'], 'Déjà utilisé par « {{action}} » dans la section « {{scope}} ».');
   assert.ok(original.includes('Aucun raccourci ne correspond à « {query} ».'));
   assert.equal(fr['keyboard.search.empty'], 'Aucun raccourci ne correspond à « {{query}} ».');
@@ -110,8 +110,8 @@ test('aides : équivalence FR avec git show, tables et touches résolues à la l
   try {
     const { commandKeyLabel } = await old.load('src/utils/platformKeys.js');
     const command = commandKeyLabel();
-    // Lot 6 : seule évolution FR des combinaisons, Shift+ devient Maj+.
-    for (const type of ['credits', 'hint', 'shortcuts']) baseline[type] = JSON.parse(applyLot413(JSON.stringify(visible(render(old, type)))).replaceAll('Shift+', 'Maj+'));
+    // seule évolution FR des combinaisons, Shift+ devient Maj+.
+    for (const type of ['credits', 'hint', 'shortcuts']) baseline[type] = JSON.parse(applyFrenchSourceCorrections(JSON.stringify(visible(render(old, type)))).replaceAll('Shift+', 'Maj+'));
     // Évolution voulue : retrait du titre « Aide », les accès restent directement visibles.
     assert.ok(baseline.credits.text.includes(' Aide Documentation '));
     baseline.credits.text = baseline.credits.text.replace(' Aide Documentation ', ' Documentation ');
@@ -140,7 +140,7 @@ test('aides : équivalence FR avec git show, tables et touches résolues à la l
           assert.deepEqual(entry, additions[entry.id], entry.id + ': ajout catalogue explicite');
           continue;
         }
-        for (const field of ['label', 'description', 'readOnlyReason']) if (original[field]) assert.equal(h.engine.t(entry[field + 'Key']), applyLot413(original[field]), entry.id + ':' + field);
+        for (const field of ['label', 'description', 'readOnlyReason']) if (original[field]) assert.equal(h.engine.t(entry[field + 'Key']), applyFrenchSourceCorrections(original[field]), entry.id + ':' + field);
         const stripped = Object.fromEntries(Object.entries(entry).filter(([key]) => !key.endsWith('Key')));
         const oldStripped = Object.fromEntries(Object.entries(original).filter(([key]) => !['label', 'description', 'readOnlyReason'].includes(key)));
         assert.deepEqual(stripped, oldStripped, entry.id + ': contrat clavier intact');

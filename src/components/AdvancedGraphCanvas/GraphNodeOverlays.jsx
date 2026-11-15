@@ -6,7 +6,7 @@ import { translateGraph as t, graphTranslationEngine, presentGraphLandmarks } fr
 // Elle existe parce que le canvas est muet : rien n'y est exposé au DOM, et
 // tout ce qui est texte, badge ou libellé doit être dessiné ici, positionné
 // depuis la caméra du moteur. Elle travaille en **pixels écran**, ce qui est
-// exactement ce qui manquait aux repères de la planche 3b : une largeur
+// nécessaire pour garder les repères lisibles au dézoom : une largeur
 // Cytoscape est une unité du graphe, donc un anneau de 56 unités mesure 0,56
 // pixel à 1 % de zoom.
 

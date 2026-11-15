@@ -205,14 +205,14 @@ export async function run() {
       const chooser = modalWithText(app.page, 'Choisir l’éditeur');
       const offered = await chooser.first().waitFor({ timeout: 180_000 }).then(() => true, () => false);
       const editors = offered ? {
-        menus: await chooser.getByRole('button', { name: 'Éditeur par menus', exact: true }).count() > 0,
+        menus: await chooser.getByRole('button', { name: /^Éditeur (par menus|simplifié)$/, exact: true }).count() > 0,
         graphe: await chooser.getByRole('button', { name: 'Éditeur graphe', exact: true }).count() > 0,
       } : null;
       if (!editors?.menus || !editors?.graphe) {
         return { ok: false, reason: `les deux éditeurs ne sont pas proposés : ${JSON.stringify(editors)}` };
       }
       await ctx.shot(app.page, '9-choix-editeur').catch(() => {});
-      await chooser.getByRole('button', { name: 'Éditeur par menus', exact: true }).click();
+      await chooser.getByRole('button', { name: /^Éditeur (par menus|simplifié)$/, exact: true }).click();
       await app.page.getByRole('button', { name: /Générer le pack/ }).first().waitFor({ timeout: 180_000 });
       await modalWithText(app.page, 'Modifier un pack').first().waitFor({ state: 'hidden', timeout: 180_000 }).catch(() => {});
       const menus = await generateAndRead('9-exemple-menus');

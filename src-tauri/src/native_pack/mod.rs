@@ -55,6 +55,7 @@ pub(crate) mod simulation;
 // pas encore faite.
 #[allow(dead_code)]
 pub(crate) mod readiness;
+pub(crate) mod recipe;
 mod stats;
 mod writer;
 

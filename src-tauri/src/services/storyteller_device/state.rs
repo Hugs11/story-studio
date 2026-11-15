@@ -100,12 +100,31 @@ fn save_record(root: &Path, name: &str, state: &State) -> Result<()> {
         if bytes.len() as u64 > MAX {
             return Err(Error::InvalidCard);
         }
-        // A file emptied by a disk check (0 bytes, or zeros only) holds no
-        // data to protect: it is read as absent and rewritten.
+        // Never downgrade a readable future version, even with unknown fields.
+        if serde_json::from_slice::<serde_json::Value>(&bytes)
+            .ok()
+            .and_then(|record| record.get("version").and_then(|v| v.as_u64()))
+            .is_some_and(|version| version > 1)
+        {
+            return Err(Error::FutureCard);
+        }
+        // Empty/zero-filled files after a disk check hold nothing to protect.
         if bytes.iter().any(|b| *b != 0) {
-            let record: Record = serde_json::from_slice(&bytes).map_err(|_| Error::InvalidCard)?;
-            if record.version != 1 {
-                return Err(Error::FutureCard);
+            match serde_json::from_slice::<Record>(&bytes) {
+                Ok(record) if record.version != 1 => return Err(Error::FutureCard),
+                Ok(_) => {}
+                Err(_) if name == "device.json" => {
+                    // Keep exactly one unreadable copy on the same volume.
+                    // A failed rename leaves the original in place and refuses
+                    // the write; never publish fresh memory over corrupt bytes.
+                    let unreadable = dir.join("device.json.unreadable");
+                    if unreadable.try_exists()? {
+                        safe(&unreadable, false)?;
+                    }
+                    platform::replace(&target, &unreadable)?;
+                    platform::sync_volume(&dir)?;
+                }
+                Err(_) => return Err(Error::InvalidCard),
             }
         }
     }

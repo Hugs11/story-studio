@@ -91,8 +91,6 @@ mod scan_tests;
 #[cfg(test)]
 mod watch_tests;
 
-pub mod path_explanation;
-
 #[cfg(test)]
 mod surface_tests;
 

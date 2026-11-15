@@ -1,4 +1,4 @@
-import { getExportPackName } from '../../utils/packConvention.js';
+import { isAbsoluteFilePath } from '../../utils/fileUtils.js';
 import { buildAggregateProject, defaultMetadataForPacks } from './aggregateProject.js';
 
 // User fields remain authoritative after the metadata form has been applied.
@@ -13,6 +13,16 @@ export function moveAggregatePack(packs, index, delta) {
   const next = [...packs];
   [next[index], next[target]] = [next[target], next[index]];
   return next;
+}
+
+// Les couvertures sont soit des fichiers du catalogue, soit des noms d'assets ZIP.
+export async function copyAggregatePack(pack, copy) {
+  return {
+    ...pack,
+    path: await copy(pack.path),
+    coverImage: isAbsoluteFilePath(pack.coverImage) ? await copy(pack.coverImage) : pack.coverImage,
+    coverAudio: isAbsoluteFilePath(pack.coverAudio) ? await copy(pack.coverAudio) : pack.coverAudio,
+  };
 }
 
 // All dependencies are copied before the project can become visible. A failed
@@ -41,7 +51,7 @@ export async function prepareAggregateLanding({ draft, preparation, workspaceDir
   }
   const packs = [];
   for (const pack of draft.packs) {
-    packs.push({ ...pack, path: await promote(pack.path), coverImage: await promote(pack.coverImage), coverAudio: await promote(pack.coverAudio) });
+    packs.push(await copyAggregatePack(pack, promote));
   }
   return buildAggregateProject({
     packs,
@@ -51,8 +61,8 @@ export async function prepareAggregateLanding({ draft, preparation, workspaceDir
   });
 }
 
-// Guards run before a new work session is created. Neither destination selection
-// nor a cancelled guard installs a project or starts a native task.
+// Guards run before a new work session is created. A cancelled guard
+// never installs a project or starts a native task.
 export async function landAggregate({ confirmBackgroundWork, confirmSave, runLanding, prepare, install }) {
   if (!await confirmBackgroundWork() || !await confirmSave()) return false;
   await runLanding('pack', async (workspaceDir, session) => {
@@ -63,24 +73,26 @@ export async function landAggregate({ confirmBackgroundWork, confirmSave, runLan
   return true;
 }
 
-export const INITIAL_AGGREGATE_DESTINATION = { destination: 'editor', confirmation: null };
-export function aggregateDestinationReducer(state, event) {
-  switch (event.type) {
-    case 'choose': return ['editor', 'generate'].includes(event.destination) ? { destination: event.destination, confirmation: null } : state;
-    case 'review': return state.destination === 'generate' ? { ...state, confirmation: event.confirmation } : state;
-    case 'cancel': return { ...state, confirmation: null };
-    default: return state;
-  }
+export function aggregateSteps() {
+  return [
+    { key: 'packs', labelKey: 'home:aggregate.step.packs' },
+    { key: 'audio', labelKey: 'home:aggregate.step.audio' },
+    { key: 'image', labelKey: 'home:aggregate.step.image' },
+    { key: 'metadata', labelKey: 'home:aggregate.step.metadata' },
+  ];
 }
 
+export function canVisitAggregateStep({ index, packs, rootAudio, rootImage }) {
+  const target = aggregateSteps()[index]?.key;
+  if (!target) return false;
+  if (target === 'packs') return true;
+  if (!packs.length) return false;
+  if (target === 'image' && !rootAudio) return false;
+  if (target === 'metadata' && (!rootAudio || !rootImage)) return false;
+  return true;
+}
 
-// Review and generation share a detached snapshot, including ordered entries
-// and every media reference. Editing the assistant cannot alter an approval.
-export function createAggregateConfirmation(draft, folder) {
-  const snapshot = structuredClone(draft);
-  const files = [...new Set([
-    ...snapshot.packs.flatMap(pack => [pack.path, pack.coverImage, pack.coverAudio]),
-    snapshot.rootAudio, snapshot.rootImage,
-  ].filter(Boolean))];
-  return { draft: snapshot, folder, fileName: `${getExportPackName(snapshot.metadata)}.zip`, files };
+// Capture the ordered draft when generation starts.
+export function createAggregateGenerationRequest(draft, folder) {
+  return { draft: structuredClone(draft), folder };
 }

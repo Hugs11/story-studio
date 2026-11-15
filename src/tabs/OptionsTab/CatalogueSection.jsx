@@ -24,6 +24,8 @@ export function CatalogueSection({ className, sectionRef, workspaceDir, api = ca
   const operations = useCatalogueOperations({ api });
   const entries = useCatalogueEntries({ api });
   const [error, setError] = useState(null);
+  const [forcing, setForcing] = useState(false);
+  const scanning = Object.values(operations.state.items ?? {}).some(op => ['queued', 'running', 'cancelling'].includes(op.status));
   const [location, setLocation] = useState('');
   const [startup, setStartup] = useState(() => startupPage(read(KEYS.CATALOGUE_STARTUP_PAGE)));
   const { add, refresh } = useCatalogueSourceActions(sources, operations, setError);
@@ -53,10 +55,20 @@ export function CatalogueSection({ className, sectionRef, workspaceDir, api = ca
         ]}
       />
     </div>
+    <div className="opts-row">
+      <div className="opts-row-info"><div className="opts-row-sub">{t('catalogue:preferences.reanalyze.description')}</div></div>
+      <Button disabled={forcing || scanning || sources.busy || sources.loading || !operations.ready} onClick={async () => {
+        setForcing(true); setError(null);
+        try { await operations.start(sources.sourcesRevision, { force: true }); }
+        catch (error) { setError(error); await sources.refresh(); }
+        finally { setForcing(false); }
+      }}>{t('catalogue:preferences.reanalyze.action')}</Button>
+    </div>
     <LuniiPermission api={api} />
     <div className="opts-row">
       <div className="opts-row-info">
         <div className="opts-row-label">{t('catalogue:preferences.location.label')}</div>
+        <div className="opts-row-sub">{t('catalogue:preferences.location.description')}</div>
         <Tooltip asChild text={location}><div className="opts-row-sub opts-catalogue-path" tabIndex={0}>{location}</div></Tooltip>
       </div>
       {location && <Button onClick={() => void revealItemInDir(location).catch(setError)}>{t('catalogue:preferences.location.open')}</Button>}

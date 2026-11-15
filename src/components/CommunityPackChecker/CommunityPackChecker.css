@@ -303,19 +303,17 @@
 
 .checker-single-stat {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 6px;
   margin-top: 8px;
 }
 
 .checker-single-stat span {
   min-width: 0;
-  overflow: hidden;
   color: var(--muted);
   font-size: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .checker-groups {
@@ -885,4 +883,13 @@
   .checker-summary-tiles {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.checker-graph-information {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 18px 0;
+  color: var(--muted);
+  font-size: 12px;
 }

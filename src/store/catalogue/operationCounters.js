@@ -48,6 +48,7 @@ function progressLine(summary) {
   if (status === 'queued') return { key: 'catalogue:progress.status.queued', params: {} };
   if (status === 'cancelling') return { key: 'catalogue:progress.status.cancelling', params: {} };
   if (phase === 'finalization') return { key: 'catalogue:progress.phase.finalization', params: {} };
+  if (phase === 'listening') return { key: 'catalogue:progress.phase.listening', params: {} };
   if (phase === 'discovery' && progress.discovered === 0) {
     return { key: 'catalogue:progress.discovery.directories', params: { count: directories.visited } };
   }

@@ -149,10 +149,19 @@ export function useProjectStore() {
   const projectMutationRef = useRef(project);
   // Le choix du mode, pas le rendu de l’accueil, capture les noms proposés.
   const creationNamesPendingRef = useRef(true);
-  const [selectedId, setSelectedId] = useState('root');
-  const [savePath, setSavePath] = useState(null); // chemin du .mbah sauvegardé
+  const [selectedId, setSelectedIdRaw] = useState('root');
+  const [savePath, setSavePathRaw] = useState(null); // chemin du .mbah sauvegardé
   const historyRef = useRef([]);
   const redoRef = useRef([]);
+  const historyGroupRef = useRef(null);
+  const setSelectedId = useCallback((id) => {
+    historyGroupRef.current = null;
+    setSelectedIdRaw(id);
+  }, []);
+  const setSavePath = useCallback((path) => {
+    historyGroupRef.current = null;
+    setSavePathRaw(path);
+  }, []);
   // Compteur de remplacements du travail courant : il change quand le projet est
   // réinitialisé ou remplacé, jamais quand il est simplement muté. C'est ce qui
   // distingue « le résultat est périmé » de « il ne concerne plus ce travail ».
@@ -180,14 +189,19 @@ export function useProjectStore() {
   const readMediaTags = useCallback(() => mediaTagsMutationRef.current, []);
 
   // Toute modification passe par ici pour alimenter l'historique
-  const setProject = useCallback((updater) => {
+  const setProject = useCallback((updater, { historyGroup = null } = {}) => {
     const current = projectMutationRef.current;
     const next = normalizeWorkProject(
       typeof updater === 'function' ? updater(current) : updater,
     );
     // Ces refs sont mutées hors de l'updater React : StrictMode peut rejouer un
     // updater pour en vérifier la pureté, ce qui dupliquerait sinon une étape.
-    historyRef.current = pushWorkHistory(historyRef.current, current);
+    // Les piles contiennent l'état AVANT le geste : les frappes suivantes
+    // gardent ce premier état, avec une nouvelle identité pour readHistoryMark.
+    historyRef.current = historyGroup && historyGroup === historyGroupRef.current
+      ? [...historyRef.current]
+      : pushWorkHistory(historyRef.current, current);
+    historyGroupRef.current = historyGroup;
     redoRef.current = [];
     projectMutationRef.current = next;
     setProjectRaw(next);
@@ -229,6 +243,7 @@ export function useProjectStore() {
   }, [commitDepthMutation]);
 
   const undo = useCallback(() => {
+    historyGroupRef.current = null;
     const step = undoWorkHistory({
       history: historyRef.current,
       redo: redoRef.current,
@@ -242,6 +257,7 @@ export function useProjectStore() {
   }, []);
 
   const redo = useCallback(() => {
+    historyGroupRef.current = null;
     const step = redoWorkHistory({
       history: historyRef.current,
       redo: redoRef.current,
@@ -263,6 +279,7 @@ export function useProjectStore() {
   // projet courant hors historique : les piles doivent suivre, sinon annuler
   // restaurerait des chemins supprimés avec la session. Voir `relocateWorkHistory`.
   const relocateHistory = useCallback((relocate) => {
+    historyGroupRef.current = null;
     const next = relocateWorkHistory({
       history: historyRef.current,
       redo: redoRef.current,
@@ -275,6 +292,7 @@ export function useProjectStore() {
   // ── Projet ──────────────────────────────────────────────────────────────────
 
   const resetProject = useCallback(() => {
+    historyGroupRef.current = null;
     creationNamesPendingRef.current = true;
     workEpochRef.current += 1;
     historyRef.current = [];
@@ -294,6 +312,7 @@ export function useProjectStore() {
   const loadProject = useCallback((data) => {
     const diagnostic = workProjectDepthDiagnostic(data);
     if (!diagnostic.allowed) return rejectMenuDepthMutation(diagnostic);
+    historyGroupRef.current = null;
     workEpochRef.current += 1;
     historyRef.current = [];
     redoRef.current = [];
@@ -354,6 +373,7 @@ export function useProjectStore() {
   const syncProjectWithoutHistory = useCallback((data) => {
     const diagnostic = workProjectDepthDiagnostic(data);
     if (!diagnostic.allowed) return rejectMenuDepthMutation(diagnostic);
+    historyGroupRef.current = null;
     const next = normalizeWorkProject(data);
     pristineRef.current = followSystemChange(pristineRef.current, projectMutationRef.current, next);
     projectMutationRef.current = next;
@@ -486,8 +506,13 @@ export function useProjectStore() {
     return newMenu.id;
   }, [commitDepthMutation]);
 
-  const updateMenu = useCallback((menuId, fields) => {
-    setProject(p => updateEntry(p, menuId, fields));
+  const updateMenu = useCallback((menuId, fields, options = {}) => {
+    // eslint-disable-next-line i18next/no-literal-string -- Clé interne de regroupement de l'historique, jamais affichée.
+    const historyGroup = Object.keys(fields).length === 1 && 'name' in fields ? `name:${menuId}` : null;
+    setProject(p => updateEntry(p, menuId, fields), {
+      historyGroup,
+      ...options,
+    });
   }, [setProject]);
 
   const deleteMenu = useCallback((menuId) => {
@@ -614,8 +639,13 @@ export function useProjectStore() {
     return newZip.id;
   }, [setProject]);
 
-  const updateItem = useCallback((itemId, fields) => {
-    setProject(p => updateEntry(p, itemId, fields));
+  const updateItem = useCallback((itemId, fields, options = {}) => {
+    // eslint-disable-next-line i18next/no-literal-string -- Clé interne de regroupement de l'historique, jamais affichée.
+    const historyGroup = Object.keys(fields).length === 1 && 'name' in fields ? `name:${itemId}` : null;
+    setProject(p => updateEntry(p, itemId, fields), {
+      historyGroup,
+      ...options,
+    });
   }, [setProject]);
 
   const bulkUpdateItems = useCallback((ids, getFields) => {

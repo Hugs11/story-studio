@@ -10,6 +10,7 @@ import { hasConfirmedFreeExportName, hasExplicitExportPackName } from '../store/
 import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { logger } from '../utils/logger';
 import { askImportedUuidRevision } from './importedUuidRevision';
+import { captureProjectMediaJob } from '../store/projectMediaOutput';
 
 // Grappe « générer le pack » extraite d'AppContent : étape métadonnées
 // (PackNameModal), gardes de validation (audit en cours puis erreurs bloquantes),
@@ -26,6 +27,7 @@ export function usePackGeneration({
   pathAudit,
   pathAuditPending,
   workspaceDirRef,
+  mediaStorageRef,
   importedPackPendingMetaRef,
   showErrorDialog,
   showChoiceDialog,
@@ -97,7 +99,20 @@ export function usePackGeneration({
     if (!outputFolder) return;
     saveLastExportDir(outputFolder);
     logger.info(`generate:queued projectType=${projectForGeneration.projectType} name='${projectForGeneration.projectName}' outputFolder='${outputFolder}'`);
+    // La copie sérialisée garde ses chemins d'origine jusqu'à la fin du rendu,
+    // y compris pendant l'attente dans la file.
+    let mediaOutput;
+    try {
+      mediaOutput = await captureProjectMediaJob(mediaStorageRef.current);
+    } catch (error) {
+      showErrorDialog({
+        title: productionRef('production:generation.blocked.title'),
+        message: error,
+      });
+      return;
+    }
     renderQueue.addJob({
+      mediaOutput,
       ...(onGenerated ? { onGenerated } : {}),
       projectName: projectForGeneration.projectName || '',
       savePath: store.savePath ?? null,

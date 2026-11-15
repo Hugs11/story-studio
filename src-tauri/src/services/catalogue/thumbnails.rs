@@ -37,12 +37,35 @@ static ADMITTED: AtomicUsize = AtomicUsize::new(0);
 // One outstanding worker per persisted source prevents a stalled share from
 // consuming all worker slots as more covers enter the viewport.
 static SOURCE_READS: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+pub(super) fn transient_image_read(error: &std::io::Error) -> bool {
+    if error.kind() == std::io::ErrorKind::PermissionDenied {
+        return true;
+    }
+    // Windows reports antivirus/file locks as sharing or lock violations,
+    // which are not necessarily mapped to PermissionDenied by std.
+    #[cfg(windows)]
+    if matches!(error.raw_os_error(), Some(32 | 33)) {
+        return true;
+    }
+    false
+}
+
+fn verified_source_health(
+    probe: std::result::Result<bool, SourceReadFailure>,
+) -> std::result::Result<(), &'static str> {
+    match probe {
+        Ok(true) => Ok(()),
+        Ok(false) | Err(SourceReadFailure::Busy) => Err("busy"),
+        Err(SourceReadFailure::Unreadable) => Err("unreadable"),
+    }
+}
 #[derive(Debug, PartialEq)]
-enum SourceReadFailure {
+pub(super) enum SourceReadFailure {
     Busy,
     Unreadable,
 }
-fn bounded_source_read<T: Send + 'static>(
+pub(super) fn bounded_source_read<T: Send + 'static>(
     key: String,
     timeout: std::time::Duration,
     read: impl FnOnce() -> T + Send + 'static,
@@ -84,7 +107,10 @@ fn bounded_source_read<T: Send + 'static>(
     }
     receive
         .recv_timeout(timeout)
-        .map_err(|_| SourceReadFailure::Unreadable)
+        .map_err(|failure| match failure {
+            std::sync::mpsc::RecvTimeoutError::Timeout => SourceReadFailure::Busy,
+            std::sync::mpsc::RecvTimeoutError::Disconnected => SourceReadFailure::Unreadable,
+        })
 }
 
 /// Held before spawn_blocking, so the runtime's waiting work is also bounded.
@@ -261,8 +287,8 @@ pub(crate) struct CoverKeys {
     pub offline: bool,
     /// Exemplar supplying the image when no correction or official image decides.
     pub supplier: Option<String>,
-    /// A valid official image not acquired yet: only `download_lunii_covers`
-    /// (consented flow) fetches it; its retention changes the signature.
+    /// A valid official image awaiting consented acquisition without a conclusive failure:
+    /// only `download_lunii_covers` fetches it; retention changes the signature.
     pub official_pending: bool,
 }
 
@@ -295,7 +321,25 @@ pub(crate) fn cover_keys(
                 let inputs = serde_json::json!({"official": cover});
                 (inputs.clone(), inputs)
             } else {
-                official_pending = official.is_some();
+                official_pending = official.is_some_and(|v| v["downloadFailed"] != true)
+                    && c.query_row(
+                        "SELECT allowed IS 1 AND coalesce((SELECT failures FROM lunii_image_attempt WHERE fiche_id=?1),0)<3 FROM lunii_permission WHERE id=1",
+                        [id],
+                        |r| r.get::<_, bool>(0),
+                    )?;
+                if official_pending {
+                    let inputs = serde_json::json!({"officialWaiting": official});
+                    return Ok(CoverKeys {
+                        signature: format!("{:x}", Sha256::digest(inputs.to_string().as_bytes())),
+                        content: format!(
+                            "{:x}",
+                            Sha256::digest(format!("cover-content-v1:{inputs}").as_bytes())
+                        ),
+                        offline: false,
+                        supplier: None,
+                        official_pending: true,
+                    });
+                }
                 let mut supplier = None;
                 let mut content = None;
                 // Same ordered fallback as the engine; a candidate already
@@ -485,7 +529,13 @@ impl Store {
                 return Ok(Thumbnail::state("absent"));
             }
             if let Some(sha) = sha.filter(|_| state == "defined") {
-                let bytes = std::fs::read(self.images_root().join(sha)).map_err(error)?;
+                let bytes = match std::fs::read(self.images_root().join(sha)) {
+                    Ok(bytes) => bytes,
+                    Err(reason) if transient_image_read(&reason) => {
+                        return Ok(Thumbnail::state("busy"));
+                    }
+                    Err(reason) => return Err(error(reason)),
+                };
                 let _decoder = DECODER.lock().map_err(error)?;
                 return Ok(match encode(&bytes) {
                     Ok(v) => Thumbnail::ready(&v),
@@ -494,8 +544,8 @@ impl Store {
             }
         }
         if let Some(thumbnail) = self.lunii_thumbnail(card)? {
-            // An official acquisition status must not hide the image
-            // already embedded in the pack while acquisition is pending.
+            // With consent, keep pending official covers neutral. A conclusive
+            // download failure permits the embedded pack fallback.
             if thumbnail.state != "absent" {
                 return Ok(thumbnail);
             }
@@ -642,19 +692,17 @@ impl Store {
                                         .is_ok_and(|m| m.is_dir())
                                 })
                         },
-                    )
-                    .unwrap_or(false);
-                    if healthy {
-                        self.mark_cover_unreadable(&id, content_revision)?;
+                    );
+                    if let Err(state) = verified_source_health(healthy) {
+                        return Ok(Thumbnail::state(state));
                     }
+                    self.mark_cover_unreadable(&id, content_revision)?;
                 }
-                return Ok(Thumbnail::state(
-                    if failure == super::analyze::CoverReadError::TooLarge {
-                        "tooLarge"
-                    } else {
-                        "unreadable"
-                    },
-                ));
+                return Ok(Thumbnail::state(match failure {
+                    super::analyze::CoverReadError::TooLarge => "tooLarge",
+                    super::analyze::CoverReadError::Transient => "busy",
+                    _ => "unreadable",
+                }));
             }
         };
         evict(&root, bytes.len() as u64, DISK_BYTES).map_err(error)?;
@@ -670,6 +718,48 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn retained_image_read_only_retries_temporary_access_errors() {
+        use std::io::{Error, ErrorKind};
+        assert!(transient_image_read(&Error::from(
+            ErrorKind::PermissionDenied
+        )));
+        for kind in [
+            ErrorKind::NotFound,
+            ErrorKind::InvalidData,
+            ErrorKind::Other,
+        ] {
+            assert!(!transient_image_read(&Error::from(kind)));
+        }
+        #[cfg(windows)]
+        for code in [32, 33] {
+            assert!(transient_image_read(&Error::from_raw_os_error(code)));
+        }
+    }
+
+    #[test]
+    fn verification_probe_timeout_or_failed_health_is_busy() {
+        let (release, wait) = std::sync::mpsc::channel::<()>();
+        let probe = bounded_source_read(
+            format!("verification-probe-{}", uuid::Uuid::new_v4()),
+            std::time::Duration::from_millis(10),
+            move || {
+                wait.recv().unwrap();
+                true
+            },
+        );
+        assert_eq!(verified_source_health(probe), Err("busy"));
+        release.send(()).unwrap();
+        assert_eq!(verified_source_health(Ok(false)), Err("busy"));
+        assert_eq!(verified_source_health(Ok(true)), Ok(()));
+        let disconnected = bounded_source_read(
+            format!("panicked-probe-{}", uuid::Uuid::new_v4()),
+            crate::test_support::timeout(),
+            || -> bool { panic!("probe worker failed") },
+        );
+        assert_eq!(verified_source_health(disconnected), Err("unreadable"));
+    }
+
     #[test]
     fn stalled_source_does_not_hold_decoder_or_block_local_read() {
         let (release, wait) = std::sync::mpsc::channel::<()>();
@@ -706,7 +796,7 @@ mod tests {
                 std::time::Duration::from_millis(10),
                 move || wait.recv()
             ),
-            Err(SourceReadFailure::Unreadable)
+            Err(SourceReadFailure::Busy)
         );
         assert_eq!(
             bounded_source_read(key.clone(), std::time::Duration::from_secs(1), || panic!(

@@ -33,7 +33,7 @@ impl Fixture {
     }
     fn open(&self) -> Arc<Store> {
         let store = Arc::new(Store::open(&self.0.join("data"), &self.0.join("cache")).unwrap());
-        store.add_source(&self.root(), 0, false).unwrap();
+        store.add_source(&self.root(), 0).unwrap();
         store
     }
     fn scan(&self, store: &Arc<Store>) {
@@ -127,6 +127,7 @@ fn delta(after: ActivitySnapshot, before: ActivitySnapshot) -> ActivitySnapshot 
     ActivitySnapshot {
         analyses: after.analyses - before.analyses,
         full_scans: after.full_scans - before.full_scans,
+        exclusions: after.exclusions - before.exclusions,
         inventories: after.inventories - before.inventories,
         targeted: after.targeted - before.targeted,
         reconciliations: after.reconciliations - before.reconciliations,
@@ -310,7 +311,7 @@ fn external_write_rename_and_move_are_refreshed_in_place() {
     std::fs::rename(f.root().join("a.zip"), f.root().join("rangement/a.zip")).unwrap();
     assert!(until(|| {
         let states = exemplar_states(&store);
-        states.contains(&("a.zip".into(), "missing".into()))
+        states.iter().filter(|(name, _)| name == "a.zip").count() == 1
             && states.contains(&("a.zip".into(), "available".into()))
     }));
     let with_uuid: Vec<Value> = entries(&store)
@@ -348,6 +349,7 @@ fn injected_transfer(
     let store = f.open();
     f.scan(&store);
     let card = entries(&store)[0]["id"].as_str().unwrap().to_owned();
+    let original_exemplar = entries(&store)[0]["exemplars"][0]["id"].clone();
     personal_data(&store, &card);
     store.set_operation_sink(Arc::new(|_, _| {})).unwrap();
     if clear_file_identity {
@@ -407,19 +409,22 @@ fn injected_transfer(
         })
         .collect();
     states.sort();
-    assert_eq!(
-        states,
-        vec![
-            (
-                crate::support::paths::path_for_frontend(&origin),
-                if copy { "available" } else { "missing" }.into(),
-            ),
-            (
-                crate::support::paths::path_for_frontend(&destination),
-                "available".into(),
-            ),
-        ]
-    );
+    let moved = uuid.is_some() && !copy && !clear_file_identity;
+    let mut expected = vec![(
+        crate::support::paths::path_for_frontend(&destination),
+        "available".into(),
+    )];
+    if !moved {
+        expected.push((
+            crate::support::paths::path_for_frontend(&origin),
+            if copy { "available" } else { "missing" }.into(),
+        ));
+    } else {
+        assert_eq!(current["exemplars"][0]["id"], original_exemplar);
+        assert_eq!(current["values"]["title"], "Mon titre");
+    }
+    expected.sort();
+    assert_eq!(states, expected);
     assert!(favorite(&store, &card));
     store
         .read(|c| {
@@ -472,10 +477,309 @@ fn rename_event(paths: &[&Path]) -> notify_debouncer_full::notify::Event {
 }
 
 #[test]
+fn full_scan_move_preserves_exemplar_and_personal_data_but_copy_and_replacement_do_not() {
+    for mode in [
+        "rename",
+        "subfolder",
+        "otherSource",
+        "copy",
+        "replacement",
+        "noFileId",
+        "otherVolume",
+    ] {
+        let f = Fixture::new();
+        let origin = f.root().join("ancien.mbah");
+        let destination = if mode == "otherSource" {
+            f.0.join("other-source/nouveau.mbah")
+        } else {
+            f.root().join(if mode == "subfolder" {
+                "rangement/nouveau.mbah"
+            } else {
+                "nouveau.mbah"
+            })
+        };
+        std::fs::write(&origin, project(Some(UUID_A), "Original")).unwrap();
+        let store = f.open();
+        f.scan(&store);
+        let before = entries(&store).remove(0);
+        let card = before["id"].as_str().unwrap();
+        let exemplar = &before["exemplars"][0]["id"];
+        personal_data(&store, card);
+        let reference = store
+            .read(|c| {
+                c.query_row(
+                    "SELECT exemplar_id FROM reference_source WHERE fiche_id=?1 LIMIT 1",
+                    [card],
+                    |r| r.get::<_, String>(0),
+                )
+            })
+            .unwrap();
+        std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
+        if mode == "otherSource" {
+            store
+                .add_source(
+                    destination.parent().unwrap(),
+                    store.sources_revision().unwrap(),
+                )
+                .unwrap();
+        }
+        let native_id =
+            super::writes::file_id(&origin).expect("native identity on local test volume");
+        if matches!(mode, "copy" | "replacement") {
+            std::fs::copy(&origin, &destination).unwrap();
+            assert_ne!(
+                super::writes::file_id(&destination).as_ref(),
+                Some(&native_id)
+            );
+            if mode == "replacement" {
+                std::fs::remove_file(&origin).unwrap();
+            }
+        } else {
+            std::fs::rename(&origin, &destination).unwrap();
+            assert_eq!(
+                super::writes::file_id(&destination).as_ref(),
+                Some(&native_id)
+            );
+        }
+        if matches!(mode, "noFileId" | "otherVolume") {
+            // Model an unavailable identity or the same native index on a
+            // different device/volume, without depending on a second test disk.
+            let id = (mode == "otherVolume").then(|| {
+                use notify_debouncer_full::file_id::FileId;
+                let id = notify_debouncer_full::file_id::get_file_id(&destination).unwrap();
+                format!(
+                    "{:?}",
+                    match id {
+                        FileId::Inode {
+                            device_id,
+                            inode_number,
+                        } => FileId::new_inode(device_id ^ 1, inode_number),
+                        FileId::LowRes {
+                            volume_serial_number,
+                            file_index,
+                        } => FileId::new_low_res(volume_serial_number ^ 1, file_index),
+                        FileId::HighRes {
+                            volume_serial_number,
+                            file_id,
+                        } => FileId::new_high_res(volume_serial_number ^ 1, file_id),
+                    }
+                )
+            });
+            store
+                .write(|tx| {
+                    tx.execute("UPDATE exemplar_file_state SET file_id=?1", [id])
+                        .map_err(super::store::error)?;
+                    Ok(())
+                })
+                .unwrap();
+        }
+        // A full inventory returns native separators, unlike injected paths.
+        let destination = destination.canonicalize().unwrap();
+        f.scan(&store);
+        let after = entries(&store).remove(0);
+        assert_eq!(after["id"], before["id"], "{mode}");
+        assert_eq!(after["favorite"], true, "{mode}");
+        assert_eq!(after["values"]["title"], "Mon titre", "{mode}");
+        let exemplars = after["exemplars"].as_array().unwrap();
+        let moved = matches!(mode, "rename" | "subfolder" | "otherSource");
+        assert_eq!(exemplars.len(), if moved { 1 } else { 2 }, "{mode}");
+        let current = exemplars
+            .iter()
+            .find(|e| {
+                e["locator"]["path"] == crate::support::paths::path_for_frontend(&destination)
+            })
+            .unwrap_or_else(|| panic!("destination absent for {mode}: {after}"));
+        assert_eq!(current["state"], "available", "{mode}");
+        assert_eq!(&current["id"] == exemplar, moved, "{mode}");
+        if !moved {
+            let old = exemplars.iter().find(|e| &e["id"] == exemplar).unwrap();
+            assert_eq!(
+                old["state"],
+                if mode == "copy" {
+                    "available"
+                } else {
+                    "missing"
+                },
+                "{mode}"
+            );
+        }
+        store
+            .read(|c| {
+                assert_eq!(
+                    c.query_row(
+                        "SELECT fiche_id FROM tag_member WHERE tag_id='personal-tag'",
+                        [],
+                        |r| r.get::<_, String>(0)
+                    )?,
+                    card
+                );
+                assert_eq!(
+                    c.query_row(
+                        "SELECT exemplar_id FROM reference_source WHERE fiche_id=?1 LIMIT 1",
+                        [card],
+                        |r| r.get::<_, String>(0)
+                    )?,
+                    reference
+                );
+                Ok(())
+            })
+            .unwrap();
+        // The new locator and analysis cache must also work on the next scan.
+        f.scan(&store);
+        assert_eq!(
+            entries(&store)[0]["exemplars"].as_array().unwrap().len(),
+            exemplars.len()
+        );
+    }
+}
+
+#[test]
+fn full_scan_disconnected_exemplar_is_not_reclaimed_even_with_same_file_id() {
+    let f = Fixture::new();
+    let origin = f.root().join("ancien.mbah");
+    std::fs::write(&origin, project(Some(UUID_A), "Original")).unwrap();
+    let store = f.open();
+    f.scan(&store);
+    let before = entries(&store).remove(0);
+    let source = f.root();
+    let disconnected = f.0.join("disconnected");
+    std::fs::rename(&source, &disconnected).unwrap();
+    f.scan(&store);
+    assert_eq!(entries(&store)[0]["exemplars"][0]["state"], "unavailable");
+    // Moving that very file into another source supplies an equal file_id:
+    // the explicit unavailable exclusion still protects the disconnected entry.
+    let other = f.0.join("other-source");
+    std::fs::create_dir(&other).unwrap();
+    store
+        .add_source(&other, store.sources_revision().unwrap())
+        .unwrap();
+    std::fs::rename(disconnected.join("ancien.mbah"), other.join("nouveau.mbah")).unwrap();
+    f.scan(&store);
+    let after = entries(&store).remove(0);
+    assert_eq!(after["id"], before["id"]);
+    let exemplars = after["exemplars"].as_array().unwrap();
+    assert_eq!(exemplars.len(), 2);
+    let old = exemplars
+        .iter()
+        .find(|e| e["id"] == before["exemplars"][0]["id"])
+        .unwrap();
+    assert_eq!(old["state"], "unavailable");
+    assert!(exemplars.iter().any(|e| e["state"] == "available"));
+}
+
+#[test]
 fn injected_move_destination_only_confirms_old_path() {
     injected_transfer(Some(UUID_A), false, false, |_, to| {
         vec![vec![rename_event(&[to])]]
     });
+}
+
+#[test]
+fn full_scan_renamed_archive_preserves_each_member_identity() {
+    let f = Fixture::new();
+    let origin = f.root().join("bundle.zip");
+    let destination = f.root().join("renamed.zip");
+    let mut writer = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+    for name in ["a.zip", "b.zip"] {
+        writer
+            .start_file(name, zip::write::SimpleFileOptions::default())
+            .unwrap();
+        writer.write_all(&zip_bytes(UUID_A, name)).unwrap();
+    }
+    std::fs::write(&origin, writer.finish().unwrap().into_inner()).unwrap();
+    let store = f.open();
+    f.scan(&store);
+    let before = entries(&store).remove(0);
+    assert_eq!(before["exemplars"].as_array().unwrap().len(), 2);
+    std::fs::rename(&origin, &destination).unwrap();
+    f.scan(&store);
+    let after = entries(&store).remove(0);
+    let exemplars = after["exemplars"].as_array().unwrap();
+    assert_eq!(exemplars.len(), 2);
+    for old in before["exemplars"].as_array().unwrap() {
+        let current = exemplars.iter().find(|e| e["id"] == old["id"]).unwrap();
+        assert_eq!(current["locator"]["memberKey"], old["locator"]["memberKey"]);
+        assert_eq!(
+            current["locator"]["path"],
+            crate::support::paths::path_for_frontend(&destination)
+        );
+        assert_eq!(current["state"], "available");
+    }
+    store
+        .read(|c| {
+            let count: i64 = c.query_row(
+                "SELECT count(*) FROM exemplar e JOIN container c ON c.id=e.container_id
+             JOIN cache.observation o ON o.exemplar_id=e.id
+             WHERE json_extract(c.anchor_json,'$.path')=?1 AND o.container_id=e.container_id",
+                [crate::support::paths::path_for_frontend(&destination)],
+                |r| r.get(0),
+            )?;
+            assert_eq!(count, 2);
+            Ok(())
+        })
+        .unwrap();
+}
+
+#[test]
+fn exemplar_already_seen_in_scan_is_not_reclaimed() {
+    let f = Fixture::new();
+    let origin = f.root().join("ancien.mbah");
+    let destination = f.root().join("nouveau.mbah");
+    std::fs::write(&origin, project(Some(UUID_A), "Original")).unwrap();
+    let store = f.open();
+    let source = store.list_sources().unwrap().items[0].id.clone();
+    let publish = |path: &Path| {
+        let (token, modified, size) = super::scan::token(path).unwrap();
+        let item = super::grouping::Scanned {
+            source_id: source.clone(),
+            path: crate::support::paths::path_for_frontend(path),
+            path_key: super::path_identity::key(path),
+            token,
+            modified,
+            size,
+            file_id: super::writes::file_id(path),
+            save_prestate: None,
+            observation: super::analyze::project(path).unwrap(),
+        };
+        store
+            .publish_scan(
+                "one-scan",
+                store.sources_revision().unwrap(),
+                &[item],
+                &[(source.clone(), true)],
+            )
+            .unwrap();
+    };
+    publish(&origin);
+    std::fs::rename(&origin, &destination).unwrap();
+    publish(&destination);
+    let cards = entries(&store);
+    assert_eq!(cards.len(), 1);
+    assert_eq!(cards[0]["exemplars"].as_array().unwrap().len(), 2);
+}
+
+#[test]
+fn replacement_at_same_path_and_uuid_keeps_existing_anchor() {
+    let f = Fixture::new();
+    let path = f.root().join("pack.mbah");
+    let temporary = f.root().join("replacement.tmp");
+    std::fs::write(&path, project(Some(UUID_A), "Original")).unwrap();
+    let store = f.open();
+    f.scan(&store);
+    let before = entries(&store).remove(0);
+    let native_id = super::writes::file_id(&path).unwrap();
+    std::fs::write(&temporary, project(Some(UUID_A), "Remplacé")).unwrap();
+    assert_ne!(
+        super::writes::file_id(&temporary).as_ref(),
+        Some(&native_id)
+    );
+    std::fs::rename(&temporary, &path).unwrap();
+    f.scan(&store);
+    let after = entries(&store).remove(0);
+    assert_eq!(after["id"], before["id"]);
+    assert_eq!(after["exemplars"].as_array().unwrap().len(), 1);
+    assert_eq!(after["exemplars"][0]["id"], before["exemplars"][0]["id"]);
+    assert_eq!(after["values"]["title"], "Remplacé");
 }
 
 #[test]
@@ -515,7 +819,7 @@ fn injected_move_uuid_without_file_identity_confirms_old_path() {
 
 #[test]
 fn injected_move_copy_keeps_both_paths_available() {
-    injected_transfer(Some(UUID_A), true, true, |_, to| {
+    injected_transfer(Some(UUID_A), true, false, |_, to| {
         vec![vec![rename_event(&[to])]]
     });
 }
@@ -546,10 +850,7 @@ fn injected_move_defers_old_path_owned_by_an_active_write() {
     );
     assert_eq!(
         exemplar_states(&store),
-        vec![
-            ("ancien.mbah".into(), "available".into()),
-            ("nouveau.mbah".into(), "available".into()),
-        ]
+        vec![("nouveau.mbah".into(), "available".into())]
     );
     registry.finish(&write, false, Vec::new());
     // Deliver the retained origin through the same pipeline after release.
@@ -565,10 +866,7 @@ fn injected_move_defers_old_path_owned_by_an_active_write() {
     );
     assert_eq!(
         exemplar_states(&store),
-        vec![
-            ("ancien.mbah".into(), "missing".into()),
-            ("nouveau.mbah".into(), "available".into()),
-        ]
+        vec![("nouveau.mbah".into(), "available".into())]
     );
     let work = delta(store.activity.snapshot(), before);
     assert_eq!(work.analyses, 1);
@@ -622,12 +920,13 @@ fn injected_move_ignores_retired_and_pathless_exemplars() {
         let cards = entries(&store);
         assert_eq!(cards.len(), 1);
         assert_eq!(cards[0]["id"], card);
-        for (path, state) in [(&origin, "missing"), (&destination, "available")] {
-            assert!(cards[0]["exemplars"].as_array().unwrap().iter().any(|e| {
-                e["locator"]["path"] == crate::support::paths::path_for_frontend(path)
-                    && e["state"] == state
-            }));
-        }
+        assert!(!cards[0]["exemplars"].as_array().unwrap().iter().any(|e| {
+            e["locator"]["path"] == crate::support::paths::path_for_frontend(&origin)
+        }));
+        assert!(cards[0]["exemplars"].as_array().unwrap().iter().any(|e| {
+            e["locator"]["path"] == crate::support::paths::path_for_frontend(&destination)
+                && e["state"] == "available"
+        }));
         let pathless = cards[0]["exemplars"]
             .as_array()
             .unwrap()
@@ -671,10 +970,7 @@ fn injected_move_lookup_error_publishes_destination_then_reconciles() {
     );
     assert_eq!(
         exemplar_states(&store),
-        vec![
-            ("ancien.mbah".into(), "missing".into()),
-            ("nouveau.mbah".into(), "available".into()),
-        ]
+        vec![("nouveau.mbah".into(), "available".into())]
     );
     assert_eq!(entries(&store).len(), 1);
     assert_eq!(entries(&store)[0]["id"], card);
@@ -685,8 +981,8 @@ fn injected_move_lookup_error_publishes_destination_then_reconciles() {
         "destination was not analysed twice: {work:?}"
     );
     assert_eq!(
-        work.publications, 2,
-        "destination published before fallback: {work:?}"
+        work.publications, 1,
+        "the relocated exemplar leaves no missing origin to publish during fallback: {work:?}"
     );
     assert_eq!(work.inventories, 1, "{work:?}");
     assert_eq!(work.reconciliations, 1, "{work:?}");

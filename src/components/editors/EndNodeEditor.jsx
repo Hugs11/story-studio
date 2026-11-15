@@ -37,6 +37,7 @@ export function EndNodeEditor({
   useTreeTranslation();
   const hasAudio = typeof nightModeAudio === 'string' && nightModeAudio.trim().length > 0;
   const startReturnLabel = packStartReturnLabel(project);
+  const isSimpleProject = project?.projectType === 'simple';
   const presentations = collectEndMessagePresentations(project);
   const globalStories = presentations.filter((item) => item.presentationKind === 'global');
   const localStories = presentations.filter((item) => item.presentationKind === 'local_prompt' || item.presentationKind === 'local_sequence');
@@ -110,6 +111,9 @@ export function EndNodeEditor({
             <div className="editor-setting-control">
               <NavigationTargetSelect
                 value={nightModeHomeReturn ?? ''}
+                includeNextStory={!isSimpleProject}
+                resolvedDefaultValue={isSimpleProject && nightModeHomeReturn === 'next_story' ? 'root' : null}
+                resolvedDefaultLabel={startReturnLabel}
                 onChange={(value) => onUpdateNightModeHomeReturn?.(value)}
                 allMenus={allMenus}
                 allStories={allStories}
@@ -150,6 +154,9 @@ export function EndNodeEditor({
             <div className="editor-setting-control">
               <NavigationTargetSelect
                 value={nightModeReturn ?? ''}
+                includeNextStory={!isSimpleProject}
+                resolvedDefaultValue={isSimpleProject && nightModeReturn === 'next_story' ? 'root' : null}
+                resolvedDefaultLabel={startReturnLabel}
                 onChange={(value) => onUpdateNightModeReturn?.(value)}
                 allMenus={allMenus}
                 allStories={allStories}

@@ -5,7 +5,7 @@ import { copyFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from '../lib/launch.mjs';
 import { createRun } from '../lib/run-context.mjs';
-import { clickButton, closeFunnel, goHome } from '../lib/actions.mjs';
+import { closeFunnel, goHome, returnHome } from '../lib/actions.mjs';
 import { answerNext } from '../lib/dialogs.mjs';
 import { dropFiles } from '../lib/drop.mjs';
 import { smallestArchives } from '../lib/corpus.mjs';
@@ -54,7 +54,7 @@ export async function run() {
     const continuer = page.locator('.funnel-foot .funnel-btn-primary');
 
     events.setStep('audio');
-    await continuer.click(); // étape Packs → Audio
+    await continuer.click(); // Packs -> Audio
     await answerNext(page, 'open', audio);
     await page.getByRole('button', { name: /Choisir un audio/ }).click();
     await page.waitForTimeout(500);
@@ -66,13 +66,10 @@ export async function run() {
     await page.waitForTimeout(500);
 
     events.setStep('metadonnees');
-    await continuer.click(); // étape Image → Métadonnées (PackNameModal embarqué, sans pied de page)
+    await continuer.click(); // étape Image → Métadonnées (actions fixes dans la fiche intégrée)
     // Chunk lazy (React.lazy) chargé à froid par Vite dev à la première ouverture :
     // laisser large avant de conclure que l'étape ne se charge pas.
-    // Sélecteur par texte visible, pas par rôle+nom : ce bouton porte un
-    // `aria-label` (tooltip) qui remplace son nom accessible, différent de son
-    // texte affiché « Appliquer & générer » (cf. `PackNameModal.jsx`).
-    const generateButton = page.locator('button:visible').filter({ hasText: /Appliquer\s*&\s*générer/ }).first();
+    const generateButton = page.locator('.pack-meta-footer').getByRole('button', { name: 'Générer le pack', exact: true });
     const metadataReady = await generateButton.waitFor({ timeout: 60_000 }).then(() => true, () => false);
     await ctx.shot(page, 'metadonnees');
     ctx.check('l’étape Métadonnées (PackNameModal embarqué) se charge', metadataReady);
@@ -83,7 +80,7 @@ export async function run() {
     let done = false;
     if (metadataReady) {
       await answerNext(page, 'open', outDir);
-      await clickButton(page, /Appliquer\s*&\s*générer/);
+      await generateButton.click();
       done = await page.getByText('Pack généré', { exact: true }).first()
         .waitFor({ timeout: 300_000 }).then(() => true, () => false);
       await ctx.shot(page, 'apres-generation');
@@ -97,6 +94,26 @@ export async function run() {
       const readback = await readbackPack(page, zip, ctx.dir('studio'));
       ctx.check('le pack agrégé est relu par l’app et accepté par STUdio', readback.ok, { readback });
     }
+
+    // --- Le même brouillon peut être poursuivi dans l’éditeur par menus. ---
+    events.setStep('editeur');
+    await closeFunnel(page);
+    // Attendre que l'assistant précédent soit vraiment fermé : son titre porte le même texte que la tuile.
+    await page.locator('.funnel-head-title').waitFor({ state: 'detached', timeout: 15_000 });
+    await goHome(page);
+    await page.getByText('Agréger des packs', { exact: true }).click();
+    await dropFiles(page, '[data-funnel-drop]', [packA, packB]);
+    await page.getByText(/2 packs? · /).first().waitFor({ timeout: 60_000 });
+    await continuer.click();
+    await answerNext(page, 'open', audio);
+    await page.getByRole('button', { name: /Choisir un audio/ }).click();
+    await continuer.click();
+    await answerNext(page, 'open', image);
+    await page.getByRole('button', { name: /Choisir une image/ }).click();
+    await page.getByRole('button', { name: 'Poursuivre dans l’éditeur par menus', exact: true }).click();
+    await page.locator('[data-toolbar-id="project-menu"]').waitFor({ timeout: 60_000 });
+    await ctx.shot(page, 'editeur-par-menus');
+    await returnHome(page);
   } catch (error) {
     ctx.check(`parcours interrompu : ${error.message}`, false);
   } finally {

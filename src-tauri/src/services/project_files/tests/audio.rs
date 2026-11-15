@@ -4,6 +4,138 @@ use crate::support::user_message::codes;
 use crate::support::user_message::MessageTransportAssertions as _;
 
 #[test]
+fn editing_duplicate_audio_preserves_other_screen() {
+    check_duplicate_audio_preserves_other_screen(false);
+}
+
+#[test]
+fn committing_duplicate_audio_preserves_other_screen() {
+    check_duplicate_audio_preserves_other_screen(true);
+}
+
+fn check_duplicate_audio_preserves_other_screen(chained: bool) {
+    let ffmpeg = get_ffmpeg_path().expect("FFmpeg required for this regression");
+    let workspace = temp_workspace_with_dirs(if chained {
+        "shared_commit"
+    } else {
+        "shared_apply"
+    });
+    let source = workspace.join("fichiers-importes/source.flac");
+    let mut command = std::process::Command::new(&ffmpeg);
+    crate::support::ffmpeg::apply_no_window(&mut command);
+    let generated = command
+        .args([
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=1",
+            "-c:a",
+            "flac",
+        ])
+        .arg(&source)
+        .output()
+        .expect("run FFmpeg");
+    assert!(
+        generated.status.success(),
+        "{}",
+        String::from_utf8_lossy(&generated.stderr)
+    );
+    let workspace_str = workspace.to_str().unwrap();
+    let params = AudioEditParams {
+        mode: "trim",
+        start_sec: 0.0,
+        end_sec: 0.8,
+        fade_in_sec: 0.0,
+        fade_out_sec: 0.0,
+        cut_fade_sec: 0.0,
+    };
+    let first = apply_audio_edit(AudioEditRequest {
+        input_path: source.to_str().unwrap(),
+        preserve_input: false,
+        save_path: None,
+        workspace_dir: Some(workspace_str),
+        project_destination: None,
+        params,
+    })
+    .expect("first edit");
+    // Duplicating the story keeps the same media path in both fields.
+    let original_screen_path = first.output_path.clone();
+    let mut duplicate_screen_path = first.output_path.clone();
+    let before = fs::read(&original_screen_path).unwrap();
+    let original_backup = first.original_path.as_ref().unwrap();
+    let original_bytes = fs::read(original_backup).unwrap();
+    assert!(
+        !first.path_changed,
+        "unshared managed audio is still edited in place"
+    );
+    let preview_root = workspace.join("previews");
+    let request = AudioEditRequest {
+        input_path: &duplicate_screen_path,
+        preserve_input: true,
+        save_path: None,
+        workspace_dir: Some(workspace_str),
+        project_destination: None,
+        params: AudioEditParams {
+            end_sec: 0.4,
+            ..params
+        },
+    };
+    let second = if chained {
+        let preview = preview_audio_edit(request, &preview_root).expect("preview");
+        commit_audio_preview_in(
+            &duplicate_screen_path,
+            &preview,
+            None,
+            Some(workspace_str),
+            &preview_root,
+            None,
+            true,
+        )
+        .expect("commit copy edit")
+    } else {
+        apply_audio_edit(request).expect("edit copy")
+    };
+    duplicate_screen_path = second.output_path;
+    assert_eq!(
+        original_screen_path, first.output_path,
+        "other field path unchanged"
+    );
+    assert_eq!(
+        fs::read(&original_screen_path).unwrap(),
+        before,
+        "other screen audio bytes must stay unchanged (chained={chained})"
+    );
+    assert_ne!(
+        duplicate_screen_path, original_screen_path,
+        "copy receives its own file"
+    );
+    let restored_copy =
+        restore_audio_original(&duplicate_screen_path, None, Some(workspace_str), false)
+            .expect("restore copy to its source");
+    assert_eq!(restored_copy.output_path, original_screen_path);
+    assert_eq!(fs::read(&original_screen_path).unwrap(), before);
+    assert!(
+        audio_edit_info(&original_screen_path, None, Some(workspace_str))
+            .unwrap()
+            .original_available
+    );
+
+    // Both screens now use the first edit again: restoring one must preserve
+    // the other screen and its sidecar, including its ability to restore later.
+    let restored = restore_audio_original(&original_screen_path, None, Some(workspace_str), true)
+        .expect("restore shared audio into separate file");
+    assert!(restored.path_changed);
+    assert_eq!(fs::read(&restored.output_path).unwrap(), original_bytes);
+    assert_eq!(fs::read(&original_screen_path).unwrap(), before);
+    restore_audio_original(&original_screen_path, None, Some(workspace_str), false)
+        .expect("restore remaining unshared screen");
+    assert_eq!(fs::read(&original_screen_path).unwrap(), original_bytes);
+    assert_eq!(fs::read(&restored.output_path).unwrap(), original_bytes);
+    fs::remove_dir_all(workspace).unwrap();
+}
+
+#[test]
 fn audio_assembly_filename_forces_flac_and_rejects_paths() {
     // L'assemblage produit un fichier de travail FLAC (sans perte) : l'encodage
     // MP3 n'a plus lieu qu'à la génération du pack.
@@ -348,6 +480,7 @@ fn restore_audio_original_supports_legacy_hidden_backup() {
         edited.to_str().unwrap(),
         None,
         Some(workspace.to_str().unwrap()),
+        false,
     )
     .expect("restore original");
 
@@ -390,6 +523,7 @@ fn restore_audio_original_switches_back_to_managed_original_when_path_changed() 
         edited.to_str().unwrap(),
         None,
         Some(workspace.to_str().unwrap()),
+        false,
     )
     .expect("restore original");
 
@@ -443,6 +577,7 @@ fn restore_audio_original_does_not_delete_unexpected_external_original() {
         edited.to_str().unwrap(),
         None,
         Some(workspace.to_str().unwrap()),
+        false,
     )
     .expect("restore original");
 
@@ -566,6 +701,7 @@ fn commit_audio_preview_removes_managed_preview_after_success() {
         Some(workspace.to_str().unwrap()),
         &root,
         None,
+        false,
     )
     .expect("commit preview");
 

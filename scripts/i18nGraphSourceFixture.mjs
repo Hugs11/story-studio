@@ -1,36 +1,5 @@
 // Surface FR rendue depuis git show 92de5a35fa8417a392a6ca719d449aafefb7e801, indépendamment des nouveaux catalogues.
 export const originalGraphSurfaces = {
-  "inspectorEmpty": {
-    "text": "Aucun nœud sélectionné Choisis un nœud dans la liste pour consulter tous ses détails.",
-    "attributes": [
-      [
-        "aria-label",
-        "Inspecteur"
-      ]
-    ]
-  },
-  "inspectorStage": {
-    "text": "Écran Entrée _AUTHOR_0_ entry Identité Identifiant entry Nom _AUTHOR_0_ Entrée oui Médias 1 Audio commun.mp3 Image absent audio · usage commun.mp3 — utilisé par 2 écrans Contrôles wheel absent ok absent home absent pause absent autoplay absent Transitions OK choix — choix 0 HOME absent Disposition Position 0, 0 Liens 1 0 entrant 1 sortant Sortant /actionNodes/@id=choix#0 OK",
-    "attributes": [
-      [
-        "aria-label",
-        "Inspecteur"
-      ]
-    ]
-  },
-  "inspectorList": {
-    "text": "Liste de choix Liste sans nom 1 (sans nom) choix Identité Identifiant choix Nom absent Options 2 cible cible Disposition Position 0, 96 Liens 3 1 entrant 2 sortants Sortant /stageNodes/@uuid=cible#0 choix 0 Sortant /stageNodes/@uuid=cible#0 choix 1 Entrant /stageNodes/@uuid=entry#0 stage-ok",
-    "attributes": [
-      [
-        "aria-label",
-        "Inspecteur"
-      ],
-      [
-        "title",
-        "Repli d&#x27;affichage, pas un nom d&#x27;auteur"
-      ]
-    ]
-  },
   "controls": {
     "text": "+ 100% − ⌗ ‹ › 2 3 4 2 3 4 Structure Retour Retour Lunii Aléatoire Vue d’ensemble",
     "attributes": [
@@ -323,16 +292,7 @@ export const originalGraphSurfaces = {
     ]
   }
 };
-
-// Littéraux et templates extraits exclusivement des fichiers de la base ci-dessus.
 export const originalGraphLiteralFixtures = [
-  { "key": "canvas.error.fallbackCode", "source": "src/components/AdvancedGraphCanvas/AdvancedGraphCanvas.jsx", "line": 65, "expectedFrench": "ERREUR" },
-  {
-    "key": "canvas.unableToRead.label",
-    "source": "src/components/AdvancedGraphCanvas/AdvancedGraphCanvas.jsx",
-    "line": 62,
-    "expectedFrench": "Lecture impossible"
-  },
   {
     "key": "canvas.savedCameraPositionCannotBeUsedViewFittedAgain.label",
     "source": "src/components/AdvancedGraphCanvas/GraphCanvasStage.jsx",
@@ -350,192 +310,6 @@ export const originalGraphLiteralFixtures = [
     "source": "src/components/AdvancedGraphCanvas/GraphCanvasStage.jsx",
     "line": 673,
     "expectedFrench": "Lecture du graphe…"
-  },
-  {
-    "key": "inspector.absent.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 6,
-    "expectedFrench": "absent"
-  },
-  {
-    "key": "inspector.null.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 6,
-    "expectedFrench": "null"
-  },
-  {
-    "key": "inspector.valeur.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 6,
-    "expectedFrench": "valeur"
-  },
-  {
-    "key": "inspector.choiceDrawnAtRandomEachTimeTheListOpens.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 49,
-    "expectedFrench": " — choix tiré au sort à chaque ouverture"
-  },
-  {
-    "key": "inspector.sortant.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 60,
-    "expectedFrench": "Sortant"
-  },
-  {
-    "key": "inspector.choix.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 62,
-    "expectedFrench": "choix {{ordinal}}"
-  },
-  {
-    "key": "inspector.entrant.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 70,
-    "expectedFrench": "Entrant"
-  },
-  {
-    "key": "inspector.liens.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 77,
-    "expectedFrench": "Liens"
-  },
-  {
-    "key": "inspector.detachedNodeNoIncomingOrOutgoingLinks.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 83,
-    "expectedFrench": "Nœud détaché : aucun lien entrant ni sortant."
-  },
-  {
-    "key": "inspector.inspecteur.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 108,
-    "expectedFrench": "Inspecteur"
-  },
-  {
-    "key": "inspector.noNodeSelected.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 110,
-    "expectedFrench": "Aucun nœud sélectionné"
-  },
-  {
-    "key": "inspector.selectANodeInTheListToViewAll.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 111,
-    "expectedFrench": "Choisis un nœud dans la liste pour consulter tous ses détails."
-  },
-  {
-    "key": "inspector.ecran.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 125,
-    "expectedFrench": "Écran"
-  },
-  {
-    "key": "inspector.entree.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 126,
-    "expectedFrench": "Entrée"
-  },
-  {
-    "key": "inspector.displayFallbackNotAnAuthoredName.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 131,
-    "expectedFrench": "Repli d'affichage, pas un nom d'auteur"
-  },
-  {
-    "key": "inspector.identite.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 139,
-    "expectedFrench": "Identité"
-  },
-  {
-    "key": "inspector.identifiant.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 140,
-    "expectedFrench": "Identifiant"
-  },
-  {
-    "key": "inspector.nom.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 144,
-    "expectedFrench": "Nom"
-  },
-  {
-    "key": "inspector.oui.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 147,
-    "expectedFrench": "oui"
-  },
-  {
-    "key": "inspector.non.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 147,
-    "expectedFrench": "non"
-  },
-  {
-    "key": "inspector.audio.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 155,
-    "expectedFrench": "Audio"
-  },
-  {
-    "key": "inspector.image.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 158,
-    "expectedFrench": "Image"
-  },
-  {
-    "key": "inspector.controles.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 169,
-    "expectedFrench": "Contrôles"
-  },
-  {
-    "key": "inspector.active.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 174,
-    "expectedFrench": "activé"
-  },
-  {
-    "key": "inspector.desactive.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 174,
-    "expectedFrench": "désactivé"
-  },
-  {
-    "key": "inspector.transitions.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 180,
-    "expectedFrench": "Transitions"
-  },
-  {
-    "key": "inspector.home.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 62,
-    "expectedFrench": "HOME"
-  },
-  {
-    "key": "inspector.options.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 188,
-    "expectedFrench": "Options"
-  },
-  {
-    "key": "inspector.cibleNulle.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 193,
-    "expectedFrench": "cible nulle"
-  },
-  {
-    "key": "inspector.disposition.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 210,
-    "expectedFrench": "Disposition"
-  },
-  {
-    "key": "inspector.position.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 212,
-    "expectedFrench": "Position"
   },
   {
     "key": "overlay.entree.label",
@@ -616,22 +390,10 @@ export const originalGraphLiteralFixtures = [
     "expectedFrench": " (sans nom)"
   },
   {
-    "key": "search.ecran.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 125,
-    "expectedFrench": "Écran"
-  },
-  {
     "key": "search.entryStageThePackStartsHere.label",
     "source": "src/components/AdvancedGraphCanvas/GraphSearchPanel.jsx",
     "line": 399,
     "expectedFrench": "Écran d’entrée : le pack commence ici"
-  },
-  {
-    "key": "search.entree.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 126,
-    "expectedFrench": "Entrée"
   },
   {
     "key": "surface.structure.label",
@@ -844,12 +606,6 @@ export const originalGraphLiteralFixtures = [
     "expectedFrench": "Vue complète"
   },
   {
-    "key": "capture.entree.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphNodeOverlays.jsx",
-    "line": 22,
-    "expectedFrench": "ENTRÉE"
-  },
-  {
     "key": "dialog.appliquer.label",
     "source": "src/components/AdvancedWorkspace/AdvancedDialog.jsx",
     "line": 26,
@@ -866,12 +622,6 @@ export const originalGraphLiteralFixtures = [
     "source": "src/components/AdvancedWorkspace/AdvancedWorkspace.jsx",
     "line": 484,
     "expectedFrench": "Le projet de ce média n’est plus ouvert."
-  },
-  {
-    "key": "workspace.unableToRead.label",
-    "source": "src/components/AdvancedGraphCanvas/AdvancedGraphCanvas.jsx",
-    "line": 62,
-    "expectedFrench": "Lecture impossible"
   },
   {
     "key": "workspace.resizeTheNodeList.label",
@@ -974,12 +724,6 @@ export const originalGraphLiteralFixtures = [
     "source": "src/components/AdvancedWorkspace/CreateConstructionDialog.jsx",
     "line": 64,
     "expectedFrench": "Construction"
-  },
-  {
-    "key": "construction.nom.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 144,
-    "expectedFrench": "Nom"
   },
   {
     "key": "construction.aQuestionStageBeforeTheAnswers.label",
@@ -1234,12 +978,6 @@ export const originalGraphLiteralFixtures = [
     "expectedFrench": "retour par défaut de la Lunii, hors du pack"
   },
   {
-    "key": "edge.choix.label",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 62,
-    "expectedFrench": "choix {{ordinal}}"
-  },
-  {
     "key": "edge.choix.labelVariant",
     "source": "src/store/advancedGraphView/graphPresentation.js",
     "line": 157,
@@ -1262,12 +1000,6 @@ export const originalGraphLiteralFixtures = [
     "source": "src/hooks/useAdvancedProjectEntry.js",
     "line": 71,
     "expectedFrench": "Nouveau pack"
-  },
-  {
-    "key": "inspector.node.actionLabel",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 125,
-    "expectedFrench": "Liste de choix"
   },
   {
     "key": "search.scope.actions",
@@ -1298,12 +1030,6 @@ export const originalGraphLiteralFixtures = [
     "source": "src/components/AdvancedGraphCanvas/GraphSurfaceControls.jsx",
     "line": 397,
     "expectedFrench": "Afficher la vue d’ensemble"
-  },
-  {
-    "key": "capture.engine.unreadable",
-    "source": "src/components/AdvancedGraphCanvas/graphSurfaceCapture.js",
-    "line": 104,
-    "expectedFrench": "Rendu du moteur illisible"
   },
   {
     "key": "construction.name.question",
@@ -1352,12 +1078,6 @@ export const originalGraphLiteralFixtures = [
     "source": "src/store/advancedAuthoring/constructions.js",
     "line": 39,
     "expectedFrench": "Nomme chaque nouveau passage ou proposition."
-  },
-  {
-    "key": "inspector.media.usageLabel",
-    "source": "src/components/AdvancedGraphCanvas/GraphInspector.jsx",
-    "line": 162,
-    "expectedFrench": "{{field}} · usage"
   },
   {
     "key": "construction.destination.title",

@@ -1888,91 +1888,223 @@
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.queue.title": {
-    "context": "Notes de version 0.9.11 > titre court : les opérations Lunii s’enchaînent dans une file d’attente.",
+  "releaseNotes.current.recipe.title": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Packs rouverts à l’identique » : titre court en gras.",
     "en": {
-      "sourceHash": "80107fb64d84",
+      "sourceHash": "1906b7bbd970",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "80107fb64d84",
+      "sourceHash": "1906b7bbd970",
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.queue.detail": {
-    "context": "Notes de version 0.9.11 > détail de la file d’attente Lunii (envois, rapatriements, retraits traités un par un, visibles dans la liste).",
+  "releaseNotes.current.recipe.detail": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Packs rouverts à l’identique » : détail des corrections, après le tiret.",
     "en": {
-      "sourceHash": "7e79925f5090",
+      "sourceHash": "b9903bb9f1ba",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "7e79925f5090",
+      "sourceHash": "b9903bb9f1ba",
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.sound.title": {
-    "context": "Notes de version 0.9.11 > titre court : le niveau d’un son est vérifié dès son ajout.",
+  "releaseNotes.current.imports.title": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Imports depuis l’Accueil » : titre court en gras.",
     "en": {
-      "sourceHash": "7d2c80a5843a",
+      "sourceHash": "4406ae7a527b",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "7d2c80a5843a",
+      "sourceHash": "4406ae7a527b",
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.sound.detail": {
-    "context": "Notes de version 0.9.11 > détail du repère ambre posé sur un son au niveau problématique.",
+  "releaseNotes.current.imports.detail": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Imports depuis l’Accueil » : détail des corrections, après le tiret.",
     "en": {
-      "sourceHash": "be9a671559ab",
+      "sourceHash": "ae3656db6b5c",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "be9a671559ab",
+      "sourceHash": "ae3656db6b5c",
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.updates.title": {
-    "context": "Notes de version 0.9.11 > titre court : avis facultatif de nouvelle version publiée.",
+  "releaseNotes.current.assembly.title": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Assembler des packs » : titre court en gras.",
     "en": {
-      "sourceHash": "e9550d7586da",
+      "sourceHash": "8b79bea97bf8",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "e9550d7586da",
+      "sourceHash": "8b79bea97bf8",
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.updates.detail": {
-    "context": "Notes de version 0.9.11 > détail de l’avis de nouvelle version (avec accord, aucune installation automatique).",
+  "releaseNotes.current.assembly.detail": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Assembler des packs » : détail des corrections, après le tiret.",
     "en": {
-      "sourceHash": "e003e55af25f",
+      "sourceHash": "8d5e23e9e717",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "e003e55af25f",
+      "sourceHash": "8d5e23e9e717",
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.episodes.title": {
-    "context": "Notes de version 0.9.11 > titre court : nouveaux épisodes des sources suivies (podcasts, YouTube).",
+  "releaseNotes.current.catalogue.title": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Catalogue » : titre court en gras.",
     "en": {
-      "sourceHash": "79f01a0fba7e",
+      "sourceHash": "103451395067",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "79f01a0fba7e",
+      "sourceHash": "103451395067",
       "status": "ai-reviewed"
     }
   },
-  "releaseNotes.current.episodes.detail": {
-    "context": "Notes de version 0.9.11 > détail : les nouveaux épisodes sont signalés sur tous les écrans.",
+  "releaseNotes.current.catalogue.detail": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Catalogue » : détail des corrections, après le tiret.",
     "en": {
-      "sourceHash": "5ebd2e7d8f4b",
+      "sourceHash": "8784de1a75f3",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "5ebd2e7d8f4b",
+      "sourceHash": "8784de1a75f3",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.checker.title": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Vérificateur de pack » : titre court en gras.",
+    "en": {
+      "sourceHash": "6a3c62a73e72",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "6a3c62a73e72",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.checker.detail": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Vérificateur de pack » : détail des corrections, après le tiret.",
+    "en": {
+      "sourceHash": "385cb20feaff",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "385cb20feaff",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.endings.title": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Messages de fin et destinations » : titre court en gras.",
+    "en": {
+      "sourceHash": "e10edf714891",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "e10edf714891",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.endings.detail": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Messages de fin et destinations » : détail des corrections, après le tiret.",
+    "en": {
+      "sourceHash": "93a9a6a92057",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "93a9a6a92057",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.lunii.title": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Lunii » : titre court en gras.",
+    "en": {
+      "sourceHash": "ba7f3bfe4c25",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "ba7f3bfe4c25",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.lunii.detail": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Lunii » : détail des corrections, après le tiret.",
+    "en": {
+      "sourceHash": "01c70b3f1f32",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "01c70b3f1f32",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.media.title": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Sons et médias » : titre court en gras.",
+    "en": {
+      "sourceHash": "12a615adb98d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "12a615adb98d",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.media.detail": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Sons et médias » : détail des corrections, après le tiret.",
+    "en": {
+      "sourceHash": "92651c10adfe",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "92651c10adfe",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.editors.title": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Éditeurs » : titre court en gras.",
+    "en": {
+      "sourceHash": "d12d70ebdfe9",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "d12d70ebdfe9",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.editors.detail": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Éditeurs » : détail des corrections, après le tiret.",
+    "en": {
+      "sourceHash": "09c6a9e7f1ef",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "09c6a9e7f1ef",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.recovery.title": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Reprise après plantage » : titre court en gras.",
+    "en": {
+      "sourceHash": "c4ff9abc872c",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "c4ff9abc872c",
+      "status": "ai-reviewed"
+    }
+  },
+  "releaseNotes.current.recovery.detail": {
+    "context": "Notes de version 0.9.12 > ligne FIX « Reprise après plantage » : détail des corrections, après le tiret.",
+    "en": {
+      "sourceHash": "a72bf55d3b52",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "a72bf55d3b52",
       "status": "ai-reviewed"
     }
   },
@@ -1988,13 +2120,13 @@
     }
   },
   "releaseNotes.current.fixes.label": {
-    "context": "Release notes: single summary line for all bug fixes, next to the FIX badge.",
+    "context": "Notes de version : dernière ligne FIX, renvoi aux autres corrections (sans détail).",
     "en": {
-      "sourceHash": "faa67296bf39",
+      "sourceHash": "d8fbe6601f70",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "faa67296bf39",
+      "sourceHash": "d8fbe6601f70",
       "status": "ai-reviewed"
     }
   },
@@ -2029,6 +2161,28 @@
     },
     "it": {
       "sourceHash": "f14eebdc9444",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.playback.stale": {
+    "context": "Avis discret sous le simulateur flottant : le projet courant diffère de l’instantané écouté.",
+    "en": {
+      "sourceHash": "75819561e7eb",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "75819561e7eb",
+      "status": "ai-reviewed"
+    }
+  },
+  "simulator.playback.restart": {
+    "context": "Action de l’avis : relancer l’écoute depuis la racine du projet courant.",
+    "en": {
+      "sourceHash": "2c27f95809aa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "2c27f95809aa",
       "status": "ai-reviewed"
     }
   }

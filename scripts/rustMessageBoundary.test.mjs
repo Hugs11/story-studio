@@ -117,7 +117,7 @@ test('la garde détecte chaque forme de producteur libre et accepte les envelopp
   assert.deepEqual(freeTextErrorProducers('OsString::from("--model")'), []);
 });
 
-test('P2/P3 : les retours applicatifs ne réintroduisent pas de templates libres', async () => {
+test('Messages Rust : les retours applicatifs ne réintroduisent pas de templates libres', async () => {
   const areas = ['services/project_files/', 'services/pack_reader/', 'services/community_pack_checker/', 'services/piper/', 'services/xtts/', 'services/comfyui/', 'services/youtube/', 'support/'];
   const files = (await Promise.all(areas.map((area) => rustFiles(new URL(`../src-tauri/src/${area}`, import.meta.url))))).flat();
   files.push(new URL('../src-tauri/src/services/podcast.rs', import.meta.url));
@@ -135,7 +135,7 @@ test('P2/P3 : les retours applicatifs ne réintroduisent pas de templates libres
   }
 });
 
-test('P2/P3 : les builders statiques fournissent tous les paramètres du registre', async () => {
+test('Messages Rust : les builders statiques fournissent tous les paramètres du registre', async () => {
   const contracts = new Map(registry.map(({ code, params }) => [code, params]));
   const areas = ['services/project_files/', 'services/pack_reader/', 'services/community_pack_checker/', 'services/piper/', 'services/xtts/', 'services/comfyui/', 'services/youtube/', 'support/'];
   const files = (await Promise.all(areas.map((area) => rustFiles(new URL(`../src-tauri/src/${area}`, import.meta.url))))).flat();

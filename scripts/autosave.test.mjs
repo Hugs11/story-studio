@@ -394,8 +394,8 @@ test('selectStaleAutosaveBackups: N+1 backups → exactly one (oldest) is remove
 
 test('selectStaleAutosaveBackups returns nothing when keep ≥ number of backups', () => {
   const entries = [
-    { isFile: true, name: 'projet.2026-01-01.mbah' },
-    { isFile: true, name: 'projet.2026-01-02.mbah' },
+    { isFile: true, name: 'projet.2026-01-01T10-00-00-000Z.mbah' },
+    { isFile: true, name: 'projet.2026-01-02T10-00-00-000Z.mbah' },
   ];
   assert.deepEqual(selectStaleAutosaveBackups(entries, 'projet', 5), []);
   assert.deepEqual(selectStaleAutosaveBackups(entries, 'projet', 2), []);
@@ -403,22 +403,22 @@ test('selectStaleAutosaveBackups returns nothing when keep ≥ number of backups
 
 test('selectStaleAutosaveBackups ignores directories and unrelated files', () => {
   const entries = [
-    { isFile: false, name: 'projet.2026-01-01.mbah' }, // dossier homonyme
+    { isFile: false, name: 'projet.2026-01-01T10-00-00-000Z.mbah' }, // dossier homonyme
     { isFile: true, name: 'autre.2026-01-01.mbah' },   // base différente
     { isFile: true, name: 'projet.2026-01-02.txt' },   // mauvaise extension
-    { isFile: true, name: 'projet.2026-01-03.mbah' },
-    { isFile: true, name: 'projet.2026-01-04.mbah' },
+    { isFile: true, name: 'projet.2026-01-03T10-00-00-000Z.mbah' },
+    { isFile: true, name: 'projet.2026-01-04T10-00-00-000Z.mbah' },
   ];
   assert.deepEqual(
     selectStaleAutosaveBackups(entries, 'projet', 1),
-    ['projet.2026-01-03.mbah'],
+    ['projet.2026-01-03T10-00-00-000Z.mbah'],
   );
 });
 
 test('selectStaleAutosaveBackups treats keep ≤ 0 as “purge everything matching”', () => {
   const entries = [
-    { isFile: true, name: 'projet.2026-01-01.mbah' },
-    { isFile: true, name: 'projet.2026-01-02.mbah' },
+    { isFile: true, name: 'projet.2026-01-01T10-00-00-000Z.mbah' },
+    { isFile: true, name: 'projet.2026-01-02T10-00-00-000Z.mbah' },
   ];
   assert.equal(selectStaleAutosaveBackups(entries, 'projet', 0).length, 2);
   assert.equal(selectStaleAutosaveBackups(entries, 'projet', -1).length, 2);

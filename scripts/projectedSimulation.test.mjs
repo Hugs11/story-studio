@@ -7,6 +7,32 @@ const { normalizeProjectData, projectToRustExport } = await import('../src/store
 
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 
+test('l’instantané devient périmé après édition et Relancer lit le projet courant', async (t) => {
+  let project = projectFixture('pack');
+  let launch = { nodeId: 'root' };
+  const received = [];
+  const projectStory = async (dto) => { received.push(dto); return projectionFixture(dto); };
+  const hook = runner(() => useProjectedSimulation({ project, launch, projectStory }));
+  t.after(() => hook.unmount());
+  hook.render(); hook.flush(); await settle();
+  const initial = hook.render();
+  assert.equal(Boolean(initial.stale), false, 'pas d’avis au lancement');
+
+  project = { ...project, globalOptions: { ...project.globalOptions, autoNext: true } };
+  assert.equal(hook.render().stale, true, 'avis dès la modification');
+  hook.flush(); await settle();
+  assert.equal(hook.render().graph, initial.graph, 'l’écoute reste figée');
+  assert.equal(received.length, 1, 'pas de reprojection automatique');
+
+  launch = { nodeId: 'root' };
+  hook.render(); hook.flush(); await settle();
+  const restarted = hook.render();
+  assert.equal(restarted.stale, false, 'Relancer retire l’avis');
+  assert.notEqual(restarted.graph, initial.graph);
+  assert.equal(received.length, 2);
+  assert.equal(received[1].globalOptions.autoNext, true);
+});
+
 function projectFixture(projectType, title = 'Le voyage') {
   return normalizeProjectData({
     projectType,

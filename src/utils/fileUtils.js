@@ -16,6 +16,11 @@ export function stripWindowsLongPathPrefix(path) {
   return value.replace(/^\\\\\?\\/i, '');
 }
 
+// Chemins natifs absolus Windows (lecteur/UNC) et POSIX.
+export function isAbsoluteFilePath(path) {
+  return typeof path === 'string' && (path.startsWith('/') || WINDOWS_DRIVE_PATH_PATTERN.test(path) || WINDOWS_UNC_PATH_PATTERN.test(path));
+}
+
 export function pathKey(path) {
   const value = stripWindowsLongPathPrefix(path).trim();
   if (!value) return '';

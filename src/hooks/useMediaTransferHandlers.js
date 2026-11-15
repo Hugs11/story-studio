@@ -10,7 +10,7 @@ import {
   isAlreadyManagedFile,
   transferProjectFilesToProject,
 } from '../store/projectIO';
-import { findEntryById } from '../store/projectModel';
+import { clearMediaField, findEntryById } from '../store/projectModel';
 import { pathKey } from '../utils/fileUtils';
 import { FICHIERS_IMPORTES } from '../store/workspaceDirs';
 import { keepFolderPackInProject } from '../utils/packFolder';
@@ -74,7 +74,7 @@ export function useMediaTransferHandlers({
       logger.error('media-transfer:copy-generated-to-project-error', e);
       setSaveToast?.('error');
       setTimeout(() => setSaveToast?.(null), 3000);
-      return filePath;
+      throw e;
     }
   }, [mediaStorageRef, sessionModeRef, savePathRef, setSaveToast, setWorkspaceDirState, store, workspaceDir, workspaceDirRef]);
 
@@ -106,7 +106,22 @@ export function useMediaTransferHandlers({
     } finally { mediaOutput.release(); }
   }, [copyGeneratedMediaToProject, sessionModeRef, store, workspaceDirRef]);
 
-  const dropOnNode = useCallback(async ({ nodeId, nodeType, path, paths, kind, clipboardMode }) => {
+  const notifyCutPaste = useCallback(({ path, source, target } = {}) => {
+    if (!path || !source) return;
+    if (target && source.kind === target.kind && source.entryId === target.entryId
+      && source.field === target.field && source.stepId === target.stepId
+      && source.stageId === target.stageId && source.workId === target.workId
+      && source.projectEpoch === target.projectEpoch) return;
+    // Le graphe avancé applique son geste au document courant.
+    if (source.clear) source.clear();
+    else {
+      const project = store.readProject?.() ?? store.project;
+      const next = clearMediaField(project, source, path);
+      if (next !== project) store.setProject(next);
+    }
+  }, [store]);
+
+  const dropOnNode = useCallback(async ({ nodeId, nodeType, path, paths, kind, clipboardMode, source }) => {
     if (kind !== 'audio' && kind !== 'image') return;
     const sourcePaths = (Array.isArray(paths) && paths.length > 0 ? paths : [path]).filter(Boolean);
     if (sourcePaths.length === 0) return;
@@ -126,11 +141,7 @@ export function useMediaTransferHandlers({
         finalPaths.push(await maybeCopyToProject(sourcePath, { mediaStorage, mediaOutput }));
       }
       if (epoch != null && store.workEpochRef.current !== epoch) return;
-      if (clipboardMode === 'cut') {
-        for (const sourcePath of sourcePaths) {
-          store.removeMediaReferences(sourcePath);
-        }
-      }
+      const beforePaste = store.readProject?.() ?? store.project;
       if (kind === 'image') {
         const finalPath = finalPaths[0];
         if (nodeType === 'root') {
@@ -139,6 +150,12 @@ export function useMediaTransferHandlers({
           store.updateMenu(nodeId, { image: finalPath });
         } else if (nodeType === 'story') {
           store.updateItem(nodeId, { itemImage: finalPath });
+        }
+        if (clipboardMode === 'cut' && (store.readProject?.() ?? store.project) !== beforePaste) {
+          notifyCutPaste({ path, source, target: {
+            kind: nodeType, entryId: nodeType === 'root' ? undefined : nodeId,
+            field: nodeType === 'root' ? 'rootImage' : nodeType === 'menu' ? 'image' : 'itemImage',
+          } });
         }
         return;
       }
@@ -160,24 +177,22 @@ export function useMediaTransferHandlers({
           addPathsToMediaLibrary?.([previousAudio]);
         }
       }
+      if (clipboardMode === 'cut' && (store.readProject?.() ?? store.project) !== beforePaste) {
+        notifyCutPaste({ path, source, target: nodeType === 'story' ? { kind: 'story', entryId: nodeId, field: 'audio' } : null });
+      }
     } finally { mediaOutput?.release(); }
-  }, [addPathsToMediaLibrary, maybeCopyToProject, mediaStorageRef, sessionModeRef, store, workspaceDirRef]);
+  }, [addPathsToMediaLibrary, maybeCopyToProject, mediaStorageRef, notifyCutPaste, sessionModeRef, store, workspaceDirRef]);
 
-  const notifyCutPaste = useCallback(({ path, kind } = {}) => {
-    if (!path) return;
-    logger.info('media-transfer:cut-paste', { path, kind });
-    store.removeMediaReferences(path);
-  }, [store]);
-
-  const extractAudioEmbeddedImage = useCallback(async (audioPath) => {
+  const extractAudioEmbeddedImage = useCallback(async (audioPath, options = {}) => {
     if (!audioPath) return null;
     try {
-      return await invoke('extract_audio_embedded_image', { audioPath });
+      const image = await invoke('extract_audio_embedded_image', { audioPath });
+      return image ? await copyGeneratedMediaToProject(image, options) : null;
     } catch (e) {
       logger.warn('media-transfer:extract-embedded-image-error', audioPath, e);
       return null;
     }
-  }, []);
+  }, [copyGeneratedMediaToProject]);
 
   const maybeOfferTransferIntoProject = useCallback(async (project, savePath, options = {}) => {
     const {

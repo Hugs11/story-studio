@@ -23,7 +23,7 @@ const { renderJobReport } = await import('../src/store/production/productionRepo
 const { presentUserMessage } = await import('../src/i18n/userMessage.js');
 
 // L'expression que la carte exécute au clic sur « Copier logs », lue dans le
-// composant lui-même (même procédé que rustP1Consumers) : aucune règle recopiée.
+// composant lui-même (même procédé que rustCoreConsumers) : aucune règle recopiée.
 const panelSource = await readFile(new URL('../src/components/RenderQueuePanel/RenderQueuePanel.jsx', import.meta.url), 'utf8');
 const copyStart = panelSource.indexOf('const allText = ') + 'const allText = '.length;
 const copyExpression = panelSource.slice(copyStart, panelSource.indexOf(';', copyStart));

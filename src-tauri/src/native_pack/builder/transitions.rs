@@ -1,3 +1,4 @@
+use super::super::canonical::has_combined_night_story_shape;
 use super::super::{CanonicalStory, ControlSettings, Position, Presence, Transition};
 use crate::domain::project::EntryControlSettings;
 
@@ -41,12 +42,7 @@ pub(crate) fn should_emit_combined_story_stage(
         && story.item_image.is_none()
         && story.title_control_settings.is_none();
 
-    imported_direct_stage
-        || (has_night_mode
-            && story.title_control_settings.is_none()
-            && story.item_audio == story.audio
-            && story.wheel
-            && story.autoplay)
+    imported_direct_stage || (has_night_mode && has_combined_night_story_shape(story))
 }
 
 pub(crate) fn prompt_controls_from_settings(

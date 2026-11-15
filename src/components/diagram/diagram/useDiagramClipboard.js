@@ -86,6 +86,7 @@ export function useDiagramClipboard({
       paths: clip.paths,
       kind,
       clipboardMode: clip.mode,
+      source: clip.source,
     });
     if (clip.mode === 'cut') clipboard.clear();
   }, [dropOnNode]);

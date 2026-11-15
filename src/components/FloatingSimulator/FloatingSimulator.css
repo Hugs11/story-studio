@@ -1,5 +1,7 @@
 .floating-simulator {
   position: absolute;
+  display: flex;
+  flex-direction: column;
   z-index: 24;
   top: 68px;
   left: 50%;
@@ -88,7 +90,8 @@
 
 .floating-simulator .lunii-sim {
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -135,6 +138,21 @@
     linear-gradient(135deg, transparent 0 42%, rgba(13, 75, 70, 0.82) 42% 50%, transparent 50% 62%, rgba(13, 75, 70, 0.82) 62% 70%, transparent 70%);
   cursor: nwse-resize;
   opacity: 0.7;
+}
+
+.floating-simulator-stale {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  /* Marge droite : la poignée de redimensionnement (18 px à 8 px du bord) ne doit pas couvrir « Relancer ». */
+  padding: 8px 36px 8px 12px;
+  border: 1px solid var(--borderLt);
+  border-radius: var(--radius-md);
+  background: var(--bg1);
+  color: var(--text-secondary);
+  font-size: var(--text-body);
 }
 
 .floating-simulator-resize:hover {

@@ -93,6 +93,7 @@ export function useTreeClipboard({
       paths: clip.paths,
       kind,
       clipboardMode: clip.mode,
+      source: clip.source,
     });
     if (clip.mode === 'cut') clipboard.clear();
   }

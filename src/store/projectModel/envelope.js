@@ -28,7 +28,7 @@ export class ProjectFormatError extends Error {
       cause?.detail ?? cause?.message ?? (typeof cause === 'string' ? cause
         : this.presentationRef ? presentStoredError(this.presentationRef) : legacyDetail) } });
     if (cause) this.cause = cause;
-    // Les portes Imports portent des refs explicites ; les anciens producteurs hors lot
+    // Les portes Imports portent des refs explicites ; les anciens producteurs
     // gardent leur présentation historique jusqu’à leur propre conversion.
     if (found?.key || expected?.key || cause) this.presentationRef = cause?.code
       ? { userMessage: cause, codedOnly: true }

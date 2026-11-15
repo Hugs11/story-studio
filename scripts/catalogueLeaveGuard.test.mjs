@@ -91,11 +91,11 @@ test('both assembly launch paths refuse invalid drafts, await saving and protect
   const driverUrl = new URL('./reactHookDriver.mjs', import.meta.url).href;
   const reactModuleUrl = new URL('../node_modules/react/index.js', import.meta.url).href;
   const reactUrl = `data:text/javascript,${encodeURIComponent(`export * from '${reactModuleUrl}'; export { default } from '${reactModuleUrl}'; export { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, useReducer, useContext, useId } from '${driverUrl}'; export function useSyncExternalStore(_subscribe, snapshot) { return snapshot(); }`)}`;
-  const fixture = { state: { phase: 'idle' }, starts: [], start(selection) { this.starts.push(selection); }, close() {} };
+  const fixture = { state: { phase: 'idle' }, starts: [], removals: [], start(selection) { this.starts.push(selection); }, close() {} };
   globalThis.__assemblyLaunchTest = fixture;
   const hooks = registerHooks({
     resolve(specifier, context, next) {
-      if (specifier === 'react') return { url: reactUrl, shortCircuit: true };
+      if (specifier === 'react') return { url: reactUrl, format: 'module', shortCircuit: true };
       if (specifier.startsWith('.') && context.parentURL) {
         for (const suffix of ['.js', '.jsx', '/index.js', '/index.jsx']) {
           const candidate = new URL(`${specifier}${suffix}`, context.parentURL);
@@ -105,8 +105,11 @@ test('both assembly launch paths refuse invalid drafts, await saving and protect
       return next(specifier, context);
     },
     load(url, context, next) {
+      // dnd-kit requires React from CommonJS. Serve the data URL explicitly:
+      // Node's CJS loader would otherwise try to read it as a filesystem path.
+      if (url === reactUrl) return { format: 'module', source: decodeURIComponent(reactUrl.slice(reactUrl.indexOf(',') + 1)), shortCircuit: true };
       if (url.endsWith('/useCatalogueAssembly.js')) return { format: 'module', source: 'export function useCatalogueAssembly() { return globalThis.__assemblyLaunchTest; }', shortCircuit: true };
-      if (url.endsWith('/useCatalogueRemoval.js')) return { format: 'module', source: 'export function useCatalogueRemoval() { return () => { throw new Error("unexpected removal"); }; }', shortCircuit: true };
+      if (url.endsWith('/useCatalogueRemoval.js')) return { format: 'module', source: 'export function useCatalogueRemoval() { return cards => globalThis.__assemblyLaunchTest.removals.push(cards.map(card => card.id)); }', shortCircuit: true };
       if (url.endsWith('.jsx')) return { format: 'module', source: `import InteractionReact from '${reactModuleUrl}';\n` + transformSync(fileURLToPath(url), readFileSync(fileURLToPath(url), 'utf8').replaceAll('import.meta.env.DEV', 'false'), { jsx: { runtime: 'classic', pragma: 'InteractionReact.createElement', pragmaFrag: 'InteractionReact.Fragment' } }).code, shortCircuit: true };
       return next(url, context);
     },
@@ -127,7 +130,7 @@ test('both assembly launch paths refuse invalid drafts, await saving and protect
     const { CatalogueBrowser } = await import('../src/components/Catalogue/CatalogueBrowser.jsx');
     ({ browseSession } = await import('../src/store/catalogue/browseSession.js'));
     const { card } = await import('./catalogueFixtures.mjs');
-    const cards = [card({ id: 'a', title: 'A' }), card({ id: 'b', title: 'B' })];
+    let cards = [card({ id: 'a', title: 'A' }), card({ id: 'b', title: 'B' }), card({ id: 'c', title: 'C' })];
     browseSession.save({ view: 'cards', ficheId: 'a', selection: { ids: ['a', 'b'], anchorId: 'a' }, activeId: 'a' });
     const guard = { current: async () => false };
     app = runner(() => CatalogueBrowser({ abandonGuard: guard, cards, revision: 1, api: {}, onError: error => { throw error; }, renderEmpty: () => null }));
@@ -135,11 +138,14 @@ test('both assembly launch paths refuse invalid drafts, await saving and protect
     const find = (tree, predicate) => { const found = elements(tree).find(predicate); assert.ok(found); return found; };
     const render = () => app.render(); // Effects/IPC are outside this gesture test.
     const selectionLaunch = () => find(render(), e => e.props?.onSelectionAction).props.onSelectionAction('assemble');
-    const menuLaunch = () => {
+    const openContext = (id = 'a') => {
       const tree = render();
       const view = find(tree, e => e.props?.view?.onCardMenu);
-      view.props.view.onCardMenu({ preventDefault() {}, currentTarget: { id: 'card-a' }, type: 'keydown' }, view.props.items[0]);
-      const menu = find(render(), e => e.type?.name === 'CardContextMenu');
+      view.props.view.onCardMenu({ preventDefault() {}, currentTarget: { id: `card-${id}` }, type: 'keydown' }, view.props.items.find(item => item.card.id === id));
+      return find(render(), e => e.type?.name === 'CardContextMenu');
+    };
+    const menuLaunch = () => {
+      const menu = openContext();
       const entry = menu.props.entries.find(e => e.action?.id === 'assemble');
       assert.ok(entry?.action.enabled);
       menu.props.onActivate(entry);
@@ -160,6 +166,29 @@ test('both assembly launch paths refuse invalid drafts, await saving and protect
       const assistant = find(render(), e => e.type?.name === 'CatalogueAssembly');
       assert.equal(assistant.props.returnFocus.current.trigger, launch === menuLaunch ? menuTrigger : trigger);
     }
+    await t.test('selection context shares panel actions and removal targets; an outside card keeps its own menu', () => {
+      const selectedIds = tree => find(tree, e => e.props?.view?.selected).props.view.selected;
+      const selectionBefore = [...selectedIds(render())];
+      const panel = () => find(render(), e => e.props?.onSelectionAction);
+      const selectedMenu = openContext();
+      assert.equal(selectedMenu.props.menu.kind, 'selection');
+      assert.deepEqual(selectedMenu.props.entries.map(entry => entry.action), panel().props.actions);
+      assert.ok(!selectedMenu.props.entries.some(entry => ['removeFromCatalogue', 'simulate', 'edit', 'copyUuid', 'reveal'].includes(entry.action.id)));
+      assert.deepEqual(selectedMenu.props.tagMenu.targets.map(card => card.id), ['a', 'b']);
+      const outsideMenu = openContext('c');
+      assert.equal(outsideMenu.props.menu.kind, 'card');
+      assert.ok(outsideMenu.props.entries.some(entry => entry.action.id === 'simulate'));
+      assert.ok(!outsideMenu.props.entries.some(entry => entry.action.id === 'assemble'));
+      assert.deepEqual([...selectedIds(render())], selectionBefore);
+      cards = cards.map(card => ({ ...card, available: false, offlineReason: 'missing', exemplars: card.exemplars.map(exemplar => ({ ...exemplar, available: false })) }));
+      const missingMenu = openContext();
+      assert.deepEqual(missingMenu.props.entries.map(entry => entry.action), panel().props.actions);
+      assert.ok(!missingMenu.props.entries.some(entry => entry.action.id === 'assemble'));
+      missingMenu.props.onActivate(missingMenu.props.entries.find(entry => entry.action.id === 'removeFromCatalogue'));
+      panel().props.onSelectionAction('removeFromCatalogue');
+      assert.deepEqual(fixture.removals, [['a', 'b'], ['a', 'b']], 'menu and panel call the same collective removal handler');
+      cards = cards.map(card => ({ ...card, available: true, offlineReason: null, exemplars: card.exemplars.map(exemplar => ({ ...exemplar, available: true })) }));
+    });
     for (const phase of ['idle', 'preparing', 'ready', 'error']) {
       fixture.state = { phase };
       const tree = render();

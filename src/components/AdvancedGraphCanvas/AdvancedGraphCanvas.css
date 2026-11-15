@@ -4,20 +4,6 @@
  * diagramme Libre garde intégralement ses gestes, sa caméra et son style, et
  * aucune régression Libre n'est permise. */
 
-.advanced-canvas {
-  display: grid;
-  grid-template-columns: minmax(220px, 300px) 1fr minmax(260px, 340px);
-  height: 100%;
-  min-height: 0;
-  background: var(--surface-1, #15181c);
-  color: var(--text-1, #e8eaed);
-}
-
-.advanced-canvas--error {
-  display: block;
-  padding: 24px;
-}
-
 .advanced-canvas__stage {
   position: relative;
   min-width: 0;
@@ -154,7 +140,7 @@
 .advanced-group-overlay.is-tone-4 { --group-tone: #5f87a8; }
 .advanced-group-overlay.is-tone-5 { --group-tone: #7a8494; }
 
-/* Cartes du handoff. Le moteur garde les fonds, miniatures et zones de clic ;
+/* Cartes de la maquette. Le moteur garde les fonds, miniatures et zones de clic ;
  * cette couche pose le contenu typographique sans le flou ni la troncature du
  * texte canvas. Elle ne capte jamais le pointeur. */
 .advanced-node-overlays {
@@ -398,7 +384,7 @@
   stroke-dasharray: 4 3;
 }
 
-/* Repères de la vue éloignée (planche 3b). Ils sont en **pixels écran**, donc
+/* Repères de la vue éloignée. Ils sont en **pixels écran**, donc
  * de taille constante à tous les zooms : c'est toute la différence avec une
  * largeur Cytoscape, qui est une unité du graphe et fond avec lui. */
 .advanced-landmark {
@@ -1053,8 +1039,7 @@
   white-space: nowrap;
 }
 
-.advanced-search__fallback,
-.advanced-inspector__fallback {
+.advanced-search__fallback {
   opacity: 0.6;
 }
 
@@ -1071,115 +1056,6 @@
   padding: 10px 12px;
   border-left: 1px solid var(--border);
   font-size: 13px;
-}
-
-.advanced-inspector__header {
-  margin-bottom: 10px;
-}
-
-.advanced-inspector__kind {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  opacity: 0.7;
-}
-
-.advanced-inspector__title {
-  margin: 2px 0 0;
-  font-size: 15px;
-}
-
-.advanced-inspector__row {
-  display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: 8px;
-  padding: 2px 0;
-  align-items: baseline;
-}
-
-.advanced-inspector__label {
-  opacity: 0.7;
-  font-size: 12px;
-}
-
-.advanced-inspector__cell {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-/* Une absence, un `null` et une valeur ne se ressemblent pas : la distinction
- * doit rester lisible à l'œil, pas seulement dans le DTO. */
-.advanced-inspector__absent {
-  font-style: italic;
-  opacity: 0.55;
-}
-
-.advanced-inspector__absent[data-presence="null"] {
-  text-decoration: underline dotted;
-}
-
-.advanced-inspector__warning {
-  color: #f28b82;
-  font-style: normal;
-}
-
-.advanced-inspector__controls {
-  margin: 10px 0;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-}
-
-.advanced-inspector__controls legend {
-  font-size: 12px;
-  opacity: 0.75;
-}
-
-.advanced-inspector__options ol {
-  margin: 4px 0;
-  padding-left: 22px;
-}
-
-.advanced-inspector__link {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #8ab4f8;
-  font: inherit;
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.advanced-inspector__link:disabled {
-  color: inherit;
-  opacity: 0.5;
-  cursor: default;
-}
-
-.advanced-inspector__diagnostics ul {
-  margin: 4px 0;
-  padding-left: 0;
-  list-style: none;
-}
-
-.advanced-inspector__diagnostics li {
-  margin-bottom: 8px;
-  padding-left: 8px;
-  border-left: 3px solid #f28b82;
-}
-
-.advanced-inspector__diagnostics li[data-family="import"] { border-left-color: #8ab4f8; }
-.advanced-inspector__diagnostics li[data-family="authoring"] { border-left-color: #fdd663; }
-
-.advanced-inspector__family {
-  margin-left: 6px;
-  font-size: 11px;
-  opacity: 0.7;
-}
-
-.advanced-inspector__diagnostics p {
-  margin: 2px 0 0;
-  font-size: 12px;
 }
 
 .advanced-inspector h3 {

@@ -94,6 +94,11 @@ test('native startup keeps plugin registration and shared cleanup in their guard
   const logging = region('fn prepare_logging', 'fn initialize_resources');
   const builder = region('fn startup_builder', '/// Shared setup ordering');
   const nativeWriter = region('impl StartupWriterWork for NativeStartupWriter', 'fn writer_startup');
+  // Both startup phases must stay quiet even without a working frontend.
+  assert.match(logging, /log::set_max_level\(log::LevelFilter::Warn\)/);
+  const run = source.slice(source.indexOf('pub fn run()'));
+  assert.match(run, /log::set_max_level\(log::LevelFilter::Warn\)/);
+  assert.doesNotMatch(source, /log::set_max_level\(log::LevelFilter::(?:Trace|Debug)\)/);
   assert.match(builder, /builder\s*\.plugin\(single_instance\)/);
   assert.doesNotMatch(builder, /log_plugin_builder|prepare_logging|tauri_plugin_log|build_log_plugin/);
   // Runtime tests exercise the shared orchestration. These boundaries also catch

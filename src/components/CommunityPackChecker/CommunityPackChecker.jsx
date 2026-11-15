@@ -1,3 +1,4 @@
+import { reportDisplayIssues, reportStructureOk, reportHasBlockingVerdict, isGraphEditorInformation, issueDisplayText, issueDisplaySeverity, issueRoleLabel, reportPresentationCounts } from './packCheckerIssueClassification.js';
 import { measuredIssueSummary, saturatedSummary, silenceSummaryParts, volumeSummary } from './packCheckerIssueClassification.js';
 import { CheckerTrans, useCheckerTranslation } from '../../i18n/useCheckerTranslation.js';
 import { translateChecker } from '../../i18n/checkerPresentation.js';
@@ -68,7 +69,7 @@ const PROBLEM_SECTIONS = [
     Icon: Info,
     explanationKey: 'checker:issue.listen.explanation',
     actionKey: 'checker:issue.listen.action',
-    match: (issue) => !isOptionalSilenceIssue(issue) && !issue.autoFixAvailable && issue.category !== 'structure' && issue.category !== 'title',
+    match: (issue) => !isOptionalSilenceIssue(issue) && !issue.autoFixAvailable && issue.category === 'audio',
   },
   {
     id: 'silence',
@@ -134,11 +135,11 @@ const PROBLEM_SECTIONS = [
     id: 'structure',
     titleKey: 'checker:issue.structure.title',
     badgeKey: 'checker:issue.badge.manual',
-    bucket: 'listen',
+    bucket: 'review',
     Icon: Network,
     explanationKey: 'checker:issue.structure.explanation',
     actionKey: 'checker:issue.structure.action',
-    match: (issue) => issue.category === 'structure',
+    match: (issue) => !issue.autoFixAvailable && issue.category !== 'audio' && issue.category !== 'title' && !isGraphEditorInformation(issue),
   },
 ];
 
@@ -202,12 +203,7 @@ function hasMeasureIssue(record, key) {
   return hasMeasureIssues(issues, key);
 }
 
-function roleLabel(record) {
-  const raw = record.item?.itemType || record.issue?.itemType || record.issue?.category || translateChecker('checker:file.label.fallback');
-  if (raw === 'image') return translateChecker('checker:file.role.image');
-  if (raw === 'audio') return translateChecker('checker:file.role.audio');
-  return raw;
-}
+const roleLabel = issueRoleLabel;
 
 function issuesByFilePath(report) {
   const map = new Map();
@@ -231,14 +227,14 @@ function buildItemMap(report) {
 }
 
 function uniqueIssueKey(issue) {
-  return issue.filePath || `${issue.category}:${issue.code ?? issue.label}`;
+  return issue.filePath || `${issue.category}:${issue.code ?? issue.label}:${issue.message}`;
 }
 
 function buildProblemGroups(report) {
   if (!report) return [];
   const itemMap = buildItemMap(report);
   const used = new Set();
-  const relevantIssues = (report.issues || []).filter((issue) => (
+  const relevantIssues = reportDisplayIssues(report).filter((issue) => !isGraphEditorInformation(issue) && (
     issue.severity === 'error' || issue.severity === 'warning' || isOptionalSilenceIssue(issue)
   ));
 
@@ -259,7 +255,7 @@ function buildProblemGroups(report) {
         id: `${section.id}:${key}`,
         issue,
         issues: allFileIssues,
-        sectionIssues: allFileIssues.filter((candidate) => section.match(candidate)),
+        sectionIssues: allFileIssues.filter((candidate) => section.match(candidate) && (section.id !== 'optionalSilence' || candidate.code === issue.code)),
         item: itemEntry?.item || null,
         kind: itemEntry?.kind || issue.category,
       });
@@ -283,25 +279,21 @@ function saturatedFileCount(groups) {
 }
 
 function summarizeGroups(groups, report) {
-  const listenCount = groups
-    .filter((group) => group.bucket === 'listen')
-    .reduce((sum, group) => sum + group.count, 0);
-  const fixCount = groups
-    .filter((group) => group.bucket === 'fix')
-    .reduce((sum, group) => sum + group.fixCount, 0);
-  const optionalCount = groups
-    .filter((group) => group.bucket === 'optional')
-    .reduce((sum, group) => sum + group.optionalCount, 0);
+  const counts = reportPresentationCounts(report);
+  const listenCount = counts.listen;
+  const reviewCount = counts.review;
+  const fixCount = counts.automatic + counts.assisted;
+  const optionalCount = counts.optional;
   const saturatedCount = saturatedFileCount(groups);
-  const hasBlocking = report?.verdict === 'invalid' || groups.some((group) => (
-    group.bucket === 'listen' && group.records.some((record) => record.issue.severity === 'error')
+  const hasBlocking = reportHasBlockingVerdict(report) || groups.some((group) => (
+    ['listen', 'review'].includes(group.bucket) && group.records.some((record) => issueDisplaySeverity(record.issue) === 'error')
   ));
 
   // Titre et sous-titre : clés et compte, résolus au rendu (changement de langue à chaud).
   const verdict = (tone, Icon, titleKey, subtitleKey, titleCount) => ({
     tone, Icon, titleKey, subtitleKey, titleCount, listenCount, fixCount, optionalCount,
   });
-  if (!groups.length) {
+  if (fixCount === 0 && listenCount === 0 && reviewCount === 0 && optionalCount === 0) {
     return verdict('ok', CircleCheck, 'checker:verdict.conform.title', 'checker:verdict.conform.subtitle');
   }
   if (hasBlocking) {
@@ -315,6 +307,7 @@ function summarizeGroups(groups, report) {
       ? verdict('quality', TriangleAlert, 'checker:verdict.saturatedFixable.title', 'checker:verdict.saturatedFixable.subtitle')
       : verdict('quality', TriangleAlert, 'checker:verdict.saturated.title', 'checker:verdict.saturated.subtitle');
   }
+  if (reviewCount > 0) return verdict('listen', Info, 'checker:verdict.review.title', 'checker:verdict.review.subtitle');
   if (listenCount > 0) {
     return verdict('listen', Info, 'checker:verdict.listen.title', 'checker:verdict.listen.subtitle', listenCount);
   }
@@ -359,7 +352,7 @@ function SummaryTiles({ report, saturatedCount = 0 }) {
   const images = categoryConformanceStats(report.imageSummary);
   const title = categoryConformanceStats(report.titleSummary);
   const titleOk = title.total > 0 && title.needsFix === 0;
-  const structureOk = report.structureSummary?.luniiCompatible && report.structureSummary?.storyStudioEditable;
+  const structureOk = reportStructureOk(report);
   const nightMode = Boolean(report.nightMode?.detected);
   return (
     <div className="checker-summary-tiles" aria-label={t('checker:summary.tiles.aria')}>
@@ -394,6 +387,7 @@ function SummaryTiles({ report, saturatedCount = 0 }) {
 function TechnicalDetail({ record }) {
   const { t } = useCheckerTranslation();
   const item = record.item;
+  const scopedIssues = record.sectionIssues?.length ? record.sectionIssues : record.issues;
   return (
     <div className="checker-tech-detail">
       <div>
@@ -422,17 +416,17 @@ function TechnicalDetail({ record }) {
             <Measure label={t('checker:detail.expected.label')} value="320×240" status={expectedImageOk(item) ? 'ok' : 'bad'} />
           </>
         ) : (
-          <Measure label={t('checker:detail.category.label')} value={record.issue.category} status={record.issue.severity === 'ok' ? 'ok' : 'bad'} />
+          <Measure label={t('checker:detail.category.label')} value={issueRoleLabel(record)} status={isGraphEditorInformation(record.issue) ? 'info' : (record.issue.severity === 'ok' ? 'ok' : 'bad')} />
         )}
       </div>
       <div>
-        <div className="checker-tech-title">{t('checker:detail.actions.title')}</div>
-        {(record.sectionIssues?.length ? record.sectionIssues : record.issues).map((issue, index) => (
+        <div className="checker-tech-title">{scopedIssues.some((issue) => issue.autoFixAvailable) ? t('checker:detail.actions.title') : t('checker:detail.finding.title')}</div>
+        {scopedIssues.map((issue, index) => (
           <div className="checker-tech-action" key={`${issue.message}-${index}`}>
             <IconFrame Icon={issue.autoFixAvailable ? Wrench : Info} />
             <div>
-              <strong>{issue.autoFixDescription || issue.message}</strong>
-              {issue.technicalDetails ? <span>{issue.technicalDetails}</span> : null}
+              <strong>{issueDisplayText(issue, issue.autoFixDescription ? 'autoFixDescription' : 'message')}</strong>
+              {issue.technicalDetails ? <span>{issueDisplayText(issue, 'technicalDetails')}</span> : null}
             </div>
           </div>
         ))}
@@ -455,8 +449,8 @@ function MiniFile({ record, open, onToggle }) {
         <span className="checker-mini-problem" title={issueSummary}>
           {issueSummary}
         </span>
-        <span className={`checker-mini-severity checker-mini-severity--${firstIssue.severity}`}>
-          {severityLabel(firstIssue.severity)}
+        <span className={`checker-mini-severity checker-mini-severity--${issueDisplaySeverity(firstIssue)}`}>
+          {severityLabel(issueDisplaySeverity(firstIssue))}
         </span>
         <ChevronDown className={`checker-mini-chevron ${open ? 'is-open' : ''}`} aria-hidden="true" />
       </button>
@@ -477,7 +471,7 @@ function ProblemGroupCard({
   const { t } = useCheckerTranslation();
   const [openFile, setOpenFile] = useState(null);
   const Icon = group.Icon;
-  const displayedCountLabel = countLabel || t('checker:group.count.files', { count: countValue });
+  const displayedCountLabel = countLabel || (group.bucket === 'optional' ? t('checker:group.count.suggestions', { count: countValue }) : group.records.every((record) => record.kind === 'audio' || record.kind === 'image') ? t('checker:group.count.files', { count: countValue }) : t('checker:group.count.points', { count: countValue }));
   return (
     <div className={`checker-group checker-group--${group.bucket} checker-group--${group.id} ${expanded ? 'is-expanded' : ''}`}>
       <button type="button" className="checker-group-head" onClick={onToggle}>
@@ -585,6 +579,7 @@ export function ReportView({
   const [metadataOpen, setMetadataOpen] = useState(false);
   if (!report) return null;
   const SummaryIcon = summary.Icon;
+  const counts = reportPresentationCounts(report);
 
   function startFixFlow() {
     if (onStartFix) {
@@ -608,7 +603,11 @@ export function ReportView({
           <span>
             <CheckerTrans i18nKey="checker:report.callout.listen" count={summary.listenCount} components={STRONG} />
             {' · '}
-            <CheckerTrans i18nKey="checker:report.callout.automatic" count={summary.fixCount} components={STRONG} />
+            <CheckerTrans i18nKey="checker:report.callout.review" count={counts.review} components={STRONG} />
+            {' · '}
+            <CheckerTrans i18nKey="checker:report.callout.assisted" count={counts.assisted} components={STRONG} />
+            {' · '}
+            <CheckerTrans i18nKey="checker:report.callout.automatic" count={counts.automatic} components={STRONG} />
             {' · '}
             <CheckerTrans i18nKey="checker:report.callout.optional" count={summary.optionalCount} components={STRONG} />
           </span>
@@ -616,6 +615,9 @@ export function ReportView({
       </div>
 
       <SummaryTiles report={report} saturatedCount={saturatedCount} />
+      {report.issues?.some(isGraphEditorInformation) ? (
+        <div className="checker-graph-information"><IconFrame Icon={Info} />{t('checker:structure.graphEditor')}</div>
+      ) : null}
 
       {groups.length === 0 ? (
         <div className="checker-empty checker-empty--success">

@@ -1,3 +1,4 @@
+import { reportDisplayIssues, reportStructureOk, reportHasBlockingVerdict, isGraphEditorInformation, issueDisplayText, issueDisplaySeverity, issueRoleLabel, reportPresentationCounts } from './packCheckerIssueClassification.js';
 import { presentCheckerReport } from '../../i18n/checkerMessages.js';
 import { measuredIssueSummary, saturatedSummary, silenceSummaryParts, volumeSummary } from './packCheckerIssueClassification.js';
 import { getIntlLocale } from '../../i18n/language.js';
@@ -118,7 +119,7 @@ function issuesByFilePath(report) {
 }
 
 function uniqueIssueKey(issue) {
-  return issue.filePath || `${issue.category}:${issue.code ?? ''}:${issue.label}`;
+  return issue.filePath || `${issue.category}:${issue.code ?? ''}:${issue.label}:${issue.message}`;
 }
 
 // Clés de présentation ; le classement reste porté par category/code (`match`).
@@ -143,7 +144,7 @@ const PROBLEM_SECTIONS = [
     bucket: 'listen',
     icon: 'info',
     actionKey: 'checker:issue.listen.action',
-    match: (issue) => !isOptionalSilenceIssue(issue) && !issue.autoFixAvailable && issue.category !== 'structure' && issue.category !== 'title',
+    match: (issue) => !isOptionalSilenceIssue(issue) && !issue.autoFixAvailable && issue.category === 'audio',
   },
   {
     id: 'silence',
@@ -203,10 +204,10 @@ const PROBLEM_SECTIONS = [
     id: 'structure',
     titleKey: 'checker:issue.structure.title',
     badgeKey: 'checker:issue.badge.manual',
-    bucket: 'listen',
+    bucket: 'review',
     icon: 'network',
     actionKey: 'checker:issue.structure.action',
-    match: (issue) => issue.category === 'structure',
+    match: (issue) => !issue.autoFixAvailable && issue.category !== 'audio' && issue.category !== 'title' && !isGraphEditorInformation(issue),
   },
 ];
 
@@ -215,7 +216,7 @@ function buildProblemGroups(report) {
   const byFile = issuesByFilePath(report);
   const files = itemMap(report);
   const used = new Set();
-  const relevantIssues = (report.issues || []).filter((issue) => (
+  const relevantIssues = reportDisplayIssues(report).filter((issue) => !isGraphEditorInformation(issue) && (
     issue.severity === 'error' || issue.severity === 'warning' || isOptionalSilenceIssue(issue)
   ));
 
@@ -236,7 +237,7 @@ function buildProblemGroups(report) {
         id: `${section.id}:${key}`,
         issue,
         issues: fileIssues,
-        sectionIssues: fileIssues.filter((candidate) => section.match(candidate)),
+        sectionIssues: fileIssues.filter((candidate) => section.match(candidate) && (section.id !== 'optionalSilence' || candidate.code === issue.code)),
         item: fileEntry?.item || null,
         kind: fileEntry?.kind || issue.category,
       });
@@ -281,30 +282,27 @@ function saturatedFileCount(groups) {
 }
 
 function summarizeGroups(groups, report) {
-  const listenCount = groups
-    .filter((group) => group.bucket === 'listen')
-    .reduce((sum, group) => sum + group.count, 0);
-  const fixCount = groups
-    .filter((group) => group.bucket === 'fix')
-    .reduce((sum, group) => sum + group.fixCount, 0);
-  const optionalCount = groups
-    .filter((group) => group.bucket === 'optional')
-    .reduce((sum, group) => sum + group.optionalCount, 0);
+  const counts = reportPresentationCounts(report);
+  const listenCount = counts.listen;
+  const reviewCount = counts.review;
+  const fixCount = counts.automatic + counts.assisted;
+  const optionalCount = counts.optional;
   const saturatedCount = saturatedFileCount(groups);
-  const hasBlocking = report?.verdict === 'invalid' || groups.some((group) => (
-    group.bucket === 'listen' && group.records.some((record) => record.issue.severity === 'error')
+  const hasBlocking = reportHasBlockingVerdict(report) || groups.some((group) => (
+    ['listen', 'review'].includes(group.bucket) && group.records.some((record) => issueDisplaySeverity(record.issue) === 'error')
   ));
 
   const verdict = (tone, icon, titleKey, subtitleKey, count) => ({
     tone, icon, title: t(titleKey, { count }), subtitle: t(subtitleKey), listenCount, fixCount, optionalCount,
   });
-  if (!groups.length) return verdict('ok', 'check', 'checker:verdict.conform.title', 'checker:verdict.conform.subtitle');
+  if (fixCount === 0 && listenCount === 0 && reviewCount === 0 && optionalCount === 0) return verdict('ok', 'check', 'checker:verdict.conform.title', 'checker:verdict.conform.subtitle');
   if (hasBlocking) return verdict('listen', 'warning', 'checker:verdict.blocking.title', 'checker:verdict.blocking.subtitle');
   if (saturatedCount > 0) {
     return fixCount > 0
       ? verdict('quality', 'warning', 'checker:verdict.saturatedFixable.title', 'checker:verdict.saturatedFixable.subtitle')
       : verdict('quality', 'warning', 'checker:verdict.saturated.title', 'checker:verdict.saturated.subtitle');
   }
+  if (reviewCount > 0) return verdict('listen', 'info', 'checker:verdict.review.title', 'checker:verdict.review.subtitle');
   if (listenCount > 0) return verdict('listen', 'info', 'checker:verdict.listen.title', 'checker:verdict.listen.subtitle', listenCount);
   if (fixCount === 0 && listenCount === 0 && optionalCount > 0) {
     return verdict('ok', 'check', 'checker:verdict.optional.title', 'checker:verdict.optional.subtitle', optionalCount);
@@ -341,7 +339,7 @@ function recordDetailHtml(record) {
   let rows = [];
   if (record.kind === 'audio') rows = audioMeasureRows(item);
   else if (record.kind === 'image') rows = [...imageMeasureRows(item), { key: 'expected', label: t('checker:detail.expected.label'), value: '320×240' }];
-  else rows = [{ key: 'category', label: t('checker:detail.category.label'), value: record.issue.category || t('checker:severity.info.label') }];
+  else rows = [{ key: 'category', label: t('checker:detail.category.label'), value: issueRoleLabel(record) }];
   const scopedIssues = record.sectionIssues?.length ? record.sectionIssues : record.issues;
   const flaggedKeys = new Set(rows.filter((row) => hasMeasureIssue(scopedIssues, row.key)).map((row) => row.key));
   const optional = record.issue.fixDisposition === 'optional';
@@ -353,12 +351,12 @@ function recordDetailHtml(record) {
       ${measureRowsHtml(rows, badKeys, infoKeys)}
     </div>
     <div>
-      <div class="tech-title">${escapeHtml(t('checker:detail.proposed.title'))}</div>
+      <div class="tech-title">${escapeHtml(scopedIssues.some((issue) => issue.autoFixAvailable) ? t('checker:detail.proposed.title') : t('checker:detail.finding.title'))}</div>
       ${(record.sectionIssues?.length ? record.sectionIssues : record.issues).map((issue) => html`<div class="tech-action">
         ${icon(issue.autoFixAvailable ? 'wrench' : 'info')}
         <div>
-          <strong>${escapeHtml(issue.autoFixDescription || issue.message)}</strong>
-          ${issue.technicalDetails ? `<span>${escapeHtml(issue.technicalDetails)}</span>` : ''}
+          <strong>${escapeHtml(issueDisplayText(issue, issue.autoFixDescription ? 'autoFixDescription' : 'message'))}</strong>
+          ${issue.technicalDetails ? `<span>${escapeHtml(issueDisplayText(issue, 'technicalDetails'))}</span>` : ''}
         </div>
       </div>`).join('')}
     </div>
@@ -376,7 +374,7 @@ function problemGroupHtml(group, open = false) {
         </span>
         <span>${escapeHtml(t(group.actionKey, { duration: formatPackAudioEdgeSilence() }))}</span>
       </span>
-      <span class="group-count"><strong>${group.count}</strong><small>${escapeHtml(group.bucket === 'optional' ? t('checker:group.count.suggestions', { count: group.count }) : t('checker:group.count.files', { count: group.count }))}</small></span>
+      <span class="group-count"><strong>${group.count}</strong><small>${escapeHtml(group.bucket === 'optional' ? t('checker:group.count.suggestions', { count: group.count }) : (group.records.every((record) => record.kind === 'audio' || record.kind === 'image') ? t('checker:group.count.files', { count: group.count }) : t('checker:group.count.points', { count: group.count })))}</small></span>
     </summary>
     <div class="group-body">
       <div class="mini-list">
@@ -384,10 +382,10 @@ function problemGroupHtml(group, open = false) {
           const firstIssue = record.issue;
           return html`<details class="mini-file">
             <summary class="mini-file-row">
-              <span class="role">${escapeHtml(roleLabel(record.kind))}</span>
+              <span class="role">${escapeHtml(issueRoleLabel(record))}</span>
               <span class="mini-name" title="${escapeHtml(firstIssue.filePath || firstIssue.label)}">${escapeHtml(cleanLabel(firstIssue.label))}</span>
               <span class="mini-problem">${escapeHtml(recordProblemSummary(record))}</span>
-              <span class="mini-severity mini-severity--${escapeHtml(firstIssue.severity)}">${escapeHtml(severityLabel(firstIssue.severity))}</span>
+              <span class="mini-severity mini-severity--${escapeHtml(issueDisplaySeverity(firstIssue))}">${escapeHtml(severityLabel(issueDisplaySeverity(firstIssue)))}</span>
             </summary>
             ${recordDetailHtml(record)}
           </details>`;
@@ -457,7 +455,7 @@ function buildConformingGroups(report) {
       facts: [
         { key: 'lunii', label: t('checker:conform.fact.lunii'), value: structure.luniiCompatible ? t('checker:fact.value.yes') : t('checker:fact.value.no') },
         { key: 'editable', label: t('checker:conform.fact.editable'), value: structure.storyStudioEditable ? t('checker:fact.value.yes') : t('checker:fact.value.no') },
-        { key: 'stories', label: t('checker:conform.fact.stories'), value: String(structure.storyCount ?? 0) },
+        { key: 'stories', label: t('checker:conform.fact.stories'), value: String(structure.storyCount ?? '—') },
         { key: 'stages', label: t('checker:conform.fact.stages'), value: String(structure.stageCount ?? 0) },
         { key: 'actions', label: t('checker:conform.fact.actions'), value: String(structure.actionCount ?? 0) },
         { key: 'refAudio', label: t('checker:conform.fact.refAudio'), value: String(structure.referencedAudioCount ?? 0) },
@@ -735,18 +733,17 @@ function reportStyles() {
     .split-fix strong { color: var(--warning-text); }
     .single-stat {
       display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 8px;
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 6px;
       margin-top: 8px;
     }
     .single-stat span {
       min-width: 0;
-      overflow: hidden;
       font-size: 10px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      white-space: normal;
     }
+    .graph-information { display: flex; align-items: center; gap: 8px; margin: 14px 18px 0; color: var(--muted); font-size: 12px; }
     .empty,
     .section-head {
       display: flex;
@@ -1042,14 +1039,14 @@ export function formatHtmlReport(report) {
   if (!report) return '';
   const groups = buildProblemGroups(report);
   const summary = summarizeGroups(groups, report);
-  const correctionCounts = packCorrectionCounts(report);
+  const correctionCounts = reportPresentationCounts(report);
   const saturatedCount = saturatedFileCount(groups);
   const conformingGroups = buildConformingGroups(report);
   const audio = categoryConformanceStats(report.audioSummary);
   const images = categoryConformanceStats(report.imageSummary);
   const title = categoryConformanceStats(report.titleSummary);
   const titleOk = title.total > 0 && title.needsFix === 0;
-  const structureOk = report.structureSummary?.luniiCompatible && report.structureSummary?.storyStudioEditable;
+  const structureOk = reportStructureOk(report);
   const nightMode = Boolean(report.nightMode?.detected);
   const generatedAt = new Date().toLocaleString(getIntlLocale());
   const titleText = t('checker:export.html.title', { name: report.packName || t('checker:export.pack.fallback') });
@@ -1086,7 +1083,7 @@ export function formatHtmlReport(report) {
         </div>
         <div class="report-callout">
           ${icon('info')}
-          <span>${richHtml(t('checker:report.callout.listen', { count: summary.listenCount }))} · ${richHtml(t('checker:report.callout.automatic', { count: correctionCounts.automatic }))} · ${richHtml(t('checker:report.callout.optional', { count: correctionCounts.optional }))}</span>
+          <span>${richHtml(t('checker:report.callout.listen', { count: summary.listenCount }))} · ${richHtml(t('checker:report.callout.review', { count: correctionCounts.review }))} · ${richHtml(t('checker:report.callout.assisted', { count: correctionCounts.assisted }))} · ${richHtml(t('checker:report.callout.automatic', { count: correctionCounts.automatic }))} · ${richHtml(t('checker:report.callout.optional', { count: correctionCounts.optional }))}</span>
         </div>
       </div>
       <div class="summary-tiles" aria-label="${escapeHtml(t('checker:summary.tiles.aria'))}">
@@ -1124,7 +1121,7 @@ export function formatHtmlReport(report) {
           small: nightMode ? t('checker:summary.nightMode.detected') : t('checker:summary.nightMode.notBlocking'),
         })}
       </div>
-      ${groups.length === 0 ? html`<div class="empty">${icon('check')}${escapeHtml(t('checker:report.empty'))}</div>` : html`<div class="groups">
+      ${report.issues?.some(isGraphEditorInformation) ? html`<div class="graph-information">${icon('info')}${escapeHtml(t('checker:structure.graphEditor'))}</div>` : ''}${groups.length === 0 ? html`<div class="empty">${icon('check')}${escapeHtml(t('checker:report.empty'))}</div>` : html`<div class="groups">
         ${groups.map((group, index) => problemGroupHtml(group, index === 0)).join('')}
       </div>`}
       ${conformingGroups.length ? html`<div class="section-head">${icon('check')}${escapeHtml(t('checker:conform.section.title'))}</div>
@@ -1220,7 +1217,7 @@ export function formatReadableReport(report) {
     lines.push(`### ${t('checker:summary.structure.title')}`);
     lines.push(`- ${t('checker:markdown.fact.lunii', { value: yesNo(structure.luniiCompatible) })}`);
     lines.push(`- ${t('checker:markdown.fact.editable', { value: yesNo(structure.storyStudioEditable) })}`);
-    lines.push(`- ${t('checker:markdown.fact.stories', { value: structure.storyCount ?? 0 })}`);
+    lines.push(`- ${t('checker:markdown.fact.stories', { value: structure.storyCount ?? '—' })}`);
     lines.push(`- ${t('checker:markdown.fact.stages', { value: structure.stageCount ?? 0 })}`);
     lines.push(`- ${t('checker:markdown.fact.actions', { value: structure.actionCount ?? 0 })}`);
     lines.push(`- ${t('checker:markdown.fact.refAudio', { value: structure.referencedAudioCount ?? 0 })}`);

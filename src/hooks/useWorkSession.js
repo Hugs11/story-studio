@@ -7,6 +7,7 @@ import { exists, remove } from '@tauri-apps/plugin-fs';
 import {
   autoSaveEphemeralProject,
   collectLiveSessionDependencies,
+  discardProjectAutosave,
   ensureWorkspaceDir,
   getWorkspaceDir,
   loadProjectFromPath,
@@ -24,6 +25,7 @@ import {
   resetEphemeralSnapshotSeedState,
 } from '../store/ephemeralSnapshotSeed';
 import { logger } from '../utils/logger';
+import { isProjectMediaOutputBusy } from '../store/projectMediaOutput';
 
 const SESSION_RECOVERY_FILE = '.session-recovery.mbah';
 
@@ -277,10 +279,15 @@ export function useWorkSession({
     return workspaceDir;
   }
 
-  // Nettoie le dossier de la session éphémère courante (no-op sinon). Awaitable ;
+  // Nettoie le filet du travail volontairement quitté : copie automatique ou
+  // dossier de session éphémère. Awaitable ;
   // les appelants fire-and-forget peuvent l'appeler sans await, l'échec est loggé ici.
-  async function cleanupEphemeralSession() {
+  async function cleanupEphemeralSession(openedPath = null) {
+    const autoSavePath = autoSavePathRef.current;
+    await discardProjectAutosave(autoSavePath, openedPath).catch(error => logger.warn('autosave:cleanup-error', error));
+    if (autoSavePathRef.current === autoSavePath) autoSavePathRef.current = null;
     if (sessionModeRef.current !== 'ephemeral' || !sessionWorkspaceDirRef.current) return;
+    if (isProjectMediaOutputBusy((store.readProject?.() ?? store.project).storage?.workId)) return;
     await invoke('cleanup_session_workspace', { path: sessionWorkspaceDirRef.current }).catch((error) => {
       logger.warn('session:cleanup-error', error);
     });
@@ -365,7 +372,7 @@ export function useWorkSession({
       // Une mutation pendant cette attente périme également la promotion.
       await ephemeralSnapshotSeedStateRef.current.writeChain.catch(() => {});
       const pending = await collectLiveSessionDependencies(project, sessionDir);
-      if (pending.length > 0 || !canPromote()) {
+      if (pending.length > 0 || isProjectMediaOutputBusy(project?.storage?.workId) || !canPromote()) {
         logger.warn(`session:cleanup-skipped dependencies=${pending.length} dir='${sessionDir}'`);
         return;
       }

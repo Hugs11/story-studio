@@ -14,7 +14,7 @@ const { buildProjectIndex } = await import('../src/store/projectModel.js');
 const { acquireImportedAdvancedProject } = await import('../src/store/projectModel/authoring.js');
 const noop = () => {};
 
-test('revue 1/3 : arguments actifs, cause retenue et dialogue de lot sans dirty/undo/sérialisation modifiés', async () => {
+test('Import : arguments actifs, cause retenue et dialogue de lot sans dirty/undo/sérialisation modifiés', async () => {
   i18next.init(createTestI18n().options);
   const blocked = { code: 'blocked', params: {}, detail: 'RAW_YTDLP' };
   const namedCalls = [];
@@ -75,7 +75,7 @@ test('revue 1/3 : arguments actifs, cause retenue et dialogue de lot sans dirty/
       await imports.handleImportFolder();
       assert.equal(namedCalls.at(-1)[1].proposedFolderName, i18next.t('import:names.folder.fallback'));
       const acquired = await acquireImportedAdvancedProject({ packPath: '/AUTHOR/pack.zip', assetsDir: disk.project, workspaceDir: disk.workspace, projectName: 'Auteur', storage: store.project.storage, ephemeral: false });
-      // Correction revue Claude : aucun nom proposé dans le document graphe.
+      // Attente du document graphe : aucun nom proposé dans le document graphe.
       assert.equal(Object.hasOwn(namedCalls.at(-1)[1], 'proposedPackName'), false);
       assert.equal(acquired.projectName, 'Auteur');
       assert.equal(createWorkSnapshot(store.project), signature);

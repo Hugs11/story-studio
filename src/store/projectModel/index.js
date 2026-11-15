@@ -1,5 +1,6 @@
+import { isAbsoluteFilePath } from '../../utils/fileUtils.js';
 import { translateTree as t } from "../../i18n/treePresentation.js";
-import { makeId, normalizeMenuEntry, normalizeStoryEntry, normalizeZipEntry } from './schema.js';
+import { makeId, normalizeMenuEntry, normalizeStoryEntry, normalizeZipEntry, remapEntryIds } from './schema.js';
 import { walkMediaBindingReferences } from './mediaBindings.js';
 
 function buildProjectIndexEntries(entries, ancestors, level, index) {
@@ -102,11 +103,9 @@ export function createZipEntry(fields = {}) {
 
 export function deepCloneEntry(entry) {
   if (!entry || typeof entry !== 'object') return entry;
-  const cloned = { ...entry, id: makeId() };
-  if (Array.isArray(cloned.children)) {
-    cloned.children = cloned.children.map(deepCloneEntry);
-  }
-  return cloned;
+  const idMap = new Map();
+  walkEntries([entry], (child) => idMap.set(child.id, makeId()));
+  return remapEntryIds(entry, idMap);
 }
 
 export function findEntryById(project, entryId, projectIndex = null) {
@@ -258,24 +257,24 @@ export function getEntryThumbnailPath(entry, { rootImage = null, isRoot = false 
 // liaisons declarees dans `authoring.mediaBindings`, jamais le payload d'auteur
 // — une chaine opaque, ou une cle `audio` ou `path` d'extension inconnue n'est
 // ni une reference media, ni un candidat au transfert.
-export function* walkProjectMediaReferences(project) {
+export function* walkProjectMediaReferences(project, { includeRelativeZipCovers = false } = {}) {
   if (!project || typeof project !== 'object') return;
 
   yield* walkRootReferences(project);
   yield* walkMediaBindingReferences(project);
   yield* walkNativeGraphReferences(project.nativeGraph, { key: "tree:media.nativeRoot.label" });
-  yield* walkEntriesMedia(project.rootEntries ?? []);
+  yield* walkEntriesMedia(project.rootEntries ?? [], includeRelativeZipCovers);
 }
 
-function* walkEntriesMedia(entries) {
+function* walkEntriesMedia(entries, includeRelativeZipCovers) {
   for (const entry of entries) {
     if (!entry || typeof entry !== 'object') continue;
     if (entry.type === 'menu') {
       yield* walkMenuReferences(entry);
       yield* walkNativeGraphReferences(entry.nativeGraph, { key: "tree:media.nativeMenu.label", params: { name: entry.name || { key: "tree:media.menu.fallback" } } });
-      yield* walkEntriesMedia(entry.children ?? []);
+      yield* walkEntriesMedia(entry.children ?? [], includeRelativeZipCovers);
     } else if (entry.type === 'zip') {
-      yield* walkZipReferences(entry);
+      yield* walkZipReferences(entry, includeRelativeZipCovers);
     } else {
       yield* walkStoryReferences(entry);
     }
@@ -303,11 +302,13 @@ function* walkMenuReferences(menu) {
   if (menu.image) yield { obj: menu, key: 'image', path: menu.image, get label() { return t("tree:media.menu.image", { name }); }, scope: 'menu' };
 }
 
-function* walkZipReferences(zip) {
+function* walkZipReferences(zip, includeRelativeZipCovers) {
+  // Les chemins relatifs ne sont parcourus que pour le codec disque.
+  const isCoverFile = path => isAbsoluteFilePath(path) || (includeRelativeZipCovers && typeof path === 'string' && (path.startsWith('./') || path.startsWith('../')));
   const name = zip.name || { key: "tree:media.name.fallback" };
   if (zip.zipPath) yield { obj: zip, key: 'zipPath', path: zip.zipPath, get label() { return t("tree:media.zip.archive", { name }); }, scope: 'zip' };
-  if (zip.coverImage) yield { obj: zip, key: 'coverImage', path: zip.coverImage, get label() { return t("tree:media.cover.image"); }, scope: 'zip' };
-  if (zip.coverAudio) yield { obj: zip, key: 'coverAudio', path: zip.coverAudio, get label() { return t("tree:media.cover.audio"); }, scope: 'zip' };
+  if (isCoverFile(zip.coverImage)) yield { obj: zip, key: 'coverImage', path: zip.coverImage, get label() { return t("tree:media.cover.image"); }, scope: 'zip' };
+  if (isCoverFile(zip.coverAudio)) yield { obj: zip, key: 'coverAudio', path: zip.coverAudio, get label() { return t("tree:media.cover.audio"); }, scope: 'zip' };
 }
 
 function* walkStoryReferences(story) {

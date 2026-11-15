@@ -47,13 +47,15 @@ pub(crate) fn stage_imported_zip_bundle(
     let mut asset_map = HashMap::new();
     let referenced_assets = referenced_asset_names(&document);
     for asset_name in referenced_assets {
-        let mut zip_entry = archive
-            .by_name(&format!("assets/{}", asset_name))
-            .map_err(|_| {
-                UserMessage::new(codes::IMPORT_IMPORTED_ASSET_MISSING)
-                    .param("asset_name", (asset_name).to_string())
-                    .into_transport()
-            })?;
+        let entry_name = crate::services::pack_reader::resolve_zip_asset_name(
+            &archive,
+            &format!("assets/{}", asset_name),
+        );
+        let mut zip_entry = archive.by_name(&entry_name).map_err(|_| {
+            UserMessage::new(codes::IMPORT_IMPORTED_ASSET_MISSING)
+                .param("asset_name", (asset_name).to_string())
+                .into_transport()
+        })?;
         let mut bytes = Vec::new();
         zip_entry.read_to_end(&mut bytes).map_err(|e| {
             UserMessage::new(codes::IMPORT_ASSET_FILE_READ_FAILED)
@@ -329,3 +331,7 @@ mod tests {
         fs::remove_dir_all(dir).ok();
     }
 }
+
+#[cfg(test)]
+#[path = "zip_bundle_tests.rs"]
+mod asset_path_tests;

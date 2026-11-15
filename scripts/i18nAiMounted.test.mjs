@@ -58,7 +58,7 @@ test('IA montée : FR → EN → IT, dialogue et tables conservés, requête TTS
     await act(async () => store.markPristine());
     const before = JSON.stringify(store.readProject()), undo = store.readHistoryMark();
     const modal = host.querySelector('.tts-modal'), imageModal = host.querySelector('.sd-generate-box');
-    // Lot select A : la liste de langue est le composant Select (bouton combobox) et non plus un <select> natif.
+    // Listes de sélection : la liste de langue est le composant Select (bouton combobox) et non plus un <select> natif.
     const ttsSelect = modal.querySelector('.select-trigger');
     assert.equal(ttsSelect.textContent, engine.t('ai:voice.language.fr'));
     const advanced = imageModal.querySelector('.sd-advanced-toggle');

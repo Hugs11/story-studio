@@ -74,7 +74,16 @@ export function buildProjectAfterZipUnpack({
   const nextProject = shouldPromote
     ? {
         ...project,
-        projectType: 'pack',
+        projectType: result?.projectType === 'simple' ? 'simple' : 'pack',
+        ...(result?.recipeReopened ? {
+          rootName: result.rootName || undefined,
+          endNodeName: result.endNodeName || undefined,
+          treeColor: result.treeColor ?? null,
+          globalOptions: { ...project?.globalOptions, ...result.globalOptions },
+          nightModeAudio: result.nightModeAudio ?? null,
+          nightModeReturn: result.nightModeReturn ?? null,
+          nightModeHomeReturn: result.nightModeHomeReturn ?? null,
+        } : {}),
         projectName: project?.projectName ?? '',
         packMetadata,
         officialProvenance: result?.officialProvenance ?? 'unknown',

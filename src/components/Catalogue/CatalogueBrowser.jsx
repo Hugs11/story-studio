@@ -10,7 +10,8 @@ import { exemplarActions } from '../../store/catalogue/cardActions.js';
 import { catalogueCardActivation } from '../../store/catalogue/cardActivation.js';
 import { CatalogueAssembly } from './assembly/CatalogueAssembly.jsx';
 import { useCatalogueAssembly } from '../../hooks/useCatalogueAssembly.js';
-import { assemblySelection, assemblyAction, assemblyMenuEntries } from '../../store/catalogue/assemblySelection.js';
+import { assemblySelection } from '../../store/catalogue/assemblySelection.js';
+import { selectionMenuKind, selectionMenuEntries, selectionPanelActions } from '../../store/catalogue/selectionActions.js';
 import { DuplicateDialog } from './files/DuplicateResults.jsx';
 import { CheckerEntry } from './files/CheckerEntry.jsx';
 import { beforeFicheAbandon } from '../../store/catalogue/metadataDraft.js';
@@ -205,11 +206,14 @@ export function CatalogueBrowser({ abandonGuard, lunii, sendBridge, renderLunii,
     if (wasMultiple && !data.targets.length && !trashCard) setFicheId(null);
   }, [data.targets.length, trashCard]);
 
+  const panelActions = [...selectionPanelActions(data.targets, data.actions, assembly.state.phase, data.busy), ...(sendUi.action ? [sendUi.action] : [])];
+  const contextEntries = (menu, card, exemplars) => menu.kind === 'selection' ? selectionMenuEntries(panelActions) : sendUi.menuEntries(menuEntries(menu, card, exemplars), menu, card);
   const openMenu = (item, kind, scope, { trigger, point = null }) => {
     lastFocusedCard.current = item.card.id;
     menuItem.current = captureMenuTarget(item, revision);
-    const probe = { open: true, kind, scope, step: null };
-    menus.open({ kind, targetId: item.card.id, scope, trigger, point, itemCount: sendUi.menuEntries(assemblyMenuEntries(menuEntries(probe, item.card, item.exemplars), probe, data.targets.length, assembly.state.phase), probe, item.card).length });
+    const menuKind = kind === 'card' ? selectionMenuKind(item.card, data.targets) : kind;
+    const probe = { open: true, kind: menuKind, scope, step: null };
+    menus.open({ kind: menuKind, targetId: item.card.id, scope, trigger, point, itemCount: contextEntries(probe, item.card, item.exemplars).length });
   };
 
   const columns = () => {
@@ -294,7 +298,7 @@ export function CatalogueBrowser({ abandonGuard, lunii, sendBridge, renderLunii,
   }, [cards, restoreActionFocus]);
   const menu = menus.menu;
   const target = menu.open ? menuItem.current : null;
-  const entries = target ? sendUi.menuEntries(assemblyMenuEntries(menuEntries(menu, target.card, target.exemplars), menu, data.targets.length, assembly.state.phase), menu, target.card) : [];
+  const entries = target ? contextEntries(menu, target.card, target.exemplars) : [];
   const activate = (entry) => {
     if (!entry || !target) return;
     actionFocus.current = document.getElementById(menu.returnFocusId);
@@ -305,6 +309,13 @@ export function CatalogueBrowser({ abandonGuard, lunii, sendBridge, renderLunii,
       return;
     }
     if (!action.enabled) return;
+    if (menu.kind === 'selection') {
+      // Tags use the same collective mutation through the menu's cascade.
+      if (action.id === 'tags') return;
+      menus.close();
+      runSelectionAction(action.id, actionFocus.current);
+      return;
+    }
     if (['reveal', 'checkPack'].includes(action.id) && !exemplar && target.exemplars.length > 1) {
       menus.close(false); setFileChoice({ target, action, triggerId: menu.returnFocusId }); return;
     }
@@ -315,12 +326,7 @@ export function CatalogueBrowser({ abandonGuard, lunii, sendBridge, renderLunii,
     }
     if (action.id === 'luniiSend') {
       menus.close();
-      void sendUi.onSend(target.card.id, entry.deviceId);
-      return;
-    }
-    if (action.id === 'assemble') {
-      menus.close();
-      void startAssembly(document.getElementById(menu.returnFocusId));
+      void sendUi.onSendCard(target.card.id, entry.deviceId);
       return;
     }
     if (['favorite', 'tags'].includes(action.id)) {
@@ -392,10 +398,10 @@ export function CatalogueBrowser({ abandonGuard, lunii, sendBridge, renderLunii,
     },
   }, { active });
 
-  const panelActions = [...data.actions, assemblyAction(data.targets.length, assembly.state.phase), ...(sendUi.action ? [sendUi.action] : [])];
-  const runSelectionAction = id => {
+  const runSelectionAction = (id, trigger = document.activeElement) => {
     if (id === 'luniiSend') sendUi.runSelection();
-    else if (id === 'assemble') void startAssembly();
+    else if (id === 'assemble') void startAssembly(trigger);
+    else if (id === 'removeFromCatalogue') void removeOffline(data.targets);
     else if (id === 'favorite') void data.favorite();
   };
   const ficheServices = { revision, data, actions, setTagPopover, actionFocus, simulate: simulation.simulate, edit: editor.edit, onFilterTag: viewProps.onFilterTag, onAnnounce, onRefresh, onError };
@@ -463,7 +469,7 @@ export function CatalogueBrowser({ abandonGuard, lunii, sendBridge, renderLunii,
     {tagPopover && <CatalogueMenuLayer><TagSubmenu tags={tags.items} targets={tagPopover.targetIds ? tagPopover.targetIds.map(id => cardsById.get(id)).filter(Boolean) : data.targets} busy={data.busy} onMutate={data.mutate} {...tagPopover} onClose={() => setTagPopover(null)} /></CatalogueMenuLayer>}
     {menu.open && target && <CatalogueMenuLayer>
       <CardContextMenu menu={menu} card={target.card} entries={entries} dispatch={menus.dispatch} onActivate={activate} onBack={back}
-        tagMenu={{ tags: tags.items, targets: cards.filter(card => card.id === target.card.id), busy: data.busy, onMutate: data.mutate }} />
+        tagMenu={{ tags: tags.items, targets: menu.kind === 'selection' ? data.targets : cards.filter(card => card.id === target.card.id), busy: data.busy, onMutate: data.mutate }} />
     </CatalogueMenuLayer>}
   </section></SelectionControlsContext.Provider></LuniiDndFrame>;
 }

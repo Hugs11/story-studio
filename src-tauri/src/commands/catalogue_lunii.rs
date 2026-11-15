@@ -69,8 +69,8 @@ pub async fn catalogue_lunii_set_permission(
                 app.path().data_dir().ok(),
             )?;
             s.open_lunii(&locale, catalogue::operation_sink(app.clone()))?;
-            changed(app, &s);
         }
+        changed(app, &s);
         Ok(Value::Null)
     })
     .await

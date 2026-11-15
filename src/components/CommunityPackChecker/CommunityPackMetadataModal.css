@@ -63,6 +63,7 @@
   margin: 1px 0 0;
   overflow: hidden;
   color: var(--text);
+  font-family: var(--font-mono);
   font-size: 15px;
   font-weight: 750;
   text-overflow: ellipsis;
@@ -231,6 +232,10 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(72px, 0.9fr);
   gap: 6px;
+}
+
+.checker-meta-age-hint {
+  color: var(--warning-text);
 }
 
 .checker-meta-age button {

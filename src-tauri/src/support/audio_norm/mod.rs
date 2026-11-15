@@ -12,9 +12,9 @@ pub(crate) use loudness::{
 };
 pub(crate) use silence::{
     build_edge_silence_filters, build_edge_silence_filters_with_targets,
-    build_selected_edge_silence_filters, edge_envelope_args, edges_from_envelope,
-    measure_edge_silence, parse_rms_envelope, EdgeMeasure, EdgeSilenceFilters,
-    EdgeSilenceSelection,
+    build_selected_edge_silence_filters, edge_envelope_args, edges_after_gain, edges_from_envelope,
+    measure_edge_envelope, measure_edge_silence, parse_rms_envelope, EdgeMeasure,
+    EdgeSilenceFilters, EdgeSilenceSelection,
 };
 pub(crate) use types::{
     LoudnessAction, EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP, MAX_LIMITING_DB,

@@ -1,5 +1,5 @@
 // Les titres de dialogue sont des éléments React vivants ; leur création ne consomme aucun hook.
-export { default, Fragment, createContext, Children, cloneElement, isValidElement, createElement, forwardRef, memo } from '../node_modules/react/index.js';
+export { default, Fragment, Suspense, lazy, createContext, Children, cloneElement, isValidElement, createElement, forwardRef, memo } from '../node_modules/react/index.js';
 // Ordonnanceur React de test : le seul double des tests de hooks.
 //
 // Il remplace `useState`/`useRef`/`useCallback`/`useEffect` par des variables et
@@ -140,3 +140,6 @@ export const useLayoutEffect = useEffect;
 
 // Standalone component runners read the default context; mounted provider trees use React DOM.
 export function useContext(context) { return context._currentValue; }
+
+// Les rendus explicites relisent eux-mêmes les stores externes.
+export function useSyncExternalStore(_subscribe, getSnapshot) { return getSnapshot(); }

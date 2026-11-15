@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import i18next from 'i18next';
 import { createTestI18n } from './i18nTestSetup.mjs';
 import { BASE, sources } from './i18nExamplesSourceFixture.mjs';
-import { applyLot413 } from './i18nLot413Corrections.mjs';
+import { applyFrenchSourceCorrections } from './i18nFrenchSourceCorrections.mjs';
 import { checkCatalogues, EXAMPLES_NEUTRAL_KEYS, sourceHash } from './check-i18n.mjs';
 import fr from '../src/locales/fr/examples.json' with { type: 'json' };
 import en from '../src/locales/en/examples.json' with { type: 'json' };
@@ -110,13 +110,13 @@ test('exemples FR : contenu, topologie et métadonnées identiques aux cinq exem
       const original = base.catalog.ADVANCED_EXAMPLES[rank];
       for (const field of ['id', 'title', 'description', 'stageCount', 'actionCount']) assert.equal(entry[field], original[field], `${entry.id}.${field}`);
       const created = createAdvancedExample(entry.id, 'fr');
-      assert.deepEqual(withoutPresentation(created), JSON.parse(applyLot413(JSON.stringify(base.catalog.createAdvancedExample(entry.id)))));
+      assert.deepEqual(withoutPresentation(created), JSON.parse(applyFrenchSourceCorrections(JSON.stringify(base.catalog.createAdvancedExample(entry.id)))));
       assert.deepEqual(createAdvancedExample(entry.id), created, 'langue par défaut : français, comme avant');
       assert.equal(created.language, 'fr');
     }
     // Ancien et nouveau plan média identiques (le plan ne dépend que des intentions).
     for (const id of IDS) {
-      assert.deepEqual(exampleMediaPlan(createAdvancedExample(id)), JSON.parse(applyLot413(JSON.stringify(base.media.exampleMediaPlan(base.catalog.createAdvancedExample(id))))));
+      assert.deepEqual(exampleMediaPlan(createAdvancedExample(id)), JSON.parse(applyFrenchSourceCorrections(JSON.stringify(base.media.exampleMediaPlan(base.catalog.createAdvancedExample(id))))));
     }
   } finally { await base.close(); }
 });

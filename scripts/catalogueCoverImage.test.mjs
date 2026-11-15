@@ -38,7 +38,35 @@ test('unmount cancels the old image handlers before mounting another fiche', () 
 });
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
-for (const phase of ['absent', 'unreadable', 'tooLarge', 'offline']) test(`terminal ${phase} remount is synchronous and makes no request`, async () => {
+
+test('finished operation restores an offline mounted cover without changing its address', async () => {
+  const { createCatalogueApi } = await import('../src/store/catalogue/catalogueApi.js');
+  let finished, released = 0;
+  const api = createCatalogueApi({ invoke: async () => {}, listen: async (event, callback) => {
+    assert.equal(event, 'catalogue-operation-finished');
+    finished = callback; return () => released++;
+  } });
+  const saved = globalThis.fetch;
+  globalThis.fetch = async () => ({ status: 503, headers: new Headers({ 'x-cover-state': 'offline' }) });
+  const address = 'operation-offline';
+  const hook = runner(() => useCatalogueCoverImage(address, 'a', { api }));
+  try {
+    let cover = hook.render(); hook.flush(); cover.onError(); await tick();
+    cover = hook.render(); assert.equal(cover.state.phase, 'offline');
+    finished({ payload: {} }); cover = hook.render(); hook.flush();
+    assert.equal(cover.state.phase, 'waiting'); assert.equal(cover.src, address);
+    cover.onLoad(); cover = hook.render(); assert.equal(cover.state.phase, 'ready');
+    finished({ payload: {} }); assert.equal(hook.render().state.phase, 'ready');
+    hook.unmount(); await tick(); assert.equal(released, 1);
+    const remount = runner(() => useCatalogueCoverImage(address, 'a', { api }));
+    try {
+      cover = remount.render(); remount.flush();
+      assert.equal(cover.state.phase, 'waiting');
+      cover.onLoad(); assert.equal(remount.render().state.phase, 'ready');
+    } finally { remount.unmount(); }
+  } finally { hook.unmount(); globalThis.fetch = saved; }
+});
+for (const phase of ['absent', 'unreadable', 'tooLarge']) test(`terminal ${phase} remount is synchronous and makes no request`, async () => {
   const saved = globalThis.fetch;
   let calls = 0;
   globalThis.fetch = async () => { calls++; return { status: phase === 'offline' ? 503 : 422, headers: new Headers({ 'x-cover-state': phase }) }; };
@@ -81,7 +109,7 @@ test('fingerprint replacement keeps the same fiche image until ready; another fi
   hook.flush(); hook.unmount();
 });
 
-for (const phase of ['absent', 'unreadable', 'tooLarge', 'offline']) test(`replacement ending in ${phase} ${phase === 'offline' ? 'keeps' : 'removes'} the previous image`, async () => {
+for (const phase of ['absent', 'unreadable', 'tooLarge', 'offline', 'officialPending']) test(`replacement ending in ${phase} ${phase === 'offline' ? 'keeps' : 'removes'} the previous image`, async () => {
   const saved = globalThis.fetch;
   globalThis.fetch = async () => ({ status: phase === 'offline' ? 503 : 422, headers: new Headers({ 'x-cover-state': phase }) });
   let address = `end-${phase}-old`;
@@ -204,4 +232,35 @@ test('useDisplayableCover: any custom scheme goes through a blob on an http page
   } finally { prod.unmount(); }
   const none = runner(() => useDisplayableCover(null, { protocol: 'http:', load }));
   try { assert.equal(none.render(), null); } finally { none.unmount(); }
+});
+
+test('official acquisition renders an accessible temporary placeholder without a pack image', async () => {
+  const { CoverImage } = await import('../src/components/Catalogue/views/CoverImage.jsx');
+  const { Image } = await import('../src/components/icons/LucideLocal.jsx');
+  const savedFetch = globalThis.fetch, savedWindow = globalThis.window;
+  globalThis.window = { __TAURI_INTERNALS__: { convertFileSrc: (path, protocol) => `${protocol}://localhost/${path}` } };
+  globalThis.fetch = async () => ({ status: 503, headers: new Headers({ 'x-cover-state': 'officialPending' }) });
+  const hook = runner(() => {
+    const view = CoverImage({ ficheId: 'neutral-official', coverSignature: 'f'.repeat(64) });
+    return view.type(view.props);
+  });
+  try {
+    let view = hook.render(); hook.flush();
+    view.props.children.flat().find(child => child?.type === 'img').props.onError();
+    await tick(); view = hook.render();
+    const children = view.props.children.filter(Boolean);
+    assert.equal(children.length, 1);
+    assert.equal(children[0].props.className, 'catalogue-cover-official-pending');
+    assert.equal(children[0].props['aria-hidden'], 'true');
+    assert.equal(children[0].props.children[0].type, Image);
+    assert.equal(children[0].props.children[1].props.children, 'Jaquette en cours de récupération…');
+    assert.equal(view.props.title, 'Jaquette en cours de récupération…');
+    assert.equal(view.props['aria-label'], view.props.title);
+    assert.equal(view.props.role, 'img');
+    assert.match(view.props.className, /catalogue-cover--official-pending/);
+    assert.match(view.props.className, /catalogue-cover--missing/);
+  } finally {
+    hook.unmount(); globalThis.fetch = savedFetch;
+    if (savedWindow === undefined) delete globalThis.window; else globalThis.window = savedWindow;
+  }
 });

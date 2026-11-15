@@ -1,17 +1,6 @@
 import { releaseProjectMediaJob } from './projectMediaOutput';
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { loadSdSettings, saveSdSettings } from './sdSettings';
-import { KEYS, read, write } from './persistentSettings';
-
-function loadPersistedJobs() {
-  const jobs = read(KEYS.SD_RESULTS, { parse: JSON.parse, defaultValue: [] });
-  return Array.isArray(jobs) ? jobs : [];
-}
-
-function persistDoneJobs(jobs) {
-  const toSave = jobs.filter(j => j.status === 'done' && j.resultPaths.length > 0);
-  write(KEYS.SD_RESULTS, toSave, { serialize: JSON.stringify });
-}
 
 function genId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -36,7 +25,7 @@ function genId() {
 
 export function useSdStore() {
   const [sdSettings, setSdSettings] = useState(() => loadSdSettings());
-  const [jobs, setJobs] = useState(() => loadPersistedJobs());
+  const [jobs, setJobs] = useState([]);
   const jobsRef = useRef(jobs);
   const mutateJobs = useCallback((transform) => {
     jobsRef.current = transform(jobsRef.current);
@@ -105,10 +94,6 @@ export function useSdStore() {
       .filter(j => j.status !== 'done' || j.resultPaths.length > 0),
     );
   }, [mutateJobs]);
-
-  useEffect(() => {
-    persistDoneJobs(jobs);
-  }, [jobs]);
 
   const pendingCount = jobs.filter(j => j.status === 'pending' || j.status === 'submitting' || j.status === 'running').length;
   const hasResults = jobs.some(j => j.status === 'done' && j.resultPaths.length > 0);

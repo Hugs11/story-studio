@@ -834,7 +834,7 @@ fn rescan_never_replaces_an_unavailable_imported_reference_implicitly() {
     zip.write_all(json!({"title":"Local source","stageNodes":[{"uuid":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee","squareOne":true}]}).to_string().as_bytes()).unwrap();
     zip.finish().unwrap();
     let original = fs::read(&path).unwrap();
-    f.store.add_source(&root, 0, false).unwrap();
+    f.store.add_source(&root, 0).unwrap();
     let receipt = f
         .store
         .start_scan(
@@ -1010,7 +1010,7 @@ fn relation_fixture() -> (Fixture, Value, BTreeMap<String, String>) {
     let f = Fixture::new();
     let root = f.root.join("source");
     fs::create_dir(&root).unwrap();
-    f.store.add_source(&root, 0, false).unwrap();
+    f.store.add_source(&root, 0).unwrap();
     let source = f.store.list_sources().unwrap().items[0].id.clone();
     let mut items = vec![];
     for name in ["one.mbah", "two.mbah"] {
@@ -1228,7 +1228,7 @@ fn legacy_group_export_import_keeps_reference_choices_without_rejoining_files() 
         (original["a"].clone(), local["a"].clone()),
         (original["b"].clone(), local["b"].clone()),
     ]);
-    // Same values as the active local reference: nothing to choose (REVb2 P2-B).
+    // Same values as the active local reference: nothing to choose.
     let p = relation_preview(&b, &doc, associations.clone());
     assert!(!p.plan.actions.iter().any(|r| r.kind == "referenceBundle"));
     let mut doc = doc;
@@ -1444,7 +1444,7 @@ fn empty_imported_reference_survives_reexport() {
     zip.write_all(json!({"title":"Local source","stageNodes":[{"uuid":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee","squareOne":true}]}).to_string().as_bytes()).unwrap();
     zip.finish().unwrap();
     let original = fs::read(&path).unwrap();
-    c.store.add_source(&root, 0, false).unwrap();
+    c.store.add_source(&root, 0).unwrap();
     let receipt = c
         .store
         .start_scan(
@@ -1809,7 +1809,7 @@ fn reconcile_keeps_empty_imported_reference_and_tag_origin_with_target_priority(
         zip.write_all(json!({"title":"Local source","stageNodes":[{"uuid":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee","squareOne":true}]}).to_string().as_bytes()).unwrap();
         zip.finish().unwrap();
         let before = fs::read(&path).unwrap();
-        f.store.add_source(&root, 0, false).unwrap();
+        f.store.add_source(&root, 0).unwrap();
         let receipt = f
             .store
             .start_scan(
@@ -2384,7 +2384,7 @@ fn age_additions_apply_by_default_and_partial_inversion_requires_an_individual_c
             .unwrap(),
         "8"
     );
-    // REVb2 P2-A: the default keeps 8-10, so the preview is no longer refused;
+    // the default keeps 8-10, so the preview is no longer refused;
     // only the inverting alternative leaves the global choice.
     doc["corrections"] = json!([{"ficheId":"card","field":"ageMax","language":"","state":"defined","value":3,"provenanceId":"manual","imageSha256":null}]);
     let p = f.prepare(&f.archive(&doc)).unwrap();
@@ -2726,7 +2726,7 @@ fn incompatible_reconciliation_and_archive_ages_are_refused_only_when_chosen() {
     doc["corrections"] = json!([
         {"ficheId":"card","field":"ageMax","language":"","state":"defined","value":6,"provenanceId":"manual","imageSha256":null}
     ]);
-    // REVb2 P2-A: the default (1-10) is valid, so the preview is accepted. The
+    // the default (1-10) is valid, so the preview is accepted. The
     // inverting combination of both incoming choices leaves the global choice
     // and an explicit request is refused at application, naming the fiche.
     let path = f.archive(&doc);
@@ -3096,7 +3096,7 @@ fn imported_forgetting_purges_like_local_and_preview_alone_does_nothing() {
     ] {
         assert_eq!(imported.count(table), local.count(table), "{table}");
     }
-    // BKc2 P3-3: same final content, not only the same number of rows.
+    // same final content, not only the same number of rows.
     let content = |f: &Fixture| -> Vec<String> {
         f.store
             .read(|c| {
@@ -3133,7 +3133,7 @@ fn imported_forgetting_refuses_covered_card_atomically() {
         let pack = root.join("pack.zip");
         fs::write(&pack, b"untouched pack bytes").unwrap();
         if covered {
-            f.store.add_source(&root, 0, false).unwrap();
+            f.store.add_source(&root, 0).unwrap();
         }
         f.store.write(|tx|{tx.execute("INSERT INTO exemplar(id,fiche_id,anchor_json,proof_json,content_revision,created_at) VALUES ('ex','local',?1,'{}',0,0)",[json!({"path":pack}).to_string()]).map_err(error)?;Ok(())}).unwrap();
         let mut doc = identified();
@@ -3146,7 +3146,7 @@ fn imported_forgetting_refuses_covered_card_atomically() {
             .iter()
             .find(|c| c.target["kind"] == "forgotten")
             .unwrap();
-        // BKc2 P2: a covered target cannot follow the global choice.
+        // a covered target cannot follow the global choice.
         assert_eq!(
             forgotten.target["requiresIndividualChoice"] == true,
             covered
@@ -3180,7 +3180,7 @@ fn imported_forgetting_refuses_covered_card_atomically() {
         assert_eq!(fs::read(pack).unwrap(), b"untouched pack bytes");
     }
 }
-// REVb3 P3-3: local forgetting never accepts a group member, so an imported
+// local forgetting never accepts a group member, so an imported
 // forgetting of a member leaves the global choice and an explicit one is refused.
 #[test]
 fn imported_forgetting_of_a_group_member_is_refused_and_keeps_the_group() {
@@ -3277,7 +3277,7 @@ fn six_hundred_official_covers_fit_export_and_offline_preview() {
     );
     let archive_size = fs::metadata(path).unwrap().len();
     println!("600 covers: payload {total} bytes; archive {archive_size} bytes");
-    // BKc2 P3-4: each cover is stored once, without amplification. Measured
+    // each cover is stored once, without amplification. Measured
     // on Linux: 198 179 bytes without images, payload + 467 581 with them.
     assert!(reference_size < 512 * 1024, "{reference_size}");
     assert!(
@@ -3343,11 +3343,7 @@ fn pending_forgetting_requires_choice_and_refuses_covered_target_atomically() {
         fs::write(&pack, b"pack preserved").unwrap();
         if covered {
             f.store
-                .add_source(
-                    &root,
-                    f.store.list_sources().unwrap().sources_revision,
-                    false,
-                )
+                .add_source(&root, f.store.list_sources().unwrap().sources_revision)
                 .unwrap();
             f.store.write(|tx|{tx.execute("INSERT INTO exemplar(id,fiche_id,anchor_json,proof_json,content_revision,created_at) VALUES ('ex','local',?1,'{}',0,0)",[json!({"path":pack}).to_string()]).map_err(error)?;Ok(())}).unwrap();
         }
@@ -3632,7 +3628,7 @@ fn already_forgotten_target_is_purged_after_forgotten_waiting_card_transfer() {
     assert_forgotten_data_absent(&f, true);
 }
 
-// REVb2 P2-A (relecture, sonde zz_a): one divergent fiche never blocks the
+// one divergent fiche never blocks the
 // preview; the default application keeps the local interval.
 #[test]
 fn one_divergent_age_keeps_the_preview_and_the_default_keeps_local_bounds() {
@@ -3651,7 +3647,7 @@ fn one_divergent_age_keeps_the_preview_and_the_default_keeps_local_bounds() {
     f.apply(&p, BTreeMap::new()).unwrap();
     assert_eq!(age_bounds(&f, "local"), ["10", "8"]);
 }
-// REVb2 P2-A: an incoming addition inverted against a local bound becomes a
+// an incoming addition inverted against a local bound becomes a
 // single conflict that keeps the local bound by default.
 #[test]
 fn inverted_age_addition_becomes_a_conflict_keeping_the_local_bound() {
@@ -3680,7 +3676,7 @@ fn inverted_age_addition_becomes_a_conflict_keeping_the_local_bound() {
     f.apply(&p, global_incoming(&p)).unwrap();
     assert_eq!(age_bounds(&f, "local"), ["8"]);
 }
-// REVb2 P3-A.1 (sonde zz_b): a `source` choice is resolved through the
+// a `source` choice is resolved through the
 // reference value, so the risk is visible and the refusal names the fiche.
 #[test]
 fn source_age_choice_is_checked_against_the_reference_and_names_the_fiche() {
@@ -3705,7 +3701,7 @@ fn source_age_choice_is_checked_against_the_reference_and_names_the_fiche() {
     assert_eq!(error.params["title"], "Local");
     assert_eq!(age_bounds(&f, "local"), ["6", "1"]);
 }
-// REVb2 P3-A.2 (sonde zz_c): a reference replacement takes part in the
+// a reference replacement takes part in the
 // simulation of the bounds.
 #[test]
 fn reference_replacement_is_simulated_with_age_corrections() {
@@ -3745,7 +3741,7 @@ fn reference_replacement_is_simulated_with_age_corrections() {
     assert_eq!(max, "10");
     f.apply(&p, global_incoming(&p)).unwrap();
 }
-// REVb3 P3-1: a reference or an official value added where the card has none
+// a reference or an official value added where the card has none
 // becomes a conflict keeping the local side, like an age correction addition.
 #[test]
 fn inverted_reference_or_official_addition_becomes_a_conflict_keeping_local() {
@@ -3798,7 +3794,7 @@ fn inverted_reference_or_official_addition_becomes_a_conflict_keeping_local() {
         assert_eq!(f.count("reference_value"), 0, "{kind}");
     }
 }
-// REVb2 P2-B (sonde zz_d): after a reinstall and a new scan, the active local
+// after a reinstall and a new scan, the active local
 // reference with the same values is kept without conflict, at every round.
 #[test]
 fn identical_active_reference_of_another_catalogue_never_conflicts() {
@@ -3839,7 +3835,7 @@ fn identical_active_reference_of_another_catalogue_never_conflicts() {
         assert_eq!(b.count("import_reference"), 0);
     }
 }
-// REVb2 mineur: every portable ceiling reached by an export has its own code.
+// Every portable ceiling reached by an export has its own code.
 #[test]
 fn export_ceilings_have_a_dedicated_code() {
     assert_eq!(
@@ -3881,7 +3877,7 @@ fn export_ceilings_have_a_dedicated_code() {
         codes::CATALOG_BACKUP_SIZE_LIMIT_EXCEEDED
     );
 }
-// REVb2 mineur: a symbolic `catalogue.json` member is refused again by a test.
+// A symbolic `catalogue.json` member is refused again by a test.
 #[test]
 fn symbolic_catalogue_member_is_refused() {
     use std::io::Write;
@@ -3922,7 +3918,7 @@ fn symbolic_catalogue_member_is_refused() {
     );
     assert_eq!(f.count("fiche"), 0);
 }
-// BKc2 P2 (relecture P2-1): forgetting C keeps the refused A/B decision that
+// forgetting C keeps the refused A/B decision that
 // the same import operation restored, by import and locally alike.
 #[test]
 fn forgetting_keeps_unrelated_decisions_of_the_same_operation() {
@@ -3985,7 +3981,7 @@ fn forgetting_keeps_unrelated_decisions_of_the_same_operation() {
         assert_eq!(mentions, 0);
     }
 }
-// BKc2 P3 (relecture P3-2): two different payloads under one Lunii key
+// two different payloads under one Lunii key
 // produce one archived image, attached to both fiches.
 #[test]
 fn official_covers_are_deduplicated_by_key_not_by_content() {
@@ -4132,7 +4128,7 @@ fn compl3_imported_cover_without_exemplar_survives_rescan_assembly_and_cache() {
     zip.write_all(include_bytes!("../../../../icons/32x32.png"))
         .unwrap();
     zip.finish().unwrap();
-    f.store.add_source(&root, 0, false).unwrap();
+    f.store.add_source(&root, 0).unwrap();
     let rescan = || {
         let receipt = f
             .store

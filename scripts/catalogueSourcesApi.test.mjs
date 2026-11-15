@@ -9,10 +9,10 @@ test('additive source contract and source commands preserve revisions', async ()
   const api=createCatalogueApi({listen:async()=>()=>{},invoke:async(command,args)=>{calls.push({command,args});return command==='catalogue_list_sources'?{items:[source],sourcesRevision:3}:{sourceId:source.id,sourcesRevision:4};}});
   const list=await api.listSources('/workspace');
   assert.deepEqual(list.items[0],source);
-  await api.addSource('/packs',3);await api.removeSource('source-id',4,9);await api.explainPath('/packs/file.zip');await api.getExclusions();
+  await api.addSource('/packs',3);await api.removeSource('source-id',4,9);await api.getExclusions();
   assert.deepEqual(calls[1],{command:'catalogue_add_source',args:{path:'/packs',expectedSourcesRevision:3}});
   assert.deepEqual(calls[2],{command:'catalogue_remove_source',args:{sourceId:'source-id',expectedSourcesRevision:4,expectedCatalogueRevision:9}});
-  assert.equal(calls[3].command,'catalogue_explain_path');
+  assert.equal(calls[3].command,'catalogue_get_source_exclusions');
 });
 test('subscribe before launch, recover earlier scan, keep newest complete snapshot', async () => {
   const calls=[],handlers={};
@@ -27,6 +27,25 @@ test('subscribe before launch, recover earlier scan, keep newest complete snapsh
   assert.equal(state.items.startup.status,'failed');
   stop();await Promise.resolve();assert.equal(calls.filter(c=>c==='release').length,2);
 });
+test('cover retries share one finished listener and release even when unmounted during installation', async () => {
+  let installed = 0, released = 0, finished, complete;
+  const api = createCatalogueApi({ invoke: async () => {}, listen: async (event, callback) => {
+    assert.equal(event, 'catalogue-operation-finished'); installed++; finished = callback;
+    return new Promise(resolve => { complete = () => resolve(() => released++); });
+  } });
+  let a = 0, b = 0;
+  const stopA = api.subscribeCoverRetries(() => a++);
+  const stopB = api.subscribeCoverRetries(() => b++);
+  await Promise.resolve();
+  assert.equal(installed, 1);
+  finished({ payload: {} }); assert.deepEqual([a, b], [1, 1]);
+  stopA(); finished({ payload: {} }); assert.deepEqual([a, b], [1, 2]);
+  stopB(); complete();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(released, 1);
+  finished({ payload: {} }); assert.deepEqual([a, b], [1, 2]);
+});
+
 test('partially installed subscription cleans itself when the next listener fails', async () => {
   let installed=0,released=0;
   const api=createCatalogueApi({invoke:async()=>{},listen:async()=>{if(++installed===2)throw new Error('offline');return ()=>released++;}});
@@ -46,12 +65,10 @@ test('a folder added inside an active source is explained with the enclosing pat
   assert.equal(sourceAddResult(before,{sourceId:'other'},[...before,{id:'other',status:'active',path:'/elsewhere',includedIn:null}]).notice.key,'catalogue:sources.added.message');
   assert.equal(sourceAddResult(before,{sourceId:'child'}).notice.key,'catalogue:sources.added.message');
 });
-test('operation and explanation fixtures travel unchanged across IPC',async()=>{
+test('operation fixtures travel unchanged across IPC',async()=>{
   const operations=JSON.parse(await readFile(new URL('./fixtures/catalogue/operations.json',import.meta.url),'utf8'));
-  const explanation=JSON.parse(await readFile(new URL('./fixtures/catalogue/path-explanation.json',import.meta.url),'utf8'));
-  const api=createCatalogueApi({listen:async()=>()=>{},invoke:async(command)=>command==='catalogue_list_operations'?operations:explanation});
+  const api=createCatalogueApi({listen:async()=>()=>{},invoke:async(command)=>command==='catalogue_list_operations'?operations:null});
   assert.deepEqual(await api.listOperations(),operations);
-  assert.deepEqual(await api.explainPath('/packs/broken.zip'),explanation);
 });
 
 test('source removal preview and confirmed card erasure carry the snapshot revision', async () => {

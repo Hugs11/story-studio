@@ -300,6 +300,7 @@ export function EndSequenceEditor({
           />
           <ImageField
             fieldId={`${node.id}:homeStep:image`}
+            mediaTarget={{ kind: 'storyHomeStep', entryId: node.id, field: 'image' }}
             label={{ key: "tree:story.home.imageLabel" }}
             file={homeStep.image}
             onPick={(file) => updateHomeStep({ image: file })}

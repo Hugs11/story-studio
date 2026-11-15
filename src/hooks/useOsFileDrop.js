@@ -87,7 +87,7 @@ export function useOsFileDrop({
             files: relevant,
             maybeCopyToProject: (path) => maybeCopyToProject(path, request?.copies),
             copyGeneratedMediaToProject: copyGeneratedMediaToProject ? (path) => copyGeneratedMediaToProject(path, request?.copies) : null,
-            extractAudioEmbeddedImage,
+            extractAudioEmbeddedImage: (path) => extractAudioEmbeddedImage(path, request?.copies),
             setImporting,
             getImportDisplayName,
           });

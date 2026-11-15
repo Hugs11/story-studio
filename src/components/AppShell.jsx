@@ -71,8 +71,6 @@ export function AppShell({
           suspensionNotice={toolbar.suspensionNotice}
           onNewProject={toolbar.onNewProject}
           onReturnToCatalogue={toolbar.onReturnToCatalogue}
-          onOpenProject={toolbar.onOpenProject}
-          onOpenPack={toolbar.onOpenPack}
           onSaveProject={toolbar.onSaveProject}
           onSaveProjectAs={toolbar.onSaveProjectAs}
           onContinueInGraph={toolbar.onContinueInGraph}

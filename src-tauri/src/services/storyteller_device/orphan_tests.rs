@@ -207,6 +207,7 @@ fn zero_byte_device_memory_and_card_are_absent_then_rewritten() {
     let saved: serde_json::Value =
         serde_json::from_slice(&fs::read(dir.join("device.json")).unwrap()).unwrap();
     assert_eq!(saved["version"], 1);
+    assert!(!dir.join("device.json.unreadable").exists());
     // The empty card is replaced by the catalogue's on the next synchronization.
     let report = d.sync_cards(&[C], &OneCard).unwrap();
     assert!(report.failures.is_empty());
@@ -220,6 +221,7 @@ fn zero_byte_device_memory_and_card_are_absent_then_rewritten() {
     assert_eq!(d.name().unwrap(), "Lunii 00000000000042");
     d.rename("Salon".into()).unwrap();
     assert_eq!(d.name().unwrap(), "Salon");
+    assert!(!dir.join("device.json.unreadable").exists());
     f.coherent();
 }
 

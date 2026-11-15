@@ -9,7 +9,7 @@ import { offlinePresentation } from '../src/store/catalogue/offlinePresentation.
 import { cardMenuActions } from '../src/store/catalogue/cardActions.js';
 import { rawEntry } from './catalogueFixtures.mjs';
 
-const offline = (offlineReason, path) => normalizeEntry({ ...rawEntry({ exemplars: [{ available: false, path }] }), offlineReason });
+const offline = (offlineReason, path) => normalizeEntry({ ...rawEntry({ exemplars: [{ available: false, state: offlineReason, path }] }), offlineReason });
 const online = () => normalizeEntry(rawEntry({ exemplars: [{ path: '/packs/a.zip' }] }));
 
 test('offline presentation: reason, folder for an unreachable folder, last known path for a missing file', () => {
@@ -35,9 +35,15 @@ test('cover corner marks: star toggle without text button, offline badge with a 
     const { initializeI18n } = await server.ssrLoadModule('/src/i18n/index.js');
     const engine = initializeI18n('fr');
     const { CardCover } = await server.ssrLoadModule('/src/components/Catalogue/views/CardCover.jsx');
+    const { FicheExemplars } = await server.ssrLoadModule('/src/components/Catalogue/fiche/FicheDialog.jsx');
     const view = { dataBusy: false, onFavorite() {} };
     for (const language of ['fr', 'en', 'it']) {
       await engine.changeLanguage(language);
+      const missing = offline('missing', '/mnt/nas/a.zip');
+      const rows = renderToStaticMarkup(React.createElement(FicheExemplars, { card: missing }));
+      assert.ok(rows.includes(`>${engine.t('catalogue:offline.missing.help', { path: '/mnt/nas/a.zip' })}</span>`), 'last known path is visible beside the missing copy');
+      const availableRows = renderToStaticMarkup(React.createElement(FicheExemplars, { card: online() }));
+      assert.doesNotMatch(availableRows, /catalogue-fiche-copy-location/);
       for (const favorite of [false, true]) {
         const card = { ...online(), favorite };
         const html = renderToStaticMarkup(React.createElement(CardCover, { card, view, tabIndex: 0 }));
@@ -57,6 +63,7 @@ test('cover corner marks: star toggle without text button, offline badge with a 
           assert.ok(!html.includes(`>${engine.t('catalogue:offline.missing.badge')}</span>`));
         }
         assert.match(html, /role="img" aria-label="[^"]*\/mnt\/nas/);
+        if (reason === 'missing') assert.match(html, /aria-label="[^"]*\/mnt\/nas\/a.zip/);
         assert.doesNotMatch(html, /catalogue:|\[object Object\]/);
       }
     }

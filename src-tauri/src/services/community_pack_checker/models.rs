@@ -89,7 +89,7 @@ pub struct CategorySummary {
 pub struct StructureSummary {
     pub lunii_compatible: bool,
     pub story_studio_editable: bool,
-    pub story_count: usize,
+    pub story_count: Option<usize>,
     pub stage_count: usize,
     pub action_count: usize,
     pub referenced_audio_count: usize,
@@ -105,6 +105,9 @@ pub struct NightModeSummary {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioValidationItem {
+    // Planning data only; measured source edges remain the public report values.
+    #[serde(skip)]
+    pub(crate) edges_after_gain: Option<(f64, f64)>,
     pub file_path: String,
     pub label: String,
     pub item_type: String,
@@ -198,6 +201,8 @@ pub struct PackMetadataPatch {
     pub bonus: Option<String>,
     pub uuid: Option<String>,
     pub naming_mode: Option<String>,
+    /// Nom sans extension calculé par l'aperçu ; absent chez les anciens appelants.
+    pub export_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

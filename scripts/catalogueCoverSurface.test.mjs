@@ -62,7 +62,7 @@ test('grid/list, inspector, modal and selection mosaic emit direct async images 
   });
 });
 
-for (const phase of ['absent', 'unreadable', 'tooLarge', 'offline']) test(`remembered ${phase} renders its terminal label without an img`, async () => {
+for (const phase of ['absent', 'unreadable', 'tooLarge']) test(`remembered ${phase} renders its terminal label without an img`, async () => {
   const { createCoverLoading } = await import('../src/store/catalogue/coverLoading.js');
   const signature = 'c'.repeat(64), id = `remembered-${phase}`;
   const address = `catalogue-cover://localhost/v1/${id}/${signature}.jpg`;

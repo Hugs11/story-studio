@@ -1106,3 +1106,219 @@ fn png_of(width: u32, height: u32) -> Vec<u8> {
         .unwrap();
     encoded.into_inner()
 }
+
+/// Régression : un MP3 déjà « conforme » (MPEG-1 couche III, 44,1 kHz, mono)
+/// est copié tel quel sur l'appareil, tags ID3 compris, alors que la cible
+/// retenue par la spécification est un MP3 sans tag (STUdio et Lunii.QT les
+/// retirent avant d'écrire `sf/`).
+#[test]
+fn conformant_mp3_is_written_to_the_device_without_id3_tags() {
+    let base = Scratch::new(&crate::support::paths::canonical_temp_dir()).unwrap();
+    let ffmpeg = crate::support::ffmpeg::get_ffmpeg_path().expect("FFmpeg for media tests");
+    let sound = base.0.join("tagged.mp3");
+    let status = std::process::Command::new(ffmpeg)
+        .args([
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=0.5",
+            "-ar",
+            "44100",
+            "-ac",
+            "1",
+            "-c:a",
+            "libmp3lame",
+            "-metadata",
+            "title=Une histoire",
+            "-metadata",
+            "artist=Quelqu'un",
+            "-id3v2_version",
+            "3",
+            "-write_id3v1",
+            "1",
+            "-y",
+        ])
+        .arg(&sound)
+        .status()
+        .unwrap();
+    assert!(status.success());
+    let source = fs::read(&sound).unwrap();
+    // The fixture is the case under test: a tagged file whose first frame is conformant.
+    assert!(source.starts_with(b"ID3"));
+    assert_eq!(&source[source.len() - 128..source.len() - 125], b"TAG");
+    assert!(native_pack::parse_mpeg_frame_header(&source)
+        .unwrap()
+        .is_studio_conform());
+    let mut doc = document(false);
+    doc.stage_nodes[1].audio = Presence::Value("tagged.mp3".into());
+    let bindings = [AdvancedMediaBinding {
+        asset_ref: "tagged.mp3".into(),
+        path: Some(sound.to_string_lossy().into_owned()),
+        status: native_pack::persistence::MediaBindingStatus::Resolved,
+    }];
+    let written = write_plain_story(
+        &authorization(&doc),
+        &bindings,
+        &base.0,
+        &AtomicBool::new(false),
+    )
+    .unwrap();
+    let device = fs::read(written.path.join("sf/000/00000000")).unwrap();
+    assert!(
+        !device.starts_with(b"ID3"),
+        "le son écrit sur l'appareil commence par un tag ID3v2 ({} octets copiés tels quels)",
+        device.len()
+    );
+    assert!(
+        device.len() < 128 || &device[device.len() - 128..device.len() - 125] != b"TAG",
+        "le son écrit sur l'appareil se termine par un tag ID3v1"
+    );
+}
+
+/// Documents synthétiques : documents aléatoires valides → format appareil →
+/// relecture. L'oracle est indépendant du juge : chaque Écran est comparé par
+/// son rang, ses commandes, la présence de ses médias et ses transitions
+/// résolues en rangs d'Écrans.
+#[test]
+fn random_documents_survive_device_roundtrip() {
+    struct Lcg(u64);
+    impl Lcg {
+        fn next(&mut self, bound: usize) -> usize {
+            self.0 = self
+                .0
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            ((self.0 >> 33) as usize) % bound
+        }
+        fn flag(&mut self) -> bool {
+            self.next(2) == 1
+        }
+    }
+    type Shape = (
+        [bool; 5],
+        bool,
+        Option<(Vec<usize>, i64)>,
+        Option<(Vec<usize>, i64)>,
+    );
+    fn shapes(doc: &StoryDocument, order: &[usize]) -> Vec<Shape> {
+        let rank: std::collections::HashMap<&str, usize> = order
+            .iter()
+            .enumerate()
+            .map(|(rank, &index)| (doc.stage_nodes[index].uuid.as_str(), rank))
+            .collect();
+        let resolve = |t: Option<&native_pack::Transition>| {
+            t.map(|t| {
+                let action = doc
+                    .action_nodes
+                    .iter()
+                    .find(|a| a.id == t.action_node)
+                    .unwrap();
+                (
+                    action
+                        .options
+                        .iter()
+                        .map(|o| rank[o.as_deref().unwrap()])
+                        .collect::<Vec<_>>(),
+                    t.selection.to_dialect_index(),
+                )
+            })
+        };
+        order
+            .iter()
+            .map(|&index| {
+                let s = &doc.stage_nodes[index];
+                let c = &s.control_settings;
+                (
+                    [c.wheel(), c.ok(), c.home(), c.pause(), c.autoplay()],
+                    s.image.value().is_some(),
+                    resolve(s.ok_transition.value()),
+                    resolve(s.home_transition.value()),
+                )
+            })
+            .collect()
+    }
+    let base = Scratch::new(&crate::support::paths::canonical_temp_dir()).unwrap();
+    let mut rng = Lcg(0x4832);
+    let (mut written_count, mut skipped) = (0, 0);
+    for case in 0..400 {
+        let stages = 2 + rng.next(9);
+        let ids: Vec<String> = (0..stages)
+            .map(|i| format!("00000000-0000-4000-8000-{:012X}", 0x1000 + case * 16 + i))
+            .collect();
+        let entry = rng.next(stages);
+        let others: Vec<usize> = (0..stages).filter(|i| *i != entry).collect();
+        let actions = 1 + rng.next(5);
+        let action_nodes: Vec<_> = (0..actions)
+            .map(|a| {
+                let count = 1 + rng.next(4);
+                let options: Vec<_> = (0..count)
+                    .map(|_| ids[others[rng.next(others.len())]].clone())
+                    .collect();
+                json!({"id": format!("a{a}"), "options": options})
+            })
+            .collect();
+        let transition = |rng: &mut Lcg| {
+            let a = rng.next(actions);
+            let count = action_nodes[a]["options"].as_array().unwrap().len();
+            let index = if rng.next(5) == 0 {
+                -1
+            } else {
+                rng.next(count) as i64
+            };
+            json!({"actionNode": format!("a{a}"), "optionIndex": index})
+        };
+        let stage_nodes: Vec<_> = (0..stages)
+            .map(|i| {
+                let (wheel, ok, home, pause, autoplay) =
+                    (rng.flag(), rng.flag(), rng.flag(), rng.flag(), rng.flag());
+                let ok_t = if ok || autoplay || rng.next(4) == 0 {
+                    transition(&mut rng)
+                } else {
+                    json!(null)
+                };
+                let home_t = if rng.flag() {
+                    transition(&mut rng)
+                } else {
+                    json!(null)
+                };
+                let image = if i == entry || rng.flag() {
+                    json!("entry.bmp")
+                } else {
+                    json!(null)
+                };
+                json!({"uuid": ids[i], "squareOne": i == entry, "image": image, "audio": null,
+                    "controlSettings": {"wheel": wheel, "ok": ok, "home": home, "pause": pause, "autoplay": autoplay},
+                    "okTransition": ok_t, "homeTransition": home_t})
+            })
+            .collect();
+        let doc: StoryDocument = serde_json::from_value(json!({"uuid": ids[entry], "version": 1,
+            "stageNodes": stage_nodes, "actionNodes": action_nodes}))
+        .unwrap();
+        let dir = Scratch::new(&base.0).unwrap();
+        let Ok(story) =
+            write_plain_story(&authorization(&doc), &[], &dir.0, &AtomicBool::new(false))
+        else {
+            skipped += 1;
+            continue;
+        };
+        written_count += 1;
+        let read = re_read(&story.path, &dir.0);
+        let mut order = vec![entry];
+        order.extend(others.iter().copied());
+        let read_order: Vec<usize> = (0..read.stage_nodes.len()).collect();
+        assert_eq!(read.stage_nodes.len(), stages, "cas {case}");
+        assert_eq!(
+            shapes(&doc, &order),
+            shapes(&read, &read_order),
+            "cas {case} : {}",
+            serde_json::to_string(&doc).unwrap()
+        );
+    }
+    println!("roundtrip: {written_count} écrits, {skipped} refusés avant écriture");
+    assert!(
+        written_count >= 40,
+        "trop peu de documents valides : {written_count}"
+    );
+}

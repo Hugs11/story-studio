@@ -416,9 +416,13 @@ mod repatriated_source_tests {
             .is_err());
         let revision = store.sources_revision().unwrap();
         for declined in [false, true] {
-            let duplicate = store
-                .add_source(&root.0.join("packs-rapatries"), revision, declined)
-                .unwrap();
+            let directory = root.0.join("packs-rapatries");
+            let duplicate = if declined {
+                store.add_declined_source(&directory, revision)
+            } else {
+                store.add_source(&directory, revision)
+            }
+            .unwrap();
             assert_eq!(duplicate.source_id, source.0);
             assert_eq!(duplicate.sources_revision, revision);
         }
@@ -467,7 +471,7 @@ mod repatriated_source_tests {
             let store = Store::open(&root.0.join("data"), &root.0.join("cache")).unwrap();
             let directory = root.0.join("packs-rapatries");
             fs::create_dir(&directory).unwrap();
-            let manual = store.add_source(&directory, 0, false).unwrap();
+            let manual = store.add_source(&directory, 0).unwrap();
             let id = Uuid::new_v4();
             let zip = fixture(&root.0, id);
             if acquired_before_removal {
@@ -558,7 +562,7 @@ mod repatriated_source_tests {
         let folder = first.join("packs-rapatries");
         fs::create_dir(&folder).unwrap();
         let manual = store
-            .add_source(&folder, store.sources_revision().unwrap(), false)
+            .add_source(&folder, store.sources_revision().unwrap())
             .unwrap();
         store
             .write(|tx| {
@@ -849,7 +853,7 @@ mod repatriated_source_tests {
         // A source command commits between acquisition/observation and indexing.
         std::thread::scope(|scope| {
             scope
-                .spawn(|| store.add_source(&root.0, before, false).unwrap())
+                .spawn(|| store.add_source(&root.0, before).unwrap())
                 .join()
                 .unwrap();
         });

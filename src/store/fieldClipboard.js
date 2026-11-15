@@ -11,6 +11,7 @@ function normalizeEntry(kind, pathOrPaths, options = {}) {
     path: paths[0],
     paths,
     mode: options.mode === 'cut' ? 'cut' : 'copy',
+    source: options.mode === 'cut' ? options.source ?? null : null,
   };
 }
 

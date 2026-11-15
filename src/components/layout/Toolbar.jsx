@@ -175,8 +175,6 @@ export function Toolbar({
   suspensionNotice = null,
   onNewProject,
   onReturnToCatalogue,
-  onOpenProject,
-  onOpenPack,
   onSaveProject,
   onSaveProjectAs,
   onContinueInGraph,
@@ -237,8 +235,6 @@ export function Toolbar({
           commands={fileGroup}
           onNewProject={onNewProject}
           onReturnToCatalogue={onReturnToCatalogue}
-          onOpenProject={onOpenProject}
-          onOpenPack={onOpenPack}
           onSaveProject={onSaveProject}
           onSaveProjectAs={onSaveProjectAs}
           onContinueInGraph={onContinueInGraph}

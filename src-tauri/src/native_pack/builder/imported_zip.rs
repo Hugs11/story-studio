@@ -2,8 +2,8 @@ use crate::support::user_message::{codes, UserMessage};
 use std::collections::HashMap;
 
 use super::super::{
-    display_label, named_option_targets, ActionNode, CanonicalZip, ControlSettings,
-    ImportedZipBundle, Presence, StageNode, StoryBuilder, StoryDocument, Transition,
+    display_label, ActionNode, CanonicalZip, ControlSettings, ImportedZipBundle, Presence,
+    StageNode, StoryBuilder, StoryDocument, Transition,
 };
 use super::transitions::{
     action_node_name, default_stage_type, no_authored_position, stage_transition_uses_action,
@@ -21,6 +21,16 @@ impl<'a> StoryBuilder<'a> {
         let bundle = self
             .imported_zip_bundle(&format!("{}/zip", role_prefix))?
             .clone();
+        let root_action = bundle
+            .document
+            .action_nodes
+            .iter()
+            .find(|action| action.id == bundle.root_action_id)
+            .ok_or_else(|| {
+                UserMessage::new(codes::IMPORT_ROOT_ACTION_MISSING)
+                    .param("zip_path_buf", bundle.zip_path.as_str())
+                    .into_transport()
+            })?;
         let mut stage_id_map = HashMap::new();
         let mut action_id_map = HashMap::new();
         let group_id_map = self.imported_group_id_map(&bundle.document);
@@ -109,7 +119,18 @@ impl<'a> StoryBuilder<'a> {
             cloned.ok_transition =
                 self.remap_imported_transition(&stage.ok_transition, &action_id_map);
 
-            if stage.uuid == bundle.post_root_stage_id {
+            // Avec plusieurs choix, seuls les Accueil sans valeur sont complétés.
+            // Un choix unique (ou un ZIP sans wrapper) garde le retour parent
+            // inconditionnel historique sur l'Écran qui suit la couverture.
+            let needs_parent_return = if wrap_for_selection && root_action.options.len() > 1 {
+                root_action
+                    .named_options()
+                    .any(|target| target == stage.uuid)
+                    && stage.home_transition.value().is_none()
+            } else {
+                stage.uuid == bundle.post_root_stage_id
+            };
+            if needs_parent_return {
                 cloned.home_transition = Presence::Value(parent_return_transition.clone());
             }
 
@@ -131,15 +152,21 @@ impl<'a> StoryBuilder<'a> {
 
         // En mode wrapper de sélection, le stage wrapper affiche déjà l'audio/image
         // de couverture importés. ok_transition doit sauter le squareOne importé
-        // et viser le premier vrai stage de contenu, sinon la couverture joue deux fois.
-        let imported_post_root_stage_id = stage_id_map
-            .get(&bundle.post_root_stage_id)
-            .cloned()
-            .ok_or_else(|| {
-                UserMessage::new(codes::GENERATION_POST_ROOT_MISSING)
-                    .param("zip_name", (zip.name).to_string())
-                    .into_transport()
-            })?;
+        // et reprendre tous ses choix de contenu, sinon la couverture joue deux fois.
+        if !stage_id_map.contains_key(&bundle.post_root_stage_id) {
+            return Err(UserMessage::new(codes::GENERATION_POST_ROOT_MISSING)
+                .param("zip_name", (zip.name).to_string())
+                .into_transport());
+        }
+        let imported_root_options = root_action
+            .options
+            .iter()
+            .map(|option| {
+                option
+                    .as_deref()
+                    .and_then(|target| stage_id_map.get(target).cloned())
+            })
+            .collect();
 
         let (wrapper_stage_id, wrapper_action_id) = wrapper_ids.ok_or_else(|| {
             UserMessage::new(codes::GENERATION_WRAPPER_NODE_MISSING)
@@ -162,7 +189,7 @@ impl<'a> StoryBuilder<'a> {
             name: action_node_name(),
             action_type: Presence::Absent,
             group_id: Presence::Absent,
-            options: named_option_targets(vec![imported_post_root_stage_id]),
+            options: imported_root_options,
             position: no_authored_position(),
         });
 

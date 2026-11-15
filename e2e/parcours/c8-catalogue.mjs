@@ -99,6 +99,8 @@ export async function run() {
     if (!await add.count()) {
       await page.getByRole('button', { name: /^Préférences de l’application/ }).click();
       await page.locator('.opts-nav').getByRole('button', { name: 'Catalogue', exact: true }).click();
+      await page.locator('.opts-nav-item.is-active').filter({ hasText: /^Catalogue$/ }).waitFor();
+      await page.locator('#catalogue').getByRole('button', { name: 'Forcer la ré-analyse de tous les packs', exact: true }).waitFor();
       viaPreferences = true;
     }
     await answerNext(page, 'open', fixtures.directory);
@@ -132,8 +134,7 @@ export async function run() {
     // Capturer une fois les jaquettes visibles chargées (au plus 20 s, sinon capture telle quelle).
     async function shot(target, label) {
       const deadline = Date.now() + 20_000;
-      while (Date.now() < deadline && await target.evaluate(() => [...document.querySelectorAll('.catalogue-cover--missing span')]
-        .some(node => node.textContent.trim() === 'Chargement de la jaquette'))) await new Promise(done => setTimeout(done, 250));
+      while (Date.now() < deadline && await target.locator('img.catalogue-cover-pending').count()) await new Promise(done => setTimeout(done, 250));
       return ctx.shot(target, label);
     }
     async function optional(label, locator, action) {

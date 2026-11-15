@@ -1,6 +1,6 @@
 // Les tailles de la couche HTML qui dépendent du zoom, écrites une fois pour
-// l'écran (`GraphNodeOverlays`, par variables CSS) et pour la capture
-// (`graphSurfaceCapture`), qui doivent peindre la même chose.
+// l'écran (`GraphNodeOverlays`, par variables CSS), pour les cartes et les
+// libellés affichés.
 //
 // Mesurées sur trois packs réels à 1280×800 et 2560×1440 (parcours e2e
 // `c7-graphe-zoom-lisibilite`) : à 1280 de large, les panneaux laissent

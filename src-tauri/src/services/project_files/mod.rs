@@ -9,7 +9,10 @@ mod recording;
 pub use audio::*;
 pub use delete::*;
 pub(crate) use paths::*;
-pub use project_storage::{rename_project_folder, resolve_project_folder, ProjectFolderMove};
+pub use project_storage::{
+    rename_project_folder, resolve_project_folder, resolve_project_media_folder,
+    restore_project_folder, ProjectFolderMove,
+};
 pub(crate) use recording::*;
 
 #[cfg(test)]

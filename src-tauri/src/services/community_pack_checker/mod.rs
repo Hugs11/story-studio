@@ -6,6 +6,10 @@ mod models;
 mod zip_doc;
 
 #[cfg(test)]
+mod archive_regression_tests;
+#[cfg(test)]
+mod audio_regression_tests;
+#[cfg(test)]
 mod tests;
 
 pub use models::{
@@ -41,8 +45,17 @@ pub fn analyze_pack(zip_path: &Path) -> ReportModel {
     analyze_pack_with_log(zip_path, &|_| {})
 }
 
+#[cfg(test)]
 pub fn analyze_pack_with_log(zip_path: &Path, emit: &dyn Fn(&str)) -> ReportModel {
-    let pack_name = pack_name_from_path(zip_path);
+    analyze_pack_with_source_log(zip_path, zip_path, emit)
+}
+
+pub fn analyze_pack_with_source_log(
+    zip_path: &Path,
+    source_path: &Path,
+    emit: &dyn Fn(&str),
+) -> ReportModel {
+    let pack_name = pack_name_from_path(source_path);
     let zip_path_string = path_for_frontend(zip_path);
     let mut report = empty_report(&pack_name, &zip_path_string);
     emit(&{
@@ -93,7 +106,7 @@ pub fn analyze_pack_with_log(zip_path: &Path, emit: &dyn Fn(&str)) -> ReportMode
         return finalize_report_with_log(report, true, emit);
     }
 
-    let result = analyze_pack_inner(zip_path, &temp_dir, report, emit);
+    let result = analyze_pack_inner(zip_path, source_path, &temp_dir, report, emit);
     let _ = fs::remove_dir_all(&temp_dir);
     result
 }
@@ -161,7 +174,7 @@ pub(crate) fn create_fixed_pack_with_source_log(
     catalogue: Option<&crate::services::catalogue::CatalogueState>,
 ) -> Result<FixedPackResultModel, String> {
     emit(codes::CHECKER_SOURCE_ANALYSIS_START_TRANSPORT);
-    let report = analyze_pack_with_log(zip_path, emit);
+    let report = analyze_pack_with_source_log(zip_path, source_path, emit);
     let correction_selection = correction_selection.unwrap_or_default();
     let optional_audio_silences_fixed = correction_selection
         .optional_audio_silences
@@ -679,6 +692,7 @@ fn prepare_one_fixed_image(
 
 fn analyze_pack_inner(
     zip_path: &Path,
+    source_path: &Path,
     temp_dir: &Path,
     mut report: ReportModel,
     emit: &dyn Fn(&str),
@@ -743,7 +757,7 @@ fn analyze_pack_inner(
         .unwrap_or(1);
 
     emit(codes::CHECKER_METADATA_CHECK_START_TRANSPORT);
-    validate_title(&doc, zip_path, &mut report);
+    validate_title(&doc, source_path, &mut report);
     emit(codes::CHECKER_STRUCTURE_CHECK_START_TRANSPORT);
     validate_structure(&doc, zip_path, temp_dir, &mut report);
     analyze_audio(&doc, zip_path, temp_dir, &mut report, emit);
@@ -832,27 +846,8 @@ fn validate_structure(
     report.structure_summary.action_count = doc.action_count;
     report.structure_summary.referenced_audio_count = unique_ref_count(&doc.audio_refs);
     report.structure_summary.referenced_image_count = unique_ref_count(&doc.image_refs);
-    report.structure_summary.story_count = doc
-        .story
-        .get("stageNodes")
-        .and_then(|value| value.as_array())
-        .map(|stages| {
-            stages
-                .iter()
-                .filter(|stage| {
-                    stage
-                        .get("controlSettings")
-                        .and_then(|value| value.get("autoplay"))
-                        .and_then(|value| value.as_bool())
-                        .unwrap_or(false)
-                        && stage
-                            .get("audio")
-                            .and_then(|value| value.as_str())
-                            .is_some()
-                })
-                .count()
-        })
-        .unwrap_or(0);
+    let story_ids = zip_doc::story_stage_ids(&doc.story);
+    report.structure_summary.story_count = (!story_ids.is_empty()).then_some(story_ids.len());
     report.night_mode.detected = doc
         .story
         .get("nightModeAvailable")
@@ -2280,6 +2275,9 @@ fn unique_fixed_zip_path(
 }
 
 fn convention_zip_stem(patch: &PackMetadataPatchModel) -> Option<String> {
+    if let Some(export_name) = patch.export_name.as_deref() {
+        return Some(filename_token(export_name));
+    }
     let title = filename_token(patch.title.as_deref()?);
     if title.is_empty() {
         return None;

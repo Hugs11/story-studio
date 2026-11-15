@@ -30,6 +30,7 @@ import {
   NAV_ROOT_LABEL,
   normalizeSequenceStep,
 } from './storyUtils';
+import { hasGeneratedLocalEndMessage } from '../../../store/generatedPlayback.js';
 import { EndSequenceEditor } from './EndSequenceEditor';
 import { StoryDisclosure } from './StoryDisclosure';
 import { ChevronDown, ChevronUp, CircleStop, Pause, Trash2 } from '../../icons/LucideLocal';
@@ -359,7 +360,8 @@ export function AfterPlaySection({
     : usesStorySpecificEndReturn
       ? t("tree:story.destination.override")
       : null;
-  const showEndModeControls = !hasGeneratedEndNode && !autoNextApplies;
+  const hasLocalEndMessage = hasGeneratedLocalEndMessage(node, !!project?.globalOptions?.autoNext);
+  const showEndModeControls = !hasGeneratedEndNode && !autoNextApplies && !hasLocalEndMessage;
   const showReturnDestinationRow = !autoNextApplies && (
     usesStorySpecificEndReturn
     || (!hasGeneratedEndNode && autoContinuationEnabled)

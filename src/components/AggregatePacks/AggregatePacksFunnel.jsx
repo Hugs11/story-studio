@@ -1,5 +1,7 @@
-import { AggregateDestinationChoice, AggregateGenerationReview } from './AggregateDestinationChoice.jsx';
-import { aggregateDestinationReducer, INITIAL_AGGREGATE_DESTINATION, createAggregateConfirmation, moveAggregatePack, refreshAggregateMetadata } from './aggregateLanding.js';
+import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { copyAggregatePack, moveAggregatePack, refreshAggregateMetadata, aggregateSteps, canVisitAggregateStep, createAggregateGenerationRequest } from './aggregateLanding.js';
 import { nativeGenerationLock } from '../../store/nativeGenerationLock.js';
 import { catalogueAssemblyApi } from '../../store/catalogue/catalogueAssemblyApi.js';
 import { assemblyPacks } from '../../store/catalogue/assemblySelection.js';
@@ -9,7 +11,7 @@ import { useHomeTranslation } from '../../i18n/useHomeTranslation.js';
 import { useMessageLanguage } from '../../i18n/useMessageLanguage.js';
 import {presentUserMessage, presentStoredError } from '../../i18n/userMessage.js';
 import { TechnicalDetail } from '../common/UserMessage.jsx';
-import { Suspense, lazy, useEffect, useRef, useState, useReducer } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
@@ -70,12 +72,16 @@ const GenerateVoiceModal = lazy(() => import('../GenerateVoiceModal/GenerateVoic
 const PackNameModal = lazy(() => import('../layout/PackNameModal')
   .then((module) => ({ default: module.PackNameModal })));
 
-const STEPS = [
-  { key: 'packs', labelKey: 'home:aggregate.step.packs' },
-  { key: 'audio', labelKey: 'home:aggregate.step.audio' },
-  { key: 'image', labelKey: 'home:aggregate.step.image' },
-  { key: 'metadata', labelKey: 'home:aggregate.step.metadata' },
-];
+function SortablePackRow({ pack, children }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: pack.id });
+  const { t } = useHomeTranslation();
+  return <div ref={setNodeRef} className={`aggregate-pack-row${isDragging ? ' is-dragging' : ''}`}
+    style={{ transform: CSS.Transform.toString(transform), transition }}>
+    <button type="button" ref={setActivatorNodeRef} className="aggregate-pack-handle" {...attributes} {...listeners}
+      aria-label={t('home:aggregate.packs.reorder', { name: pack.name })}><span aria-hidden="true">⋮⋮</span></button>
+    {children}
+  </div>;
+}
 
 function formatBytes(bytes) {
   if (!bytes || bytes <= 0) return '';
@@ -99,7 +105,19 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
   const { xttsSettings, onUpdateXttsSettings } = useProjectContext();
   const [step, setStep] = useState(0);
   const [packs, setPacks] = useState(() => preparation ? assemblyPacks(preparation) : []);
-  const [destination, dispatchDestination] = useReducer(aggregateDestinationReducer, INITIAL_AGGREGATE_DESTINATION);
+  const steps = aggregateSteps();
+  const stepKey = steps[step].key;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const packName = ({ active }) => packs.find(pack => pack.id === active.id)?.name;
+  const announcements = {
+    onDragStart: event => t('home:aggregate.packs.pickedUp', { name: packName(event) }),
+    onDragOver: () => undefined,
+    onDragEnd: event => t('home:aggregate.packs.dropped', { name: packName(event) }),
+    onDragCancel: event => t('home:aggregate.packs.cancelled', { name: packName(event) }),
+  };
   const ageEdited = useRef(false);
   const busyRef = useRef(false);
   const cancelledRef = useRef(false);
@@ -108,7 +126,7 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
   const [rootAudio, setRootAudio] = useState('');
   const [rootImage, setRootImage] = useState('');
   // L'identité du pack est tirée une fois, à l'ouverture de l'assistant : les
-  // générations successives livrent le même pack, qui remplace le précédent.
+  // générations successives livrent la même identité de pack.
   const [metadata, setMetadata] = useState(() => ({ ...defaultMetadataForPacks([], generateUuid()), minAge: preparation?.suggestedAgeMin == null ? '' : String(preparation.suggestedAgeMin) }));
   const [outputDir, setOutputDir] = useState(() => getLastExportDir() || '');
   const [phase, setPhase] = useState('collect'); // collect | landing | generating | done
@@ -290,19 +308,11 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
   }
 
   function canGoTo(index) {
-    if (index <= step) return true;
-    if (index >= 1 && packs.length === 0) return false;
-    if (index >= 2 && !rootAudio) return false;
-    if (index >= 3 && !rootImage) return false;
-    return true;
+    return canVisitAggregateStep({ index, packs, rootAudio, rootImage });
   }
 
   function handlePrimary() {
-    if (step < STEPS.length - 1) {
-      if (canGoTo(step + 1)) setStep(step + 1);
-      return;
-    }
-    return;
+    if (canGoTo(step + 1)) setStep(step + 1);
   }
 
   function saveMetadataDraft(draft, changedField) {
@@ -310,34 +320,33 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
     setMetadata((current) => ({ ...current, ...draft }));
   }
 
+  async function openEditor() {
+    if (busyRef.current || !onLand) return;
+    busyRef.current = true;
+    // eslint-disable-next-line i18next/no-literal-string -- État interne de préparation de session.
+    setPhase('landing');
+    setError('');
+    setTechnicalDetail('');
+    try {
+      const landed = await onLand({ draft: { packs, rootAudio, rootImage, metadata }, preparation });
+      if (landed) {
+        await handleClose(true);
+        onLanded?.();
+        return;
+      }
+    } catch (landingError) {
+      setError({ userMessage: landingError, codedOnly: true });
+      setTechnicalDetail(presentUserMessage(landingError).technicalDetail);
+    } finally {
+      busyRef.current = false;
+      if (!mountedRef.current) await cleanupAssistantSession();
+      else setPhase('collect');
+    }
+  }
+
   async function saveMetadataAndGenerate(draft) {
-    if (draft.minAge !== undefined && String(draft.minAge) !== String(metadata.minAge)) ageEdited.current = true;
     const nextMetadata = { ...metadata, ...draft };
     setMetadata(nextMetadata);
-    if (destination.destination === 'editor') {
-      if (busyRef.current || !onLand) return;
-      busyRef.current = true;
-      // eslint-disable-next-line i18next/no-literal-string -- État interne de préparation de session.
-      setPhase('landing');
-      setError('');
-      setTechnicalDetail('');
-      try {
-        const landed = await onLand({ draft: { packs, rootAudio, rootImage, metadata: nextMetadata }, preparation });
-        if (landed) {
-          await handleClose(true);
-          onLanded?.();
-          return;
-        }
-      } catch (landingError) {
-        setError({ userMessage: landingError, codedOnly: true });
-        setTechnicalDetail(presentUserMessage(landingError).technicalDetail);
-      } finally {
-        busyRef.current = false;
-        if (!mountedRef.current) await cleanupAssistantSession();
-        else setPhase('collect');
-      }
-      return;
-    }
     // Le dossier de sortie est choisi ici, au moment de générer (comme le flux
     // normal), plutôt que dans une étape dédiée en amont.
     const selected = await openDialog({
@@ -349,20 +358,18 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
     if (!selected) return;
     setOutputDir(selected);
     saveLastExportDir(selected);
-    // eslint-disable-next-line i18next/no-literal-string -- Événement du réducteur de destination.
-    dispatchDestination({ type: 'review', confirmation: createAggregateConfirmation({ packs, rootAudio, rootImage, metadata: nextMetadata }, selected) });
+    await generate(createAggregateGenerationRequest({ packs, rootAudio, rootImage, metadata: nextMetadata }, selected));
   }
 
-  async function generate(confirmation) {
-    const { packs, rootAudio, rootImage, metadata: activeMetadata } = confirmation.draft;
-    const outputFolder = confirmation.folder;
+  async function generate(request) {
+    const { packs, rootAudio, rootImage, metadata: activeMetadata } = request.draft;
+    const outputFolder = request.folder;
     if (!packs.length || !rootAudio || !rootImage || !activeMetadata.title?.trim() || !outputFolder) return;
     if (busyRef.current) return;
     const generationLease = nativeGenerationLock.acquire({ owner: 'aggregate', label: activeMetadata.title });
     if (!generationLease) { setError({ key: 'home:aggregate.generation.busy', params: {} }); return; }
     busyRef.current = true;
     cancelledRef.current = false;
-    dispatchDestination({ type: 'cancel' });
     setPhase('generating');
     setProgress(0.05);
     setError('');
@@ -380,8 +387,7 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
       const preparedPacks = [];
       for (let index = 0; index < packs.length; index += 1) {
         const pack = packs[index];
-        const copiedZip = await copyToSession(pack.path, activeMetadata.title || 'agregation');
-        preparedPacks.push({ ...pack, path: copiedZip, coverImage: pack.coverImage ? await copyToSession(pack.coverImage, activeMetadata.title) : pack.coverImage, coverAudio: pack.coverAudio ? await copyToSession(pack.coverAudio, activeMetadata.title) : pack.coverAudio });
+        preparedPacks.push(await copyAggregatePack(pack, path => copyToSession(path, activeMetadata.title || 'agregation')));
         setProgress(0.18 + ((index + 1) / packs.length) * 0.18);
       }
 
@@ -451,13 +457,10 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
   }
 
   const totalStories = packs.reduce((sum, pack) => sum + (pack.storyCount || 0), 0);
+  const sceneCountKnown = packs.every(pack => Number.isFinite(pack.storyCount));
   const totalSize = packs.reduce((sum, pack) => sum + (pack.sizeBytes || 0), 0);
   const ttsAvailable = isTtsAvailable(xttsSettings);
-  const primaryDisabled = (
-    (step === 0 && (packs.length === 0 || loadingPacks))
-    || (step === 1 && !rootAudio)
-    || (step === 2 && !rootImage)
-  );
+  const primaryDisabled = !canGoTo(step + 1) || loadingPacks;
   const previewProject = buildAggregateProject({ packs, rootAudio, rootImage, metadata });
   const generationPhases = [
     { label: t('home:aggregate.phase.combine'), status: progress >= 0.28 ? 'done' : 'active' },
@@ -478,20 +481,22 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
       ariaLabel={t('home:modeSelector.aggregate.label')}
       stepper={(
         <FunnelStepper
-          steps={STEPS.map((step) => ({ ...step, label: t(step.labelKey) }))}
+          steps={steps.map((step) => ({ ...step, label: t(step.labelKey) }))}
           current={step}
           onStepClick={(index) => { if (canGoTo(index)) setStep(index); }}
           disabled={phase !== 'collect'}
         />
       )}
-      footer={phase === 'collect' && step === STEPS.length - 1 ? null : (
+      footer={phase !== 'collect' || stepKey === 'metadata' ? null : (
         <FunnelFooter
           onBack={() => setStep((current) => Math.max(0, current - 1))}
           backDisabled={step === 0}
-          stepLabel={t('home:funnel.footer.stepCount', { step: step + 1, total: STEPS.length })}
+          stepLabel={t('home:funnel.footer.stepCount', { step: step + 1, total: steps.length })}
           onPrimary={handlePrimary}
-          primaryLabel={step === STEPS.length - 1 ? t('home:aggregate.generation.action') : t('home:funnel.footer.continue')}
-          primaryIcon={step === STEPS.length - 1 ? <Package /> : null}
+          primaryLabel={t('home:funnel.footer.continue')}
+          onSecondary={openEditor}
+          secondaryLabel={t('home:aggregate.editor.continue')}
+          secondaryDisabled={!packs.length || loadingPacks}
           primaryDisabled={primaryDisabled}
         />
       )}
@@ -513,7 +518,7 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
           fileName={result?.fileName}
           meta={[
             formatBytes(result?.sizeBytes),
-            t('home:aggregate.count.stories', { count: result?.storyCount ?? totalStories }),
+            sceneCountKnown ? t('home:aggregate.count.scenes', { count: result?.storyCount ?? totalStories }) : null,
             t('home:aggregate.done.packCount', { count: result?.packCount ?? packs.length }),
           ].filter(Boolean).join(' · ')}
           notice={result?.warnings?.length ? (
@@ -557,17 +562,20 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
 
           {preparation && <p>{t('catalogue:assembly.effectiveValues')}</p>}
           {packs.length > 0 && (
+            <DndContext sensors={sensors} collisionDetection={closestCenter}
+              accessibility={{ announcements, screenReaderInstructions: { draggable: t('home:aggregate.packs.dragInstructions') } }} onDragEnd={({ active, over }) => {
+              if (over && active.id !== over.id) setPacks(current => arrayMove(current, current.findIndex(pack => pack.id === active.id), current.findIndex(pack => pack.id === over.id)));
+            }}>
+            <SortableContext items={packs.map(pack => pack.id)} strategy={verticalListSortingStrategy}>
             <div className="aggregate-pack-list">
               {packs.map((pack, index) => (
-                <div className="aggregate-pack-row" key={pack.id}>
-                  <span className="aggregate-pack-handle" aria-hidden="true">⋮⋮</span>
+                <SortablePackRow pack={pack} key={pack.id}>
                   <span className="aggregate-pack-icon"><Package /></span>
                   <span className="aggregate-pack-copy">
                     {preparation && pack.provenance?.some(field => field.effective?.origin === 'correction' || field.effective?.origin === 'cleared') && <span>{t('catalogue:data.corrected')}</span>}
                     {preparation ? <input aria-label={t('home:aggregate.packs.title')} value={pack.name} onChange={event => setPacks(current => current.map(item => item.id === pack.id ? { ...item, name: event.target.value } : item))} /> : <span className="aggregate-pack-name" title={pack.fileName}>{pack.fileName}</span>}
                     <span className="aggregate-pack-meta">
-                      {preparation && <button type="button" onClick={async () => { const image = await pickImage(); if (image) setPacks(current => current.map(item => item.id === pack.id ? { ...item, coverImage: image } : item)); }}>{t('home:aggregate.image.choose')}</button>}
-                      {[formatBytes(pack.sizeBytes), t('home:aggregate.count.scenes', { count: pack.storyCount })].filter(Boolean).join(' · ')}
+                      {[formatBytes(pack.sizeBytes), Number.isFinite(pack.storyCount) ? t('home:aggregate.count.scenes', { count: pack.storyCount }) : null].filter(Boolean).join(' · ')}
                     </span>
                   </span>
                   <button type="button" className="aggregate-icon-btn" onClick={() => movePack(index, -1)} disabled={index === 0} aria-label={t('home:aggregate.packs.moveUp')}>
@@ -579,26 +587,29 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
                   <button type="button" className="aggregate-icon-btn" onClick={() => removePack(pack.id)} aria-label={t('home:aggregate.packs.remove')}>
                     <Trash2 />
                   </button>
-                </div>
+                </SortablePackRow>
               ))}
               <div className="aggregate-pack-list-foot">
-                <span>{t('home:aggregate.count.packs', { count: packs.length })} · {t('home:aggregate.count.scenes', { count: totalStories })}</span>
+                <span>{[t('home:aggregate.count.packs', { count: packs.length }), sceneCountKnown ? t('home:aggregate.count.scenes', { count: totalStories }) : null].filter(Boolean).join(' · ')}</span>
                 <span>{formatBytes(totalSize)}</span>
               </div>
             </div>
+            </SortableContext>
+            </DndContext>
           )}
           {loadingPacks && <div className="aggregate-inline-note">{t('home:aggregate.packs.loading')}</div>}
           {error && <div className="funnel-error" role="alert">{presentStoredError(error)}<TechnicalDetail value={technicalDetail} /></div>}
         </div>
       )}
 
-      {phase === 'collect' && step === 1 && (
+      {phase === 'collect' && stepKey === 'audio' && (
         <div className="funnel-step-content aggregate-step">
           <FunnelSectionHeader
             icon={<Mic />}
             title={t('home:aggregate.audio.title')}
             description={t('home:aggregate.audio.description')}
           />
+          <p className="aggregate-inline-note">{t('home:aggregate.audio.editorHint')}</p>
           <div className="aggregate-audio-card">
             <button
               type="button"
@@ -631,7 +642,7 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
         </div>
       )}
 
-      {phase === 'collect' && step === 2 && (
+      {phase === 'collect' && stepKey === 'image' && (
         <div className="funnel-step-content aggregate-step">
           <FunnelSectionHeader
             icon={<Image />}
@@ -673,7 +684,11 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
         </div>
       )}
 
-      {phase === 'collect' && step === 3 && (
+      {phase === 'collect' && (stepKey === 'audio' || stepKey === 'image') && error && (
+        <div className="funnel-error" role="alert">{presentStoredError(error)}<TechnicalDetail value={technicalDetail} /></div>
+      )}
+
+      {phase === 'collect' && stepKey === 'metadata' && (
         <div className="funnel-step-content aggregate-step aggregate-metadata-step">
           <FunnelSectionHeader
             icon={<Package />}
@@ -681,11 +696,7 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
             description={t('home:aggregate.metadata.description')}
             trailing={<span className="funnel-badge">{t('home:aggregate.metadata.badge')}</span>}
           />
-          {/* eslint-disable-next-line i18next/no-literal-string -- Événement interne du choix de destination. */}
-          <AggregateDestinationChoice destination={destination.destination} onChoose={value => dispatchDestination({ type: 'choose', destination: value })} />
-          {destination.confirmation ? <AggregateGenerationReview {...destination.confirmation}
-            onCancel={() => dispatchDestination({ type: 'cancel' })}
-            onConfirm={() => { const review = destination.confirmation; void generate(review); }} /> : <Suspense fallback={null}>
+          <Suspense fallback={null}>
             <PackNameModal
               open
               embedded
@@ -696,10 +707,10 @@ export function AggregatePacksFunnel({ onClose, preparation = null, onReleasePre
               onDraftChange={saveMetadataDraft}
               onSave={saveMetadataDraft}
               onSaveAndGenerate={saveMetadataAndGenerate}
-              primaryActionLabel={destination.destination === 'editor' ? t('home:aggregate.destination.editor') : t('home:aggregate.destination.review')}
+              primaryActionLabel={t('home:aggregate.generation.action')}
               onClose={() => setStep(2)}
             />
-          </Suspense>}
+          </Suspense>
           {error && <div className="funnel-error" role="alert">{presentStoredError(error)}<TechnicalDetail value={technicalDetail} /></div>}
         </div>
       )}

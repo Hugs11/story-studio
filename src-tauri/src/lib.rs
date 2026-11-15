@@ -87,10 +87,12 @@ fn prepare_logging<R: tauri::Runtime>(
     buffer: &support::startup_log::StartupLog,
     target: tauri_plugin_log::TargetKind,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let (plugin, level, logger) = log_plugin_builder(Some(target)).split(app)?;
+    let (plugin, _, logger) = log_plugin_builder(Some(target)).split(app)?;
     app.plugin(plugin)?;
     buffer.attach(logger);
-    log::set_max_level(level);
+    // Keep the plugin permissive for later preference changes, but fail quiet
+    // until the frontend explicitly requests a more verbose level.
+    log::set_max_level(log::LevelFilter::Warn);
     Ok(())
 }
 
@@ -211,12 +213,10 @@ pub(crate) fn admit_startup_with_resources<R: tauri::Runtime>(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Le tampon de demarrage ne garde que Warn et plus avant l'attache du journal
-    // fichier. Le niveau maximal Trace est celui que tauri-plugin-log reglerait de
-    // toute facon a l'installation; le frontend appelle set_log_level au boot
-    // (preference verbose ou non) pour le ramener au niveau choisi.
+    // Warn stays the threshold if the frontend never loads or set_log_level fails.
+    // At boot the frontend always calls set_log_level: warn, or info when verbose.
     log::set_logger(&support::startup_log::LOGGER).expect("startup logger");
-    log::set_max_level(log::LevelFilter::Trace);
+    log::set_max_level(log::LevelFilter::Warn);
 
     startup_builder(tauri::Builder::default(), tauri_plugin_single_instance::init(|app, _, _| {
             use tauri::Manager;
@@ -313,7 +313,6 @@ pub fn run() {
             commands::catalogue::catalogue_cancel_operation,
             commands::catalogue::catalogue_get_operation,
             commands::catalogue::catalogue_list_operations,
-            commands::catalogue::catalogue_explain_path,
             commands::catalogue::catalogue_reveal_exemplar,
             commands::catalogue::catalogue_reveal_path,
             commands::catalogue::catalogue_get_thumbnail,

@@ -1,4 +1,59 @@
 {
+  "CHECKER_ROLE_ROOT": {
+    "context": "Rôle de l’écran dans les lignes du vérificateur de pack.",
+    "en": {
+      "sourceHash": "9a59e26d691e",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "9a59e26d691e",
+      "status": "ai-reviewed"
+    }
+  },
+  "CHECKER_ROLE_STORY": {
+    "context": "Rôle de l’écran dans les lignes du vérificateur de pack.",
+    "en": {
+      "sourceHash": "7c574fe25d60",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "7c574fe25d60",
+      "status": "ai-reviewed"
+    }
+  },
+  "CHECKER_ROLE_END_MESSAGE": {
+    "context": "Rôle de l’écran dans les lignes du vérificateur de pack.",
+    "en": {
+      "sourceHash": "cb764ce46b97",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "cb764ce46b97",
+      "status": "ai-reviewed"
+    }
+  },
+  "CHECKER_ROLE_TITLE": {
+    "context": "Rôle de l’écran dans les lignes du vérificateur de pack.",
+    "en": {
+      "sourceHash": "78e7920010aa",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "78e7920010aa",
+      "status": "ai-reviewed"
+    }
+  },
+  "CHECKER_ROLE_NAVIGATION": {
+    "context": "Rôle de l’écran dans les lignes du vérificateur de pack.",
+    "en": {
+      "sourceHash": "3db65f8c2a7d",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "3db65f8c2a7d",
+      "status": "ai-reviewed"
+    }
+  },
   "ACTION_ID_EMPTY": {
     "context": "Diagnostic d’intégrité affiché dans l’éditeur graphe/import/export ; ActionNode sans identifiant : le champ « id » est vide.",
     "en": {
@@ -8016,12 +8071,12 @@
   "CHECKER_SILENCE_PADDING_DESCRIPTION": {
     "context": "COMMUNITY_PACK_CHECKER > erreur ou journal utilisateur ; src-tauri/src/services/community_pack_checker/audio.rs:843 ; Ajouter du silence au {{side}} pour atteindre {{targetSilenceSeconds}} s.",
     "en": {
-      "status": "ai-reviewed",
-      "sourceHash": "6d2a58689092"
+      "sourceHash": "d3b6b2ecb871",
+      "status": "ai-reviewed"
     },
     "it": {
-      "status": "ai-reviewed",
-      "sourceHash": "6d2a58689092"
+      "sourceHash": "d3b6b2ecb871",
+      "status": "ai-reviewed"
     }
   },
   "CHECKER_SILENCE_ADJUSTMENT_TITLE": {
@@ -8049,12 +8104,12 @@
   "CHECKER_SILENCE_REDUCTION_DESCRIPTION": {
     "context": "COMMUNITY_PACK_CHECKER > erreur ou journal utilisateur ; src-tauri/src/services/community_pack_checker/audio.rs:862 ; Ramener facultativement le silence au {{side}} à {{targetSilenceSeconds}} s.",
     "en": {
-      "status": "ai-reviewed",
-      "sourceHash": "006fc256cfd2"
+      "sourceHash": "f6d34cb50980",
+      "status": "ai-reviewed"
     },
     "it": {
-      "status": "ai-reviewed",
-      "sourceHash": "006fc256cfd2"
+      "sourceHash": "f6d34cb50980",
+      "status": "ai-reviewed"
     }
   },
   "CHECKER_FFMPEG_ERROR_UNKNOWN": {
@@ -8935,12 +8990,12 @@
   "CHECKER_AUTHORING_CLASSIFICATION_REFUSED": {
     "context": "COMMUNITY_PACK_CHECKER > erreur ou journal utilisateur ; src-tauri/src/services/community_pack_checker/mod.rs:800 ; Cette structure peut être valide pour la Lunii mais Story Studio ne la classe pas authoring-editable.",
     "en": {
-      "status": "ai-reviewed",
-      "sourceHash": "b4fdbc26ae92"
+      "sourceHash": "feb841fe7477",
+      "status": "ai-reviewed"
     },
     "it": {
-      "status": "ai-reviewed",
-      "sourceHash": "b4fdbc26ae92"
+      "sourceHash": "feb841fe7477",
+      "status": "ai-reviewed"
     }
   },
   "CHECKER_AUTHORING_REFUSAL_LOG_one": {
@@ -15772,22 +15827,22 @@
     "context": "COMMUNITY_PACK_CHECKER > erreur ou journal utilisateur ; src-tauri/src/services/community_pack_checker/audio.rs:49 ; début",
     "en": {
       "status": "ai-reviewed",
-      "sourceHash": "a34a7b30753c"
+      "sourceHash": "12bfa884de1e"
     },
     "it": {
       "status": "ai-reviewed",
-      "sourceHash": "a34a7b30753c"
+      "sourceHash": "12bfa884de1e"
     }
   },
   "LABEL_SILENCE_END": {
     "context": "COMMUNITY_PACK_CHECKER > erreur ou journal utilisateur ; src-tauri/src/services/community_pack_checker/audio.rs:50 ; fin",
     "en": {
       "status": "ai-reviewed",
-      "sourceHash": "a383bcb77c83"
+      "sourceHash": "9b20fcda3895"
     },
     "it": {
       "status": "ai-reviewed",
-      "sourceHash": "a383bcb77c83"
+      "sourceHash": "9b20fcda3895"
     }
   },
   "LABEL_AUDIO_CODEC_UNKNOWN": {
@@ -17822,6 +17877,17 @@
       "status": "ai-reviewed"
     }
   },
+  "STORYTELLER_DEVICE_WRITE_FAILED": {
+    "context": "Échec d’un geste sur la Lunii ; distinct de la préparation d’un envoi.",
+    "en": {
+      "sourceHash": "4e6a3f321f5a",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "4e6a3f321f5a",
+      "status": "ai-reviewed"
+    }
+  },
   "STORYTELLER_WRITE_FAILED": {
     "context": "Échec de préparation conteuse ; détail technique réservé au diagnostic.",
     "en": {
@@ -18351,13 +18417,13 @@
     }
   },
   "STORYTELLER_PROJECT_OPEN_ID_REQUIRED": {
-    "context": "Refus avant envoi du projet du catalogue vers la Lunii.",
+    "context": "Projet ouvert sans modifications en attente, mais sans identifiant enregistré : enregistrer dans l’éditeur avant de réessayer l’envoi vers la Lunii.",
     "en": {
-      "sourceHash": "945a7c5d1270",
+      "sourceHash": "03e8b35204fd",
       "status": "ai-reviewed"
     },
     "it": {
-      "sourceHash": "945a7c5d1270",
+      "sourceHash": "03e8b35204fd",
       "status": "ai-reviewed"
     }
   },
@@ -18380,6 +18446,17 @@
     },
     "it": {
       "sourceHash": "54d6dd8ae18b",
+      "status": "ai-reviewed"
+    }
+  },
+  "CHECKER_VOLUME_BEST_EFFORT": {
+    "context": "Vérificateur audio : annonce dès la première analyse que la correction prévue laissera le son sous la fenêtre de volume.",
+    "en": {
+      "sourceHash": "15d5492cd3f5",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "15d5492cd3f5",
       "status": "ai-reviewed"
     }
   }

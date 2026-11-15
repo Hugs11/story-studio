@@ -171,7 +171,7 @@ fn entry_page_matches_the_hand_written_contract_fixture() {
     let f = Fixture::new();
     populate(&f.root());
     let store = f.open();
-    store.add_source(&f.root(), 0, false).unwrap();
+    store.add_source(&f.root(), 0).unwrap();
     f.scan(&store);
     let page = serde_json::to_value(store.query_entries(2, None, true).unwrap()).unwrap();
     let expected = fixture();
@@ -223,7 +223,7 @@ fn entries_publish_dates_sizes_sources_versions_and_containers() {
     populate(&f.root());
     let before = snapshot(&f.root());
     let store = f.open();
-    let source = store.add_source(&f.root(), 0, false).unwrap().source_id;
+    let source = store.add_source(&f.root(), 0).unwrap().source_id;
     f.scan(&store);
     let page = store.query_entries(200, None, false).unwrap();
     assert_eq!(page.items.len(), 3);
@@ -300,7 +300,7 @@ fn a_cursor_of_an_older_revision_is_refused_with_its_own_code() {
     let f = Fixture::new();
     populate(&f.root());
     let store = f.open();
-    store.add_source(&f.root(), 0, false).unwrap();
+    store.add_source(&f.root(), 0).unwrap();
     f.scan(&store);
     let cursor = store.query_entries(1, None, false).unwrap().cursor.unwrap();
     f.scan(&store);
@@ -348,7 +348,7 @@ fn entries_publish_the_send_gate_official_decision() {
     )
     .unwrap();
     let store = f.open();
-    store.add_source(&f.root(), 0, false).unwrap();
+    store.add_source(&f.root(), 0).unwrap();
     f.scan(&store);
     store
         .write(|tx| {

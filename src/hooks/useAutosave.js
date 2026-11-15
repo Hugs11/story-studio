@@ -71,8 +71,6 @@ export function useAutosave({
       });
       switch (action.kind) {
         case AUTOSAVE_ACTIONS.SKIP_EMPTY:
-          logger.warn('autosave:skip-empty-project');
-          return;
         case AUTOSAVE_ACTIONS.SKIP_BUSY:
         case AUTOSAVE_ACTIONS.SKIP_UNCHANGED:
         case AUTOSAVE_ACTIONS.SKIP_NO_TARGET:

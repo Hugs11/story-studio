@@ -54,6 +54,7 @@
   "loading.state.stale": "Refresh failed: the cards shown may be out of date.",
   "progress.status.queued": "Waiting…",
   "progress.status.cancelling": "Cancelling…",
+  "progress.phase.listening": "Reading 7z archives…",
   "progress.phase.finalization": "Publishing the index…",
   "progress.discovery.directories_one": "{{count}} folder browsed — discovery in progress",
   "progress.discovery.directories_other": "{{count}} folders browsed — discovery in progress",
@@ -237,6 +238,7 @@
   "filter.additions.label": "Additions from this scan (criteria suspended)",
   "summary.additions.show": "Show these additions",
   "cover.loading.label": "Loading cover",
+  "cover.officialPending.label": "Fetching cover…",
   "cover.unreadable.label": "Unreadable cover",
   "cover.tooLarge.label": "Cover exceeds size limit",
   "selection.hidden.removedNamed_one": "{{count}} hidden card removed from the selection. Affected cards include: {{titles}}.",
@@ -360,7 +362,7 @@
   "assembly.cancel": "Cancel",
   "assembly.generateFirst": "Generate first",
   "assembly.unavailable": "Source unavailable",
-  "assembly.effectiveValues": "Names and images come from the catalogue. You can change them here without changing the source files.",
+  "assembly.effectiveValues": "Names come from the catalogue. You can change them to name the nodes in the editor. On the Lunii, each pack keeps its original cover.",
   "backupExport.title": "Export catalogue data",
   "backupExport.description": "One file contains your personal data and retained images. Packs and caches are excluded.",
   "backupExport.destination": "Backup file",
@@ -460,7 +462,8 @@
   "sources.remove.withRemainingOne_other": "{{count}} packs will be removed from the catalogue, with their favourites, corrections and tags. {{remaining}} other remains available in another folder.",
   "sources.remove.withRemainingOther_other": "{{count}} packs will be removed from the catalogue, with their favourites, corrections and tags. {{remaining}} others remain available in another folder.",
   "preferences.sources.label": "Catalogue folders",
-  "preferences.location.label": "Catalogue location",
+  "preferences.location.label": "Catalogue data folder",
+  "preferences.location.description": "This folder contains the catalogue database and images. Packs stay in your working folders.",
   "preferences.location.open": "Open folder",
   "preferences.lunii.permission": "Retrieve titles and covers for official packs (connects to Lunii servers)",
   "preferences.export.label": "Export catalogue",
@@ -938,5 +941,7 @@
   "operation.moreNames_one": "and {{count}} other",
   "operation.moreNames_other": "and {{count}} others",
   "toolbar.sort.current": "Sort by {{criterion}}",
-  "sources.repatriated.managed": "Managed by Story Studio: packs retrieved from the Lunii"
+  "sources.repatriated.managed": "Managed by Story Studio: packs retrieved from the Lunii",
+  "preferences.reanalyze.action": "Force reanalysis of all packs",
+  "preferences.reanalyze.description": "Reopens every pack, even unchanged ones. Use when a card does not reflect its pack’s contents. Takes longer."
 }

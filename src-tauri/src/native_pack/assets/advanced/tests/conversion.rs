@@ -22,6 +22,92 @@ fn record<'a>(
 }
 
 #[test]
+fn conforming_mp3_copy_preserves_frames_with_or_without_id3_tags() {
+    let Some(ffmpeg) = ffmpeg_or_skip("mp3_tags") else {
+        return;
+    };
+    let scratch = Scratch::new("mp3-tags");
+    let frames = encode_conforming_mp3(&ffmpeg, &scratch, &tone(440.0, 0.5, 0.4));
+    assert!(frames.starts_with(&[0xff]));
+    for version in [0, 3, 4] {
+        // 130 octets de charge : taille syncsafe distincte d'un entier big endian.
+        let flags = if version == 4 { 0x10 } else { 0 };
+        let mut tagged = vec![b'I', b'D', b'3', version, 0, flags, 0, 0, 1, 2];
+        tagged.extend_from_slice(&[0; 130]);
+        if version == 4 {
+            tagged.extend_from_slice(&[b'3', b'D', b'I', 4, 0, 0x10, 0, 0, 1, 2]);
+        }
+        if version == 0 {
+            tagged.clear();
+        }
+        tagged.extend_from_slice(&frames);
+        if version != 0 {
+            tagged.extend_from_slice(b"TAG");
+            tagged.extend_from_slice(&[0; 125]);
+        }
+        let source = scratch.write_source("src", "tags.mp3", &tagged);
+        let document = document_with(&stage(ENTRY, true, Some("tags.mp3"), None), "");
+        // Un espace distinct par préparation, comme en production.
+        let run = Scratch::new(&format!("mp3-tags-{version}"));
+        let prepared = prepare(&document, &[binding("tags.mp3", &source)], &run, &ffmpeg).unwrap();
+        let record = record(&prepared, "tags.mp3");
+        assert_eq!(record.transformation, Transformation::Verbatim);
+        assert!(record.applied_plan.is_empty(), "aucun encodage");
+        assert_eq!(record.snapshot_sha256 == record.output_sha256, version == 0);
+        assert_eq!(
+            fs::read(&prepared.archive_entries[0].output_path).unwrap(),
+            frames
+        );
+        assert_eq!(fs::read(&source).unwrap(), tagged, "source intacte");
+
+        use crate::native_pack::assets::audio::{prepare_audio_asset, AudioPreparation};
+        use crate::native_pack::CanonicalOptions;
+        use crate::support::user_message::MessageLabel;
+        let options = CanonicalOptions {
+            silence_mode: SilenceMode::Off,
+            harmonize_loudness: false,
+            ..Default::default()
+        };
+        let menus = prepare_audio_asset(
+            source.to_str().unwrap(),
+            &ffmpeg,
+            &run.root,
+            &options,
+            0.0,
+            0.0,
+            ("storyAudio", MessageLabel::data("test")),
+        )
+        .unwrap();
+        let AudioPreparation::Verbatim { source: copied } = menus.preparation else {
+            panic!("les menus conservent aussi les trames sans ré-encodage");
+        };
+        assert_eq!(fs::read(copied).unwrap(), frames);
+    }
+}
+
+#[test]
+fn unexpected_bytes_before_mpeg_frames_fall_back_to_encoding() {
+    let Some(ffmpeg) = ffmpeg_or_skip("mp3_prefix") else {
+        return;
+    };
+    let scratch = Scratch::new("mp3-prefix");
+    let frames = encode_conforming_mp3(&ffmpeg, &scratch, &tone(440.0, 0.5, 0.4));
+    let bytes = [b"unexpected prefix".as_slice(), &frames].concat();
+    let source = scratch.write_source("src", "prefix.mp3", &bytes);
+    let header = super::super::format::parse_mpeg_frame_header(&bytes);
+    assert!(header.unwrap().is_studio_conform());
+    let plan = plan_audio(
+        &ffmpeg,
+        &source,
+        header,
+        &AdvancedAudioOptions::default(),
+        std::time::Duration::from_secs(120),
+    )
+    .unwrap();
+    assert!(matches!(plan, ConversionPlan::AudioEncode { .. }));
+}
+
+#[test]
 fn a_wav_an_offformat_png_and_a_conforming_mp3_cross_the_chain_as_expected() {
     let Some(ffmpeg) = ffmpeg_or_skip("wav_png_mp3_chain") else {
         return;

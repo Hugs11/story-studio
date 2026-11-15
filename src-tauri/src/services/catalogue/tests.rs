@@ -214,8 +214,8 @@ fn nested_roots_removal_and_declines() {
     let store = f.open();
     let child = f.0.join("root/child");
     std::fs::create_dir_all(&child).unwrap();
-    let parent = store.add_source(&f.0.join("root"), 0, false).unwrap();
-    let added = store.add_source(&child, 1, false).unwrap();
+    let parent = store.add_source(&f.0.join("root"), 0).unwrap();
+    let added = store.add_source(&child, 1).unwrap();
     let list = store.list_sources().unwrap();
     assert_eq!(
         list.items
@@ -239,7 +239,7 @@ fn nested_roots_removal_and_declines() {
     let workspace = f.0.join("workspace");
     std::fs::create_dir_all(&workspace).unwrap();
     store
-        .add_source(&workspace.join("exports"), 3, true)
+        .add_declined_source(&workspace.join("exports"), 3)
         .unwrap();
     store.remember_workspace(workspace.to_str()).unwrap();
     store.remember_workspace(workspace.to_str()).unwrap();
@@ -261,7 +261,7 @@ fn declined_source_stays_declined_after_reopening_and_remembering_workspace() {
     let workspace = f.0.join("workspace");
     std::fs::create_dir_all(&workspace).unwrap();
     let declined = workspace.join("exports");
-    store.add_source(&declined, 0, true).unwrap();
+    store.add_declined_source(&declined, 0).unwrap();
     drop(store);
     let store = f.open();
     store.remember_workspace(workspace.to_str()).unwrap();
@@ -326,7 +326,7 @@ fn concurrent_reads_and_stale_revision() {
             Ok(())
         })
         .unwrap();
-    let added = store.add_source(&f.0, 0, false).unwrap();
+    let added = store.add_source(&f.0, 0).unwrap();
     assert_eq!(added.catalogue_revision, 2);
     assert_eq!(added.sources_revision, 1);
     assert_eq!(
@@ -397,7 +397,7 @@ fn failed_migration_keeps_original_and_backup() {
 fn source_wire_contract() {
     let f = Fixture::new();
     let store = f.open();
-    let outcome = store.add_source(&f.0, 0, false).unwrap();
+    let outcome = store.add_source(&f.0, 0).unwrap();
     let value = serde_json::to_value(outcome).unwrap();
     assert_eq!(value["sourcesRevision"], 1);
     assert_eq!(value["catalogueRevision"], 1);
@@ -455,7 +455,7 @@ fn technical_links_and_direct_sources_remain_excluded() {
     let project = technical.join("project.mbah");
     std::fs::write(&project, b"untouched backup").unwrap();
     let before = std::fs::read(&project).unwrap();
-    store.add_source(&technical, 0, false).unwrap();
+    store.add_source(&technical, 0).unwrap();
     let rules = store.exclusions(&f.cache(), &f.data()).unwrap();
     assert_eq!(
         rules.reason_for(&project).unwrap().role,
@@ -481,7 +481,7 @@ fn technical_links_and_direct_sources_remain_excluded() {
     store.remember_workspace(workspace.to_str()).unwrap();
     let revision = store.list_sources().unwrap().sources_revision;
     store
-        .add_source(&workspace.join("zips-extraits"), revision, false)
+        .add_source(&workspace.join("zips-extraits"), revision)
         .unwrap();
     let rules = store.exclusions(&f.cache(), &f.data()).unwrap();
     assert_eq!(
@@ -504,9 +504,9 @@ fn missing_alias_sources_keep_identity_through_creation_and_return() {
     if !directory_link(&real, &alias) {
         return;
     }
-    let refused = store.add_source(&alias.join("new"), 0, true).unwrap();
+    let refused = store.add_declined_source(&alias.join("new"), 0).unwrap();
     std::fs::create_dir_all(real.join("new")).unwrap();
-    let refused_again = store.add_source(&real.join("new"), 1, true).unwrap();
+    let refused_again = store.add_declined_source(&real.join("new"), 1).unwrap();
     assert_eq!(refused.source_id, refused_again.source_id);
     // A declined source must be activated before it can be explicitly removed.
     assert_eq!(
@@ -517,7 +517,7 @@ fn missing_alias_sources_keep_identity_through_creation_and_return() {
             .code,
         "CATALOG_SOURCE_NOT_FOUND"
     );
-    store.add_source(&real.join("new"), 2, false).unwrap();
+    store.add_source(&real.join("new"), 2).unwrap();
     store.remove_source(&refused.source_id, 3).unwrap();
     std::fs::remove_dir(real.join("new")).unwrap();
     store.reconcile_sources().unwrap();
@@ -530,7 +530,7 @@ fn missing_alias_sources_keep_identity_through_creation_and_return() {
     assert_eq!(returned.items.len(), 1);
     assert_eq!(returned.items[0].id, refused.source_id);
     assert_eq!(returned.items[0].status, "removed");
-    let reactivated = store.add_source(&alias.join("new"), 4, false).unwrap();
+    let reactivated = store.add_source(&alias.join("new"), 4).unwrap();
     assert_eq!(reactivated.source_id, refused.source_id);
     store.remove_source(&refused.source_id, 5).unwrap();
     std::fs::remove_dir_all(&real).unwrap();
@@ -633,8 +633,8 @@ fn check_link_target_reconciliation(swap: bool) {
     if !directory_link(&targets[1], &links[1]) {
         return;
     }
-    let first = store.add_source(&links[0], 0, false).unwrap();
-    let second = store.add_source(&links[1], 1, true).unwrap();
+    let first = store.add_source(&links[0], 0).unwrap();
+    let second = store.add_declined_source(&links[1], 1).unwrap();
     store.remove_source(&first.source_id, 2).unwrap();
     let before = store.list_sources().unwrap();
     for link in &links {
@@ -673,9 +673,7 @@ fn check_link_target_reconciliation(swap: bool) {
         store.list_sources().unwrap().sources_revision,
         after.sources_revision
     );
-    let reactivated = store
-        .add_source(&links[0], after.sources_revision, false)
-        .unwrap();
+    let reactivated = store.add_source(&links[0], after.sources_revision).unwrap();
     assert_eq!(reactivated.source_id, first.source_id);
     assert_eq!(
         store
@@ -714,7 +712,7 @@ fn a_hung_source_probe_never_blocks_the_listing_nor_the_writer() {
     let store = f.open();
     let share = f.0.join("network-share");
     std::fs::create_dir_all(&share).unwrap();
-    store.add_source(&share, 0, false).unwrap();
+    store.add_source(&share, 0).unwrap();
     let before = store.list_sources().unwrap();
     // A simulated dead mount: the resolution never answers until released.
     let (entered, started) = mpsc::channel();
@@ -763,9 +761,9 @@ fn nesting_uses_the_persisted_resolution() {
     if !directory_link(&real, &alias) {
         return;
     }
-    let outer = store.add_source(&alias, 0, false).unwrap();
+    let outer = store.add_source(&alias, 0).unwrap();
     let inner = store
-        .add_source(&real.join("inner"), outer.sources_revision, false)
+        .add_source(&real.join("inner"), outer.sources_revision)
         .unwrap();
     // The link disappears: the listing still nests from the stored
     // resolution, without probing the disk.

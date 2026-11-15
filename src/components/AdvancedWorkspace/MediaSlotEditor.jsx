@@ -38,11 +38,13 @@ export function MediaSlotEditor({
     if (disabled) return;
     void onGesture(advancedGestures.setStageMedia(stage.uuid, field, presence.null()));
   };
+  const mediaTarget = { kind: 'advancedStage', projectEpoch, stageId: stage.uuid, field, clear };
 
   return (
     <div className={`advanced-media-field advanced-media-field--${field}`}>
       {field === 'image' ? (
         <ImageField
+          mediaTarget={mediaTarget}
           fieldId={`advanced:${stage.uuid}:image`}
           label={null}
           file={file}
@@ -57,6 +59,7 @@ export function MediaSlotEditor({
         />
       ) : (
         <AudioField
+          mediaTarget={mediaTarget}
           levelLabel={{ stage: stageName }}
           label={t("graph:media.audio.label")}
           labelRef={{ key: "graph:media.audio.label" }}

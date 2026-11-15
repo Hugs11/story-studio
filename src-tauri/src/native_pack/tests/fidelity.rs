@@ -1,5 +1,289 @@
 use super::*;
 
+/// Import réel d'un message partagé partiel : les histoires directes ne le
+/// jouaient pas. Le juge doit empêcher leur régénération infidèle par menus.
+#[test]
+fn c3_import_message_partiel_avec_histoires_directes_reste_graphe() {
+    use crate::services::pack_reader::{
+        classify_pack_editability, unpack_zip_to_entries, unpack_zip_to_entries_unchecked,
+    };
+    use crate::support::user_message::{codes, MessageTransportAssertions};
+    use serde_json::json;
+
+    let base = std::env::temp_dir().join(format!("c3_import_partiel_{}", now_millis()));
+    let transition = |action, index| json!({"actionNode": action, "optionIndex": index});
+    let stage = |id: &str, wheel, autoplay, ok_action, home_action, home_index| {
+        json!({
+            "uuid": id, "name": id, "type": "stage", "squareOne": id == "cover",
+            "audio": format!("{id}.mp3"),
+            "image": if matches!(id, "cover" | "ta" | "tb" | "mq") { Some("cover.png") } else { None },
+            "controlSettings": {
+                "wheel": wheel, "ok": true, "home": id != "cover",
+                "pause": false, "autoplay": autoplay,
+            },
+            "okTransition": transition(ok_action, 0),
+            "homeTransition": if matches!(id, "cover" | "ta" | "tb" | "mq") { serde_json::Value::Null }
+                else { transition(home_action, home_index) },
+        })
+    };
+    let source = json!({
+        "title": "C3 message partiel", "version": 1, "description": "", "format": "v1",
+        "nightModeAvailable": false,
+        "stageNodes": [
+            stage("cover", true, false, "choices", "choices", 0),
+            stage("ta", true, false, "play-a", "choices", 0),
+            stage("tb", true, false, "play-b", "choices", 1),
+            stage("reading-a", false, true, "end", "choices", 0),
+            stage("reading-b", false, true, "end", "choices", 1),
+            stage("nightStage", false, true, "choices", "choices", 0),
+            stage("mq", true, false, "sub-choices", "choices", 2),
+            stage("d1", true, true, "back-sub", "choices", 2),
+            stage("d2", true, true, "back-sub", "choices", 2),
+        ],
+        "actionNodes": [
+            {"id": "choices", "options": ["ta", "tb", "mq"]},
+            {"id": "play-a", "options": ["reading-a"]},
+            {"id": "play-b", "options": ["reading-b"]},
+            {"id": "end", "options": ["nightStage"]},
+            {"id": "sub-choices", "options": ["d1", "d2"]},
+            {"id": "back-sub", "options": ["mq"]},
+        ],
+    });
+    let original: StoryDocument = serde_json::from_value(source.clone()).expect("source");
+    validate_document_for_studio_compat(&original).expect("ports source valides");
+    let zip = write_synthetic_pack(
+        &base,
+        &source,
+        &[
+            "cover.mp3",
+            "cover.png",
+            "ta.mp3",
+            "tb.mp3",
+            "reading-a.mp3",
+            "reading-b.mp3",
+            "nightStage.mp3",
+            "mq.mp3",
+            "d1.mp3",
+            "d2.mp3",
+        ],
+    );
+    let imported =
+        unpack_zip_to_entries_unchecked(&zip, base.join("imported").to_str().expect("chemin"))
+            .expect("import réel");
+    assert_eq!(imported["usesGraphProjection"], true);
+    assert!(imported["nightModeAudio"]
+        .as_str()
+        .expect("message importé")
+        .ends_with("nightStage.mp3"));
+    let project = fidelity_project(&imported, "C3 message partiel");
+    let directs = project
+        .root_entries
+        .iter()
+        .chain(&project.shared_entries)
+        .flat_map(|entry| std::iter::once(entry).chain(entry.children.iter()))
+        .filter(|entry| matches!(entry.native_stage_id.as_deref(), Some("d1" | "d2")))
+        .collect::<Vec<_>>();
+    assert_eq!(directs.len(), 2);
+    for direct in directs {
+        assert_eq!(direct.entry_type, "story");
+        assert!(direct.item_audio.is_none() && direct.item_image.is_none());
+        assert_eq!(direct.return_after_play.as_deref(), Some("menu:mq"));
+    }
+
+    let verdict = classify_pack_editability(&zip).expect("juge d'import");
+    assert!(!verdict.authoring_editable, "{verdict:?}");
+    assert!(verdict.read_only_inspectable && verdict.uses_graph_projection);
+    assert!(!verdict.round_trip_faithful, "{verdict:?}");
+    assert!(
+        verdict
+            .reason
+            .contains_any_code(&[codes::VALIDATION_AUTHORING_SHARED_UNSUPPORTED]),
+        "{verdict:?}"
+    );
+    let error = unpack_zip_to_entries(&zip, base.join("menus").to_str().expect("chemin"))
+        .expect_err("le chemin public doit refuser l'éditeur par menus");
+    assert!(error.contains_any_code(&[codes::IMPORT_AUTHORING_EDITING_REFUSED]));
+    std::fs::remove_dir_all(base).expect("nettoyage");
+}
+
+/// Oracle écrit à la main, indépendant du builder : les titres passent par le
+/// message global, les histoires directes retournent au sous-menu sans le jouer.
+#[test]
+fn c3_message_partiel_projetable_en_arbre_reste_non_fidele() {
+    use serde_json::json;
+
+    for pause in [false, true] {
+        let controls = |wheel, autoplay, ok, home| json!({"wheel": wheel, "autoplay": autoplay, "ok": ok, "home": home, "pause": false});
+        let transition = |action, index| json!({"actionNode": action, "optionIndex": index});
+        let stage = |id: &str, image, controls, ok, home| {
+            json!({
+                "uuid": id, "name": id, "type": "stage", "squareOne": id == "cover",
+                "audio": format!("{id}.mp3"), "image": image,
+                "controlSettings": controls, "okTransition": ok, "homeTransition": home,
+            })
+        };
+        let play_controls =
+            json!({"wheel": false, "autoplay": true, "ok": false, "home": true, "pause": pause});
+        let source = json!({
+            "title": "C3 arbre mixte", "version": 1, "description": "", "format": "v1",
+            "nightModeAvailable": false,
+            "stageNodes": [
+                stage("cover", Some("cover.png"), controls(true, false, true, false), transition("choices", 0), json!(null)),
+                stage("ta", Some("ta.png"), controls(true, false, true, true), transition("play-a", 0), transition("choices", 0)),
+                stage("tb", Some("tb.png"), controls(true, false, true, true), transition("play-b", 0), transition("choices", 0)),
+                stage("reading-a", None, play_controls.clone(), transition("end", 0), transition("choices", 0)),
+                stage("reading-b", None, play_controls.clone(), transition("end", 0), transition("choices", 0)),
+                stage("nightStage", None, controls(false, true, true, true), transition("sub-choices", 0), json!(null)),
+                stage("mq", Some("mq.png"), controls(true, false, true, true), transition("sub-choices", 0), json!(null)),
+                stage("d1", None, play_controls.clone(), transition("sub-choices", 0), transition("sub-choices", 0)),
+                stage("d2", None, play_controls.clone(), transition("sub-choices", 0), transition("sub-choices", 0)),
+            ],
+            "actionNodes": [
+                {"id": "choices", "options": ["mq"]},
+                {"id": "play-a", "options": ["reading-a"]},
+                {"id": "play-b", "options": ["reading-b"]},
+                {"id": "end", "options": ["nightStage"]},
+                {"id": "sub-choices", "options": ["ta", "tb", "d1", "d2"]},
+            ],
+        });
+        let original: StoryDocument = serde_json::from_value(source.clone()).expect("oracle");
+        validate_document_for_studio_compat(&original).expect("oracle valide");
+        let titled = |id: &str, title: &str| {
+            json!({
+                "id": id, "type": "story", "name": id, "audio": format!("{id}.mp3"),
+                "itemAudio": format!("{title}.mp3"), "itemImage": format!("{title}.png"),
+                "controlSettings": play_controls,
+            })
+        };
+        let direct = |id: &str| {
+            json!({
+                "id": id, "type": "story", "name": id, "audio": format!("{id}.mp3"),
+                "nativeStageId": id, "controlSettings": play_controls,
+                "returnAfterPlay": "story:reading-a", "returnOnHome": "story:reading-a",
+            })
+        };
+        let mut project = fidelity_project(
+            &json!({
+                "rootAudio": "cover.mp3", "rootImage": "cover.png",
+                "entries": [{
+                    "id": "mq", "type": "menu", "name": "mq", "audio": "mq.mp3", "image": "mq.png",
+                    "children": [titled("reading-a", "ta"), titled("reading-b", "tb"), direct("d1"), direct("d2")],
+                }],
+                "nativeGraph": {"preserveForRoundTrip": true, "document": source},
+            }),
+            "C3 arbre mixte",
+        );
+        project.night_mode_audio = Some("nightStage.mp3".to_string());
+        // Retour sur le premier choix du sous-menu (la même liste de quatre
+        // options pour les histoires directes et le message de fin).
+        project.night_mode_return = Some("story:reading-a".to_string());
+        let canonical = canonicalize_project(&project);
+        let verdict =
+            crate::native_pack::fidelity_judge::canonical_roundtrip_is_faithful(&canonical)
+                .expect("juge de fidélité");
+        assert_eq!(
+            verdict.generated_stage_count,
+            original.stage_nodes.len(),
+            "{verdict:?}"
+        );
+        assert_eq!(verdict.oracle_stage_count, original.stage_nodes.len());
+        assert_eq!(verdict.invalid_transition_count, 0, "{verdict:?}");
+        assert_eq!(verdict.asset_presence_gap_count, 0, "{verdict:?}");
+        assert!(!verdict.faithful, "{verdict:?}");
+        assert_eq!(verdict.gaps.len(), 7, "{verdict:?}");
+        assert!(
+            verdict
+                .topology_gap_kinds
+                .iter()
+                .any(|gap| !gap.is_end_home_or_night()),
+            "{verdict:?}"
+        );
+    }
+}
+
+/// Un message global peut venir de l'import lui-même, même sans mode nuit.
+/// Source indépendante du builder : deux histoires avec titre partagent un message
+/// puis reviennent à la première histoire. Aucun réglage n'est retouché après l'import.
+#[test]
+fn c3_import_avec_message_global_sans_mode_nuit_reste_fidele() {
+    use serde_json::json;
+    for night_mode in [false, true] {
+        let base = std::env::temp_dir().join(format!("c3_import_{}_{}", night_mode, now_millis()));
+        let controls = |wheel, autoplay| {
+            json!({
+            "wheel": wheel, "ok": true, "home": autoplay, "pause": false, "autoplay": autoplay,
+            })
+        };
+        let stage = |id, audio, wheel, autoplay, action| {
+            json!({
+                "uuid": id, "name": id, "type": "stage", "squareOne": id == "cover",
+                "audio": audio, "image": if id == "cover" { Some("cover.png") } else { None },
+                "controlSettings": if id == "a" || id == "b" {
+                    json!({"wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false})
+                } else { controls(wheel, autoplay) },
+                "homeTransition": null, "okTransition": {"actionNode": action, "optionIndex": 0},
+            })
+        };
+        let source = json!({
+            "title": "C3 import", "version": 1, "description": "", "format": "v1",
+            "nightModeAvailable": night_mode,
+            "stageNodes": [
+                stage("cover", "root.mp3", true, false, "choices"),
+                stage("a", "a-title.mp3", true, false, "play-a"),
+                stage("b", "b-title.mp3", true, false, "play-b"),
+                stage("reading-a", "a.mp3", false, true, "end"),
+                stage("reading-b", "b.mp3", false, true, "end"),
+                stage("nightStage", "fin.mp3", false, true, "end-return"),
+            ],
+            "actionNodes": [
+                {"id": "choices", "options": ["a", "b"]},
+                {"id": "end", "options": ["nightStage"]},
+                {"id": "play-a", "options": ["reading-a"]},
+                {"id": "play-b", "options": ["reading-b"]},
+                {"id": "end-return", "options": ["a"]},
+            ],
+        });
+        let zip = write_synthetic_pack(
+            &base,
+            &source,
+            &[
+                "root.mp3",
+                "cover.png",
+                "a-title.mp3",
+                "b-title.mp3",
+                "a.mp3",
+                "b.mp3",
+                "fin.mp3",
+            ],
+        );
+        let imported = crate::services::pack_reader::unpack_zip_to_entries_unchecked(
+            &zip,
+            base.join("imported").to_str().expect("chemin"),
+        )
+        .expect("import");
+        assert!(imported["nightModeAudio"].as_str().is_some());
+        assert_eq!(imported["nightMode"], night_mode);
+        let mut project = fidelity_project(&imported, "C3 import");
+        // Comme project_from_imported_entries, conserver le message même sans mode nuit.
+        project.night_mode_audio = imported["nightModeAudio"].as_str().map(str::to_string);
+        project.night_mode_return = imported["nightModeReturn"].as_str().map(str::to_string);
+        project.night_mode_home_return =
+            imported["nightModeHomeReturn"].as_str().map(str::to_string);
+        let canonical = canonicalize_project(&project);
+        let assets = fidelity_fake_assets(&canonical);
+        let generated =
+            build_story_document(&report_for(canonical, assets, vec![])).expect("régénération");
+        let original: StoryDocument = serde_json::from_value(source).expect("source");
+        assert_fidelity_stage_shapes(&original, &generated, "C3 import non retouché");
+        // Le builder réutilise la liste des titres pour le retour (indice fixe 0),
+        // là où la source emploie une Action dédiée. Comparer les Écrans atteints
+        // et leurs contrôles, pas ce partage interne des Actions.
+        validate_document_for_studio_compat(&generated).expect("ports valides");
+        assert_graph_chain_fidelity(&zip, "C3 import non retouché");
+        let _ = std::fs::remove_dir_all(base);
+    }
+}
+
 // Optional external-pack fidelity harness. It is driven only by LUNII_FIDELITY_* env vars.
 // ── Fidelity tests (structure navigation) ─────────────────────────────────
 
@@ -61,6 +345,9 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
     }
 
     Project {
+        root_name: String::new(),
+        end_node_name: String::new(),
+        tree_color: None,
         name: title.to_string(),
         project_type: Some("pack".to_string()),
         root_audio: root_audio.clone(),
@@ -79,6 +366,7 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
             .cloned(),
         root_entries: entries,
         global_options: GlobalOptions {
+            end_node: false,
             add_silence: false,
             silence_mode: None,
             harmonize_loudness: true,
