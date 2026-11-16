@@ -14,29 +14,29 @@ const { useProjectStore } = await import('../src/store/projectStore.js');
 function attachedProject(autoNext) {
   const attached = (id) => ({
     id, type: 'story', name: id,
-    audio: `C:/h10b/${id}.mp3`, itemAudio: `C:/h10b/${id}-t.mp3`, itemImage: `C:/h10b/${id}.png`,
+    audio: `C:/message-fin/${id}.mp3`, itemAudio: `C:/message-fin/${id}-t.mp3`, itemImage: `C:/message-fin/${id}.png`,
     // « Rattacher au message global » (attachStoryEndToGlobalProject) ou import d'un pack
     // à écran de fin par histoire (Bestioles : 154 invites rattachées).
-    afterPlaybackPromptAudio: 'C:/h10b/fin.mp3',
+    afterPlaybackPromptAudio: 'C:/message-fin/fin.mp3',
     afterPlaybackPromptOkTarget: null,
     afterPlaybackPromptHomeTarget: null,
     afterPlaybackPromptHomeNone: true,
   });
   return normalizeProjectData({
     projectType: 'pack',
-    projectName: 'H10b',
-    packMetadata: { title: 'H10b', uuid: '11111111-2222-4333-8444-555566667777' },
-    rootAudio: 'C:/h10b/root.mp3',
-    rootImage: 'C:/h10b/root.png',
-    nightModeAudio: 'C:/h10b/fin.mp3',
+    projectName: 'Message de fin',
+    packMetadata: { title: 'Message de fin', uuid: '11111111-2222-4333-8444-555566667777' },
+    rootAudio: 'C:/message-fin/root.mp3',
+    rootImage: 'C:/message-fin/root.png',
+    nightModeAudio: 'C:/message-fin/fin.mp3',
     globalOptions: { endNode: true, autoNext },
     rootEntries: [attached('a'), attached('b')],
   });
 }
 
 test('p4 témoin : sans enchaînement auto, changer le son global le recopie dans les invites rattachées', () => {
-  const next = updateGlobalEndMessageProject(attachedProject(false), { nightModeAudio: 'C:/h10b/fin2.mp3' });
-  assert.deepEqual(next.rootEntries.map((e) => e.afterPlaybackPromptAudio), ['C:/h10b/fin2.mp3', 'C:/h10b/fin2.mp3']);
+  const next = updateGlobalEndMessageProject(attachedProject(false), { nightModeAudio: 'C:/message-fin/fin2.mp3' });
+  assert.deepEqual(next.rootEntries.map((e) => e.afterPlaybackPromptAudio), ['C:/message-fin/fin2.mp3', 'C:/message-fin/fin2.mp3']);
 });
 
 test('p4 enchaînement auto actif : le nœud « Message de fin » du diagramme reste éditable alors que l\'arbre le masque', () => {
@@ -48,12 +48,12 @@ test('p4 enchaînement auto actif : le nœud « Message de fin » du diagramme r
   assert.equal(layout.hasEndNode, false, 'diagramme : le nœud « Message de fin » est affiché (et sélectionnable) malgré l\'enchaînement auto');
 });
 
-// Ces deux reproductions gardent les oracles du banc H10b. L'éditeur reste
+// L'éditeur du message de fin reste
 // accessible après Annuler ou par le menu contextuel de l'arbre, même quand
 // l'enchaînement automatique masque le nœud ; une voix peut aussi arriver après son activation.
 test('p4 enchaînement auto actif : changer le son global (éditeur du message de fin) propage aux invites rattachées', () => {
   // Geste : éditeur du message de fin resté ouvert → nouveau son ; puis désactiver l'enchaînement automatique.
-  let project = updateGlobalEndMessageProject(attachedProject(true), { nightModeAudio: 'C:/h10b/fin2.mp3' });
+  let project = updateGlobalEndMessageProject(attachedProject(true), { nightModeAudio: 'C:/message-fin/fin2.mp3' });
   project = { ...project, globalOptions: { ...project.globalOptions, autoNext: false } };
   const kinds = collectEndMessagePresentations(project).map((item) => `${item.entry.id}:${item.presentationKind}:${item.entry.afterPlaybackPromptAudio === project.nightModeAudio}`);
   assert.deepEqual(kinds, ['a:global:true', 'b:global:true'],
@@ -83,13 +83,13 @@ test('Annuler réactive l’enchaînement avec end-node sélectionné : le nouve
   assert.equal(store.project.globalOptions.autoNext, true);
   assert.equal(hasVisibleEndNode(store.project), false);
   assert.equal(store.selectedId, 'end-node');
-  store.updateGlobalEndMessage({ nightModeAudio: 'C:/h10b/fin2.mp3' });
+  store.updateGlobalEndMessage({ nightModeAudio: 'C:/message-fin/fin2.mp3' });
   store = hook.render();
   store.updateGlobalOption('autoNext', false);
   store = hook.render();
 
   assert.deepEqual(store.project.rootEntries.map((entry) => entry.afterPlaybackPromptAudio.replaceAll('\\', '/')),
-    ['C:/h10b/fin2.mp3', 'C:/h10b/fin2.mp3']);
+    ['C:/message-fin/fin2.mp3', 'C:/message-fin/fin2.mp3']);
   assert.deepEqual(collectEndMessagePresentations(store.project).map((item) => item.presentationKind),
     ['global', 'global']);
 });

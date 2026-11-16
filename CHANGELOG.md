@@ -8,6 +8,21 @@ public version; this file stays as the concise project history.
 
 ---
 
+## [0.9.13] - 2026-11-16
+
+Story Studio 0.9.13 is a quick follow-up to 0.9.12: it fixes saving a new project and adds night mode to the
+Graph Editor.
+
+### Added
+
+- Graph Editor: the audiobook details can now turn on the Lunii night mode for the pack.
+
+### Fixed
+
+- The "What's new" window now opens on first launch even when the Catalogue is your start screen.
+- Saving a new project for the first time no longer fails with an error about the project folder when an older
+  untitled project already exists. This affected every editor since 0.9.12.
+
 ## [0.9.12] - 2026-11-15
 
 Story Studio 0.9.12 is mostly a fixes release. A pack made by the Menu Editor now reopens in that same

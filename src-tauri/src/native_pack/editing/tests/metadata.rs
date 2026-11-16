@@ -318,3 +318,81 @@ fn a_braced_pack_uuid_is_refused_at_input() {
         error.message
     );
 }
+
+/// Le mode nuit du graphe n'est que le drapeau racine : l'auteur l'active et le
+/// désactive, rien d'autre n'est généré. Les champs non visés gardent leur forme.
+#[test]
+fn the_night_mode_flag_is_toggled_alone_and_the_other_fields_keep_their_form() {
+    let payload = payload();
+    let before = decode_authoring_payload(&payload).expect("payload de départ");
+    // Le document source ne porte pas le drapeau : l'absence est la forme de départ.
+    assert_eq!(before.document.night_mode_available, Presence::Absent);
+
+    // Un champ non touché conserve sa présence : le titre bouge, pas le drapeau.
+    let titled = applied(
+        &payload,
+        bindings(),
+        update(json!({"title": {"form": "set", "value": "Autre"}})),
+    );
+    let seen = saved_and_reopened(&titled.payload);
+    assert_eq!(seen.document.night_mode_available, Presence::Absent);
+
+    let on = applied(
+        &payload,
+        bindings(),
+        update(json!({"nightModeAvailable": {"form": "set", "value": true}})),
+    );
+    let seen = saved_and_reopened(&on.payload);
+    assert_eq!(seen.document.night_mode_available, Presence::Value(true));
+    assert_eq!(seen.document.title, before.document.title);
+    assert_eq!(seen.document.stage_nodes, before.document.stage_nodes);
+    assert_eq!(seen.document.action_nodes, before.document.action_nodes);
+
+    // Le drapeau est aussi lu par la vue que consulte la fiche.
+    let view =
+        crate::native_pack::graph_view::read_advanced_graph_view(&on.payload).expect("vue lisible");
+    assert_eq!(view.metadata.night_mode_available.value, Some(true));
+
+    let off = applied(
+        &on.payload,
+        bindings(),
+        update(json!({"nightModeAvailable": {"form": "set", "value": false}})),
+    );
+    let seen = saved_and_reopened(&off.payload);
+    assert_eq!(seen.document.night_mode_available, Presence::Value(false));
+    assert_eq!(seen.document.title, before.document.title);
+
+    // Annulation : le payload d'avant le geste est inchangé et se relit à l'identique.
+    let restored = saved_and_reopened(&payload);
+    assert_eq!(restored.document, before.document);
+    let still_on = saved_and_reopened(&on.payload);
+    assert_eq!(
+        still_on.document.night_mode_available,
+        Presence::Value(true)
+    );
+
+    // Une forme `absent` rend le document de départ.
+    let cleared = applied(
+        &on.payload,
+        bindings(),
+        update(json!({"nightModeAvailable": {"form": "absent"}})),
+    );
+    let seen = saved_and_reopened(&cleared.payload);
+    assert_eq!(seen.document, before.document);
+}
+
+#[test]
+fn an_enabled_night_mode_flag_reaches_the_export() {
+    let mut source = source_document();
+    source["stageNodes"][1]["controlSettings"]["home"] = json!(true);
+    let payload = payload_from(&source);
+    let on = applied(
+        &payload,
+        bindings(),
+        update(json!({"nightModeAvailable": {"form": "set", "value": true}})),
+    );
+    let after = saved_and_reopened(&on.payload);
+    let prepared = crate::native_pack::preparation::prepare_graph_document_for_export(&after)
+        .expect("document préparé");
+    assert_eq!(prepared.standard_value()["nightModeAvailable"], true);
+}

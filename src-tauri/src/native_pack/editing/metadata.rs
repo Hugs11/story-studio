@@ -74,6 +74,24 @@ impl VersionUpdate {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(tag = "form", rename_all = "kebab-case", deny_unknown_fields)]
+pub(crate) enum FlagUpdate {
+    Set { value: bool },
+    Null,
+    Absent,
+}
+
+impl FlagUpdate {
+    fn presence(self) -> Presence<bool> {
+        match self {
+            FlagUpdate::Set { value } => Presence::Value(value),
+            FlagUpdate::Null => Presence::Null,
+            FlagUpdate::Absent => Presence::Absent,
+        }
+    }
+}
+
 /// Les champs visés par le geste. Un champ absent de la demande n'est pas
 /// touché ; c'est ce qui tient la conservation des informations non visées.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
@@ -88,6 +106,10 @@ pub(crate) struct DocumentMetadataUpdate {
     /// Racine `uuid` du dialecte, distincte de la `packIdentity`.
     #[serde(default)]
     uuid: Option<TextUpdate>,
+    /// Drapeau racine `nightModeAvailable` : c'est l'auteur qui l'active ; le
+    /// graphe n'y ajoute ni écran, ni audio, ni retour de fin d'histoire.
+    #[serde(default)]
+    night_mode_available: Option<FlagUpdate>,
     /// Identité du pack livré, distincte de la racine `uuid` du document.
     #[serde(default)]
     pack_identity: Option<String>,
@@ -99,6 +121,7 @@ impl DocumentMetadataUpdate {
             && self.version.is_none()
             && self.description.is_none()
             && self.uuid.is_none()
+            && self.night_mode_available.is_none()
             && self.pack_identity.is_none()
     }
 }
@@ -195,6 +218,9 @@ pub(crate) fn set_document_metadata(
     }
     if let Some(uuid) = update.uuid.clone() {
         decoded.document.uuid = uuid.presence();
+    }
+    if let Some(flag) = update.night_mode_available {
+        decoded.document.night_mode_available = flag.presence();
     }
     if let Some(identity) = new_identity {
         decoded.document.uuid = Presence::Value(identity.to_string());

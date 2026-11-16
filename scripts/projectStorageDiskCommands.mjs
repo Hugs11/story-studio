@@ -64,7 +64,6 @@ export const projectStorageDiskCommands = {
         if (ranks.has(collisionKey(name)) && (!originalFolders || name === old)
           && await owner(path.join(parent, name)) === workId) owned.push(name);
       }
-      if (!owned.length && entries.some(name => collisionKey(name) === collisionKey(old))) throw new Error('Destination de renommage refusée');
       for (const name of owned) {
         const from = path.join(parent, name); const to = path.join(parent, originalFolders?.[category] ?? next);
         if (from === to) continue;

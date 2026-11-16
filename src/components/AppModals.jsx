@@ -112,7 +112,7 @@ export function AppModals({
 
   return (
     <>
-      {appVersion && <ReleaseNotesModal key={appVersion} appVersion={appVersion} forceOpen={modals.isOpen('releaseNotes')} onClose={() => modals.close('releaseNotes')} />}
+      {appVersion && <ReleaseNotesModal key={appVersion} appVersion={appVersion} autoOpen={false} forceOpen={modals.isOpen('releaseNotes')} onClose={() => modals.close('releaseNotes')} />}
       {modals.isOpen('prefs') && renderDeferred(
         <OptionsTab
           {...optionsTabProps}

@@ -416,7 +416,7 @@ per-file** limit.
 
 yt-dlp and Deno remain downloaded at runtime and are not bundled. Piper 1.6 is bundled
 without its voice models; corresponding-source availability for the exact
-runtime build must accompany each release, including Story Studio 0.9.12.
+runtime build must accompany each release, including Story Studio 0.9.13.
 
 ## rusqlite and SQLite
 

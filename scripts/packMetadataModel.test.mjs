@@ -193,6 +193,27 @@ test('une version absente reste absente, jamais repliée sur 1', () => {
   assert.equal(advancedPackMetadataDraft(emptied).description, '');
 });
 
+test('le mode nuit du graphe : drapeau absent lu désactivé, écrit seulement quand il change', () => {
+  const withFlag = (flag) => ({ ...imported, metadata: { ...imported.metadata, nightModeAvailable: flag } });
+  const base = advancedPackMetadataDraft(withFlag(absent));
+  assert.equal(base.nightMode, false);
+  // Absent et `false` sont tous deux « désactivé » : aucun geste sans changement.
+  assert.equal(advancedMetadataMembers(withFlag(absent), base), null);
+  assert.equal(advancedMetadataMembers(withFlag(value(false)), { ...base, nightMode: false }), null);
+  // Activer, puis désactiver un drapeau posé.
+  assert.deepEqual(
+    advancedMetadataGesture(withFlag(absent), { ...base, nightMode: true }),
+    { gesture: 'set-document-metadata', update: { nightModeAvailable: { form: 'set', value: true } } },
+  );
+  const on = withFlag(value(true));
+  assert.equal(advancedPackMetadataDraft(on).nightMode, true);
+  assert.deepEqual(
+    advancedMetadataMembers(on, { ...advancedPackMetadataDraft(on), nightMode: false }),
+    { nightModeAvailable: { form: 'set', value: false } },
+  );
+  assert.equal(advancedMetadataMembers(on, advancedPackMetadataDraft(on)), null);
+});
+
 test('les compteurs comptent la structure réelle, pas des histoires absentes', () => {
   // Le piège : un projet graphe n'a pas d'arbre, et compter ses histoires
   // afficherait zéro pour la mauvaise raison.

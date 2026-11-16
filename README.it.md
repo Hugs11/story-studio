@@ -8,7 +8,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: build desktop" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="Licenza: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requisiti"><img alt="Piattaforme: Windows, Linux e macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Versione 0.9.12" src="https://img.shields.io/badge/version-0.9.12-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Versione 0.9.13" src="https://img.shields.io/badge/version-0.9.13-2F80ED.svg"></a>
   <a href="#stato-beta"><img alt="Stato: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -47,9 +47,9 @@ La scrittura sul dispositivo (invio, eliminazione, riordino e recupero di audiol
 - Gli audiolibri ufficiali Lunii non vengono mai copiati sul tuo computer.
 - Story Studio è fornito "così com'è", senza alcuna garanzia (vedi la [licenza](LICENSE)). **Lo usi con il tuo dispositivo a tuo rischio**: gli autori non possono essere ritenuti responsabili di perdite di dati o malfunzionamenti del dispositivo.
 
-## Versione 0.9.12
+## Versione 0.9.13
 
-Questa versione serve soprattutto a correggere difetti. Un pack creato con l’editor a menu si riapre nello stesso editor, esattamente come lo avevi costruito, le importazioni dalla Home arrivano nel posto giusto, il catalogo non rilegge più tutti i pack, il verificatore di pack è più preciso e l’assistente di assemblaggio è semplificato.
+Una versione correttiva rapida dopo la 0.9.12: il salvataggio di un nuovo progetto funziona di nuovo, l’editor a grafo può attivare la modalità notte della Lunii e la finestra delle novità si apre anche quando il Catalogo è la tua schermata iniziale.
 
 Dalla 0.9.10, Story Studio ha un catalogo locale e gestisce direttamente la Lunii. Puoi consultare, inviare e recuperare audiolibri, gestire la lista del dispositivo ed espellerlo. Titoli e copertine ufficiali sono facoltativi e richiedono il tuo consenso.
 

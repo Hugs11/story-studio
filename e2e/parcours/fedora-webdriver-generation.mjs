@@ -1,4 +1,4 @@
-// Jalon 2 du portage : même ouverture menus et mêmes quatre oracles que
+// Même ouverture menus et mêmes quatre oracles que
 // release-ui, isolés pour vérifier la chaîne avant les neuf étapes.
 import { launchApp } from '../lib/launch.mjs';
 import { importPack, generatePack } from '../lib/actions.mjs';

@@ -1,5 +1,5 @@
 // Constantes et helpers purs partages par la modale d'edition audio.
-// Extrait de AudioEditorModal.jsx pour reduire la surface du composant orchestrateur.
+// Extrait de AudioEditorModal.jsx pour reduire la surface du composant parent.
 
 export const NUDGE_STEP = 0.05;
 export const SKIP_STEP = 5;

@@ -125,6 +125,8 @@
   "packName.uuid.regenerate": "Genera un nuovo UUID dell’audiolibro",
   "packName.uuid.help": "Con un nuovo UUID puoi conservare questo audiolibro e il precedente come due audiolibri distinti.",
   "packName.uuid.importedHint": "UUID importato dall’audiolibro. Puoi generarne uno nuovo se vuoi.",
+  "packName.nightMode.label": "Modalità notte",
+  "packName.nightMode.help": "Attiva la modalità notte della Lunii.",
   "packName.filename.previewLabel": "Nome esportato",
   "packName.structure.loading": "Lettura della struttura…",
   "packName.generate.action": "Applica e crea",

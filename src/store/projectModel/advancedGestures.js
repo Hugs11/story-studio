@@ -33,6 +33,7 @@ const ADVANCED_METADATA_KEYS = Object.freeze([
   'version',
   'description',
   'uuid',
+  'nightModeAvailable',
   'packIdentity',
 ]);
 export const ADVANCED_MEDIA_FIELDS = Object.freeze(['audio', 'image']);

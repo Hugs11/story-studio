@@ -64,7 +64,7 @@ fn reopen(dto: Value) -> (Value, Project) {
 }
 
 #[test]
-fn lb_root3_g0_l_prompt_c0_returns_to_the_menu() {
+fn trois_histoires_avec_invites_reviennent_au_menu() {
     let mut dto = root_three();
     for (index, entry) in dto["rootEntries"]
         .as_array_mut()
@@ -84,7 +84,7 @@ fn lb_root3_g0_l_prompt_c0_returns_to_the_menu() {
 }
 
 #[test]
-fn lb_root3_g_end_l0_c0_keeps_the_global_end_and_default_return() {
+fn trois_histoires_conservent_la_fin_globale_et_le_retour_par_defaut() {
     let mut dto = root_three();
     dto["nightModeAudio"] = json!("end.mp3");
     dto["globalOptions"]["endMessageAutoplay"] = json!(false);
@@ -95,7 +95,7 @@ fn lb_root3_g_end_l0_c0_keeps_the_global_end_and_default_return() {
 }
 
 #[test]
-fn lb_night_flag_survives_when_personal_ends_replace_the_global_audio() {
+fn le_mode_nuit_survit_aux_fins_personnelles_sans_son_global() {
     let mut dto = root_three();
     dto["nightModeAudio"] = json!("unused-end.mp3");
     dto["globalOptions"]["nightMode"] = json!(true);
@@ -115,7 +115,7 @@ fn lb_night_flag_survives_when_personal_ends_replace_the_global_audio() {
 }
 
 #[test]
-fn lb_mini_loup_shape_keeps_twenty_stories_and_the_next_story_end() {
+fn le_dossier_conserve_vingt_histoires_et_la_fin_vers_la_suivante() {
     let mut dto = root_three();
     let template = dto["rootEntries"][0].clone();
     let stories: Vec<Value> = (0..20)
@@ -130,7 +130,7 @@ fn lb_mini_loup_shape_keeps_twenty_stories_and_the_next_story_end() {
         })
         .collect();
     dto["rootEntries"] = json!([{
-        "id": "folder", "name": "Mini-loup", "type": "menu",
+        "id": "folder", "name": "Histoires du soir", "type": "menu",
         "audio": "folder.mp3", "image": "folder.png", "children": stories
     }]);
     dto["nightModeAudio"] = json!("end.mp3");
@@ -144,7 +144,7 @@ fn lb_mini_loup_shape_keeps_twenty_stories_and_the_next_story_end() {
 }
 
 #[test]
-fn lb_personal_end_ok_does_not_replace_the_story_home_return() {
+fn la_fin_personnelle_ne_remplace_pas_le_retour_accueil() {
     let mut dto = root_three();
     let mut stories = dto["rootEntries"].as_array().unwrap().clone();
     for story in &mut stories {
@@ -166,10 +166,10 @@ fn lb_personal_end_ok_does_not_replace_the_story_home_return() {
     );
 }
 
-/// Témoin C3 avec images : une fin commune reliée à une partie seulement des
+/// Cas avec images : une fin commune reliée à une partie seulement des
 /// histoires reste au Graphe, même quand la projection par arbre serait valide.
 #[test]
-fn lb_partial_shared_end_with_images_stays_graph() {
+fn la_fin_partiellement_partagee_avec_images_reste_au_graphe() {
     use crate::services::pack_reader::{
         classify_pack_editability, unpack_zip_to_entries_unchecked,
     };
@@ -177,7 +177,7 @@ fn lb_partial_shared_end_with_images_stays_graph() {
     use std::io::Write;
 
     let base = std::env::temp_dir().join(format!(
-        "lb_c3_images_{}_{}",
+        "fin_partagee_images_{}_{}",
         std::process::id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

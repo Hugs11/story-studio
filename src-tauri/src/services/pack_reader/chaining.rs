@@ -1,6 +1,6 @@
 //! Helpers de chainage / linearisation utilises pendant la projection.
 //!
-//! Extraits de `projection.rs` pour reduire la surface du fichier orchestrateur
+//! Extraits de `projection.rs` pour reduire la surface du fichier parent
 //! et permettre des tests unitaires futurs.
 
 use std::collections::{HashMap, HashSet};

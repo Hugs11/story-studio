@@ -160,13 +160,13 @@ pub(super) fn zip_entry_stems(path: &Path) -> Vec<String> {
 
 fn fix_and_reanalyse(dir: &Path, zip: &Path) -> (ReportModel, ReportModel) {
     let before = analyze_pack(zip);
-    eprintln!("H8 AVANT\n{}", describe(&before));
+    eprintln!("Audio AVANT\n{}", describe(&before));
     let out = dir.join("out");
     fs::create_dir_all(&out).unwrap();
     let fixed = create_fixed_pack_with_log(zip, Some(&out), None, None, &|_| {})
         .expect("create fixed pack");
     let after = analyze_pack(Path::new(&fixed.fixed_zip_path));
-    eprintln!("H8 APRES\n{}", describe(&after));
+    eprintln!("Audio APRES\n{}", describe(&after));
     (before, after)
 }
 
@@ -383,7 +383,7 @@ fn explore_long_audio_is_measured_to_its_end() {
     let started = std::time::Instant::now();
     let (item, issues) = audio::analyze_audio_file(&ffmpeg, &path, "long.mp3", "Long", "Histoire");
     eprintln!(
-        "H8 LONG {:?} lead={:?} trail={:?} lufs={:?} dur={:?} en {:?} ; {:?}",
+        "Audio LONG {:?} lead={:?} trail={:?} lufs={:?} dur={:?} en {:?} ; {:?}",
         item.status,
         item.leading_silence_secs,
         item.trailing_silence_secs,
@@ -445,7 +445,7 @@ fn id3_text_does_not_change_the_detected_format() {
         audio::analyze_audio_file(&ffmpeg, &tagged, "tagged.mp3", "Tag", "Histoire");
     assert_eq!(item.duration_secs, plain_item.duration_secs);
     eprintln!(
-        "H8 ID3 témoin codec={:?} sr={:?} ch={:?} {:?} ; tag codec={:?} sr={:?} ch={:?} {:?}",
+        "Audio ID3 témoin codec={:?} sr={:?} ch={:?} {:?} ; tag codec={:?} sr={:?} ch={:?} {:?}",
         plain_item.codec,
         plain_item.sample_rate,
         plain_item.channels,

@@ -1151,7 +1151,6 @@
   "FILES_PROJECT_FOLDER_NAME_COLLISION": "Più cartelle hanno nomi che Story Studio considera identici.",
   "FILES_PROJECT_FOLDER_NAME_EXHAUSTED": "Impossibile riservare una cartella unica per il progetto.",
   "FILES_LINK_FORBIDDEN_FOLDER_RENAME": "I collegamenti non sono consentiti in una cartella da rinominare.",
-  "FILES_PROJECT_MARKER_MISSING": "Questa cartella del progetto non è stata creata da Story Studio o ha perso il suo marcatore.",
   "FILES_PROJECT_MERGE_FORBIDDEN": "La cartella di destinazione esiste già e Story Studio non unisce le cartelle.",
   "FILES_FOLDER_CHANGED_DURING_ORGANIZATION": "La cartella è cambiata durante l’organizzazione del progetto.",
   "FILES_INCOMPLETE_ROLLBACK": "{{error}}; impossibile annullare del tutto le modifiche: {{failures}}",

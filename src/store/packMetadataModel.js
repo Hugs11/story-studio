@@ -110,6 +110,7 @@ export function advancedPackMetadataDraft(view) {
     // masquerait ce refus derrière un repli.
     version: version == null ? '' : String(version),
     uuid: advancedProducedIdentity(view) ?? '',
+    nightMode: presenceValue(metadata?.nightModeAvailable) === true,
     originalUuid: advancedImportedIdentity(view),
     ...(view?.identityLocked ? { identityLocked: true } : {}),
   };
@@ -232,6 +233,13 @@ export function advancedMetadataMembers(view, draft) {
         members.version = presence.value(parsed);
       }
     }
+  }
+
+  // Le drapeau n'est écrit que s'il change : absent et `false` se lisent tous
+  // deux « désactivé », et les confondre créerait un pas d'annulation vide.
+  if (typeof draft?.nightMode === 'boolean') {
+    const current = presenceValue(metadata?.nightModeAvailable) === true;
+    if (draft.nightMode !== current) members.nightModeAvailable = presence.value(draft.nightMode);
   }
 
   if (governance.uuid.editable) {

@@ -2720,7 +2720,7 @@ fn unavailable_source_keeps_nonexcluded_exemplar_unretired_after_reconcile_and_s
 // Handwritten minimal editor envelopes, independent of the persistence encoder.
 const PROJ_MENU_FIXTURE: &str = r#"{
     "schemaVersion": 4, "authoringMode": "free", "projectType": "pack",
-    "packMetadata": {"title": "Mini-loup", "minAge": " 3 ",
+    "packMetadata": {"title": "Histoires du soir", "minAge": " 3 ",
                      "producer": "Producteur projet", "bonus": "Avec bonus"},
     "rootEntries": [{"type": "story"}, {"type": "zip"}]
 }"#;
@@ -4066,7 +4066,7 @@ fn a_damaged_picture_is_published_per_exemplar_and_measured_again_after_a_versio
     assert_eq!(field(&store), Value::Null);
 }
 
-// L22: old dates avoid the deliberate coarse-filesystem ambiguity window.
+// Old dates avoid the deliberate coarse-filesystem ambiguity window.
 fn age_for_analysis(path: &Path) {
     std::fs::File::options()
         .write(true)
@@ -4076,7 +4076,7 @@ fn age_for_analysis(path: &Path) {
         .unwrap();
 }
 #[test]
-fn l22_reuses_complete_observations_and_force_measures_everything() {
+fn les_observations_completes_sont_reutilisees_et_le_scan_force_remesure_tout() {
     let f = Fixture::new();
     let path = f.root().join("stable.zip");
     std::fs::write(&path, zip_bytes(&studio(Some(ID)))).unwrap();
@@ -4139,7 +4139,7 @@ fn l22_reuses_complete_observations_and_force_measures_everything() {
     assert_eq!(store.activity.snapshot().analyses, 0, "persisted analysis");
 }
 #[test]
-fn l22_invalid_analysis_evidence_is_never_reused() {
+fn les_preuves_analyse_invalides_ne_sont_jamais_reutilisees() {
     for change in [
         "version",
         "pending",
@@ -4171,7 +4171,7 @@ fn l22_invalid_analysis_evidence_is_never_reused() {
     }
 }
 #[test]
-fn l22_recent_dates_and_changed_files_are_reanalysed() {
+fn les_dates_recentes_et_fichiers_modifies_sont_reanalyses() {
     let f = Fixture::new();
     let path = f.root().join("stable.zip");
     let bytes = zip_bytes(&studio(Some(ID)));
@@ -4218,7 +4218,7 @@ fn l22_recent_dates_and_changed_files_are_reanalysed() {
     assert_eq!(store.activity.snapshot().analyses, 6, "size changed");
 }
 #[test]
-fn l22_internal_pack_file_and_all_archive_members_are_tracked() {
+fn le_fichier_interne_et_tous_les_membres_archive_sont_suivis() {
     let f = Fixture::new();
     let dir = f.root().join("folder");
     std::fs::create_dir_all(&dir).unwrap();
@@ -4269,7 +4269,7 @@ fn l22_internal_pack_file_and_all_archive_members_are_tracked() {
 }
 
 #[test]
-fn l22_queued_force_stays_scoped_when_normal_requests_merge() {
+fn le_scan_force_en_attente_garde_sa_portee_apres_fusion() {
     let f = Fixture::new();
     let other = f.0.join("other");
     std::fs::create_dir_all(&other).unwrap();
@@ -4335,7 +4335,7 @@ fn l22_queued_force_stays_scoped_when_normal_requests_merge() {
 }
 
 #[test]
-fn l22_solid_archive_reuses_metadata_and_listening_without_extraction() {
+fn une_archive_solide_reutilise_metadonnees_et_ecoute_sans_extraction() {
     let f = Fixture::new();
     let path = measured_solid_archive(&f);
     age_for_analysis(&path);
@@ -4359,7 +4359,7 @@ fn l22_solid_archive_reuses_metadata_and_listening_without_extraction() {
     assert_eq!(store.query_entries(20, None, false).unwrap().items, rows);
 }
 #[test]
-fn l22_superseded_force_survives_automatic_resume() {
+fn le_scan_force_remplace_survit_a_la_reprise_automatique() {
     let f = Fixture::new();
     let path = f.root().join("stable.zip");
     std::fs::write(&path, zip_bytes(&studio(Some(ID)))).unwrap();
@@ -4414,7 +4414,7 @@ fn l22_superseded_force_survives_automatic_resume() {
     );
 }
 
-// L22-2: files read outside the token are reuse evidence.
+// Files read outside the token are reuse evidence.
 fn age_tree(dir: &Path) {
     for entry in std::fs::read_dir(dir).unwrap() {
         let path = entry.unwrap().path();
@@ -4430,7 +4430,7 @@ fn first_cover(store: &Arc<store::Store>) -> Value {
         .clone()
 }
 #[test]
-fn l22_project_cover_beside_the_file_is_reuse_evidence() {
+fn la_couverture_a_cote_du_projet_est_une_preuve_de_reutilisation() {
     let f = Fixture::new();
     let project = f.root().join("projet.mbah");
     write_json(
@@ -4459,7 +4459,7 @@ fn l22_project_cover_beside_the_file_is_reuse_evidence() {
     assert_eq!(first_cover(&store)["available"], json!(false));
 }
 #[test]
-fn l22_device_pack_cover_in_rf_is_reuse_evidence() {
+fn la_couverture_du_pack_dans_rf_est_une_preuve_de_reutilisation() {
     let f = Fixture::new();
     let pack = f.root().join("pack");
     crate::support::fs_pack_reader::fs_fixtures::write_encrypted_cover_pack(&pack, &bmp(8, 8));
@@ -4488,7 +4488,7 @@ fn l22_device_pack_cover_in_rf_is_reuse_evidence() {
     assert_eq!(first_cover(&store), Value::Null);
 }
 #[test]
-fn l22_upper_case_device_pack_indexes_are_reuse_evidence() {
+fn les_index_de_pack_en_majuscules_sont_des_preuves_de_reutilisation() {
     let f = Fixture::new();
     let pack = f.root().join("pack");
     crate::support::fs_pack_reader::fs_fixtures::write_cleartext_pack(&pack, false);

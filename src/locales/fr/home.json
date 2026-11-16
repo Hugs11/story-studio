@@ -125,6 +125,8 @@
   "packName.uuid.regenerate": "Générer un nouvel UUID de pack",
   "packName.uuid.help": "Un nouvel UUID permet de conserver ce pack et l’ancien comme deux packs distincts.",
   "packName.uuid.importedHint": "UUID importé du pack. Tu peux le régénérer si tu le souhaites.",
+  "packName.nightMode.label": "Mode nuit",
+  "packName.nightMode.help": "Active le mode nuit de la Lunii.",
   "packName.filename.previewLabel": "Nom exporté",
   "packName.structure.loading": "Structure en cours de lecture",
   "packName.generate.action": "Appliquer & générer",

@@ -125,6 +125,8 @@
   "packName.uuid.regenerate": "Generate a new audiobook UUID",
   "packName.uuid.help": "A new UUID lets you keep this audiobook and the old one as two separate audiobooks.",
   "packName.uuid.importedHint": "UUID imported from the audiobook. You can generate a new one if you want.",
+  "packName.nightMode.label": "Night mode",
+  "packName.nightMode.help": "Turns on the Lunii night mode.",
   "packName.filename.previewLabel": "Exported name",
   "packName.structure.loading": "Reading the structure…",
   "packName.generate.action": "Apply & create",

@@ -3421,10 +3421,6 @@
     "params": []
   },
   {
-    "code": "FILES_PROJECT_MARKER_MISSING",
-    "params": []
-  },
-  {
     "code": "FILES_PROJECT_MERGE_FORBIDDEN",
     "params": []
   },

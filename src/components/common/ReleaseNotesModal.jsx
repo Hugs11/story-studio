@@ -1,6 +1,7 @@
 import { useCommonTranslation } from '../../i18n/commonPresentation.js';
 import { getIntlLocale } from '../../i18n/language.js';
 import { useEffect, useRef, useState } from 'react';
+import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { AppModalPortal } from './AppModalPortal';
 import { Button } from './Button';
@@ -10,9 +11,19 @@ import { RELEASE_NOTES, shouldShowReleaseNotes } from '../../config/releaseNotes
 import { isTauriRuntime } from '../../utils/tauriRuntime';
 import './ReleaseNotesModal.css';
 
-export function ReleaseNotesModal({ appVersion, forceOpen = false, onClose }) {
+// Ouverture automatique au premier lancement, montée une fois à la racine de
+// l'application : elle ne dépend d'aucun écran (Accueil, éditeur, Catalogue) et
+// n'est jamais remontée en changeant d'écran. La réouverture manuelle (Crédits)
+// passe par `forceOpen` sur l'instance d'`AppModals`, avec `autoOpen={false}`.
+export function ReleaseNotesStartup() {
+  const [appVersion, setAppVersion] = useState('');
+  useEffect(() => { getVersion().then(setAppVersion).catch(() => {}); }, []);
+  return appVersion ? <ReleaseNotesModal key={appVersion} appVersion={appVersion} /> : null;
+}
+
+export function ReleaseNotesModal({ appVersion, forceOpen = false, autoOpen = true, onClose }) {
   const { t } = useCommonTranslation();
-  const [open, setOpen] = useState(() => shouldShowReleaseNotes(appVersion, read(KEYS.RELEASE_NOTES_SEEN)));
+  const [open, setOpen] = useState(() => autoOpen && shouldShowReleaseNotes(appVersion, read(KEYS.RELEASE_NOTES_SEEN)));
   const [linkError, setLinkError] = useState('');
   const boxRef = useRef(null);
   const visible = open || forceOpen;

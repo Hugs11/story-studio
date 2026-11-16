@@ -21,7 +21,7 @@ struct Fixture {
 }
 impl Fixture {
     fn new() -> Self {
-        let root = std::env::temp_dir().join(format!("l2-provenance-{}", uuid::Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("provenance-{}", uuid::Uuid::new_v4()));
         let catalogue = CatalogueState::default();
         let store = catalogue
             .store(&root.join("data"), &root.join("cache"))

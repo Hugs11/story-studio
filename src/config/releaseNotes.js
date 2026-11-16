@@ -1,21 +1,13 @@
 import i18next from 'i18next';
 
 export const RELEASE_NOTES = Object.freeze({
-  version: '0.9.12',
-  date: '2026-11-15',
-  highlights: [],
+  version: '0.9.13',
+  date: '2026-11-16',
+  highlights: [
+    ['common:releaseNotes.current.nightGraph.title', 'common:releaseNotes.current.nightGraph.detail'],
+  ],
   fixes: [
-    ['common:releaseNotes.current.recipe.title', 'common:releaseNotes.current.recipe.detail'],
-    ['common:releaseNotes.current.imports.title', 'common:releaseNotes.current.imports.detail'],
-    ['common:releaseNotes.current.assembly.title', 'common:releaseNotes.current.assembly.detail'],
-    ['common:releaseNotes.current.catalogue.title', 'common:releaseNotes.current.catalogue.detail'],
-    ['common:releaseNotes.current.checker.title', 'common:releaseNotes.current.checker.detail'],
-    ['common:releaseNotes.current.endings.title', 'common:releaseNotes.current.endings.detail'],
-    ['common:releaseNotes.current.lunii.title', 'common:releaseNotes.current.lunii.detail'],
-    ['common:releaseNotes.current.media.title', 'common:releaseNotes.current.media.detail'],
-    ['common:releaseNotes.current.editors.title', 'common:releaseNotes.current.editors.detail'],
-    ['common:releaseNotes.current.recovery.title', 'common:releaseNotes.current.recovery.detail'],
-    ['common:releaseNotes.current.fixes.label'],
+    ['common:releaseNotes.current.save.title', 'common:releaseNotes.current.save.detail'],
   ],
   chores: [],
   discordUrl: 'https://discord.gg/jeC6Qk4NS',

@@ -14,7 +14,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: desktop builds" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platforms: Windows, Linux and macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.12" src="https://img.shields.io/badge/version-0.9.12-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.13" src="https://img.shields.io/badge/version-0.9.13-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -66,9 +66,9 @@ Writing to the device (sending, deleting, reordering and retrieving audiobooks) 
 - Official Lunii audiobooks are never copied back to your computer.
 - Story Studio is provided "as is", without warranty of any kind (see [LICENSE](LICENSE)). **You use it with your device at your own risk**: the authors cannot be held responsible for data loss or a device malfunction.
 
-## Version 0.9.12
+## Version 0.9.13
 
-This version is mostly about fixes. A pack made by the Menu Editor reopens in that same editor exactly as you built it, imports from the Home screen land where they should, the catalogue stops re-reading every pack, the pack checker is more accurate, and the assembly wizard is simpler.
+A quick follow-up to 0.9.12: saving a new project works again, the Graph Editor can turn on the Lunii night mode, and the "What's new" window also opens when the Catalogue is your start screen.
 
 Since 0.9.10, Story Studio has a local audiobook catalogue and manages your Lunii directly. You can browse, send and retrieve audiobooks, manage the device list and eject it. Official titles and covers are optional and require your consent.
 

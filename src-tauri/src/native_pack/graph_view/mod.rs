@@ -122,6 +122,7 @@ pub(crate) fn project_graph_view(payload: &DecodedStoryDocument) -> AdvancedGrap
             version: PresenceView::of(&document.version),
             description: PresenceView::of(&document.description),
             uuid: PresenceView::of(&document.uuid),
+            night_mode_available: PresenceView::of(&document.night_mode_available),
         },
         entry: project_entry(document, &stage_paths),
         counts: CountsView {

@@ -1,4 +1,5 @@
 import { ReleaseNotice } from './components/ReleaseNotice.jsx';
+import { ReleaseNotesStartup } from './components/common/ReleaseNotesModal';
 import { AppModals } from './components/AppModals.jsx';
 import { presentStoredError, presentUserMessage } from './i18n/userMessage.js';
 import { useCommonTranslation } from './i18n/commonPresentation.js';
@@ -1648,6 +1649,7 @@ export default function App() {
   return (
     <ErrorDialogProvider>
       <AppContent />
+      <ReleaseNotesStartup />
       <ReleaseNotice />
       <LuniiCloseNotice />
     </ErrorDialogProvider>

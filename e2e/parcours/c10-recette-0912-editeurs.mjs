@@ -1,4 +1,4 @@
-// R1w — sans corpus, réseau ni appareil. Exécution par l'orchestrateur Windows.
+// Vérification des éditeurs sans corpus, réseau ni appareil sous Windows.
 // Un argument peut filtrer une étape par son nom exact. Aucun lancement à l'import.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -788,6 +788,6 @@ export async function run(args = []) {
     } finally { await life.stop(); }
   }
   must(!args.length || steps.some(([name]) => args.includes(name)), 'Filtre sans étape connue');
-  ctx.check('🙋 Hugs : écoute et rendu visuel fin ; les octets et le décodage ne jugent pas la perception', null);
+  ctx.check('Vérification manuelle : écoute et rendu visuel fin ; les octets et le décodage ne jugent pas la perception', null);
   return ctx.finish();
 }

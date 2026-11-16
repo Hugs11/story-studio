@@ -1,5 +1,5 @@
 // Helpers purs pour la waveform de l'editeur audio.
-// Extraits de AudioEditorModal.jsx pour reduire la surface de l'orchestrateur.
+// Extraits de AudioEditorModal.jsx pour reduire la surface du composant parent.
 
 export function createAudioEditorWaveformOptions({ container, url, plugins }) {
   return {

@@ -1,8 +1,8 @@
 // Hook : ecoute les raccourcis clavier de la modale d'edition audio et
-// dispatch vers les actions fournies par l'orchestrateur AudioEditorModal.
+// dispatch vers les actions fournies par le composant parent AudioEditorModal.
 // Extrait de AudioEditorModal.jsx.
 //
-// L'orchestrateur passe :
+// Le composant parent passe :
 //   - un drapeau `isLoading` (le hook s'efface tant que la waveform charge)
 //   - les conditions `canOperate` / `canCut` qui gardent trim/cut
 //   - un objet `actions` regroupant les 17 callbacks (undo, zoom in/out,

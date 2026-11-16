@@ -1,4 +1,4 @@
-// R2 : une étape écrite, une étape jouée seule. Aucun corpus personnel.
+// Vérification du catalogue étape par étape, sans corpus personnel.
 import assert from 'node:assert/strict';
 import { renameSync, copyFileSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, basename, dirname } from 'node:path';

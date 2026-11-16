@@ -1,5 +1,5 @@
 // Sous-composant slider de la modale d'edition d'image. Extrait de
-// ImageEditorModal.jsx pour reduire la surface du composant orchestrateur.
+// ImageEditorModal.jsx pour reduire la surface du composant parent.
 //
 // step + format permettent les valeurs flottantes (ex. gamma des niveaux,
 // step 0.01 affiché « 1.20 »).

@@ -463,7 +463,7 @@ fn recipe_roundtrip_matrix_and_unchanged_story_bytes() {
     assert!(global_prompts > 0);
 }
 
-// Lot D: real archives, reopened through the public production entry points.
+// Archives réelles rouvertes par les points d’entrée publics de production.
 fn archive_for_reopening(p: &Project, dir: &Path) -> (std::path::PathBuf, Value) {
     let mut prepared = report(p);
     let document = build_story_document(&prepared).unwrap();
@@ -1077,9 +1077,9 @@ fn recipe_production_shared_media_and_divergent_role() {
             .as_array_mut()
             .unwrap()
             .iter_mut()
-            .find(|s| s["audio"] == "C__h10b_a_t_mp3.mp3")
+            .find(|s| s["audio"] == "C__message_fin_a_t_mp3.mp3")
             .unwrap();
-        title["audio"] = json!("C__h10b_a_mp3.mp3");
+        title["audio"] = json!("C__message_fin_a_mp3.mp3");
         files.insert("story.json".into(), serde_json::to_vec(&story).unwrap());
     });
     let without = dir.path().join("title-uses-play-without.zip");
@@ -1405,9 +1405,7 @@ fn recipe_production_without_recipe_matrix() {
         assert_ne!(legacy["recipeReopened"], true);
         generated += 1;
     }
-    eprintln!(
-        "no-recipe matrix: {generated}/1420 legacy imports; {menus} menus (lot B reference: 645)"
-    );
+    eprintln!("no-recipe matrix: {generated}/1420 legacy imports; {menus} menus (reference: 645)");
     assert_eq!((generated, menus), (1420, 645));
 }
 

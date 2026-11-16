@@ -29,7 +29,7 @@ function freeProject(overrides = {}) {
       version: 3,
       namingMode: 'convention',
       minAge: '3',
-      author: 'Hugs',
+      author: 'Auteur exemple',
     },
     rootEntries: [],
     globalOptions: { autoNext: false, nightMode: false, silenceMode: 'add', harmonizeLoudness: false },
@@ -74,7 +74,7 @@ test('la copie garde le nommage d’archive, la vignette et les réglages audio'
   assert.ok(copy.thumbnailImage);
   assert.equal(copy.packMetadata.namingMode, 'convention');
   assert.equal(copy.packMetadata.minAge, '3');
-  assert.equal(copy.packMetadata.author, 'Hugs');
+  assert.equal(copy.packMetadata.author, 'Auteur exemple');
   assert.deepEqual(copy.globalOptions, {
     silenceMode: 'add',
     harmonizeLoudness: false,

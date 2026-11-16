@@ -249,6 +249,27 @@
   line-height: 1.45;
 }
 
+/* Ligne « Mode nuit » (graphe) : interrupteur suivi d'une aide neutre. */
+.pack-meta-night-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pack-meta-night-control > :first-child {
+  flex: none;
+}
+
+.pack-meta-field-hint {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .pack-meta-age-control {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

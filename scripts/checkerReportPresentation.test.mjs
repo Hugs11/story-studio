@@ -100,7 +100,7 @@ test('D15: trailing silence description uses the translated side and decimal sep
   }
 });
 
-test('lot B: composed best effort and silence descriptions are readable in the details and HTML', async () => {
+test('les descriptions des corrections combinées et des silences restent lisibles dans les détails et le HTML', async () => {
   const envelope = (code, params = {}) => JSON.stringify({ code, params });
   const autoFixDescription = envelope('UI_MESSAGE_PARTS', { parts: { data: true, separator: ', ', messages: [
     envelope('CHECKER_VOLUME_BEST_EFFORT'),

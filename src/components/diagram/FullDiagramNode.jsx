@@ -1,7 +1,7 @@
 import { useTreeTranslation } from '../../i18n/useTreeTranslation.jsx';
 import { translateTree as t } from '../../i18n/treePresentation.js';
 // Noeud unitaire du diagramme complet (story, menu, zip, root, end-node).
-// Extrait de FullDiagramTree.jsx pour reduire la surface de l'orchestrateur.
+// Extrait de FullDiagramTree.jsx pour reduire la surface du composant parent.
 
 import { useEffect, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';

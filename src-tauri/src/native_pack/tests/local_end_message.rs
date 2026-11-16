@@ -41,9 +41,9 @@ fn target<'a>(
 fn story_dto(id: &str, fields: Value) -> Value {
     let mut story = json!({
         "id": id, "type": "story", "name": id,
-        "audio": format!("C:/h10b/{id}.mp3"),
-        "itemAudio": format!("C:/h10b/{id}-t.mp3"),
-        "itemImage": format!("C:/h10b/{id}.png"),
+        "audio": format!("C:/message-fin/{id}.mp3"),
+        "itemAudio": format!("C:/message-fin/{id}-t.mp3"),
+        "itemImage": format!("C:/message-fin/{id}.png"),
         "afterPlaybackPromptControlSettings": {"autoplay": true, "wheel": false, "pause": false, "ok": true, "home": true},
         "afterPlaybackSequence": [],
         "controlSettings": {"autoplay": false, "wheel": false, "pause": true, "ok": false, "home": true},
@@ -57,12 +57,12 @@ fn story_dto(id: &str, fields: Value) -> Value {
 fn project_dto(entries: Vec<Value>) -> Value {
     json!({
         "schemaVersion": 3, "authoringMode": "free", "version": 2,
-        "projectName": "H10b", "name": "H10b", "packVersion": 1, "packDescription": "",
+        "projectName": "Message de fin", "name": "Message de fin", "packVersion": 1, "packDescription": "",
         "packUuid": "11111111-2222-4333-8444-555566667777",
-        "packMetadata": {"title": "H10b", "uuid": "11111111-2222-4333-8444-555566667777"},
+        "packMetadata": {"title": "Message de fin", "uuid": "11111111-2222-4333-8444-555566667777"},
         "projectType": "pack",
-        "rootAudio": "C:/h10b/root.mp3", "rootImage": "C:/h10b/root.png",
-        "thumbnailImage": "C:/h10b/root.png",
+        "rootAudio": "C:/message-fin/root.mp3", "rootImage": "C:/message-fin/root.png",
+        "thumbnailImage": "C:/message-fin/root.png",
         "nightModeAudio": null, "nightModeReturn": null, "nightModeHomeReturn": null,
         "globalOptions": {"silenceMode": "normalize", "harmonizeLoudness": true, "autoNext": false,
             "nightMode": false, "endMessageAutoplay": true, "endNode": false},
@@ -85,7 +85,7 @@ fn c1_message_de_fin_local_a_la_racine_enchaine_sans_ok() {
     let dto = project_dto(vec![
         story_dto(
             "a",
-            json!({"afterPlaybackPromptAudio": "C:/h10b/a-fin.mp3"}),
+            json!({"afterPlaybackPromptAudio": "C:/message-fin/a-fin.mp3"}),
         ),
         story_dto("b", json!({})),
         story_dto("c", json!({})),
@@ -109,7 +109,7 @@ fn c1_message_de_fin_local_a_la_racine_enchaine_sans_ok() {
 #[test]
 fn c1_sequence_de_fin_a_la_racine_enchaine_sans_ok() {
     let step = json!({
-        "id": "a-e1", "name": "a-e1", "audio": "C:/h10b/a-e1.mp3",
+        "id": "a-e1", "name": "a-e1", "audio": "C:/message-fin/a-e1.mp3",
         "controlSettings": {"autoplay": true, "ok": true, "home": true, "pause": false, "wheel": false},
     });
     let dto = project_dto(vec![
@@ -130,7 +130,7 @@ fn c1_histoire_importee_avec_invite_attend_toujours_ok() {
     let dto = project_dto(vec![
         story_dto(
             "a",
-            json!({"nativeStageId": "native-a", "afterPlaybackPromptAudio": "C:/h10b/a-fin.mp3"}),
+            json!({"nativeStageId": "native-a", "afterPlaybackPromptAudio": "C:/message-fin/a-fin.mp3"}),
         ),
         story_dto("b", json!({})),
     ]);
@@ -157,16 +157,16 @@ fn imported_direct_project(global_message: bool) -> Value {
     };
     let mut dto = project_dto(vec![imported("a", "story:b"), imported("b", "story:a")]);
     if global_message {
-        dto["nightModeAudio"] = json!("C:/h10b/fin.mp3");
+        dto["nightModeAudio"] = json!("C:/message-fin/fin.mp3");
         dto["globalOptions"]["endNode"] = json!(true);
     }
     dto
 }
 
-/// Décision Hugs du 13 novembre : projet de reproduction C3, oracle option (a).
+/// Une histoire importée conserve ses contrôles et ses destinations.
 /// L'écran reste direct ; seul le passage par le message global est ajouté.
 #[test]
-fn c3_histoire_importee_directe_joue_le_message_global() {
+fn histoire_importee_directe_joue_le_message_global() {
     let original = build(imported_direct_project(false)).expect("sans retouche");
     let document = build(imported_direct_project(true)).expect("avec message global");
     for (id, next) in [("a", "b"), ("b", "a")] {

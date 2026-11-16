@@ -1,4 +1,4 @@
-// Recipe roundtrip matrix (1440 DTO), adapted from the measured lot A bench.
+// Matrice de réouverture des recettes (1440 DTO).
 // Run by src-tauri/src/native_pack/tests/recipe.rs; writes src-tauri/target/recipe/cases.json.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,7 +9,7 @@ import { normalizeProjectData, projectToRustExport } from '../src/store/projectM
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.join(__dirname, '../src-tauri/target/recipe');
 
-const media = (name) => `C:/h10b/${name}`;
+const media = (name) => `C:/message-fin/${name}`;
 
 function story(id) {
   return {
@@ -108,11 +108,11 @@ for (const [sName, makeEntries] of Object.entries(STRUCTURES)) {
         ));
         const raw = {
           projectType: sName === 'simple' ? 'simple' : 'pack',
-          projectName: 'H10b',
+          projectName: 'Message de fin',
           rootName: 'Racine auteur',
           endNodeName: 'Fin auteur',
           treeColor: '#7a4fa0',
-          packMetadata: { title: 'H10b', uuid: '11111111-2222-4333-8444-555566667777' },
+          packMetadata: { title: 'Message de fin', uuid: '11111111-2222-4333-8444-555566667777' },
           rootAudio: media('root.mp3'),
           rootImage: media('root.png'),
           rootEntries,

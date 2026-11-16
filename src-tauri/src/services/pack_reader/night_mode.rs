@@ -301,7 +301,7 @@ mod tests {
     }
 
     #[test]
-    fn lb_distinct_parent_returns_are_the_default_global_end_return() {
+    fn les_retours_parents_distincts_donnent_le_retour_global_par_defaut() {
         let instances = [
             instance("a", "folder-a", "folder-a"),
             instance("b", "folder-b", "folder-b"),
@@ -313,7 +313,7 @@ mod tests {
     }
 
     #[test]
-    fn lb_common_explicit_return_takes_precedence_over_default_inference() {
+    fn le_retour_explicite_commun_prime_sur_le_retour_par_defaut() {
         let mut first = instance("a", "root", "root");
         first.next_story_stage_id = Some("b".into());
         first.expected_next_or_fallback_stage_id = "b".into();

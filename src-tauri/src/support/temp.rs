@@ -468,11 +468,11 @@ mod tests {
         fs::remove_dir_all(root).expect("manual cleanup");
     }
 
-    // H9 : la purge de démarrage (24 h) ne distingue pas un dossier de session
+    // La purge de démarrage (24 h) ne distingue pas un dossier de session
     // vide d'un dossier qui porte encore une reprise jamais proposée à l'auteur.
     #[test]
     fn startup_purge_keeps_a_session_that_still_offers_a_recovery() {
-        let root = test_session_root("h9-purge");
+        let root = test_session_root("purge-session");
         // Session d'un processus précédent (plantage) : absente du registre vivant.
         let session = root.join(format!("{SESSION_WORKSPACE_PREFIX}4242_1_0"));
         fs::create_dir_all(session.join("fichiers-importes")).expect("create crashed session");
@@ -505,7 +505,7 @@ mod tests {
     // Témoin : une session orpheline sans reprise est bien purgée.
     #[test]
     fn startup_purge_still_removes_an_orphan_session_without_recovery() {
-        let root = test_session_root("h9-purge-witness");
+        let root = test_session_root("purge-temoin");
         let session = root.join(format!("{SESSION_WORKSPACE_PREFIX}4242_2_0"));
         fs::create_dir_all(session.join("fichiers-importes")).expect("create orphan session");
         std::thread::sleep(std::time::Duration::from_millis(50));

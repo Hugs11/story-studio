@@ -51,7 +51,7 @@ fn recipe_external_archives_keep_legacy_projection() {
         let verdict = classify_pack_editability(source).unwrap();
         let dest = std::env::temp_dir().join(format!("recipe-baseline-{}", uuid::Uuid::new_v4()));
         let actual = unpack_zip_to_entries_unchecked(source, dest.to_str().unwrap()).unwrap();
-        // The lot B projection is unchanged. Compare its complete output with
+        // The menu projection is unchanged. Compare its complete output with
         // the production wrapper, using the exact extracted media paths.
         let assets: HashMap<_, _> = presence_faithful_asset_map(&decoded.source_value)
             .into_keys()

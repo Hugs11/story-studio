@@ -484,13 +484,58 @@ mod disk_tests {
         populate_all_categories(ws.root(), "Old", OWNER).unwrap();
         populate_all_categories(ws.root(), "New", OWNER).unwrap();
         assert!(rename_project_folder(ws.root(), "Old", "New", OWNER).is_err());
-        assert!(rename_project_folder(
+        // Un autre projet qui ne possède aucun dossier candidat n'a rien à
+        // déplacer : succès sans déplacement, dossiers de « Old » intacts.
+        let other = "00000000-0000-4000-8000-000000000002";
+        assert!(rename_project_folder(ws.root(), "Old", "Absent", other)
+            .unwrap()
+            .is_empty());
+        for category in PROJECT_CATEGORIES {
+            assert!(ws.0.join(category).join("Old").is_dir());
+            assert!(!ws.0.join(category).join("Absent").exists());
+        }
+    }
+    #[test]
+    fn rename_skips_categories_where_only_a_foreign_homonym_exists() {
+        let ws = Workspace::new();
+        let other = "00000000-0000-4000-8000-000000000002";
+        populate_all_categories(ws.root(), "Projet sans titre", OWNER).unwrap();
+        let name = resolve_project_media_folder(
             ws.root(),
-            "Old",
-            "Absent",
-            "00000000-0000-4000-8000-000000000002"
+            "Projet sans titre",
+            other,
+            "fichiers-importes",
+            true,
         )
-        .is_err());
+        .unwrap();
+        assert_eq!(name, "Projet sans titre (2)");
+        let moves = rename_project_folder(ws.root(), "Projet sans titre", "Hayate", other).unwrap();
+        assert_eq!(moves.len(), 1);
+        assert!(ws.0.join("fichiers-importes/Hayate").is_dir());
+        assert!(!ws
+            .0
+            .join("fichiers-importes/Projet sans titre (2)")
+            .exists());
+        for category in PROJECT_CATEGORIES {
+            assert!(ws.0.join(category).join("Projet sans titre").is_dir());
+            if category != "fichiers-importes" {
+                assert!(!ws.0.join(category).join("Hayate").exists());
+            }
+        }
+    }
+    #[test]
+    fn rename_without_any_owned_folder_succeeds_without_moves() {
+        let ws = Workspace::new();
+        let other = "00000000-0000-4000-8000-000000000002";
+        populate_all_categories(ws.root(), "Projet sans titre", OWNER).unwrap();
+        assert!(
+            rename_project_folder(ws.root(), "Projet sans titre", "Hayate", other)
+                .unwrap()
+                .is_empty()
+        );
+        for category in PROJECT_CATEGORIES {
+            assert!(ws.0.join(category).join("Projet sans titre").is_dir());
+        }
     }
     #[test]
     fn concurrent_owners_reserve_independent_folders() {
@@ -536,7 +581,13 @@ mod disk_tests {
         )
         .unwrap();
         std::os::unix::fs::symlink(outside.0.join("marker"), &marker).unwrap();
-        assert!(rename_project_folder(ws.root(), "Azuro (2)", "New", OWNER).is_err());
+        // Un marqueur lien symbolique ne prouve pas la propriété : ce dossier
+        // n'est ni déplacé ni suivi, les autres catégories le sont normalement.
+        let moves = rename_project_folder(ws.root(), "Azuro (2)", "New", OWNER).unwrap();
+        assert_eq!(moves.len(), PROJECT_CATEGORIES.len() - 1);
+        assert!(ws.0.join("voix-generees/Azuro (2)").is_dir());
+        assert!(!ws.0.join("voix-generees/New").exists());
+        assert!(outside.0.join("marker").is_file());
     }
 }
 
@@ -1068,9 +1119,6 @@ fn rename_project_folder_impl(
         }) {
             continue;
         }
-        let foreign_old = existing_candidate(parent, old)?
-            .is_some_and(|path| !owns_folder(&path, parent, work_id));
-        let owned_before = owned.len();
         for (index, from) in candidates.values().flatten() {
             if *index == category
                 && owns_folder(from, parent, work_id)
@@ -1078,13 +1126,6 @@ fn rename_project_folder_impl(
             {
                 owned.push((parent, from.clone()));
             }
-        }
-        if owned.len() == owned_before && foreign_old {
-            return Err(
-                user_message::UserMessage::new(codes::FILES_PROJECT_MARKER_MISSING)
-                    .with_detail("Dossier de projet étranger ou sans marqueur.".to_string())
-                    .into_transport(),
-            );
         }
     }
     for (parent, from) in owned {

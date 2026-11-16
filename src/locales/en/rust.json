@@ -1101,7 +1101,6 @@
   "FILES_PROJECT_FOLDER_NAME_COLLISION": "Several folders have names that Story Studio treats as identical.",
   "FILES_PROJECT_FOLDER_NAME_EXHAUSTED": "Couldn’t reserve a unique project folder.",
   "FILES_LINK_FORBIDDEN_FOLDER_RENAME": "Links aren’t allowed in a folder that’s being renamed.",
-  "FILES_PROJECT_MARKER_MISSING": "This project folder wasn’t created by Story Studio or has lost its marker.",
   "FILES_PROJECT_MERGE_FORBIDDEN": "The destination folder already exists, and Story Studio won’t merge folders.",
   "FILES_FOLDER_CHANGED_DURING_ORGANIZATION": "The folder changed while the project was being organized.",
   "FILES_INCOMPLETE_ROLLBACK": "{{error}}; couldn’t fully undo the changes: {{failures}}",

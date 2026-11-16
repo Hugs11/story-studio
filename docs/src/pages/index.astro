@@ -10,7 +10,7 @@ import '../styles/landing.css';
     <title>Story Studio pour Lunii — Crée tes histoires et gère ta collection</title>
     <meta
       name="description"
-      content="Crée tes histoires, range ta collection et envoie tes packs sur ta Lunii avec Story Studio 0.9.12. Application locale pour Windows, Linux et macOS, en français, anglais et italien."
+      content="Crée tes histoires, range ta collection et envoie tes packs sur ta Lunii avec Story Studio 0.9.13. Application locale pour Windows, Linux et macOS, en français, anglais et italien."
     />
     <meta name="robots" content="index, follow" />
     <meta name="google-site-verification" content="EW_r5pSDajA6Py5Z_duzkWnG2z-j_8UgUwk07VyOa4c" />
@@ -52,7 +52,7 @@ import '../styles/landing.css';
         "applicationCategory": "MultimediaApplication",
         "inLanguage": ["fr", "en", "it"],
         "operatingSystem": "Windows 10+, Linux x86_64, macOS 11+",
-        "softwareVersion": "0.9.12",
+        "softwareVersion": "0.9.13",
         "license": "https://github.com/Hugs11/story-studio/blob/main/LICENSE",
         "author": {
           "@type": "Person",
@@ -76,7 +76,7 @@ import '../styles/landing.css';
         <img class="logo" src="logostory.svg" alt="Story Studio" />
         <div class="badge" id="version-badge" aria-live="polite">
           <span class="dot"></span>
-          <span id="version-text">Story Studio 0.9.12</span>
+          <span id="version-text">Story Studio 0.9.13</span>
         </div>
       </div>
     </header>
@@ -139,13 +139,11 @@ import '../styles/landing.css';
           </div>
 
           <div class="release-card" aria-labelledby="latest-release-title">
-            <h2 id="latest-release-title">Nouveautés de la version 0.9.12</h2>
+            <h2 id="latest-release-title">Nouveautés de la version 0.9.13</h2>
             <ul>
-              <li>Un pack généré par l’éditeur par menus se rouvre dans le même éditeur, tel que tu l’as construit.</li>
-              <li>Un podcast ou une vidéo YouTube importé depuis l’Accueil arrive dans l’éditeur avec ses histoires.</li>
-              <li>Le catalogue ne relit plus que les packs nouveaux ou modifiés, ses jaquettes officielles arrivent pendant le scan, et le vérificateur de pack est plus juste.</li>
-              <li>L’assistant d’assemblage est simplifié : tu peux poursuivre dans l’éditeur par menus dès le choix des packs.</li>
-              <li>Beaucoup de corrections sur l’assemblage de packs, les messages de fin, la Lunii et les éditeurs.</li>
+              <li>L’enregistrement d’un nouveau projet refonctionne dans tous les éditeurs.</li>
+              <li>L’éditeur graphe peut activer le mode nuit de la Lunii depuis la fiche du pack.</li>
+              <li>La fenêtre des nouveautés s’ouvre aussi quand le Catalogue est ton écran de départ.</li>
             </ul>
           </div>
 
@@ -562,7 +560,7 @@ import '../styles/landing.css';
         }
 
         function setFallback(message) {
-          versionText.textContent = message || "Story Studio 0.9.12 — Voir les téléchargements";
+          versionText.textContent = message || "Story Studio 0.9.13 — Voir les téléchargements";
           label.textContent = "Voir les téléchargements";
           btn.setAttribute("href", RELEASES_URL);
           meta.textContent = "Ce bouton ouvre la page GitHub Releases.";

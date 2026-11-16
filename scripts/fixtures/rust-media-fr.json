@@ -3686,12 +3686,6 @@
     "source": "src-tauri/src/services/project_files/project_storage.rs:424"
   },
   {
-    "code": "FILES_PROJECT_MARKER_MISSING",
-    "params": {},
-    "expected": "Dossier de projet étranger ou sans marqueur.",
-    "source": "src-tauri/src/services/project_files/project_storage.rs:466"
-  },
-  {
     "code": "FILES_PROJECT_MERGE_FORBIDDEN",
     "params": {},
     "expected": "Dossier cible déjà présent : fusion interdite.",

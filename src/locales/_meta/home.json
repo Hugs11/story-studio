@@ -1511,6 +1511,30 @@
       "status": "ai-reviewed"
     }
   },
+  "packName.nightMode.label": {
+    "context": "Fiche du pack (éditeur graphe) > libellé de l’interrupteur du mode nuit ; drapeau racine du pack. Terme Lunii.",
+    "maxLength": 30,
+    "en": {
+      "sourceHash": "5c5d6921f582",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "5c5d6921f582",
+      "status": "ai-reviewed"
+    }
+  },
+  "packName.nightMode.help": {
+    "context": "Fiche du pack (éditeur graphe) > aide sous l’interrupteur du mode nuit ; phrase complète, longueur souple.",
+    "maxLength": 120,
+    "en": {
+      "sourceHash": "27703c137fb1",
+      "status": "ai-reviewed"
+    },
+    "it": {
+      "sourceHash": "27703c137fb1",
+      "status": "ai-reviewed"
+    }
+  },
   "packName.filename.previewLabel": {
     "context": "components/layout/PackNameModal.jsx > filename ; JSXText « Nom exporté ». Libellé de cette surface ; conserver le rôle indiqué par la clé et ne pas modifier les données auteur. Contrainte : libellé concis, une ligne si possible.",
     "maxLength": 36,

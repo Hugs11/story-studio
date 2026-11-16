@@ -259,7 +259,7 @@ fn a_nested_envelope_child_is_refused_with_a_readable_reason() {
     fs::remove_dir_all(dir).expect("nettoyage");
 }
 
-/// Un pack direct accompagné d'annexes reste un pack direct : le premier jalon
+/// Un pack direct accompagné d'annexes reste un pack direct : la lecture
 /// n'invente pas une enveloppe là où une histoire est déjà lisible.
 #[test]
 fn a_direct_pack_beside_annex_archives_stays_direct() {

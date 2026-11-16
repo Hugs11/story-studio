@@ -9,10 +9,10 @@ for (const { url, kind } of examples) {
 }
 
 test('custom channel address reaches the listing IPC unchanged', async () => {
-  const url = 'https://www.youtube.com/superboki';
+  const url = 'https://www.youtube.com/chaine-exemple';
   await fetchSubscriptionSnapshot({ source: 'youtube', url }, async (command, args) => {
     assert.equal(command, 'fetch_youtube_list');
     assert.equal(args.url, url);
-    return { title: 'Superboki', videos: [{ id: 'one' }], hasNext: false };
+    return { title: 'Chaîne exemple', videos: [{ id: 'one' }], hasNext: false };
   });
 });

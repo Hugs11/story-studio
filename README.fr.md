@@ -14,7 +14,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI : builds desktop" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#configuration-requise"><img alt="Plateformes : Windows, Linux et macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.12" src="https://img.shields.io/badge/version-0.9.12-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.13" src="https://img.shields.io/badge/version-0.9.13-2F80ED.svg"></a>
   <a href="#statut-bêta"><img alt="Statut : bêta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -68,9 +68,9 @@ L'écriture sur la conteuse (envoi, suppression, réorganisation et rapatriement
 - Les packs officiels Lunii ne sont jamais recopiés sur ton ordinateur.
 - Story Studio est fourni « en l'état », sans aucune garantie (voir la [licence](LICENSE)). **Tu l'utilises avec ta conteuse à tes propres risques** : les auteurs ne peuvent pas être tenus responsables d'une perte de données ou d'un dysfonctionnement de l'appareil.
 
-## Version 0.9.12
+## Version 0.9.13
 
-Cette version sert surtout à corriger des défauts. Un pack généré par l’éditeur par menus se rouvre dans le même éditeur, tel que tu l’as construit, les imports depuis l’Accueil arrivent au bon endroit, le catalogue ne relit plus tous les packs, le vérificateur de pack est plus juste et l’assistant d’assemblage est simplifié.
+Une version corrective rapide après la 0.9.12 : l’enregistrement d’un nouveau projet refonctionne, l’éditeur graphe peut activer le mode nuit de la Lunii, et la fenêtre des nouveautés s’ouvre aussi quand le Catalogue est ton écran de départ.
 
 Depuis la 0.9.10, Story Studio a un catalogue local et gère directement la Lunii. Tu peux consulter, envoyer et rapatrier des packs, gérer la liste de la conteuse et l’éjecter. Les titres et jaquettes officiels sont facultatifs et demandent ton accord.
 

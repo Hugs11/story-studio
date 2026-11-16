@@ -65,13 +65,13 @@ test('Accueil et funnels : FR comparé aux sources indépendantes de la base, re
     for (let i = 0; i < renders.length; i++) {
       // Les attendus proviennent du code de BASE, jamais du nouveau catalogue.
       let expected = text(applyFrenchSourceCorrections(originals[i]()));
-      // L77: fixed four steps; the footer also offers continuation in the menu editor.
+      // Fixed four steps; the footer also offers continuation in the menu editor.
       if (i >= 1 && i <= 3) expected = expected.replace(/(Étape \d \/ 4)Continuer/, '$1Poursuivre dans l’éditeur par menusContinuer');
       if (i === 2) expected = expected.replace('La voix qui annonce le menu agrégé sur la Lunii.', 'La voix qui annonce le menu agrégé sur la Lunii.Tu peux aussi poursuivre dans l’éditeur par menus : ce que tu as déjà choisi y sera repris.');
       // Embedded metadata applies drafts on each edit; only generation remains.
       if (i === 4) expected = expected.replace('AppliquerAppliquer &amp; générer', 'Générer le pack');
       if (i === 7 || i === 8) expected = expected.replace('AnnulerAppliquerAppliquer &amp; générer', 'AnnulerAppliquer &amp; générer');
-      // L70-3: stage nodes are scenes, and embedded sheets have a single
+      // Stage nodes are scenes, and embedded sheets have a single
       // Back/Generate bar, no inner close or export-folder status.
       if (i === 6) expected = expected.replace('2 histoires', '2 scènes');
       if (i === 7 || i === 8) expected = expected
@@ -79,6 +79,8 @@ test('Accueil et funnels : FR comparé aux sources indépendantes de la base, re
         .replace("Aucun dossier d’export disponible", '')
         .replace('AnnulerAppliquer &amp; générer', 'PrécédentAppliquer &amp; générer');
       if (i === 7) expected = expected.replace('1 histoire', '1 pack');
+      // Fiche du graphe : l'interrupteur du mode nuit (drapeau racine) suit le bloc de l'UUID.
+      if (i === 8) expected = expected.replace('comme deux packs distincts.', 'comme deux packs distincts.Mode nuitActive le mode nuit de la Lunii.');
       if (i === 5) expected = expected.replace('Génération du pack…', 'AnnulerGénération du pack…');
       // FICHED: the editor description is free text, with explicit help.
       expected = expected.replace('Description notes de version', 'Description Texte libre : présentation, contenu, notes de version…');

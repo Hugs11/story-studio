@@ -1,5 +1,5 @@
 // Helpers purs pour la transformation des marqueurs de cut/trim.
-// Extrait de AudioEditorModal.jsx pour reduire la surface de l'orchestrateur
+// Extrait de AudioEditorModal.jsx pour reduire la surface du composant parent
 // et permettre un test unitaire eventuel.
 
 export function markersAfterAction(markers, mode, start, end, duration, newCutFadeSec = 0) {

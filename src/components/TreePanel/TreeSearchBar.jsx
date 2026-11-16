@@ -2,7 +2,7 @@ import { useTreeTranslation } from '../../i18n/useTreeTranslation.jsx';
 import { focusButtonOnMouseDown } from '../common/mouseFocus.js';
 import { translateTree as t } from '../../i18n/treePresentation.js';
 // Barre de recherche du TreePanel : input + bouton clear.
-// Extraite de TreePanel.jsx pour reduire la surface du composant orchestrateur.
+// Extraite de TreePanel.jsx pour reduire la surface du composant parent.
 
 import { Search } from '../icons/LucideLocal';
 import { NodeColorFilterChips } from '../tree/NodeColorFilterChips.jsx';

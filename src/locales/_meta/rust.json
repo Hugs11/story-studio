@@ -12471,17 +12471,6 @@
       "sourceHash": "08687574ddde"
     }
   },
-  "FILES_PROJECT_MARKER_MISSING": {
-    "context": "FILES > erreur ou journal utilisateur ; src-tauri/src/services/project_files/project_storage.rs:466 ; Dossier de projet étranger ou sans marqueur.",
-    "en": {
-      "status": "ai-reviewed",
-      "sourceHash": "079c967c364e"
-    },
-    "it": {
-      "status": "ai-reviewed",
-      "sourceHash": "079c967c364e"
-    }
-  },
   "FILES_PROJECT_MERGE_FORBIDDEN": {
     "context": "FILES > erreur ou journal utilisateur ; src-tauri/src/services/project_files/project_storage.rs:472 ; Dossier cible déjà présent : fusion interdite.",
     "en": {

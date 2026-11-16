@@ -91,7 +91,7 @@ test('surfaces shell en pseudo-locale, y compris libellés accessibles et tables
     chromeControls: { autoPlaybackEnabled: true, transparentPreview: false },
   }).html);
   const notes = paint(ReleaseNotesModal, { appVersion: RELEASE_NOTES.version }).html;
-  assert.ok(notes.includes(i18next.t('common:releaseNotes.current.fixes.label')));
+  assert.ok(notes.includes(i18next.t(RELEASE_NOTES.fixes[0][0])));
   // Intl reste en FR en pseudo ; vérifier la date entière avant de l'exclure.
   const date = new Date(RELEASE_NOTES.date).toLocaleDateString('fr-FR', {
     day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',

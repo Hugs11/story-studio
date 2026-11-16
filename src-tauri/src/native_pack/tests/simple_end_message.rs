@@ -22,9 +22,9 @@ fn build(project: Value) -> Result<StoryDocument, String> {
 fn story_dto(id: &str, fields: Value) -> Value {
     let mut story = json!({
         "id": id, "type": "story", "name": id,
-        "audio": format!("C:/h10b/{id}.mp3"),
-        "itemAudio": format!("C:/h10b/{id}-t.mp3"),
-        "itemImage": format!("C:/h10b/{id}.png"),
+        "audio": format!("C:/message-fin/{id}.mp3"),
+        "itemAudio": format!("C:/message-fin/{id}-t.mp3"),
+        "itemImage": format!("C:/message-fin/{id}.png"),
         "afterPlaybackPromptControlSettings": {"autoplay": true, "wheel": false, "pause": false, "ok": true, "home": true},
         "afterPlaybackSequence": [],
         "controlSettings": {"autoplay": false, "wheel": false, "pause": true, "ok": false, "home": true},
@@ -38,12 +38,12 @@ fn story_dto(id: &str, fields: Value) -> Value {
 fn project_dto(project_type: &str, global: Value, entries: Vec<Value>) -> Value {
     let mut project = json!({
         "schemaVersion": 3, "authoringMode": "free", "version": 2,
-        "projectName": "H10b", "name": "H10b", "packVersion": 1, "packDescription": "",
+        "projectName": "Message de fin", "name": "Message de fin", "packVersion": 1, "packDescription": "",
         "packUuid": "11111111-2222-4333-8444-555566667777",
-        "packMetadata": {"title": "H10b", "uuid": "11111111-2222-4333-8444-555566667777"},
+        "packMetadata": {"title": "Message de fin", "uuid": "11111111-2222-4333-8444-555566667777"},
         "projectType": project_type,
-        "rootAudio": "C:/h10b/root.mp3", "rootImage": "C:/h10b/root.png",
-        "thumbnailImage": "C:/h10b/root.png",
+        "rootAudio": "C:/message-fin/root.mp3", "rootImage": "C:/message-fin/root.png",
+        "thumbnailImage": "C:/message-fin/root.png",
         "nightModeAudio": null, "nightModeReturn": null, "nightModeHomeReturn": null,
         "globalOptions": {"silenceMode": "normalize", "harmonizeLoudness": true, "autoNext": false,
             "nightMode": false, "endMessageAutoplay": true, "endNode": false},
@@ -89,7 +89,7 @@ fn stage<'a>(document: &'a StoryDocument, label: &str) -> &'a StageNode {
 fn c2_histoire_seule_message_de_fin_enchaine_sans_mode_nuit() {
     let dto = project_dto(
         "simple",
-        json!({"nightModeAudio": "C:/h10b/fin.mp3", "globalOptions": {"endNode": true}}),
+        json!({"nightModeAudio": "C:/message-fin/fin.mp3", "globalOptions": {"endNode": true}}),
         vec![story_dto("a", json!({}))],
     );
     let document = build(dto).expect("pack généré");
@@ -111,7 +111,7 @@ fn histoire_seule_message_de_fin_avec_mode_nuit_garde_ses_controles() {
     let dto = project_dto(
         "simple",
         json!({
-            "nightModeAudio": "C:/h10b/fin.mp3",
+            "nightModeAudio": "C:/message-fin/fin.mp3",
             "globalOptions": {"nightMode": true, "endNode": true},
         }),
         vec![story_dto("a", json!({}))],
@@ -139,7 +139,7 @@ fn c4_histoire_seule_message_de_fin_vers_histoire_suivante_ne_plante_pas() {
     let dto = project_dto(
         "simple",
         json!({
-            "nightModeAudio": "C:/h10b/fin.mp3",
+            "nightModeAudio": "C:/message-fin/fin.mp3",
             "nightModeReturn": "next_story",
             "globalOptions": {"endNode": true},
         }),
@@ -154,7 +154,7 @@ fn c4_histoire_seule_accueil_du_message_vers_histoire_suivante_ne_plante_pas() {
     let dto = project_dto(
         "simple",
         json!({
-            "nightModeAudio": "C:/h10b/fin.mp3",
+            "nightModeAudio": "C:/message-fin/fin.mp3",
             "nightModeHomeReturn": "next_story",
             "globalOptions": {"endNode": true},
         }),

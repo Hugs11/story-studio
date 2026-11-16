@@ -159,3 +159,27 @@ test('manual save and rollback accept one category or no media without creating 
     } finally { await fs.rm(root, { recursive: true, force: true }); }
   }
 });
+
+test('first manual save ignores foreign homonym folders in categories the project does not own', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'story-storage-foreign-homonym-'));
+  try {
+    const invokeCommand = (command, args) => projectStorageDiskCommands[command](args);
+    const previous = createProjectStorage();
+    for (const category of ['fichiers-importes', 'voix-generees', 'enregistrements']) {
+      await invokeCommand('resolve_project_folder', { root, folder: previous.folder, workId: previous.workId, create: true, category });
+    }
+    const storage = createProjectStorage();
+    const provisional = await invokeCommand('resolve_project_folder', { root, folder: storage.folder, workId: storage.workId, create: true, category: 'fichiers-importes' });
+    assert.equal(provisional, 'Projet sans titre (2)');
+    const transaction = await prepareProjectStorageSave({ project: { storage, projectName: 'Hayate', rootEntries: [] }, root, invokeCommand });
+    transaction.release();
+    assert.equal(transaction.moves.length, 1);
+    await fs.access(path.join(root, 'fichiers-importes', 'Hayate'));
+    for (const category of ['fichiers-importes', 'voix-generees', 'enregistrements']) {
+      await fs.access(path.join(root, category, previous.folder));
+    }
+    await assert.rejects(fs.access(path.join(root, 'voix-generees', 'Hayate')));
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});

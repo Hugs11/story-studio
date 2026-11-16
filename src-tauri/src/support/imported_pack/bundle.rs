@@ -17,7 +17,7 @@ use unicode_normalization::UnicodeNormalization;
 use super::source_tree::{archive_entry_name, revalidate_regular_entry, validated_directory_tree};
 
 /// Une enveloppe est un conteneur, pas une bibliothèque : l'écran de choix ne
-/// pagine pas au premier jalon, donc l'inventaire est borné.
+/// pagine pas, donc l'inventaire est borné.
 pub(crate) const BUNDLE_MAX_CHILDREN: usize = 64;
 
 /// Une enveloppe commence à deux enfants. Une archive qui n'en contient qu'un
@@ -120,7 +120,7 @@ pub(crate) fn collect_bundle_children(
 
 /// Vrai si le dossier extrait contient des archives annexes à côté du pack
 /// reconnu. Le pack direct l'emporte ; l'annexe est seulement journalisée, et
-/// jamais présentée comme une enveloppe au premier jalon.
+/// jamais présentée comme une enveloppe.
 pub(crate) fn has_annex_archives(extracted_dir: &Path) -> bool {
     let Ok(entries) = std::fs::read_dir(extracted_dir) else {
         return false;

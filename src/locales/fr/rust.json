@@ -1151,7 +1151,6 @@
   "FILES_PROJECT_FOLDER_NAME_COLLISION": "Plusieurs dossiers ont le même nom normalisé.",
   "FILES_PROJECT_FOLDER_NAME_EXHAUSTED": "Impossible de réserver un dossier de projet unique.",
   "FILES_LINK_FORBIDDEN_FOLDER_RENAME": "Lien interdit dans un dossier à renommer.",
-  "FILES_PROJECT_MARKER_MISSING": "Dossier de projet étranger ou sans marqueur.",
   "FILES_PROJECT_MERGE_FORBIDDEN": "Dossier cible déjà présent : fusion interdite.",
   "FILES_FOLDER_CHANGED_DURING_ORGANIZATION": "Dossier modifié pendant le rangement.",
   "FILES_INCOMPLETE_ROLLBACK": "{{error}}; retour arrière incomplet : {{failures}}",

@@ -1,4 +1,4 @@
-// H9 — la file des images IA survit au redémarrage, pas le projet qui les portait.
+// la file des images IA survit au redémarrage, pas le projet qui les portait.
 //
 // Les images terminées sont gardées dans le stockage local (`sdJobResults`) et
 // relues au lancement (`loadPersistedJobs`). Tout changement de projet dans
@@ -41,7 +41,7 @@ async function generateImageThenQuit(disk, imagePath) {
   first.app.unmount();
 }
 
-test('h9 : au relancement, la file IA ne propose pas une image dont le dossier de session a été supprimé', async () => {
+test('au relancement, la file IA ne propose pas une image dont le dossier de session a été supprimé', async () => {
   const disk = await createDiskHarness();
   try {
     const sessionDir = disk.dir('cache', 'sessions', 'story_studio_session_1_1_0');
@@ -64,7 +64,7 @@ test('h9 : au relancement, la file IA ne propose pas une image dont le dossier d
   } finally { await disk.dispose(); }
 });
 
-test('h9 : au relancement, un nouveau projet ne reçoit pas la file IA du projet précédent', async () => {
+test('au relancement, un nouveau projet ne reçoit pas la file IA du projet précédent', async () => {
   const disk = await createDiskHarness();
   try {
     // Projet enregistré : l'image existe toujours, mais elle appartient au projet d'hier.

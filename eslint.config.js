@@ -190,7 +190,7 @@ const config = [
         // Clés de traduction, imports et enums techniques des composants pilotes.
         callees: { exclude: ['t', 'useTranslation', 'useCommonTranslation', 'logger.*', 'invoke', 'modals.*', 'createElement', 'querySelector', 'querySelectorAll', 'closest', 'matches', 'addEventListener', 'removeEventListener', 'listen', 'classList.*', 'write', 'readSetting', 'read', 'replace', 'replaceAll', 'normalize', 'join', 'includes', 'startsWith', 'split'] },
         // Enums/IDs fermés, classes CSS, séparateurs et marques ; aucune prose UI.
-        // Identifiants de transport/vue et glyphes sans prose, familles fermées du lot 4.3b.
+        // Identifiants de transport/vue et glyphes sans prose, familles fermées.
         words: { exclude: [":", "\\u0000", "(?:-start|-exit|story_home_step|story_play|global-end|inherited|implicit|reference|same-row-return)", "(?:sep|node|tree|diagram|split|assemble|selection|warn|default|night|end|contextual|configured|curve|sequence|prompt|exit|moon|stop|story-group|menu_target_missing|ProjectMenuDepthError|end-night|night-end-node|imported-night-prompt|insert-before|insert-after|auto-next-settings|open-auto-next-settings|native-graph-root|native-graph|continuation)", "(?:container|local-end|structure|return|sequence-return|prompt-return|end-node-return|end-node-home|home):.*", "[↩↪↖⧉◇⇒▤☾■»−⌗]", "[0-9]+px", "[MLC]", ":[0-9]+","tree:.*", "(?:__mixed__|__none__|end-node|autoNext|nightModeAudio|rootAudio|rootImage|autoGenerateRootImage|nativeGraph|itemAudio|itemImage|afterPlaybackPromptAudio|audio|image|zipPath|stage|pause|wheel|autoplay|fr|title|description|center|smooth|nearest|empty|generate-text|root:coverImage)", "[→⌄#]+", "(?:NFC|convention|legacy|\\[by_|\\.zip|unknown|collision|free|uuid|minAge|start|root:thumbnailImage|addSilence|add|normalize|ref|story_home_step:|story_play:|story:|menu:|returnAfterPlay|returnOnHome|titleReturnOnHome|afterPlaybackPromptOkTarget|afterPlaybackPromptHomeTarget|return|continue|lossy|branching-graph|NFKC|_|nouveau-projet|entry_missing|empty_selection|mon-projet|projet|new-project|my-project|nuovo-progetto|mio-progetto|progetto|edit-pack:land-error|edit|podcast|youtube|aggregate|check|open|collect|piper_generate_audio|xtts_generate_audio|generating|agregation|done|active|todo|neutral|violet|%|current)", "settings:.*", "common:.*", "home:.*", "catalogue:.*", "(?:settings|common|primary|danger|danger-outline|ghost|secondary|error|warning|info|function|object|boolean|string|pack|simple|root|ok|home|story|menu|zip|cancel|save|discard|delete|stay|quit|prefs|credits|record|tts|media|document|ephemeral|project|advanced|hierarchical|below|above|floating|panel|canvas|loading|failed|applied|new|fix|chore|exports|auto|hidden|none|transparent|pointerdown|keydown|resize|scroll|ended|Tab|Escape|ArrowLeft|ArrowRight|ArrowDown|ArrowUp|Home|End|true|false|mixed|on|off|editor|export|held|busy|queue|validation|generate|undo|redo|workspace|plein|colonne|header|oe|ae|NFKD|languageChanged|podcastImport|podcastFunnel|aggregatePacks|packChecker|catalogue|editPack|harmonizeLoudness|silenceMode|leadingSilenceSec|trailingSilenceSec|catalogImage|thumbnailImage|newProject|returnToCatalogue|openProject|openPack|saveProject|saveProjectAs|continueInGraph|toggleTree|toggleSettings|toggleDiagram|toggleNodeList|toggleInspector|toggleValidation|openPreferences|treeColor)", "(?:chrome-|workspace-|bottom-workspace-|is-)[a-z0-9 -]+", "[\\\\/]+", "[()·×✓▾▶⏸⌂⋮—| +.0-9v-]+", "Story Studio", "STORY STUDIO ·", "— hugs11"] },
         'should-validate-template': true,
       }],
@@ -289,7 +289,7 @@ const importLiteralConfig = { files: importFiles, plugins: { i18next }, rules: {
   }],
 } };
 
-// Lot 4.5 — domaine Médias. Exceptions fermées : identifiants, chemins, codes et glyphes.
+// Domaine Médias. Exceptions fermées : identifiants, chemins, codes et glyphes.
 const mediaFiles = [
   'src/components/AudioAssemblyModal/AudioAssemblyModal.jsx',
   'src/components/AudioEditorModal/AudioEditorFadeOverlays.jsx',
@@ -400,7 +400,7 @@ const productionLiteralConfig = { ...mediaLiteralConfig, files: [
   }],
 } };
 
-// Lot 4.9 — vérificateur et rapports. Exceptions fermées : clés, identifiants,
+// Vérificateur et rapports. Exceptions fermées : clés, identifiants,
 // unités techniques, gabarits CSS/HTML de l'export et glyphes ; aucune prose.
 const checkerLiteralConfig = { ...mediaLiteralConfig, files: [
   "src/components/CommunityPackChecker/CommunityPackChecker.jsx",
@@ -481,7 +481,7 @@ const helpLiteralConfig = { files: ['src/components/common/CreditsModal.jsx', 's
       "(?:,|;|'|=|\u2190|\u2191|\u2193|\u232b)", "\\[", "\\]"] },
   }],
 } };
-// Lot 4.12 — exemples du graphe. Exceptions fermées : clés `examples:`/`ai:`/`common:`,
+// Exemples du graphe. Exceptions fermées : clés `examples:`/`ai:`/`common:`,
 // identifiants de voix et commandes Piper, statuts et rôles internes ; aucune prose.
 const examplesLiteralConfig = { files: ['src/components/AdvancedWorkspace/ExampleDialog.jsx', 'src/components/AdvancedWorkspace/ExamplesMenu.jsx', 'src/hooks/useAdvancedExamples.js', 'src/store/advancedExamples/catalog.js', 'src/store/advancedExamples/exampleBuilder.js', 'src/store/advancedExamples/media.js', 'src/store/advancedExamples/quizExamples.js', 'src/store/advancedExamples/storyExamples.js', 'src/store/advancedExamples/trainExample.js', 'src/store/advancedExamples/transaction.js'], plugins: { i18next }, rules: {
   'i18next/no-literal-string': ['error', { ...literalRule[1],

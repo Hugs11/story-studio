@@ -458,6 +458,8 @@ pub(crate) struct DocumentMetadataView {
     /// n'est pas la `packIdentity`, projetée à côté : les confondre ferait
     /// afficher un identifiant qui n'est pas celui de la production.
     pub(crate) uuid: PresenceView<String>,
+    /// Drapeau racine du mode nuit, posé par l'auteur dans la fiche du pack.
+    pub(crate) night_mode_available: PresenceView<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

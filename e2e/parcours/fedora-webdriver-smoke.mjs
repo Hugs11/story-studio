@@ -1,4 +1,4 @@
-// Jalon Linux : chaîne réelle, dialogue scripté, import synthétique, collecte
+// Vérification Linux : chaîne réelle, dialogue scripté, import synthétique, collecte
 // dès le démarrage, capture, arrêt et relance immédiate. Aucun oracle simulé.
 import assert from 'node:assert/strict';
 import { join } from 'node:path';

@@ -11,6 +11,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { CircleCheck, Image, Package, RotateCcw, TriangleAlert } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
+import { Toggle } from '../common/Toggle';
 import { ImageField } from '../editors/ImageField';
 import { PackAudioProcessingFields } from './PackAudioProcessingFields';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -75,6 +76,9 @@ function defaultDraft(packMetadata = {}) {
     ...packMetadata,
   };
 }
+
+// Champ du brouillon graphe qui porte le drapeau racine du mode nuit.
+const NIGHT_MODE_FIELD = 'nightMode';
 
 function normalizeDraft(draft) {
   const namingMode = draft.namingMode === 'legacy' ? 'legacy' : 'convention';
@@ -307,7 +311,7 @@ export function PackNameModal({
   // précisément ceux du **nom libre** — les taper pour se voir renvoyer au mode
   // convention serait absurde. La liste reste sinon celle du Libre, sans
   // retrait : son comportement ne change pas.
-  const NAMING_NEUTRAL_FIELDS = ['uuid', 'namingMode', 'legacyExportName'];
+  const NAMING_NEUTRAL_FIELDS = ['uuid', NIGHT_MODE_FIELD, 'namingMode', 'legacyExportName'];
 
   function updateField(field, value) {
     if (field === 'uuid' && (uuidLocked || identityLockPending)) return;
@@ -363,6 +367,7 @@ export function PackNameModal({
           description: draft.description,
           version: draft.version,
           uuid: draft.uuid,
+          nightMode: !!draft.nightMode,
           // Ce qui ne compose que le nom du fichier, et vit dans l'enveloppe du
           // projet. Séparé du reste parce que l'appelant l'écrit autrement :
           // aucun geste, aucune entrée dans le pack.
@@ -642,6 +647,19 @@ export function PackNameModal({
             <div className="pack-meta-field-row">
               <span />
               <p className="pack-meta-uuid-hint">{t('home:packName.uuid.importedHint')}</p>
+            </div>
+          ) : null}
+          {isAdvanced ? (
+            <div className="pack-meta-field-row">
+              <label>{t('home:packName.nightMode.label')}</label>
+              <div className="pack-meta-night-control">
+                <Toggle
+                  on={!!draft.nightMode}
+                  onChange={(next) => updateField(NIGHT_MODE_FIELD, next)}
+                  ariaLabel={t('home:packName.nightMode.label')}
+                />
+                <p className="pack-meta-field-hint">{t('home:packName.nightMode.help')}</p>
+              </div>
             </div>
           ) : null}
         </section>
